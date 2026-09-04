@@ -417,7 +417,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .context-change-list pre, .context-validation-list pre { max-height: 240px; overflow: auto; padding: 11px; color: #e7eceb; background: var(--ink); font-size: 9.5px; line-height: 1.55; white-space: pre-wrap; }
 .context-technical-list > div { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 9px; padding: 7px 0; border-top: 1px dashed var(--line); }
 .context-technical-list time, .context-technical-list p { margin: 0; color: var(--muted); font-size: 9.5px; line-height: 1.55; }
-.context-stop-run, .context-retry-run { margin-top: 13px; padding: 0; color: var(--watch); background: transparent; border: 0; font-size: 10px; font-weight: 650; }
+.context-retry-run { margin-top: 13px; padding: 0; color: var(--watch); background: transparent; border: 0; font-size: 10px; font-weight: 650; }
 .context-retry-run { color: var(--accent-primary); }
 .context-run-reply { flex: none; display: block; margin: 0; padding: 11px 14px 13px; background: #fff; border-top: 1px solid var(--line); }
 .context-run-reply textarea { min-height: 38px; padding: 7px 2px 6px 0; font-size: 14px; }

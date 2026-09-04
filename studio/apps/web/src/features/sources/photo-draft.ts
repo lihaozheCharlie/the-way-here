@@ -1,3 +1,4 @@
+import type { PhotoAnswer, PhotoStep } from "./photo-flow";
 import type { PhotoPerson } from "@the-way-here/shared";
 
 export interface PhotoLocalDraft {
@@ -7,7 +8,14 @@ export interface PhotoLocalDraft {
   peopleDirty: boolean;
   story: string;
   storyDirty: boolean;
+  faceGroups?: string[][];
   photoDrafts?: Record<string, PhotoPerson[]>;
+  step?: PhotoStep;
+  answers?: PhotoAnswer[];
+  skipped?: string[];
+  answer?: string;
+  direct?: boolean;
+  choiceMade?: boolean;
 }
 export function photoDraftKey(knowledgeBaseId: string, memoryId: string) {
   return `the-way-here:photo-draft:${encodeURIComponent(knowledgeBaseId)}:${encodeURIComponent(memoryId)}`;
@@ -33,6 +41,22 @@ export function parsePhotoDraft(raw: string | null): PhotoLocalDraft | undefined
         if (!parsePhotoDraft(JSON.stringify({ revision: value.revision, photoId, people, peopleDirty: true, story: "", storyDirty: false }))) return undefined;
       }
     }
+    if (value.faceGroups !== undefined) {
+      if (!Array.isArray(value.faceGroups) || value.faceGroups.length > 200) return undefined;
+      const grouped = new Set<string>();
+      for (const group of value.faceGroups) {
+        if (!Array.isArray(group) || group.length < 2 || group.length > 10) return undefined;
+        for (const id of group) {
+          if (typeof id !== "string" || !/^[a-z0-9-]{1,80}$/i.test(id) || grouped.has(id)) return undefined;
+          grouped.add(id);
+        }
+      }
+    }
+    if (value.step !== undefined && ![1, 2, 3, 4, 5].includes(value.step)) return undefined;
+    if (value.answer !== undefined && (typeof value.answer !== "string" || value.answer.length > 10000)) return undefined;
+    if (value.direct !== undefined && typeof value.direct !== "boolean" || value.choiceMade !== undefined && typeof value.choiceMade !== "boolean") return undefined;
+    if (value.skipped !== undefined && (!Array.isArray(value.skipped) || value.skipped.length > 10 || !value.skipped.every((id: unknown) => typeof id === "string"))) return undefined;
+    if (value.answers !== undefined && (!Array.isArray(value.answers) || value.answers.length > 10 || !value.answers.every((entry: any) => entry && typeof entry.photoId === "string" && typeof entry.question === "string" && entry.question.length <= 10000 && typeof entry.answer === "string" && entry.answer.length <= 10000))) return undefined;
     return value;
   } catch { return undefined; }
 }

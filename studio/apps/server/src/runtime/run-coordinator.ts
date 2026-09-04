@@ -16,6 +16,7 @@ import type {
   WikiRun,
 } from "@the-way-here/shared";
 import { JourneyReportStore, JourneyReportTargetError } from "../modules/imports/journey-report-store.js";
+import { photoPeopleVisibleAnswer } from "../modules/imports/photo-person-bindings.js";
 import { PhotoMemoryStore, PhotoMemoryError } from "../modules/imports/photo-memory-store.js";
 import { addOutputTargetInstructions, buildRunPrompt, parseAgentOutputTarget, parseAgentRuntimePreference, parseReasoningEffort, parseRunMode } from "../services/run-policy.js";
 import { runValidationCommands } from "../services/validation-runner.js";
@@ -178,7 +179,10 @@ export class RunCoordinator {
       if (normalizedInput.sourceContext?.operation === "build") {
         const source = normalizedInput.sourceContext;
         const page = resolvedKnowledge.index.list({ sources: true }).find((p) => p.relativePath === source.storedPath);
-        if (page?.importChannel === "photos") await this.photoMemories.assertBuild(taskConfig, source.importId, source.storedPath);
+        if (page?.importChannel === "photos") {
+          await this.photoMemories.assertBuild(taskConfig, source.importId, source.storedPath);
+          photoInput = { prompt: await this.photoMemories.buildContext(taskConfig, source.importId, resolvedKnowledge.index) };
+        }
       }
     } catch (error) { if (error instanceof PhotoMemoryError) throw new RunRequestError(error.statusCode, error.message); throw error; }
     if (normalizedInput.outputTarget?.kind === "journey-report" && mode !== "read") {
@@ -413,7 +417,10 @@ export class RunCoordinator {
       const page = resolved.index.list({ sources: true }).find((p) => p.relativePath === run.sourceContext?.storedPath);
       if (page?.importChannel === "photos") {
         const finished = await this.runs.get(runId);
-        try { await this.photoMemories.publish(run.configSnapshot, run.sourceContext.importId, resolved.index, finished?.changes.filter((change) => change.kind === "added").map((change) => change.path) || []); }
+        try {
+          await this.photoMemories.publish(run.configSnapshot, run.sourceContext.importId, resolved.index, finished?.changes.filter((change) => change.kind === "added").map((change) => change.path) || [], run.result?.finalAnswer || "");
+          if (run.result?.finalAnswer) run.result.finalAnswer = photoPeopleVisibleAnswer(run.result.finalAnswer);
+        }
         catch (error: any) { await this.runs.addEvent(runId, { kind: "diagnostic", message: `知识已构建，但人物影像未更新：${error.message}` }); }
       }
     }

@@ -1,0 +1,20 @@
+.source-memory-inbox { margin: 0 0 30px; }
+.source-memory-inbox > header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 14px; }
+.source-memory-inbox h2 { margin: 0; font: 500 20px/1.4 var(--font-display); color: var(--ink); }
+.source-memory-inbox > header > span { color: var(--muted); font-size: 12px; }
+.source-memory-cards { display: flex; gap: 16px; overflow-x: auto; padding: 4px 4px 10px; }
+.source-memory-card { display: flex; flex: 0 0 360px; gap: 16px; align-items: center; padding: 16px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); cursor: pointer; }
+.source-memory-card:hover { border-color: var(--accent-primary); background: var(--surface-tinted); }
+.source-memory-thumbnail { display: grid; place-items: center; flex: 0 0 72px; height: 80px; overflow: hidden; border-radius: 5px; color: var(--muted); background: var(--canvas); }
+.source-memory-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.source-memory-card-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.source-memory-card-copy > b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink); font-size: 14px; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.source-memory-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.source-memory-card > svg { flex-shrink: 0; }
+.source-memory-dialog { position: fixed; inset: 0; width: min(1400px, calc(100vw - 64px)); max-width: none; max-height: calc(100dvh - 64px); margin: auto; padding: 0; overflow: auto; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+.source-memory-dialog::backdrop { background: rgba(30, 43, 47, .32); }
+.source-memory-dialog-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.source-memory-dialog-header h2 { margin: 0; font: 500 20px/1.4 var(--font-display); }
+.source-memory-dialog-body { padding: 28px; }
+.source-memory-dialog .photo-memory { margin: 0; padding: 0; border: 0; }
+.source-memory-dialog .source-preview { border: 0; }

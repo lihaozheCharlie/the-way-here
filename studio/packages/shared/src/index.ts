@@ -113,6 +113,8 @@ export type SourceChatImportChannel = "chatgpt" | "claude" | "gemini" | "deepsee
 
 export type SourceImportChannel = "files" | SourceChatImportChannel | "alipay" | "photos";
 
+export const PHOTO_MEMORY_QUESTION = "这张照片给你留下了什么记忆？";
+
 export type PhotoBox = { x: number; y: number; width: number; height: number };
 export interface PhotoPerson {
   id: string;

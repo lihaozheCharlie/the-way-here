@@ -38,6 +38,31 @@ async function fixture(vision = true) {
 }
 
 describe("photo-memory runtime contract", () => {
+  it("carries selected identities into the model and publishes its existing-person merges", async () => {
+    const { root, coordinator, knowledge, store, target, start, emit } = await fixture();
+    const relativePath = "demo/wiki/07 实体/人物/自己.md";
+    await mkdir(path.dirname(path.join(root, relativePath)), { recursive: true });
+    await writeFile(path.join(root, relativePath), "---\ntype: entity\naliases: [我]\n---\n# 自己\n\n匿名叙述者本人。\n");
+    await knowledge.rebuildIfActive("demo");
+    const page = knowledge.index.list().find((p) => p.relativePath === relativePath)!;
+    const box = { x: 0, y: 0, width: 1, height: 1 };
+    await store.update(knowledge.index.config, target.importId, { revision: 1, photoId: "photo-1", people: [
+      { id: "chosen", name: "自己", pageId: page.id, box, useAsAvatar: true },
+      { id: "self", name: "我", box, useAsAvatar: true },
+    ], story: "这两处都是我自己。" }, knowledge.index);
+    const run = await coordinator.start({ mode: "write", knowledgeBaseId: "demo", prompt: "构建确认故事", sourceContext: { importId: target.importId, storedPath: target.storedPath, flow: "dialogue", operation: "build" } });
+    const prompt = start.mock.calls[0]![0].prompt;
+    expect(prompt).toContain(`"pageId":"${page.id}"`);
+    expect(prompt).toContain('"aliases":["我"]');
+    expect(prompt).toContain("无需为人物合并二次询问");
+    expect(prompt).toContain('"personId":"self","name":"我","identity":"待模型匹配"');
+    emit(run, { type: "turn.completed", outcome: "completed", finalAnswer: `已关联本人档案。<photo-people>${JSON.stringify({ people: [{ photoId: "photo-1", personId: "self", pageId: page.id }] })}</photo-people>` });
+    await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("completed"));
+    const memory = await store.read(knowledge.index.config, target.importId);
+    expect(memory.builtPeople?.map((p) => p.pageId)).toEqual([page.id, page.id]);
+    expect((await coordinator.get(run.id))?.result?.finalAnswer).toBe("已关联本人档案。");
+    expect(await sharp(await store.assetPath(knowledge.index.config, target.importId, "photo-1", "self")).metadata()).toMatchObject({ width: 256, height: 256 });
+  });
   it("publishes an explicitly consented avatar only after the build run passes validation", async () => {
     const { root, coordinator, knowledge, store, target, emit } = await fixture();
     await store.update(knowledge.index.config, target.importId, { revision: 1, photoId: "photo-1", people: [{ id: "new-person", name: "匿名人物", useAsAvatar: true, box: { x: 0, y: 0, width: 1, height: 1 } }], story: "我与匿名人物的一次出游。" }, knowledge.index);

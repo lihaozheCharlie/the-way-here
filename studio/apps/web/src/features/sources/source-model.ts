@@ -18,7 +18,7 @@ export const sourceRecordTypes: ReadonlyArray<{ id: "all" | SourceRecordType; la
   { id: "notes", label: "日记与笔记" },
   { id: "ai", label: "AI 对话" },
   { id: "bill", label: "消费账单" },
-  { id: "photos", label: "照片与影像" },
+  { id: "photos", label: "照片" },
 ];
 
 export function cleanSourcePath(relativePath: string): string {

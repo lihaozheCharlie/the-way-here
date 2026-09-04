@@ -1,10 +1,10 @@
 import { useId, useRef } from "react";
 import type { PhotoPerson } from "@the-way-here/shared";
-import { PhotoPersonPicker } from "./PhotoPersonPicker";
+import { PhotoPersonPicker, type PhotoPersonOption } from "./PhotoPersonPicker";
 import { clampPhotoBox } from "./photo-model";
 
 export function PhotoPeopleEditor({ people, editing, selectedId, locked, onSelect, onChange, onRemove }: {
-  people: Array<{ id: string; title: string }>;
+  people: PhotoPersonOption[];
   editing: PhotoPerson[];
   selectedId: string;
   locked: boolean;

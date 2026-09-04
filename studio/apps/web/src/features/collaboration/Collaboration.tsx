@@ -127,7 +127,7 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
     setOutputTarget(context.defaultOutputTarget);
     setSourceContext(context.defaultSourceContext);
     setView(boundRunId ? "history" : "compose");
-    if (boundRunId) setOpen(true);
+    // Restore the bound conversation quietly; only an explicit action opens the dock.
     setError("");
     pendingAutoSubmissionRef.current = undefined;
   }, [boundRunId, context.defaultMode, context.defaultOutputTarget, context.defaultSourceContext, contextIdentity, runsLoading]);
@@ -291,10 +291,12 @@ function AgentHistory({ threads, loading, error, knowledgeBaseName, onOpen, onNe
 }
 
 function ContextualRunPanel({ runId, revision, runList, onRunId, onNew }: { runId: string; revision: number; runList: WikiRun[]; onRunId: (id: string) => void; onNew: () => void }) {
-  const { data: run, loading, error } = useApi<WikiRun>(`/api/runs/${runId}`, revision);
+  const [actionRevision, setActionRevision] = useState(0);
+  const { data: run, loading, error } = useApi<WikiRun>(`/api/runs/${runId}`, revision + actionRevision);
   const returnContext = useReturnContext();
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [actionError, setActionError] = useState("");
   const [detailView, setDetailView] = useState<RunDetailView>("changes");
   const statusRef = useRef<HTMLDivElement>(null);
@@ -308,6 +310,8 @@ function ContextualRunPanel({ runId, revision, runList, onRunId, onNew }: { runI
     return () => window.cancelAnimationFrame(frame);
   }, [runId, loading]);
   useLayoutEffect(() => resizeComposerTextarea(replyTextareaRef.current), [reply]);
+  useEffect(() => { setStopping(false); }, [runId]);
+  useEffect(() => { if (run && ["completed", "failed", "interrupted"].includes(run.status)) setStopping(false); }, [run?.status]);
   if (loading && !run) return <Loading label="正在接入知识上下文" />;
   if (error || !run) return <div className="context-run-error"><p>{error || "这次对话没有找到。"}</p><button onClick={() => onRunId("")}>返回对话历史</button></div>;
   const activeRun = run;
@@ -336,17 +340,21 @@ function ContextualRunPanel({ runId, revision, runList, onRunId, onNew }: { runI
   }
 
   async function interrupt() {
+    if (!active || activeRun.status === "validating" || stopping) return;
+    setStopping(true);
     setActionError("");
     try {
       await api(`/api/runs/${activeRun.id}/interrupt`, { method: "POST" });
+      setActionRevision((value) => value + 1);
     } catch (reason: any) {
+      setStopping(false);
       setActionError(reason.message);
     }
   }
 
   async function followUp(event: React.FormEvent) {
     event.preventDefault();
-    if (!reply.trim()) return;
+    if (!reply.trim() || sending || stopping || activeRun.status === "validating") return;
     if (active && legacyJourneyConversation) {
       setActionError("这段旧对话仍在按原流程运行；等本轮结束后再继续，下一轮就会切换为只更新消费旅程报告。");
       return;
@@ -354,7 +362,7 @@ function ContextualRunPanel({ runId, revision, runList, onRunId, onNew }: { runI
     setSending(true);
     setActionError("");
     try {
-      if (active && activeRun.status !== "validating") {
+      if (active) {
         await api(`/api/runs/${activeRun.id}/steer`, { method: "POST", body: JSON.stringify({ prompt: reply }) });
       } else {
         const legacyJourneyTarget = activeRun.sourceContext?.flow === "dialogue" && activeRun.outputTarget?.kind !== "journey-report" && !isPhotoConversation
@@ -410,11 +418,18 @@ function ContextualRunPanel({ runId, revision, runList, onRunId, onNew }: { runI
       </section>;
       })}</div>
       {activeRun.approvals.map((approval) => <section className="context-approval-box" key={String(approval.requestId)} aria-live="polite"><span>需要你确认</span><h3>{approval.title}</h3><p>{approval.detail || String(approval.params?.reason || approval.params?.command || approval.method || approval.operation)}</p><small>允许只对这一次请求生效；拒绝后会保留现状。</small><div><button type="button" onClick={() => approve(approval.requestId, "deny")}>先不要</button><button type="button" className="primary-action" onClick={() => approve(approval.requestId, "allow-once")}>允许一次</button></div></section>)}
-      {active && activeRun.status !== "validating" && <button type="button" className="context-stop-run" onClick={interrupt}>停止这次任务</button>}
       {actionError && <p className="context-agent-error" role="alert">{actionError}</p>}
       {hasFailed && <button type="button" className="context-retry-run" onClick={onNew}>带着新问题重新开始</button>}
     </div>
-    {activeRun.mode !== "validate" && <form className={`context-run-reply${isJourneyConversation ? " is-journey" : ""}`} onSubmit={followUp}>{isJourneyConversation ? <header className="context-journey-reply-heading"><b>{isPhotoConversation ? "继续聊聊，丰富这段记忆" : "继续聊聊，丰富旅程"}</b><span>你的下一段讲述只会更新报告，不会构建 Wiki。</span></header> : null}<label className="sr-only" htmlFor={`context-run-reply-${run.id}`}>{active ? "再补充一句" : "沿着这件事继续聊"}</label><div className="context-composer-shell"><textarea ref={replyTextareaRef} id={`context-run-reply-${run.id}`} name="context-run-reply" autoComplete="off" value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={submitAgentFormOnEnter} placeholder={active && legacyJourneyConversation ? "本轮结束后即可按新流程继续…" : isJourneyConversation ? "补充人物、动机、当时的感受，或告诉我哪里需要修正…" : active ? "补充范围、来路，或者告诉我希望避开什么…" : "接着说，或者提出新的要求"} rows={1} disabled={active && legacyJourneyConversation} /><button type="submit" className="context-agent-send" disabled={sending || !reply.trim() || active && legacyJourneyConversation} aria-label={sending ? "正在发送" : active ? "补充一句" : "继续聊聊"}><Icon name="up" size={16} /></button></div></form>}
+    {activeRun.mode !== "validate" && <form className={`context-run-reply${isJourneyConversation ? " is-journey" : ""}`} onSubmit={followUp}>
+      {isJourneyConversation ? <header className="context-journey-reply-heading"><b>{isPhotoConversation ? "继续聊聊，丰富这段记忆" : "继续聊聊，丰富旅程"}</b><span>你的下一段讲述只会更新报告，不会构建 Wiki。</span></header> : null}
+      <label className="sr-only" htmlFor={`context-run-reply-${run.id}`}>{active ? "再补充一句" : "沿着这件事继续聊"}</label>
+      <div className="context-composer-shell">
+        <textarea ref={replyTextareaRef} id={`context-run-reply-${run.id}`} name="context-run-reply" autoComplete="off" value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={submitAgentFormOnEnter} placeholder={activeRun.status === "validating" ? "检查完成后即可继续聊聊…" : active && legacyJourneyConversation ? "本轮结束后即可按新流程继续…" : active ? "补充说明，按 Enter 发送…" : isJourneyConversation ? "补充人物、动机、当时的感受，或告诉我哪里需要修正…" : "接着说，或者提出新的要求"} rows={1} disabled={active && legacyJourneyConversation} />
+        {active ? <button type="button" className="context-agent-send" onClick={interrupt} disabled={stopping || activeRun.status === "validating"} aria-label={stopping ? "正在停止" : "停止任务"} title={stopping ? "正在停止…" : activeRun.status === "validating" ? "正在检查，暂时无法停止" : "停止任务"} aria-busy={stopping}><Icon name="stop" size={16} /></button>
+          : <button type="submit" className="context-agent-send" disabled={sending || !reply.trim()} aria-label={sending ? "正在发送" : "继续聊聊"} title={sending ? "正在发送…" : "继续聊聊"}><Icon name="up" size={16} /></button>}
+      </div>
+    </form>}
   </div>;
 }
 
