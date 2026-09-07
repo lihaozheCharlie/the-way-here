@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import type { WikiPageSummary } from "@the-way-here/shared";
-import type { ReturnContext } from "../app/config";
+
+export type ReturnContext = { returnTo: string; returnLabel: string };
 
 export function useLiveRevision(): number {
   const [revision, setRevision] = useState(0);

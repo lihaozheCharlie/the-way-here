@@ -13,27 +13,9 @@ import { AgentSettingsStore, AgentSettingsValidationError, type AgentSettingsSna
 import { CodexRuntimeAdapter } from "./codex-runtime-adapter.js";
 import { PiRuntimeAdapter } from "./pi/pi-runtime-adapter.js";
 import { listThirdPartyProviderPresets } from "./third-party-provider-catalog.js";
-import type { AgentRuntime, AgentRuntimeEnvelope } from "./types.js";
+import type { AgentRuntime, AgentRuntimeEnvelope, AgentRuntimeProvider, AgentRuntimeSettings, ResolvedAgentSelection } from "./types.js";
 
-export interface ResolvedAgentSelection {
-  runtime: AgentRuntime;
-  runtimeId: AgentRuntimeId;
-  model: AgentModelOption;
-  effort: AgentReasoningEffort;
-}
-
-export interface AgentRuntimeProvider {
-  catalog(): Promise<AgentRuntimeDescriptor[]>;
-  providerPresets(): AgentProviderPreset[];
-  settings(): AgentGlobalSettings;
-  updateSettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings>;
-  resolve(preference: AgentRuntimePreference | undefined, requestedModel: string | undefined, requestedEffort: AgentReasoningEffort | undefined): Promise<ResolvedAgentSelection>;
-  require(id: AgentRuntimeId): AgentRuntime;
-  subscribe(listener: (envelope: AgentRuntimeEnvelope) => void): () => void;
-  close(): void;
-}
-
-export class AgentRuntimeRegistry implements AgentRuntimeProvider {
+export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeSettings {
   private readonly runtimes = new Map<AgentRuntimeId, AgentRuntime>();
   private readonly listeners = new Set<(envelope: AgentRuntimeEnvelope) => void>();
   private readonly enabled: Record<AgentRuntimeId, boolean>;

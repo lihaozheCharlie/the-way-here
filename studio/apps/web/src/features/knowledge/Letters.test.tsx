@@ -2,11 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LettersView, WikiPage, WikiPageSummary, WikiRun } from "@the-way-here/shared";
-import { Letters } from "./KnowledgePages";
+import { Letters } from "./Letters";
 import { EditableDocument } from "../../shared/markdown";
 
 const mocks = vi.hoisted(() => ({ useApi: vi.fn() }));
-vi.mock("../../api", () => ({ useApi: mocks.useApi }));
+vi.mock("../../shared/use-api", () => ({ useApi: mocks.useApi }));
 vi.mock("../collaboration/Collaboration", () => ({ ContextualAgentDock: () => null }));
 
 const page: WikiPageSummary = { id: "letter-new", title: "2026-02-20 给自己的信", relativePath: "wiki/letters/new.md", excerpt: "不应重复出现在列表的摘要", tags: [], aliases: [], category: "letters", locations: [], sources: [], modifiedAt: "2026-02-20T00:00:00Z", isSource: false };

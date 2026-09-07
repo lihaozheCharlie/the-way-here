@@ -1,3 +1,4 @@
+import { isTerminalRunStatus } from "@the-way-here/shared";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -6,7 +7,7 @@ import { JOURNEY_REPORT_DRAFT_END, JOURNEY_REPORT_DRAFT_START, type PaymentJourn
 import { prepareImportBatch } from "./prepare-import.js";
 import { prepareAlipayStatement } from "./payment-statement.js";
 import { isPathInside, normalizeSourceFolder } from "../../path-policy.js";
-import { KnowledgeRuntime } from "../../runtime/knowledge-runtime.js";
+import type { ContentWorkspace } from "../content/content-workspace.js";
 
 const importChannels = new Set<SourceImportChannel>(["files", "chatgpt", "claude", "gemini", "deepseek", "doubao", "other-ai", "alipay"]);
 
@@ -20,7 +21,7 @@ export class ImportRequestError extends Error {
 }
 
 export class ImportStore {
-  constructor(private readonly knowledge: KnowledgeRuntime) {}
+  constructor(private readonly knowledge: ContentWorkspace) {}
 
   async list(runs: WikiRun[] = []): Promise<SourceImportBatch[]> {
     const sourceRoot = this.sourceRoot();
@@ -280,7 +281,7 @@ export class ImportStore {
       }
       const run = relatedRuns[0];
       if (!run || file.buildRunId === run.id && file.buildStatus === resolvedBuildStatus(file.buildKind, run)) continue;
-      if (file.buildStatus === "deferred" && ["completed", "failed", "interrupted"].includes(run.status)) continue;
+      if (file.buildStatus === "deferred" && isTerminalRunStatus(run.status)) continue;
       const status = resolvedBuildStatus(file.buildKind, run);
       const refs = status === "built" ? this.builtRefs(run) : undefined;
       if (file.buildRunId !== run.id || file.buildStatus !== status || JSON.stringify(file.builtRefs) !== JSON.stringify(refs)) changed = true;

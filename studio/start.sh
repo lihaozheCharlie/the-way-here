@@ -201,9 +201,9 @@ echo "[2/4] 检查并安装项目依赖"
 "${PNPM[@]}" install --frozen-lockfile
 
 echo "[3/4] 构建本地服务"
-"${PNPM[@]}" --filter @the-way-here/web exec tsc --noEmit
-"${PNPM[@]}" --filter @the-way-here/web exec vite build
-"${PNPM[@]}" --filter @the-way-here/server build
+# Keep the launcher on the same build path as development and CI. The web
+# build prepares ignored MediaPipe/ONNX assets before Vite copies public/.
+"${PNPM[@]}" build
 
 echo "[4/4] 启动完成"
 echo "按 Ctrl+C 停止 the-way-here。"

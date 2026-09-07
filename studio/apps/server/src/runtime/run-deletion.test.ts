@@ -5,7 +5,7 @@ import type { FastifyBaseLogger } from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentRuntimeEvent, WikiRun } from "@the-way-here/shared";
 import { stateRootForVault } from "@the-way-here/run-manager";
-import type { AgentRuntimeProvider } from "./agent-runtime/registry.js";
+import type { AgentRuntimeProvider } from "./agent-runtime/types.js";
 import type { AgentRuntimeEnvelope, StartAgentExecution } from "./agent-runtime/types.js";
 import { KnowledgeRuntime } from "./knowledge-runtime.js";
 import { RunCoordinator } from "./run-coordinator.js";

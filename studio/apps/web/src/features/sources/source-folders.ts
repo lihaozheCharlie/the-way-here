@@ -1,5 +1,5 @@
 import type { SourceFolderSummary } from "@the-way-here/shared";
-import { useApi } from "../../api";
+import { useApi } from "../../shared/use-api";
 
 const sourceFoldersEndpoint = "/api/sources/folders";
 

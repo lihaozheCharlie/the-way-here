@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { photoAssetUrl, type PhotoMemory, type VaultInfo } from "@the-way-here/shared";
-import { useApi } from "../../api";
+import { useApi } from "../../shared/use-api";
 import { Icon } from "../../shared/ui";
 import { cleanSourcePath, sourceBuildPresentation, type SourceBuildRecord } from "./source-model";
 import "./source-memories.css";

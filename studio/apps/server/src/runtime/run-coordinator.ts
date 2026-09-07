@@ -1,56 +1,24 @@
+import { isTerminalRunStatus } from "@the-way-here/shared";
 import path from "node:path";
+import { RunOutputs } from "../services/run-outputs.js";
+import { RunRequestError, type StartRunInput } from "../services/run-request.js";
 import type { FastifyBaseLogger } from "fastify";
 import { RunStore } from "@the-way-here/run-manager";
 import type {
   AgentApprovalDecision,
   DeletedAgentConversation,
-  AgentGlobalSettings,
-  AgentModelOption,
-  AgentOutputTarget,
-  AgentProviderPreset,
-  AgentReasoningEffort,
-  AgentRuntimeDescriptor,
   AgentRuntimeId,
-  AgentRuntimePreference,
   SourceRunContext,
-  UpdateAgentGlobalSettings,
   WikiRun,
 } from "@the-way-here/shared";
-import { JourneyReportStore, JourneyReportTargetError } from "../modules/imports/journey-report-store.js";
-import { photoPeopleVisibleAnswer } from "../modules/imports/photo-person-bindings.js";
-import { PhotoMemoryStore, PhotoMemoryError } from "../modules/imports/photo-memory-store.js";
 import { addOutputTargetInstructions, buildRunPrompt, parseAgentOutputTarget, parseAgentRuntimePreference, parseReasoningEffort, parseRunMode } from "../services/run-policy.js";
 import { runValidationCommands } from "../services/validation-runner.js";
-import type { AgentExecutionRef, AgentRuntimeEnvelope } from "./agent-runtime/types.js";
-import type { AgentRuntimeProvider, ResolvedAgentSelection } from "./agent-runtime/registry.js";
-import { AgentSettingsValidationError } from "./agent-runtime/agent-settings-store.js";
-import { KnowledgeRuntime } from "./knowledge-runtime.js";
-
-export type StartRunInput = {
-  title?: string;
-  prompt?: string;
-  displayPrompt?: string;
-  mode?: WikiRun["mode"];
-  knowledgeBaseId?: string;
-  runtimeId?: AgentRuntimePreference;
-  sessionId?: string;
-  model?: string;
-  effort?: AgentReasoningEffort;
-  outputTarget?: AgentOutputTarget;
-  sourceContext?: SourceRunContext;
-  contextPageId?: string;
-};
-
-export class RunRequestError extends Error {
-  constructor(readonly statusCode: number, message: string, readonly payload?: unknown) {
-    super(message);
-  }
-}
+import type { AgentExecutionRef, AgentRuntimeEnvelope, AgentRuntimeProvider, ResolvedAgentSelection } from "./agent-runtime/types.js";
+import type { KnowledgeRuntime } from "./knowledge-runtime.js";
 
 export class RunCoordinator {
   private readonly runs: RunStore;
-  private readonly journeyReports: JourneyReportStore;
-  private readonly photoMemories: PhotoMemoryStore;
+  private readonly outputs: RunOutputs;
   private readonly runByExecution = new Map<string, string>();
 
   constructor(
@@ -59,8 +27,7 @@ export class RunCoordinator {
     private readonly logger: FastifyBaseLogger,
   ) {
     this.runs = new RunStore(knowledge.vaultRoot, undefined, [path.join(knowledge.vaultRoot, "vault")]);
-    this.journeyReports = new JourneyReportStore(knowledge.vaultRoot);
-    this.photoMemories = new PhotoMemoryStore(knowledge.vaultRoot);
+    this.outputs = new RunOutputs(knowledge.vaultRoot);
     this.runtimes.subscribe((envelope) => {
       void this.recordRuntimeEvent(envelope).catch((error) => this.logger.error(error));
     });
@@ -72,7 +39,7 @@ export class RunCoordinator {
   }
 
   async hasActiveKnowledgeBaseRun(knowledgeBaseId: string): Promise<boolean> {
-    return (await this.runs.list()).some((run) => run.knowledgeBaseId === knowledgeBaseId && !["completed", "failed", "interrupted"].includes(run.status));
+    return (await this.runs.list()).some((run) => run.knowledgeBaseId === knowledgeBaseId && !isTerminalRunStatus(run.status));
   }
 
   get(id: string): Promise<WikiRun | undefined> {
@@ -87,7 +54,7 @@ export class RunCoordinator {
     const conversationRuns = visibleRuns.filter((run) => requested.runtimeSessionId
       ? run.runtimeSessionId === requested.runtimeSessionId
       : run.id === requested.id);
-    if (conversationRuns.some((run) => !["completed", "failed", "interrupted"].includes(run.status))) {
+    if (conversationRuns.some((run) => !isTerminalRunStatus(run.status))) {
       throw new RunRequestError(409, "这段对话仍在进行，请先结束后再删除");
     }
 
@@ -108,33 +75,6 @@ export class RunCoordinator {
     return deleted;
   }
 
-  models(): Promise<AgentModelOption[]> {
-    return this.runtimes.catalog().then((catalog) => catalog.flatMap((runtime) => runtime.models));
-  }
-
-  runtimeCatalog(): Promise<AgentRuntimeDescriptor[]> {
-    return this.runtimes.catalog();
-  }
-
-  providerPresets(): AgentProviderPreset[] {
-    return this.runtimes.providerPresets();
-  }
-
-  agentSettings(): AgentGlobalSettings {
-    return this.runtimes.settings();
-  }
-
-  async updateAgentSettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings> {
-    try {
-      const settings = await this.runtimes.updateSettings(input);
-      this.knowledge.events.broadcast("agent-settings", settings);
-      return settings;
-    } catch (error) {
-      if (error instanceof AgentSettingsValidationError) throw new RunRequestError(400, error.message);
-      throw error;
-    }
-  }
-
   async start(input: StartRunInput): Promise<WikiRun> {
     for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId]] as const) {
       if (value !== undefined && typeof value !== "string") throw new RunRequestError(400, `${field} 必须是字符串`);
@@ -153,20 +93,7 @@ export class RunCoordinator {
     if (contextPageId && !resolvedKnowledge.index.get(contextPageId)) throw new RunRequestError(404, "绑定的上下文文件不存在");
     const outputTarget = input.outputTarget === undefined ? undefined : parseAgentOutputTarget(input.outputTarget);
     if (input.outputTarget !== undefined && !outputTarget) throw new RunRequestError(400, "结果保存目标无效");
-    if (outputTarget) {
-      if (outputTarget.kind === "letter-version") {
-        const targetPage = resolvedKnowledge.index.get(outputTarget.pageId);
-        if (!targetPage || targetPage.category !== "letters") throw new RunRequestError(404, "要保存版本的回信不存在");
-      } else if (outputTarget.kind === "journey-report") {
-        if (mode !== "read") throw new RunRequestError(400, "消费旅程对话必须使用只读模式");
-        try {
-          await this.journeyReports.assertTarget(taskConfig, outputTarget);
-        } catch (error) {
-          if (error instanceof JourneyReportTargetError) throw new RunRequestError(404, error.message);
-          throw error;
-        }
-      }
-    }
+    await this.outputs.assertTarget(taskConfig, resolvedKnowledge.index, mode, outputTarget);
     const normalizedInput = { ...input, outputTarget, contextPageId };
     if (!prompt && mode !== "validate") throw new RunRequestError(400, "请输入任务内容");
     const requestedEffort = input.effort ? parseReasoningEffort(input.effort) : undefined;
@@ -196,47 +123,10 @@ export class RunCoordinator {
     normalizedInput.contextPageId = contextPageId || previous?.contextPageId;
     if (previous && previous.knowledgeBaseId !== taskConfig.knowledgeBaseId) throw new RunRequestError(400, "不能跨知识库继续同一段对话");
     if (previous?.outputTarget?.kind === "photo-memory" && mode !== "read") throw new RunRequestError(400, "照片对话保持只读，请另开构建任务");
-    let photoInput: { images?: Array<{ path: string; mimeType: "image/jpeg" }>; prompt: string } | undefined;
-    try {
-      if (normalizedInput.outputTarget?.kind === "photo-memory") {
-        if (mode !== "read") throw new PhotoMemoryError(400, "照片对话只保存草稿，请另行构建");
-        const target = normalizedInput.outputTarget;
-        normalizedInput.outputTarget = await this.photoMemories.prepare(taskConfig, target);
-        if (await this.hasActiveKnowledgeBaseRun(taskConfig.knowledgeBaseId)) throw new PhotoMemoryError(409, "请等当前任务完成后，再继续照片记忆");
-        normalizedInput.sourceContext = target.phase === "enrich" ? { importId: target.importId, storedPath: target.storedPath, flow: "dialogue", operation: "enrich" } : undefined;
-        photoInput = target.phase === "draft" ? await this.photoMemories.storyInput(taskConfig, target.importId, target.photoId!) : { prompt: await this.photoMemories.context(taskConfig, target.importId) };
-      }
-      if (normalizedInput.sourceContext?.operation === "build") {
-        const source = normalizedInput.sourceContext;
-        const page = resolvedKnowledge.index.list({ sources: true }).find((p) => p.relativePath === source.storedPath);
-        if (page?.importChannel === "photos") {
-          await this.photoMemories.assertBuild(taskConfig, source.importId, source.storedPath);
-          photoInput = { prompt: await this.photoMemories.buildContext(taskConfig, source.importId, resolvedKnowledge.index) };
-        }
-        if (page?.importChannel === "alipay") await this.journeyReports.assertBuild(taskConfig, source.importId, source.storedPath);
-      }
-    } catch (error) {
-      if (error instanceof PhotoMemoryError) throw new RunRequestError(error.statusCode, error.message);
-      if (error instanceof JourneyReportTargetError) throw new RunRequestError(409, error.message);
-      throw error;
-    }
-    if (normalizedInput.outputTarget?.kind === "journey-report" && mode !== "read") {
-      throw new RunRequestError(400, "消费旅程对话必须保持只读；请另行点击构建这份记录");
-    }
-    if (normalizedInput.outputTarget?.kind === "journey-report") {
-      const target = normalizedInput.outputTarget;
-      const context = normalizedInput.sourceContext;
-      if (context && (context.importId !== target.importId || context.storedPath !== target.storedPath || context.flow !== "dialogue" || context.operation && context.operation !== "enrich")) {
-        throw new RunRequestError(400, "消费旅程报告与对话上下文不一致");
-      }
-      normalizedInput.sourceContext = { importId: target.importId, storedPath: target.storedPath, flow: "dialogue", operation: "enrich" };
-      try {
-        normalizedInput.outputTarget = await this.journeyReports.prepareTarget(taskConfig, target);
-      } catch (error) {
-        if (error instanceof JourneyReportTargetError) throw new RunRequestError(409, error.message);
-        throw error;
-      }
-    }
+    const prepared = await this.outputs.prepare(taskConfig, resolvedKnowledge.index, mode, normalizedInput,
+      () => this.hasActiveKnowledgeBaseRun(taskConfig.knowledgeBaseId));
+    normalizedInput.outputTarget = prepared.outputTarget;
+    normalizedInput.sourceContext = prepared.sourceContext;
     let selection: ResolvedAgentSelection;
     try {
       selection = await this.runtimes.resolve(
@@ -247,7 +137,7 @@ export class RunCoordinator {
     } catch (error: any) {
       throw new RunRequestError(503, error.message || "没有可用的 Agent 运行时");
     }
-    if (photoInput?.images?.length && !selection.model.inputModalities?.includes("image")) throw new RunRequestError(400, "当前模型未声明图片能力，请在 AI 设置中选择视觉模型，或跳过分析手动讲述");
+    if (prepared.images?.length && !selection.model.inputModalities?.includes("image")) throw new RunRequestError(400, "当前模型未声明图片能力，请在 AI 设置中选择视觉模型，或跳过分析手动讲述");
     const run = await this.createRun(normalizedInput, mode, prompt!, taskConfig, {
       runtimeId: selection.runtimeId,
       provider: selection.model.provider,
@@ -260,9 +150,9 @@ export class RunCoordinator {
       if (mode === "write" || mode === "auto") await this.runs.snapshot(run.id, taskConfig);
       const ref = await selection.runtime.start({
         cwd: this.knowledge.vaultRoot,
-        prompt: buildRunPrompt(mode, addOutputTargetInstructions(`${prompt!}${photoInput ? `\n\n${photoInput.prompt}` : ""}`, normalizedInput.outputTarget), taskConfig),
-        images: photoInput?.images,
-        strictReadOnly: normalizedInput.outputTarget?.kind === "photo-memory",
+        prompt: buildRunPrompt(mode, addOutputTargetInstructions(`${prompt!}${prepared.prompt ? `\n\n${prepared.prompt}` : ""}`, normalizedInput.outputTarget), taskConfig),
+        images: prepared.images,
+        strictReadOnly: prepared.strictReadOnly,
         model: selection.model.id,
         effort: selection.effort,
         mode,
@@ -314,11 +204,11 @@ export class RunCoordinator {
     for (const stored of await this.runs.list()) {
       const run = await this.ensureContext(stored);
       persisted.push(run);
-      if (await this.runs.isLegacyWorkspaceRun(run.id) && !run.recoveredFromLegacyWorkspace && ["completed", "failed", "interrupted"].includes(run.status)) {
+      if (await this.runs.isLegacyWorkspaceRun(run.id) && !run.recoveredFromLegacyWorkspace && isTerminalRunStatus(run.status)) {
         await this.runs.update(run.id, { recoveredFromLegacyWorkspace: true, changes: [] });
       }
     }
-    for (const run of persisted.filter((entry) => entry.runtimeId && entry.runtimeSessionId && entry.runtimeTurnId && !["completed", "failed", "interrupted"].includes(entry.status))) {
+    for (const run of persisted.filter((entry) => entry.runtimeId && entry.runtimeSessionId && entry.runtimeTurnId && !isTerminalRunStatus(entry.status))) {
       const ref = refOf(run);
       try {
         const recovered = await this.runtimes.require(ref.runtimeId).recover(ref);
@@ -413,26 +303,13 @@ export class RunCoordinator {
     if (!stored || ["validating", "completed", "failed", "interrupted"].includes(stored.status)) return;
     const run = await this.ensureContext(stored);
     if (run.mode === "read") {
-      if (run.outputTarget?.kind === "photo-memory") {
-        try {
-          const saved = await this.photoMemories.materialize(run.configSnapshot, run.outputTarget, run.result?.finalAnswer || "");
-          await this.runs.update(runId, { status: "completed", result: { ...run.result, finalAnswer: saved.visibleAnswer, outputSavedAt: saved.savedAt, completedAt: saved.savedAt } });
-        } catch (error: any) {
-          await this.runs.update(runId, { status: "failed", error: error.message, result: { ...run.result, completedAt: new Date().toISOString() } });
-        }
-        return;
+      try {
+        const saved = await this.outputs.materialize(run);
+        if (saved.rebuild) await this.knowledge.rebuildIfActive(run.knowledgeBaseId);
+        await this.runs.update(runId, { status: "completed", result: saved.result });
+      } catch (error: any) {
+        await this.runs.update(runId, { status: "failed", error: error.message, result: { ...run.result, completedAt: new Date().toISOString() } });
       }
-      if (run.outputTarget?.kind === "journey-report") {
-        try {
-          const saved = await this.journeyReports.materialize(run.configSnapshot, run.outputTarget, run.result?.finalAnswer || "", run.id);
-          await this.knowledge.rebuildIfActive(run.knowledgeBaseId);
-          await this.runs.update(runId, { status: "completed", result: { ...run.result, finalAnswer: saved.visibleAnswer, outputSavedAt: saved.savedAt, completedAt: saved.savedAt } });
-        } catch (error: any) {
-          await this.runs.update(runId, { status: "failed", error: error?.message || "消费旅程报告没有更新", result: { ...run.result, completedAt: new Date().toISOString() } });
-        }
-        return;
-      }
-      await this.runs.update(runId, { status: "completed", result: { ...run.result, completedAt: new Date().toISOString() } });
       return;
     }
     if (run.mode === "auto") {
@@ -449,15 +326,10 @@ export class RunCoordinator {
     await this.knowledge.rebuildIfActive(run.knowledgeBaseId);
     if (valid && run.sourceContext?.operation === "build") {
       const resolved = await this.knowledge.resolve(run.knowledgeBaseId);
-      const page = resolved.index.list({ sources: true }).find((p) => p.relativePath === run.sourceContext?.storedPath);
-      if (page?.importChannel === "photos") {
-        const finished = await this.runs.get(runId);
-        try {
-          await this.photoMemories.publish(run.configSnapshot, run.sourceContext.importId, resolved.index, finished?.changes.filter((change) => change.kind === "added").map((change) => change.path) || [], run.result?.finalAnswer || "");
-          if (run.result?.finalAnswer) run.result.finalAnswer = photoPeopleVisibleAnswer(run.result.finalAnswer);
-        }
-        catch (error: any) { await this.runs.addEvent(runId, { kind: "diagnostic", message: `知识已构建，但人物影像未更新：${error.message}` }); }
-      }
+      const finished = await this.runs.get(runId);
+      const published = await this.outputs.publish(run, resolved.index, finished?.changes || []);
+      if (published.finalAnswer !== undefined && run.result) run.result.finalAnswer = published.finalAnswer;
+      if (published.diagnostic) await this.runs.addEvent(runId, { kind: "diagnostic", message: published.diagnostic });
     }
     await this.runs.update(runId, {
       status: valid ? "completed" : "failed",

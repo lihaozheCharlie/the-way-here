@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RunCoordinator } from "../runtime/run-coordinator.js";
-import { RunRequestError } from "../runtime/run-coordinator.js";
+import { RunRequestError } from "../services/run-request.js";
 import { registerRunRoutes } from "./run-routes.js";
 
 const apps: ReturnType<typeof Fastify>[] = [];

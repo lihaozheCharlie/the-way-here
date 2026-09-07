@@ -9,7 +9,7 @@ import { stateRootForVault } from "@the-way-here/run-manager";
 import { PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
 import { KnowledgeRuntime } from "./knowledge-runtime.js";
 import { RunCoordinator } from "./run-coordinator.js";
-import type { AgentRuntimeProvider } from "./agent-runtime/registry.js";
+import type { AgentRuntimeProvider } from "./agent-runtime/types.js";
 import type { AgentRuntimeEnvelope, StartAgentExecution } from "./agent-runtime/types.js";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -38,7 +38,7 @@ async function fixture(vision = true) {
 }
 
 describe("photo-memory runtime contract", () => {
-  it("carries selected identities into the model and publishes its existing-person merges", async () => {
+  it.each(["已关联本人档案。", ""])("publishes existing-person merges and strips the payload with visible prefix %j", async (visibleAnswer) => {
     const { root, coordinator, knowledge, store, target, start, emit } = await fixture();
     const relativePath = "demo/wiki/07 实体/人物/自己.md";
     await mkdir(path.dirname(path.join(root, relativePath)), { recursive: true });
@@ -56,11 +56,11 @@ describe("photo-memory runtime contract", () => {
     expect(prompt).toContain('"aliases":["我"]');
     expect(prompt).toContain("无需为人物合并二次询问");
     expect(prompt).toContain('"personId":"self","name":"我","identity":"待模型匹配"');
-    emit(run, { type: "turn.completed", outcome: "completed", finalAnswer: `已关联本人档案。<photo-people>${JSON.stringify({ people: [{ photoId: "photo-1", personId: "self", pageId: page.id }] })}</photo-people>` });
+    emit(run, { type: "turn.completed", outcome: "completed", finalAnswer: `${visibleAnswer}<photo-people>${JSON.stringify({ people: [{ photoId: "photo-1", personId: "self", pageId: page.id }] })}</photo-people>` });
     await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("completed"));
     const memory = await store.read(knowledge.index.config, target.importId);
     expect(memory.builtPeople?.map((p) => p.pageId)).toEqual([page.id, page.id]);
-    expect((await coordinator.get(run.id))?.result?.finalAnswer).toBe("已关联本人档案。");
+    expect((await coordinator.get(run.id))?.result?.finalAnswer).toBe(visibleAnswer);
     expect(await sharp(await store.assetPath(knowledge.index.config, target.importId, "photo-1", "self")).metadata()).toMatchObject({ width: 256, height: 256 });
   });
   it("publishes an explicitly consented avatar only after the build run passes validation", async () => {

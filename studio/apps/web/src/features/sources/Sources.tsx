@@ -3,8 +3,10 @@ import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } f
 import { createPortal } from "react-dom";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import type { PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
-import { api, useApi } from "../../api";
-import { graphCategoryNames, type ReturnContext } from "../../app/config";
+import { api } from "../../api";
+import { useApi } from "../../shared/use-api";
+import { graphCategoryNames } from "../../shared/categories";
+import { type ReturnContext } from "../../shared/routing";
 import { ContextualAgentDock } from "../collaboration/Collaboration";
 import { openContextAgent } from "../collaboration/model";
 import { journeyDeepConversationPrompt, journeyOverviewConversationPrompt } from "./journey-conversation";

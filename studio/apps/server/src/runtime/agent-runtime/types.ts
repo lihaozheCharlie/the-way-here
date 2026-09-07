@@ -1,5 +1,10 @@
 import type {
   AgentApprovalDecision,
+  AgentGlobalSettings,
+  AgentModelOption,
+  AgentProviderPreset,
+  AgentRuntimePreference,
+  UpdateAgentGlobalSettings,
   AgentReasoningEffort,
   AgentRuntimeDescriptor,
   AgentRuntimeEvent,
@@ -61,4 +66,25 @@ export abstract class RuntimeEventSource {
   protected emit(envelope: AgentRuntimeEnvelope): void {
     for (const listener of this.listeners) listener(envelope);
   }
+}
+
+export interface ResolvedAgentSelection {
+  runtime: AgentRuntime;
+  runtimeId: AgentRuntimeId;
+  model: AgentModelOption;
+  effort: AgentReasoningEffort;
+}
+
+export interface AgentRuntimeProvider {
+  resolve(preference: AgentRuntimePreference | undefined, requestedModel: string | undefined, requestedEffort: AgentReasoningEffort | undefined): Promise<ResolvedAgentSelection>;
+  require(id: AgentRuntimeId): AgentRuntime;
+  subscribe(listener: (envelope: AgentRuntimeEnvelope) => void): () => void;
+  close(): void;
+}
+
+export interface AgentRuntimeSettings {
+  catalog(): Promise<AgentRuntimeDescriptor[]>;
+  providerPresets(): AgentProviderPreset[];
+  settings(): AgentGlobalSettings;
+  updateSettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings>;
 }

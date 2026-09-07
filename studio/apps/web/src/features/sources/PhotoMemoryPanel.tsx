@@ -1,7 +1,9 @@
+import { isTerminalRunStatus } from "@the-way-here/shared";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { photoAssetUrl, type PhotoBox, type PhotoMemory, type PhotoPerson, type RelationshipsView, type SourceImportBatch, type VaultInfo, type WikiRun } from "@the-way-here/shared";
-import { api, useApi } from "../../api";
+import { api } from "../../api";
+import { useApi } from "../../shared/use-api";
 import { Icon } from "../../shared/ui";
 import { openContextAgent } from "../collaboration/model";
 import { clampPhotoBox } from "./photo-model";
@@ -151,7 +153,7 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasLocalDraft, draftSaved]);
   const related = runs.filter((run) => run.knowledgeBaseId === knowledgeBaseId && (run.outputTarget?.kind === "photo-memory" && run.outputTarget.importId === batch.id || run.sourceContext?.importId === batch.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const active = related.find((run) => !finishedRuns.includes(run.id) && !["completed", "failed", "interrupted"].includes(run.status)) ?? (startedRun && !related.some((run) => run.id === startedRun.id) ? startedRun : undefined);
+  const active = related.find((run) => !finishedRuns.includes(run.id) && !isTerminalRunStatus(run.status)) ?? (startedRun && !related.some((run) => run.id === startedRun.id) ? startedRun : undefined);
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -161,7 +163,7 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
       fetching = true;
       try {
         const run = await api<WikiRun>(`/api/runs/${encodeURIComponent(active.id)}`, { signal: controller.signal });
-        if (["completed", "failed", "interrupted"].includes(run.status)) {
+        if (isTerminalRunStatus(run.status)) {
           const fresh = await api<PhotoMemory>(`${base}?knowledgeBaseId=${encodeURIComponent(knowledgeBaseId)}`, { signal: controller.signal });
           setMemory((current) => !current || fresh.revision >= current.revision ? fresh : current);
           setFinishedRuns((current) => [...current, run.id]);

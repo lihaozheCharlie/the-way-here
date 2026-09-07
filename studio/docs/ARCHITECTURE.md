@@ -124,32 +124,62 @@ agents:
 
 运行记录放在操作系统应用数据目录下的 `the-way-here/vaults/<workspace-hash>/`。记录包含知识库 ID、创建时配置、`runtimeId`、通用会话/回合 ID、provider、model、最终结果、可选的 `outputTarget`，以及发起会话时绑定的 `contextPageId`；后续轮次自动继承同一文件绑定。界面切换到某个文件时会恢复绑定到该文件的最新会话，运行中、等待审批和已结束状态使用同一恢复路径；旧版来源构建任务仍可通过 `sourceContext.storedPath` 匹配。删除历史按通用会话 ID 一次移除全部 Run；Pi 同步删除 `agent-sessions/pi/` 中的本机会话文件，已写入生活记录或 Wiki 的内容保持不变。Pi 对话也保存在该目录的 `agent-sessions/pi/`，不会直接写入知识文件。完成的人物视角重读通过 `letter-version` 目标关联到原回信；消费旅程通过 `journey-report` 目标由服务端只物化报告受管区，并记录 `outputSavedAt`。写入及 `auto` 任务的快照覆盖配置声明的根协议、Wiki、Skills、Tools 和来源。每个任务使用唯一临时文件，同一知识库内可能改写内容的任务串行执行；旧版 `threadId`/`turnId` 会按 Codex 运行时透明迁移，旧版并发写坏后仍保留首个完整 JSON 对象的记录可自动恢复。
 
-## 代码组织
+## 代码组织与依赖方向
 
-- `apps/server/src/index.ts`：只读取启动参数并启动 `StudioServer`，不包含业务路由或运行状态。
-- `apps/server/src/studio-server.ts`：后端的外部接口，负责装配模块、静态资源与生命周期。
-- `apps/server/src/runtime/knowledge-runtime.ts`：知识库索引、切换、文件监听与重建的深模块。
-- `apps/server/src/runtime/run-coordinator.ts`：运行时无关的任务状态、审批、验证和恢复编排深模块。
-- `apps/server/src/runtime/agent-runtime/`：通用运行时契约与注册表，以及 Codex/Pi 两个适配器；Pi 的模型目录、工具边界和会话仓库保持在适配器内部。
-- `apps/server/src/modules/content/page-writer.ts`：页面创建、保存、重命名、来源删除与并发安全写入。
-- `apps/server/src/modules/content/source-folder-catalog.ts`：当前知识库来源文件夹的单一读取接口，隐藏目录遍历与系统目录过滤。
-- `apps/server/src/modules/knowledge-bases/knowledge-base-manager.ts`：创建或删除隔离的知识库目录，并原子更新工作区注册表。
-- `apps/server/src/modules/imports/prepare-import.ts`：来源导入的单一准备接口，内部完成压缩包展开并分派到普通文件、聊天记录或账单适配器。
-- `apps/server/src/modules/imports/import-store.ts`：只负责导入批次落盘、清单状态和任务结果对账；`modules/skills/` 负责 Skill 目录读取。
-- `apps/server/src/modules/imports/payment-statement.ts`：支付宝账单的确定性解析、归并、聚类与回忆提示；后续支付平台通过同一账单导入 seam 增加适配器。
-- `apps/server/src/routes/`：HTTP 适配器，只处理请求/响应映射，不保存领域状态。
-- `apps/server/src/services/run-policy.ts`：运行时模式校验与绑定知识库的 Prompt。
-- `apps/server/src/services/validation-runner.ts`：按 Run 上下文执行质量命令。
-- `apps/web/src/app/`：应用壳、路由装配和稳定导航配置。
-- `apps/web/src/features/sources/ImportMaterialsModal.tsx`：跨页面复用的材料选择与导入接口；`Sources.tsx` 只组织生活记录浏览、编辑和构建状态。
-- `apps/web/src/features/overview/`：此刻、已有理解总览、理解自己与问题依据工作区。
-- `apps/web/src/features/knowledge/`：人生地图、人物、回信、卡片、图谱、阅读与搜索。
-- `apps/web/src/features/collaboration/`：统一上下文 Agent 抽屉、对话历史、结果目标及纯展示模型。
-- `apps/web/src/shared/`：共享 Markdown 阅读编辑深模块、路由语义和基础展示模块；`EditableDocument` 统一双击激活、自动保存、页面级滚动与章节跟踪，页面只传正文和展示变体。`TruncatedTextTooltip` 在应用壳通过事件委托统一识别真实发生的单行省略和多行截断，悬停或聚焦时展示原始全文，避免各页面重复实现提示逻辑；拥有专用详情浮层的内容可显式退出。
-- `apps/web/src/styles/`：按基础、功能、主题和收尾覆盖顺序组织，入口显式保持级联顺序。
-- 配置路径在 `wiki-core` 解析时校验为工作区内相对路径；Python 工具通过同一注册表解析知识库根。
+```mermaid
+flowchart LR
+  shell[应用壳与路由装配] --> features[前端垂直功能]
+  features --> ui[共享展示与请求生命周期]
+  ui --> http[HTTP 客户端]
+  http --> routes[服务端 HTTP 路由]
+  routes --> runtime[知识库与任务编排]
+  routes --> settings[Agent 设置与模型目录]
+  runtime --> outputs[结果准备与保存服务]
+  outputs --> modules[内容与导入模块]
+  runtime --> contracts[运行时接口]
+  adapters[Codex 与 Pi 适配器] -.实现.-> contracts
+  modules --> core[Wiki 解析与索引]
+```
 
-后端模块的外部 seam 是 `StudioServer`；内部 seam 只在确实存在不同职责或本地测试替身时出现。前端以垂直功能为主，跨功能的 Markdown 编辑、返回上下文和基础展示行为才进入 `shared/`，避免把页面拆成大量只转发 props 的浅模块。
+箭头表示依赖或调用方向，虚线表示接口实现。跨前后端的数据契约统一放在 `packages/shared`；浏览器仅通过 HTTP 访问知识，不引入 Node 或服务端包。各 package 的 `src/index.ts` 是显式公共出口，包内实现直接引用职责模块，不反向引用自己的出口。
+
+### 共享包
+
+- `packages/shared/src/`：按 `content`、`config`、`sources`、`photos`、`skills`、`views`、`agents`、`runs` 组织契约。`isTerminalRunStatus` 统一运行锁、来源状态与前端对话的结束状态判断。
+- `packages/wiki-core/src/config.ts`：工作区注册表、路径边界及模型供应商配置的运行时校验；`page-paths.ts`：页面身份和分类；`markdown.ts`：正文、元数据、章节和链接解析；`wiki-index.ts`：文件索引、链接解析、查询和搜索。不把配置校验混进索引构建。
+- `packages/life-views/src/`：`today.ts` 负责当前状态与证据工作区，`life-map.ts` 负责阶段及事件归属，`collections.ts` 负责卡片、模型、金句与回信，`relationships.ts` 负责人物及图关系。日期、表格和页面链接工具统一在 `page-utils.ts`。阶段关联在事件归属确定后只计算一次。
+- `packages/run-manager/src/run-store.ts`：运行记录、按知识库隔离的写锁、审批、串行更新与旧运行记录迁移；`snapshots.ts`：快照及差异；`run-record.ts`：记录编码和兼容读取；`state-paths.ts`：操作系统状态目录。
+- `packages/codex-bridge`：只封装 Codex app-server 协议，不引入产品流程。
+
+### 服务端
+
+- `apps/server/src/index.ts` 读取启动参数；`studio-server.ts` 是装配入口，注册路由、运行时与资源生命周期。
+- `runtime/knowledge-runtime.ts` 管理索引、活动知识库、文件监听与重建。
+- `runtime/run-coordinator.ts` 管理任务状态、审批、快照、验证、恢复及执行事件。它依赖 `agent-runtime/types.ts` 中的 `AgentRuntimeProvider`，不引用具体适配器或照片、账单存储。
+- `services/run-outputs.ts` 统一结果目标验证、来源构建准备、只读结果保存与构建后的影像发布。每次操作显式接收 Run 绑定的配置及索引；不保存活动知识库，也不管理任务状态。
+- `services/run-request.ts` 定义启动请求与应用错误；`run-policy.ts` 负责模式校验和 Prompt；`validation-runner.ts` 执行 Run 绑定的质量命令。
+- `routes/agent-settings-routes.ts` 通过独立的 `AgentRuntimeSettings` 接口读取目录、保存设置和广播公开设置；不经过任务调度器。其余 `routes/` 只负责请求与响应映射。
+- `modules/content/content-workspace.ts` 定义内容模块所需的索引、工作区路径和事件接口。页面写入、来源文件夹目录与导入清单依赖此接口，不依赖文件监听、运行时装配或知识库切换实现。
+- `modules/content/page-writer.ts` 负责页面创建、保存、重命名、来源删除和并发安全写入；`source-folder-catalog.ts` 负责来源文件夹目录。
+- `modules/knowledge-bases/knowledge-base-manager.ts` 负责隔离知识库目录和工作区注册表的原子更新。
+- `modules/imports/prepare-import.ts` 是材料准备入口；`chat/` 和 `payment-statement.ts` 承担格式解析；`import-store.ts` 负责落盘、清单和任务结果对账；照片与消费旅程的内容保存分别由其专用 Store 负责。
+- `modules/skills/` 只读取共享 Skill 目录，不复制知识判断规则。
+
+### 前端
+
+- `apps/web/src/app/` 只保留应用壳、页面路由装配和主导航。功能及共享层不反向依赖应用壳。
+- `features/overview/` 按 `Today`、`KnowledgeHome`、`QuestionsHub`、`FocusWorkspace`、`GrowthHub` 组织页面；对话问题模型留在 `talking-questions.ts`。
+- `features/knowledge/` 按人生地图、人物、卡片、回信、模型、搜索和阅读组织页面；共用内嵌预览由 `PagePreview.tsx` 承担。页面直接导入，不经过混合页面集合。理解分类导航留在功能目录中。
+- `features/sources/` 管理生活记录、导入、照片与账单记忆；`features/collaboration/` 管理上下文 Agent、对话及设置。`AgentContext` 只在协作功能模型中定义。
+- `api.ts` 是不依赖 React 的 HTTP 客户端；`shared/use-api.ts` 管理请求取消、加载与刷新状态；`shared/routing.tsx` 管理页面链接及返回上下文，`shared/categories.ts` 保存跨功能的分类展示名。
+- `shared/markdown.tsx` 统一 Markdown 阅读、编辑、自动保存与章节跟踪；`shared/ui.tsx` 统一基础展示；`TruncatedTextTooltip` 通过应用壳事件委托处理实际截断的全文提示。页面只提供内容与展示变体。
+- `styles/` 继续按入口声明的级联顺序加载，重构不改变布局、主题或交互流程。
+
+### 可执行的架构检查
+
+`apps/server/src/architecture.test.ts` 随 `pnpm test` 检查包依赖白名单、禁止跨包访问内部文件、前端反向依赖、领域模块对编排实现的依赖、运行时循环引用，以及应用与 Worker 入口之外的孤立源码。类型检查继续拒绝未使用的局部变量和参数。
+
+匿名回归测试覆盖独立模型设置接口、结果与公开事件的密钥隔离、切换知识库后的消费旅程结果保存、并发修改拒绝、只读门槛，以及照片结果发布。HTTP 路径、共享数据字段、现有任务文件与配置格式保持兼容；本次不迁移知识内容或本机状态文件。
 
 ## 当前非目标
 

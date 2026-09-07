@@ -1,10 +1,12 @@
+import { isTerminalRunStatus } from "@the-way-here/shared";
 import { TextArea } from "../../shared/form-controls";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AgentApprovalDecision, AgentOutputTarget, AgentReasoningEffort, DeletedAgentConversation, SourceRunContext, VaultInfo, WikiRun } from "@the-way-here/shared";
-import { api, useApi } from "../../api";
+import { api } from "../../api";
+import { useApi } from "../../shared/use-api";
 import { ConfirmDeleteDialog } from "../../shared/ConfirmDeleteDialog";
 import { useReturnContext } from "../../shared/routing";
 import { resizeComposerTextarea } from "../../shared/composer-input";
@@ -293,7 +295,7 @@ function AgentHistory({ threads, loading, error, knowledgeBaseName, onOpen, onNe
     {loading ? <Loading label="正在整理对话历史" /> : error ? <div className="context-history-empty"><b>暂时无法读取对话历史</b><p>{error}</p></div> : threads.length ? <div className="context-history-list">{threads.map((thread) => {
       const answer = runFinalAnswer(thread.latest);
       const title = runDisplayPrompt(thread.runs[0]!);
-      const active = thread.runs.some((run) => !["completed", "failed", "interrupted"].includes(run.status));
+      const active = thread.runs.some((run) => !isTerminalRunStatus(run.status));
       return <article className="context-history-item" key={thread.id}>
         <button type="button" className="context-history-open" onClick={() => onOpen(thread.latest.id)}>
           <span className="context-history-meta"><RunStatus status={thread.latest.status} /><time>{new Date(thread.latest.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></span>
@@ -331,7 +333,7 @@ function ContextualRunPanel({ runId, revision, runList, onRunId, onNew, onClose 
   }, [runId, loading]);
   useLayoutEffect(() => resizeComposerTextarea(replyTextareaRef.current), [reply]);
   useEffect(() => { setStopping(false); setFinishingJourney(false); setContinuingAfterWrapUp(false); }, [runId]);
-  useEffect(() => { if (run && ["completed", "failed", "interrupted"].includes(run.status)) setStopping(false); }, [run?.status]);
+  useEffect(() => { if (run && isTerminalRunStatus(run.status)) setStopping(false); }, [run?.status]);
   if (loading && !run) return <Loading label="正在接入知识上下文" />;
   if (error || !run) return <div className="context-run-error"><p>{error || "这次对话没有找到。"}</p><button onClick={() => onRunId("")}>返回对话历史</button></div>;
   const activeRun = run;

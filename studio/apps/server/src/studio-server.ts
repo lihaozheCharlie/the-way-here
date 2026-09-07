@@ -1,4 +1,5 @@
 import path from "node:path";
+import { registerAgentSettingsRoutes } from "./routes/agent-settings-routes.js";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
@@ -30,9 +31,10 @@ export class StudioServer {
     const runtimes = await AgentRuntimeRegistry.create(knowledge.index.config.agents, knowledge.vaultRoot);
     const runs = new RunCoordinator(knowledge, runtimes, app.log);
     const imports = new ImportStore(knowledge);
-    registerContentRoutes(app, knowledge, imports, () => runs.runtimeCatalog(), (knowledgeBaseId) => runs.hasActiveKnowledgeBaseRun(knowledgeBaseId));
+    registerContentRoutes(app, knowledge, imports, () => runtimes.catalog(), (knowledgeBaseId) => runs.hasActiveKnowledgeBaseRun(knowledgeBaseId));
     registerImportRoutes(app, imports, runs);
     registerRunRoutes(app, runs);
+    registerAgentSettingsRoutes(app, runtimes, knowledge.events);
     registerPhotoMemoryRoutes(app, knowledge, runs);
     app.get("/api/events", async (request, reply) => knowledge.events.connect(request, reply));
 

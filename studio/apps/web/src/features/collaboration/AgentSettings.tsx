@@ -9,7 +9,8 @@ import type {
   AgentRuntimeId,
   UpdateAgentGlobalSettings,
 } from "@the-way-here/shared";
-import { api, useApi } from "../../api";
+import { api } from "../../api";
+import { useApi } from "../../shared/use-api";
 import { Icon } from "../../shared/ui";
 
 export const reasoningLabels: Record<AgentReasoningEffort, string> = {

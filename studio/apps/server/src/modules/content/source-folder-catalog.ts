@@ -1,10 +1,10 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import type { SourceFolderSummary } from "@the-way-here/shared";
-import type { KnowledgeRuntime } from "../../runtime/knowledge-runtime.js";
+import type { ContentWorkspace } from "./content-workspace.js";
 
 /** Lists user-visible folders inside the active knowledge base's life-record root. */
-export async function listSourceFolders(knowledge: KnowledgeRuntime): Promise<SourceFolderSummary[]> {
+export async function listSourceFolders(knowledge: ContentWorkspace): Promise<SourceFolderSummary[]> {
   const sourceRoot = path.resolve(knowledge.vaultRoot, knowledge.index.config.paths.sources);
   const folders: SourceFolderSummary[] = [];
 

@@ -5,7 +5,7 @@ import path from "node:path";
 import { pageIdForPath } from "@the-way-here/wiki-core";
 import type { WikiPage } from "@the-way-here/shared";
 import { isPathInside, markdownFileName, normalizeSourceFolder } from "../../path-policy.js";
-import { KnowledgeRuntime } from "../../runtime/knowledge-runtime.js";
+import type { ContentWorkspace } from "./content-workspace.js";
 
 export class ContentRequestError extends Error {
   constructor(readonly statusCode: number, message: string) {
@@ -14,7 +14,7 @@ export class ContentRequestError extends Error {
 }
 
 export class PageWriter {
-  constructor(private readonly knowledge: KnowledgeRuntime) {}
+  constructor(private readonly knowledge: ContentWorkspace) {}
 
   async createSource(titleValue: string | undefined, folderValue: string | undefined): Promise<WikiPage | undefined> {
     if (!titleValue?.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");

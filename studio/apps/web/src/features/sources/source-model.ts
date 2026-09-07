@@ -60,11 +60,6 @@ export function sourceRecordMonth(page: Pick<WikiPageSummary, "title" | "relativ
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function sourceMonthLabel(month: string): string {
-  const [year, number] = month.split("-");
-  return `${year?.slice(-2)}年${Number(number)}月`;
-}
-
 export function sourceMonthOptions(pages: WikiPageSummary[]): Array<{ id: string; count: number }> {
   const counts = new Map<string, number>();
   for (const page of pages) {
