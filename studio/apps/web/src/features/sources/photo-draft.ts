@@ -12,6 +12,7 @@ export interface PhotoLocalDraft {
   faceGroups?: string[][];
   photoStories?: Record<string, string>;
   legacyStory?: string;
+  groupStory?: string;
   photoDrafts?: Record<string, PhotoPerson[]>;
   step?: 1 | 2 | 3 | 4 | 5;
   answers?: LegacyPhotoAnswer[];
@@ -43,6 +44,7 @@ export function parsePhotoDraft(raw: string | null): PhotoLocalDraft | undefined
         if (!parsePhotoDraft(JSON.stringify({ revision: value.revision, photoId, people, peopleDirty: true, story: "", storyDirty: false }))) return undefined;
       }
     }
+    if (value.groupStory !== undefined && (typeof value.groupStory !== "string" || value.groupStory.length > 60000)) return undefined;
     if (value.legacyStory !== undefined && (typeof value.legacyStory !== "string" || value.legacyStory.length > 60000)) return undefined;
     if (value.photoStories !== undefined && (!value.photoStories || typeof value.photoStories !== "object" || Array.isArray(value.photoStories) || Object.keys(value.photoStories).length > 10 || !Object.values(value.photoStories).every((story) => typeof story === "string" && story.length <= 10000))) return undefined;
     if (value.faceGroups !== undefined) {

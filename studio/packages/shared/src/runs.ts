@@ -60,6 +60,7 @@ export interface PhotoMemoryOutputTarget {
   storedPath: string;
   label: string;
   phase: "enrich" | "draft";
+  /** Omitted for a whole-batch story; retained for older single-photo runs. */
   photoId?: string;
   expectedRevision?: number;
 }

@@ -14,7 +14,7 @@ import type { AgentRuntimeEnvelope, StartAgentExecution } from "./agent-runtime/
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
-async function fixture(vision = true) {
+async function fixture(vision = true, photoCount = 1) {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-photo-run-")));
   await writeFile(path.join(root, "the-way-here.config.yaml"), "version: 3\ndefaultKnowledgeBase: demo\nknowledgeBases:\n  demo:\n    paths:\n      wiki: demo/wiki\n      sources: demo/sources\n  other:\n    paths:\n      wiki: other/wiki\n      sources: other/sources\n");
   const knowledge = await KnowledgeRuntime.create(root, "demo");
@@ -30,7 +30,7 @@ async function fixture(vision = true) {
   cleanups.push(async () => { coordinator.close(); await knowledge.close(); await rm(root, { recursive: true, force: true }); await rm(stateRootForVault(root), { recursive: true, force: true }); });
   const store = new PhotoMemoryStore(root);
   const content = (await sharp({ create: { width: 20, height: 20, channels: 3, background: "white" } }).png().toBuffer()).toString("base64");
-  const batch = await store.create(knowledge.index.config, { title: "匿名测试", files: [{ name: "demo.png", content, encoding: "base64" }] });
+  const batch = await store.create(knowledge.index.config, { title: "匿名测试", files: Array.from({ length: photoCount }, (_, i) => ({ name: `demo-${i}.png`, content, encoding: "base64" })) });
   await knowledge.rebuildIfActive("demo");
   const target: PhotoMemoryOutputTarget = { kind: "photo-memory", importId: batch.id, storedPath: batch.files[0]!.storedPath, phase: "enrich", label: "照片" };
   const emit = (run: WikiRun, event: AgentRuntimeEvent) => listener({ ref: { runtimeId: run.runtimeId!, sessionId: run.runtimeSessionId!, turnId: run.runtimeTurnId! }, event });
@@ -89,6 +89,30 @@ describe("photo-memory runtime contract", () => {
     expect(saved.confirmedAt).toBeUndefined();
     expect(saved.confirmedStory).toBe("");
     expect(knowledge.index.list().filter((page) => !page.isSource)).toHaveLength(0);
+  });
+
+  it("sends three previews in one run and saves one unconfirmed story with revision protection", async () => {
+    const { coordinator, knowledge, store, target, start, emit } = await fixture(true, 3);
+    const run = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "把照片串成我的故事", outputTarget: { ...target, phase: "draft" } });
+    expect(start).toHaveBeenCalledOnce();
+    const input = start.mock.calls[0]![0];
+    expect(input.images?.map((image) => path.basename(image.path))).toEqual(["photo-1.jpg", "photo-2.jpg", "photo-3.jpg"]);
+    expect(input.prompt).toContain("第一人称");
+    expect(input.prompt).toContain("所有照片串成一篇");
+    expect(run.outputTarget).toMatchObject({ expectedRevision: 1 });
+    expect((run.outputTarget as PhotoMemoryOutputTarget).photoId).toBeUndefined();
+    const story = "我把聚餐、散步和家里的片段放在一起，留作这段生活的记录。";
+    emit(run, { type: "turn.completed", outcome: "completed", finalAnswer: `<photo-memory>${story}</photo-memory>` });
+    await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("completed"));
+    const saved = await store.read(knowledge.index.config, target.importId);
+    expect(saved.draft).toBe(story);
+    expect(saved.photos.every((photo) => photo.story === undefined)).toBe(true);
+    expect(saved.confirmedAt).toBeUndefined();
+    await expect(store.assertBuild(knowledge.index.config, target.importId, target.storedPath)).rejects.toThrow("确认");
+    const stale = await store.prepare(knowledge.index.config, { ...target, phase: "draft" });
+    await store.update(knowledge.index.config, target.importId, { revision: saved.revision, story: "我核对后的故事" }, knowledge.index);
+    await expect(store.materialize(knowledge.index.config, stale, "<photo-memory>旧草稿</photo-memory>")).rejects.toThrow("已更新");
+    expect((await store.read(knowledge.index.config, target.importId)).confirmedStory).toBe("我核对后的故事");
   });
 
   it("blocks text-only models before starting a run or sending an image", async () => {

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";
 import type { PhotoMemory } from "@the-way-here/shared";
 import { PhotoNarration } from "./PhotoNarration";
-import { assemblePhotoStories, photoStory, restorePhotoStories } from "./photo-stories";
+import { assemblePhotoStories, photoStory, restorePhotoStories, restoreGroupStory } from "./photo-stories";
 import { photoIdentityUpdates, groupedPhotoQueue, reconcilePhotoDrafts } from "./photo-face-groups";
 
 const memory = { id: "memory", knowledgeBaseId: "demo", draft: "", confirmedStory: "", photos: [
@@ -34,15 +34,26 @@ it("recovers answers from five-step browser drafts without exposing that workflo
   const draft = { revision: 1, photoId: "p1", people: [], peopleDirty: false, story: "", storyDirty: true, step: 4 as const, answers: [{ photoId: "p1", question: "在哪里？", answer: "在学校。" }], skipped: [], answer: "第二张还有一件事" };
   expect(restorePhotoStories(memory, draft).stories).toEqual({ p1: "在学校。", p2: "第二张还有一件事" });
 });
-it("shows distinct completed/empty copy and only offers drafting for an empty photo", () => {
-  const props = { memory, selectedId: "p1", stories: { p1: "已写好", p2: "" }, legacyStory: "", locked: false, onSelect: vi.fn(), onStory: vi.fn(), onLegacyStory: vi.fn(), onGenerate: vi.fn() };
-  const done = renderToStaticMarkup(<PhotoNarration {...props} />);
-  expect(done).toContain("这张已经写好了，随时可以接着改。");
-  expect(done).not.toContain("AI 帮你写");
-  expect(done).toContain("，写好了"); expect(done).toContain("，还没写");
-  const empty = renderToStaticMarkup(<PhotoNarration {...props} selectedId="p2" />);
-  expect(empty).toContain("这张还没写"); expect(empty).toContain("AI 帮你写");
-  expect(empty).not.toContain("role=\"combobox\"");
+it("shows all photos with one shared story input and batch drafting", () => {
+  const props = { memory, story: "", locked: false, generating: false, onStory: vi.fn(), onGenerate: vi.fn() };
+  const empty = renderToStaticMarkup(<PhotoNarration {...props} />);
+  expect(empty.match(/<img /g)).toHaveLength(2);
+  expect(empty.match(/<textarea /g)).toHaveLength(1);
+  expect(empty).toContain("一篇故事"); expect(empty).toContain("AI 帮你写");
+  expect(empty).not.toContain("还没写"); expect(empty).not.toContain("aria-pressed");
+  const done = renderToStaticMarkup(<PhotoNarration {...props} story="我的完整回忆" />);
+  expect(done).toContain("我的完整回忆"); expect(done).not.toContain("AI 帮你写");
+  expect(renderToStaticMarkup(<PhotoNarration {...props} locked generating />)).toContain("AI 正在把这些照片串成一个故事");
+});
+it("migrates old photo stories once and restores an intentionally cleared group draft", () => {
+  expect(restoreGroupStory(memory)).toContain("夏天的回忆");
+  const old = { ...memory, draft: "原先整段回忆" };
+  expect(restoreGroupStory(old)).toBe("原先整段回忆\n\n关于第 1 张照片（a.jpg）\n夏天的回忆");
+  expect(restoreGroupStory({ ...old, draft: restoreGroupStory(old) })).toBe(restoreGroupStory(old));
+  expect(restoreGroupStory({ ...memory, storyLayout: "group", draft: "我的共同故事" })).toBe("我的共同故事");
+  const draft = { revision: 1, photoId: "p1", people: [], peopleDirty: false, story: "", storyDirty: true, groupStory: "" };
+  expect(restoreGroupStory(memory, draft)).toBe("");
+  expect(restoreGroupStory(memory, { ...draft, groupStory: undefined, photoStories: { p2: "补充回忆" } })).toContain("补充回忆");
 });
 
 it("adopts published page links while preserving unsaved crop edits", () => {

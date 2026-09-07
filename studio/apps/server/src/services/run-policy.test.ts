@@ -20,7 +20,7 @@ describe("run policy", () => {
     expect(parseAgentOutputTarget({ ...target, expectedRevision: 99 })).toEqual(target);
     expect(parseAgentOutputTarget({ ...target, phase: "analyze" })).toBeUndefined();
     expect(parseAgentOutputTarget({ ...target, phase: "build" })).toBeUndefined();
-    expect(parseAgentOutputTarget({ ...target, phase: "draft" })).toBeUndefined();
+    expect(parseAgentOutputTarget({ ...target, phase: "draft" })).toEqual({ ...target, phase: "draft" });
     expect(parseAgentOutputTarget({ ...target, phase: "draft", photoId: "../other" })).toBeUndefined();
     expect(parseAgentOutputTarget({ ...target, phase: "draft", photoId: "photo-2", expectedRevision: 99 })).toEqual({ ...target, phase: "draft", photoId: "photo-2" });
     expect(parseAgentOutputTarget({ ...target, storedPath: "" })).toBeUndefined();
@@ -74,6 +74,8 @@ describe("run policy", () => {
     const prompt = addOutputTargetInstructions("继续聊聊", target);
     expect(prompt).toContain("Wiki 只作为参考，不得修改任何文件");
     expect(prompt).toContain("<journey-report>");
+    expect(prompt).toContain("第一人称");
+    expect(prompt).toContain("不擅自添加时间");
     expect(prompt).toContain("每一轮都要给出完整草稿");
     expect(prompt).toContain("只围绕用户主动选择的线索 journey-t001");
     expect(prompt).toContain("不要求每轮都有问题");

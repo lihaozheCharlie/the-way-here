@@ -1,24 +1,23 @@
+import { Icon } from "../../shared/ui";
 import { TextArea } from "../../shared/form-controls";
-import type { PhotoMemory } from "@the-way-here/shared";
-import { PhotoFilmstrip } from "./PhotoFilmstrip";
+import { photoAssetUrl, type PhotoMemory } from "@the-way-here/shared";
 
-export function PhotoNarration({ memory, selectedId, stories, legacyStory, locked, generatingId, onSelect, onStory, onLegacyStory, onGenerate }: {
-  memory: PhotoMemory; selectedId: string; stories: Record<string, string>; legacyStory: string; locked: boolean; generatingId?: string;
-  onSelect: (id: string) => void; onStory: (id: string, value: string) => void; onLegacyStory: (value: string) => void; onGenerate: (id: string) => void;
+export function PhotoNarration({ memory, story, locked, generating, onStory, onGenerate }: {
+  memory: PhotoMemory; story: string; locked: boolean; generating: boolean;
+  onStory: (value: string) => void; onGenerate: () => void;
 }) {
-  const index = Math.max(0, memory.photos.findIndex((photo) => photo.id === selectedId));
-  const photo = memory.photos[index];
-  if (!photo) return null;
-  const story = stories[photo.id] ?? "";
-  const generating = generatingId === photo.id;
   return <section className="photo-narration-step">
-    <PhotoFilmstrip memory={memory} selectedId={photo.id} stories={stories} onSelect={onSelect} />
-    <header className="photo-stage-heading"><h3>这张照片的故事 <span className="photo-story-counter">{index + 1} / {memory.photos.length}</span></h3>
-      <p aria-live="polite">{generating ? "AI 正在写这张照片的故事…" : story.trim() ? "这张已经写好了，随时可以接着改。" : <>这张还没写，可以自己写，也可以点 <button className="photo-assist-link" type="button" disabled={locked} onClick={() => onGenerate(photo.id)}>AI 帮你写</button>。</>}</p>
+    <div className="photo-story-gallery" role="group" aria-label="一起讲故事的照片">
+      {memory.photos.map((photo, index) => <img key={photo.id} src={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id)} alt={`第 ${index + 1} 张：${photo.name}`} />)}
+    </div>
+    <header className="photo-stage-heading photo-story-heading">
+      <div><h3>这些照片里的故事 <span className="photo-story-counter">{memory.photos.length} 张照片 · 一篇故事</span></h3>
+        <p aria-live="polite">{generating ? "AI 正在把这些照片串成一个故事…" : story.trim() ? "故事已经写下来了，随时可以接着改。" : "把这些照片里的经历，一起写成一个故事。"}</p>
+      </div>
+      {(!story.trim() || generating) ? <button className="primary-action photo-story-assist" type="button" disabled={locked || generating} onClick={onGenerate}><Icon name="spark" size={17} />{generating ? "正在写故事…" : "AI 帮你写"}</button> : null}
     </header>
-    <label className="photo-story-label" htmlFor={`photo-story-${photo.id}`}>故事</label>
-    <TextArea id={`photo-story-${photo.id}`} value={story} maxLength={10000} disabled={locked} rows={6} onChange={(event) => onStory(photo.id, event.target.value)} placeholder="这张照片是什么时候、发生了什么？" />
-    {photo.storyOrigin === "ai" && story === photo.story ? <p className="photo-help">AI 起草，收进理解前请核对并修改。</p> : null}
-    {legacyStory ? <details className="photo-legacy-story"><summary>之前保留的整段讲述</summary><p className="photo-help">原有讲述完整保留，可以继续修改。</p><TextArea aria-label="之前保留的整段讲述" value={legacyStory} disabled={locked} rows={5} maxLength={60000} onChange={(event) => onLegacyStory(event.target.value)} /></details> : null}
+    <label className="photo-story-label" htmlFor="photo-group-story">故事</label>
+    <TextArea id="photo-group-story" value={story} maxLength={60000} disabled={locked} rows={6} onChange={(event) => onStory(event.target.value)} placeholder="这些照片串起了我的哪段经历？当时和谁在一起，发生了什么？" />
+    {story.trim() && !memory.confirmedAt ? <p className="photo-help">收进理解前请核对并修改，尤其是 AI 起草的内容。</p> : null}
   </section>;
 }

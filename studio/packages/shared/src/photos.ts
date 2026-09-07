@@ -28,6 +28,8 @@ export interface PhotoMemory {
   createdAt: string;
   photos: MemoryPhoto[];
   draft: string;
+  /** Shared story is authoritative; legacy per-photo stories remain for compatibility. */
+  storyLayout?: "group";
   confirmedStory: string;
   confirmedAt?: string;
   builtAt?: string;

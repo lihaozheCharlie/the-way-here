@@ -128,8 +128,6 @@
 .photo-name-panel .photo-person-selection { display: none; }
 .photo-group-hint { color: var(--muted); font-size: 12px; line-height: 1.7; padding-top: 8px; }
 .photo-name-panel .photo-person-remove { width: 100%; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 8px; text-decoration: none; }
-.photo-memory .photo-assist-link { border: 0; padding: 0; color: var(--accent-primary); background: transparent; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.photo-memory .photo-assist-link:hover:not(:disabled) { color: var(--ink); }
 .photo-story-counter { margin-left: 8px; color: var(--muted); font: 600 13px/1.5 var(--font-ui); }
 .photo-story-label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .photo-memory-redesign .photo-narration-step textarea { min-height: 160px; background: var(--canvas); border-color: var(--line); border-radius: 10px; }
@@ -152,3 +150,10 @@
 .source-memory-dialog:has(.photo-memory-redesign) .source-memory-dialog-header h2 { display: none; }
 .source-memory-dialog:has(.photo-memory-redesign) .source-memory-dialog-header button { position: absolute; right: 22px; top: 22px; background: var(--paper); }
 .source-memory-dialog .photo-memory-redesign .photo-memory-head { padding-right: 72px; }
+
+.photo-story-gallery { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+.photo-story-gallery img { display: block; width: 140px; height: 112px; object-fit: contain; border-radius: 6px; background: var(--canvas); }
+
+.photo-story-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; }
+.photo-story-heading > div { min-width: 0; }
+.photo-memory .photo-story-assist { flex-shrink: 0; min-height: 44px; padding: 10px 20px; border-radius: 8px; }

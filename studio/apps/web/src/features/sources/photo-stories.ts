@@ -42,3 +42,17 @@ export function assemblePhotoStories(memory: PhotoMemory, drafts: Record<string,
     return story ? [`关于第 ${index + 1} 张照片（${photo.name}）\n${story}`] : [];
   })].filter(Boolean).join("\n\n");
 }
+
+export function restoreGroupStory(memory: PhotoMemory, draft?: PhotoLocalDraft): string {
+  if (draft?.groupStory !== undefined && (draft.storyDirty || draft.revision >= memory.revision)) return draft.groupStory;
+  if (draft?.groupStory !== undefined) return restoreGroupStory(memory);
+  if (!draft) {
+    const whole = memory.draft || memory.confirmedStory;
+    if (memory.storyLayout === "group") return whole;
+    const previous = assemblePhotoStories(memory, {});
+    // Older versions may already have combined these stories when confirming.
+    return !previous || whole.includes(previous) ? whole : [whole, previous].filter(Boolean).join("\n\n");
+  }
+  const restored = restorePhotoStories(memory, draft);
+  return assemblePhotoStories(memory, restored.stories, restored.legacyStory);
+}

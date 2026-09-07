@@ -105,7 +105,7 @@ describe("photo memories", () => {
     const draftTarget = await store.prepare(config, { ...target, phase: "draft", photoId: "photo-1" });
     const input = await store.storyInput(config, batch.id, "photo-1");
     expect(input.images).toHaveLength(1);
-    expect(input.prompt).toContain("只为照片 photo-1 写故事");
+    expect(input.prompt).toContain("全部 1 张照片预览");
     expect(input.images[0]!.path).toMatch(/photo-1.jpg$/);
     expect(await sharp(input.images[0]!.path).metadata()).toMatchObject({ format: "jpeg", width: 80, height: 100 });
     await store.materialize(config, draftTarget, "<photo-memory>一段尚待确认的故事。</photo-memory>");

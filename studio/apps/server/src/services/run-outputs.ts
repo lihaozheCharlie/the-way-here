@@ -42,7 +42,7 @@ export class RunOutputs {
         input.outputTarget = await this.photoMemories.prepare(config, target);
         if (await hasActiveRun()) throw new PhotoMemoryError(409, "请等当前任务完成后，再继续照片记忆");
         input.sourceContext = target.phase === "enrich" ? { importId: target.importId, storedPath: target.storedPath, flow: "dialogue", operation: "enrich" } : undefined;
-        photoInput = target.phase === "draft" ? await this.photoMemories.storyInput(config, target.importId, target.photoId!) : { prompt: await this.photoMemories.context(config, target.importId) };
+        photoInput = target.phase === "draft" ? await this.photoMemories.storyInput(config, target.importId, target.photoId) : { prompt: await this.photoMemories.context(config, target.importId) };
       }
       if (input.sourceContext?.operation === "build") {
         const source = input.sourceContext;
