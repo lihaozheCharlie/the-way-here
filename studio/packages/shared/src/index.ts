@@ -113,11 +113,10 @@ export type SourceChatImportChannel = "chatgpt" | "claude" | "gemini" | "deepsee
 
 export type SourceImportChannel = "files" | SourceChatImportChannel | "alipay" | "photos";
 
-export const PHOTO_MEMORY_QUESTION = "这张照片给你留下了什么记忆？";
-
 export type PhotoBox = { x: number; y: number; width: number; height: number };
 export interface PhotoPerson {
   id: string;
+  groupId?: string;
   box: PhotoBox;
   name: string;
   pageId?: string;
@@ -128,8 +127,8 @@ export interface MemoryPhoto {
   name: string;
   width: number;
   height: number;
-  observation?: string;
-  question?: string;
+  story?: string;
+  storyOrigin?: "user" | "ai";
   people: PhotoPerson[];
 }
 export interface PhotoMemory {
@@ -178,6 +177,30 @@ export interface SourceRunContext {
 
 export type PaymentJourneyClusterKind = "journey" | "place" | "routine" | "day-story" | "theme";
 
+export type PaymentJourneyClueStatus = "pending" | "confirmed" | "brief" | "deep" | "skipped";
+
+export interface PaymentJourneyClueState {
+  clusterId: string;
+  status: PaymentJourneyClueStatus;
+  resultText?: string;
+  note?: string;
+  conversationRunId?: string;
+  conversationTurns?: number;
+  updatedAt?: string;
+}
+
+export interface PaymentJourneyTransactionEvidence {
+  id: string;
+  createdAt: string;
+  merchant: string;
+  product: string;
+  amount: number;
+  direction: string;
+  status: string;
+  refund: number;
+  category: string;
+}
+
 export interface PaymentJourneyCluster {
   id: string;
   kind: PaymentJourneyClusterKind;
@@ -189,6 +212,10 @@ export interface PaymentJourneyCluster {
   entryCount: number;
   categories: string[];
   evidence: string[];
+  transactions?: PaymentJourneyTransactionEvidence[];
+  proposedMemory?: string;
+  confidence?: "high" | "medium";
+  relatedClusterIds?: string[];
 }
 
 export interface PaymentJourneySummary {
@@ -202,6 +229,8 @@ export interface PaymentJourneySummary {
   refundCount: number;
   clusters: PaymentJourneyCluster[];
   agentPrompt: string;
+  revision?: number;
+  clueStates?: PaymentJourneyClueState[];
 }
 
 export interface SourceImportBatch {
@@ -608,6 +637,7 @@ export interface JourneyReportOutputTarget {
   importId: string;
   storedPath: string;
   label: string;
+  clueId?: string;
   expectedContentHash?: string;
 }
 
@@ -616,7 +646,8 @@ export interface PhotoMemoryOutputTarget {
   importId: string;
   storedPath: string;
   label: string;
-  phase: "analyze" | "enrich";
+  phase: "enrich" | "draft";
+  photoId?: string;
   expectedRevision?: number;
 }
 
@@ -658,4 +689,9 @@ export interface WikiRun {
     exitCode: number | null;
     output: string;
   }>;
+}
+
+export interface DeletedAgentConversation {
+  threadId: string;
+  deletedRunIds: string[];
 }

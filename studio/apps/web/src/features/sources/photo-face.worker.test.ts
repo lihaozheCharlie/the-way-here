@@ -21,6 +21,7 @@ it("initializes one model for successive photos and releases each decoded image"
   for (const url of ["/one", "/two"]) await scope.onmessage!({ data: { url, origin: "http://localhost" } });
   expect(vision.files).toHaveBeenCalledOnce();
   expect(vision.create).toHaveBeenCalledOnce();
+  expect(vision.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ baseOptions: expect.objectContaining({ modelAssetPath: "http://localhost/models/blaze-face-full-range.tflite" }) }));
   expect(detect).toHaveBeenCalledTimes(2);
   expect(scope.postMessage.mock.calls.filter(([result]) => result.boxes && !result.phase)).toHaveLength(2);
   for (const image of images) expect(image.close).toHaveBeenCalledOnce();

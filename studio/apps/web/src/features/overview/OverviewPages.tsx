@@ -1,3 +1,4 @@
+import { TextArea } from "../../shared/form-controls";
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import type { ConversationPrompt, FocusWorkspaceView, GraphData, PaymentJourneySummary, SectionedPageView, SourceImportBatch, StateSignal, StructuredCard, TodayView, VaultInfo, WikiPageSummary } from "@the-way-here/shared";
@@ -256,8 +257,8 @@ export function Today({ revision }: { revision: number }) {
           {todayStarterPhrases.map((phrase) => <button type="button" key={phrase} onClick={() => beginWith(phrase)}>{phrase}</button>)}
         </div>
         <form className="home-opener-form" onSubmit={beginConversation}>
-          <div>
-            <textarea ref={conversationInputRef} rows={1} aria-label="接着说" value={conversationDraft} onChange={(event) => setConversationDraft(event.target.value)} onKeyDown={submitConversationOnEnter} placeholder="接着说，先说一句就行" />
+          <div className="text-field-shell">
+            <TextArea ref={conversationInputRef} rows={1} aria-label="接着说" value={conversationDraft} onChange={(event) => setConversationDraft(event.target.value)} onKeyDown={submitConversationOnEnter} placeholder="接着说，先说一句就行" />
             <button type="submit" aria-label="发送" disabled={!conversationDraft.trim()}><Icon name="up" size={19} /></button>
           </div>
           <div className="home-opener-foot">

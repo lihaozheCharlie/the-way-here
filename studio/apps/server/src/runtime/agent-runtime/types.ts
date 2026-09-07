@@ -45,6 +45,7 @@ export interface AgentRuntime {
   interrupt(ref: AgentExecutionRef): Promise<void>;
   decide(ref: AgentExecutionRef, approvalId: string | number, decision: AgentApprovalDecision): Promise<void>;
   recover(ref: AgentExecutionRef): Promise<AgentRecoveryState>;
+  deleteSession?(sessionId: string): Promise<void>;
   subscribe(listener: (envelope: AgentRuntimeEnvelope) => void): () => void;
   close(): void;
 }

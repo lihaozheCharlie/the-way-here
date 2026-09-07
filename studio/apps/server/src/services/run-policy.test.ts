@@ -16,13 +16,17 @@ const config: VaultConfig = {
 
 describe("run policy", () => {
   it("validates photo phases and never trusts a client revision token", () => {
-    const target = { kind: "photo-memory", importId: "batch-1", storedPath: "sources/memory.md", label: "记忆", phase: "analyze" };
+    const target = { kind: "photo-memory", importId: "batch-1", storedPath: "sources/memory.md", label: "记忆", phase: "enrich" };
     expect(parseAgentOutputTarget({ ...target, expectedRevision: 99 })).toEqual(target);
+    expect(parseAgentOutputTarget({ ...target, phase: "analyze" })).toBeUndefined();
     expect(parseAgentOutputTarget({ ...target, phase: "build" })).toBeUndefined();
+    expect(parseAgentOutputTarget({ ...target, phase: "draft" })).toBeUndefined();
+    expect(parseAgentOutputTarget({ ...target, phase: "draft", photoId: "../other" })).toBeUndefined();
+    expect(parseAgentOutputTarget({ ...target, phase: "draft", photoId: "photo-2", expectedRevision: 99 })).toEqual({ ...target, phase: "draft", photoId: "photo-2" });
     expect(parseAgentOutputTarget({ ...target, storedPath: "" })).toBeUndefined();
     const prompt = addOutputTargetInstructions("看图片", parseAgentOutputTarget(target));
     expect(prompt).toContain("严格只读");
-    expect(prompt).toContain("不猜身份");
+    expect(prompt).toContain("每次只问一件事");
     expect(prompt).toContain("<photo-memory>");
   });
   it("accepts only declared run modes and reasoning efforts", () => {
@@ -65,12 +69,18 @@ describe("run policy", () => {
   });
 
   it("accepts a scoped journey-report target and keeps its prompt read-only", () => {
-    const target = parseAgentOutputTarget({ kind: "journey-report", importId: "batch-1", storedPath: "vault/demo/sources/消费账单/旅程.md", label: "消费旅程报告" });
-    expect(target).toEqual({ kind: "journey-report", importId: "batch-1", storedPath: "vault/demo/sources/消费账单/旅程.md", label: "消费旅程报告" });
+    const target = parseAgentOutputTarget({ kind: "journey-report", importId: "batch-1", storedPath: "vault/demo/sources/消费账单/旅程.md", label: "消费旅程报告", clueId: "journey-t001" });
+    expect(target).toEqual({ kind: "journey-report", importId: "batch-1", storedPath: "vault/demo/sources/消费账单/旅程.md", label: "消费旅程报告", clueId: "journey-t001" });
     const prompt = addOutputTargetInstructions("继续聊聊", target);
     expect(prompt).toContain("Wiki 只作为参考，不得修改任何文件");
     expect(prompt).toContain("<journey-report>");
     expect(prompt).toContain("每一轮都要给出完整草稿");
+    expect(prompt).toContain("只围绕用户主动选择的线索 journey-t001");
+    expect(prompt).toContain("不要求每轮都有问题");
+    expect(prompt).toContain("没什么具体场景");
+    expect(prompt).toContain("不要换一个角度继续盘问");
+    expect(prompt).toContain("绝不再提问");
     expect(parseAgentOutputTarget({ kind: "journey-report", importId: "", storedPath: "sources/旅程.md", label: "报告" })).toBeUndefined();
+    expect(parseAgentOutputTarget({ kind: "journey-report", importId: "batch-1", storedPath: "sources/旅程.md", label: "报告", clueId: "../other" })).toBeUndefined();
   });
 });

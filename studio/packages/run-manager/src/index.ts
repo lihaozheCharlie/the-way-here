@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { copyFile, cp, mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import fg from "fast-glob";
@@ -172,6 +172,16 @@ export class RunStore {
     } catch {
       return undefined;
     }
+  }
+
+  async delete(id: string): Promise<boolean> {
+    await this.ensureLegacyRunsMigrated();
+    await this.mutationQueues.get(id);
+    const run = await this.get(id);
+    if (!run) return false;
+    await rm(this.runDir(id), { recursive: true, force: true });
+    if (this.activeWriteRuns.get(run.knowledgeBaseId) === id) this.activeWriteRuns.delete(run.knowledgeBaseId);
+    return true;
   }
 
   async update(id: string, patch: Partial<WikiRun>): Promise<WikiRun> {

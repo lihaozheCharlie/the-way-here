@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { WikiRun } from "@the-way-here/shared";
-import { agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, contextPrompt, groupAgentThreads, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
 
 describe("collaboration model", () => {
   it("hides photo payloads, including a partial streaming block", () => {
-    const target = { kind: "photo-memory" as const, importId: "batch", storedPath: "sources/photo.md", label: "照片", phase: "analyze" as const };
+    const target = { kind: "photo-memory" as const, importId: "batch", storedPath: "sources/photo.md", label: "照片", phase: "enrich" as const };
     expect(visibleAgentAnswer('你想从哪里讲起？<photo-memory>{"photos":[]}</photo-memory>', target)).toBe("你想从哪里讲起？");
     expect(visibleAgentAnswer('看看这里。<photo-memory>{"photos":', target)).toBe("看看这里。");
     expect(resolveComposerMode("write", target)).toBe("read");
@@ -39,6 +39,7 @@ describe("collaboration model", () => {
     expect(prompt).toContain("不是用户已经说过的话");
     expect(prompt).toContain("话题：你愿意把哪一种身体信号当作底线？");
     expect(prompt).toContain("用户这次想说：\n我想先说说最近一次晚睡。");
+    expect(prompt).toContain("不要求每轮都提问");
   });
 
   it("groups multiple turns from one Agent session into one conversation", () => {
@@ -120,6 +121,12 @@ describe("collaboration model", () => {
     expect(resolveComposerMode("auto", target)).toBe("read");
     expect(resolveAgentAutoSubmission({ prompt: "继续", mode: "auto", autoSubmit: true, outputTarget: target })).toMatchObject({ mode: "read", outputTarget: target });
     expect(visibleAgentAnswer("我理解了。\n<journey-report>\n## 完整旅程\n正文\n</journey-report>", target)).toBe("我理解了。");
+  });
+
+  it("recognizes the explicit journey wrap-up turn", () => {
+    const target = { kind: "journey-report" as const, importId: "batch-1", storedPath: "sources/消费账单/旅程.md", label: "消费旅程报告" };
+    expect(isJourneyWrapUpRun({ displayPrompt: JOURNEY_WRAP_UP_DISPLAY_PROMPT, outputTarget: target } as WikiRun)).toBe(true);
+    expect(isJourneyWrapUpRun({ displayPrompt: "继续聊聊", outputTarget: target } as WikiRun)).toBe(false);
   });
 
   it("keeps an open journey conversation stable while its report content refreshes", () => {

@@ -21,7 +21,7 @@ async function fixture() {
   const file = { name: "anonymous.png", content, encoding: "base64" };
   const batch = await store.create(index.config, { title: "匿名测试记忆", files: [file] });
   await index.rebuild();
-  const target: PhotoMemoryOutputTarget = { kind: "photo-memory", importId: batch.id, storedPath: batch.files[0]!.storedPath, label: "测试", phase: "analyze" };
+  const target: PhotoMemoryOutputTarget = { kind: "photo-memory", importId: batch.id, storedPath: batch.files[0]!.storedPath, label: "测试", phase: "enrich" };
   return { root, index, store, file, batch, target, config: index.config };
 }
 const person = { id: "person-1", name: "测试人物", box: { x: 0.2, y: 0.1, width: 0.5, height: 0.6 }, useAsAvatar: true };
@@ -100,18 +100,17 @@ describe("photo memories", () => {
     await writeFile(reportPath, oldReport + "\n外部改动");
     await expect(store.assertBuild(config, batch.id, target.storedPath)).rejects.toThrow("修改");
   });
-  it("keeps originals local and analysis candidates out of the source report", async () => {
+  it("keeps originals local and sends only the selected preview for story drafting", async () => {
     const { root, store, config, target, batch } = await fixture();
-    const prepared = await store.prepare(config, target);
-    const input = await store.analysisInput(config, batch.id);
+    const draftTarget = await store.prepare(config, { ...target, phase: "draft", photoId: "photo-1" });
+    const input = await store.storyInput(config, batch.id, "photo-1");
     expect(input.images).toHaveLength(1);
-    expect(input.prompt).toContain("这张照片给你留下了什么记忆？");
+    expect(input.prompt).toContain("只为照片 photo-1 写故事");
     expect(input.images[0]!.path).toMatch(/photo-1.jpg$/);
     expect(await sharp(input.images[0]!.path).metadata()).toMatchObject({ format: "jpeg", width: 80, height: 100 });
-    await store.materialize(config, prepared, '可以聊聊这张照片。<photo-memory>{"photos":[{"id":"photo-1","observation":"画面有一张桌子","question":"这是什么时候拍的？"}]}</photo-memory>');
-    expect((await store.read(config, batch.id)).photos[0]?.observation).toContain("桌子");
-    expect((await store.read(config, batch.id)).photos[0]?.question).toBe("这张照片给你留下了什么记忆？");
-    expect(await readFile(path.join(root, target.storedPath), "utf8")).not.toContain("桌子");
+    await store.materialize(config, draftTarget, "<photo-memory>一段尚待确认的故事。</photo-memory>");
+    expect((await store.read(config, batch.id)).photos[0]?.story).toBe("一段尚待确认的故事。");
+    expect(await readFile(path.join(root, target.storedPath), "utf8")).not.toContain("尚待确认");
     await expect(store.assertBuild(config, batch.id, target.storedPath)).rejects.toThrow("确认");
   });
 
@@ -202,5 +201,47 @@ describe("grouped photo-person confirmation", () => {
     expect(saved.photos.map((photo) => photo.people[0]?.pageId)).toEqual([page.id, page.id]);
     expect(saved.photos.map((photo) => photo.people[0]?.name)).toEqual([page.title, page.title]);
     await expect(store.update(config, batch.id, { revision: 1, photos: updates }, index)).rejects.toThrow("已更新");
+  });
+});
+
+describe("per-photo stories and persistent identity groups", () => {
+  it("persists matching identities atomically and rejects a stale rename", async () => {
+    const { store, config, index, file } = await fixture();
+    const batch = await store.create(config, { files: [file, file] });
+    const photos = ["photo-1", "photo-2"].map((photoId, i) => ({ photoId, people: [{ ...person, id: `face-${i}`, groupId: "group-a", box: { ...person.box, x: i * .1 } }] }));
+    await store.update(config, batch.id, { revision: 1, photos }, index);
+    const renamed = photos.map((photo) => ({ ...photo, people: photo.people.map((p) => ({ ...p, name: "另一个称呼" })) }));
+    await store.update(config, batch.id, { revision: 2, photos: renamed }, index);
+    await expect(store.update(config, batch.id, { revision: 2, photos }, index)).rejects.toThrow("已更新");
+    const saved = await store.read(config, batch.id);
+    expect(saved.photos.map((p) => p.people[0]!.name)).toEqual(["另一个称呼", "另一个称呼"]);
+    expect(saved.photos.map((p) => p.people[0]!.groupId)).toEqual(["group-a", "group-a"]);
+    expect(saved.photos[1]!.people[0]!.box.x).toBe(.1);
+  });
+  it("generates only the requested photo without confirming it or overwriting other stories", async () => {
+    const { store, config, index, file, root } = await fixture();
+    const batch = await store.create(config, { files: [file, file] });
+    await store.update(config, batch.id, { revision: 1, photoStories: [{ photoId: "photo-1", story: "用户写好的故事" }] }, index);
+    const target = await store.prepare(config, { kind: "photo-memory", importId: batch.id, storedPath: batch.files[0]!.storedPath, label: "单张故事", phase: "draft", photoId: "photo-2" });
+    expect((await store.storyInput(config, batch.id, "photo-2")).images.map((image) => image.path)).toEqual([expect.stringMatching(/photo-2.jpg$/)]);
+    await store.materialize(config, target, "<photo-memory>照片里的草稿</photo-memory>");
+    const saved = await store.read(config, batch.id);
+    expect(saved.photos.map((photo) => photo.story)).toEqual(["用户写好的故事", "照片里的草稿"]);
+    expect(saved.photos[1]!.storyOrigin).toBe("ai");
+    expect(saved.confirmedAt).toBeUndefined();
+    expect(await readFile(path.join(root, target.storedPath), "utf8")).not.toContain("照片里的草稿");
+    await expect(store.prepare(config, { ...target, photoId: "photo-1" })).rejects.toThrow("已有故事");
+    await expect(store.prepare(config, { ...target, photoId: "missing" })).rejects.toThrow("当前记忆");
+    await expect(store.materialize(config, target, "<photo-memory>过时故事</photo-memory>")).rejects.toThrow("已更新");
+  });
+  it("validates photo-story writes and retains blank stories when confirming the batch", async () => {
+    const { store, config, index, batch } = await fixture();
+    for (const photoStories of [[{ photoId: "missing", story: "" }], [{ photoId: "photo-1", story: 123 }], [{ photoId: "photo-1", story: "x".repeat(10001) }]]) {
+      await expect(store.update(config, batch.id, { revision: 1, photoStories }, index)).rejects.toThrow();
+    }
+    const saved = await store.update(config, batch.id, { revision: 1, story: "原有整段讲述", photoStories: [{ photoId: "photo-1", story: "" }] }, index);
+    expect(saved.photos[0]!.story).toBe("");
+    expect(saved.confirmedStory).toBe("原有整段讲述");
+    expect(saved.confirmedAt).toBeTruthy();
   });
 });

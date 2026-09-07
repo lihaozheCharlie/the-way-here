@@ -1,3 +1,4 @@
+import { SelectInput, TextInput } from "../../shared/form-controls";
 import { useEffect, useState } from "react";
 import type {
   AgentGlobalSettings,
@@ -228,20 +229,20 @@ export function AiConfiguration({ id, agent }: { id: string; agent: AgentSetting
 
     {codexSelected ? <div className="ai-config-fields ai-config-fields--codex">
       <div className="ai-config-intro"><b>Codex 自行管理模型服务</b><span>这里不需要填写 API Key 或选择服务商。</span></div>
-      <label htmlFor={`${id}-codex-model`}><span>模型</span><select id={`${id}-codex-model`} value={agent.codexModels.some((entry) => entry.id === draft.codex.model) ? draft.codex.model : agent.codexModels[0]?.id} onChange={(event) => agent.selectCodexModel(event.target.value)}>{agent.codexModels.map((entry) => <option key={entry.id} value={entry.id}>{entry.displayName}</option>)}</select></label>
-      <label htmlFor={`${id}-codex-effort`}><span>思考深度</span><select id={`${id}-codex-effort`} value={agent.codexEfforts.includes(draft.codex.effort) ? draft.codex.effort : agent.codexEfforts[0]} onChange={(event) => agent.setCodexEffort(event.target.value as AgentReasoningEffort)}>{agent.codexEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</select></label>
+      <label htmlFor={`${id}-codex-model`}><span>模型</span><SelectInput id={`${id}-codex-model`} value={agent.codexModels.some((entry) => entry.id === draft.codex.model) ? draft.codex.model : agent.codexModels[0]?.id} onChange={(event) => agent.selectCodexModel(event.target.value)}>{agent.codexModels.map((entry) => <option key={entry.id} value={entry.id}>{entry.displayName}</option>)}</SelectInput></label>
+      <label htmlFor={`${id}-codex-effort`}><span>思考深度</span><SelectInput id={`${id}-codex-effort`} value={agent.codexEfforts.includes(draft.codex.effort) ? draft.codex.effort : agent.codexEfforts[0]} onChange={(event) => agent.setCodexEffort(event.target.value as AgentReasoningEffort)}>{agent.codexEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</SelectInput></label>
       {!agent.codexRuntime.available && <p className="ai-config-warning">{agent.codexRuntime.reason || "本机没有可用的 Codex。"}</p>}
     </div> : <div className="ai-config-fields ai-config-fields--third-party">
       <div className="ai-config-intro"><b>第三方请求由 pi-agent 执行</b><span>选择厂商即可使用官方服务地址，密钥只保存在本机。</span></div>
-      <label className="wide" htmlFor={`${id}-provider`}><span>模型厂商</span><select id={`${id}-provider`} value={agent.selectedProvider.id} onChange={(event) => agent.selectProvider(event.target.value)}>{agent.providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.displayName} · {provider.description}</option>)}</select></label>
+      <label className="wide" htmlFor={`${id}-provider`}><span>模型厂商</span><SelectInput id={`${id}-provider`} value={agent.selectedProvider.id} onChange={(event) => agent.selectProvider(event.target.value)}>{agent.providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.displayName} · {provider.description}</option>)}</SelectInput></label>
       <section className="wide ai-model-bundle" aria-labelledby={`${id}-model-bundle-label`}>
         <header><span id={`${id}-model-bundle-label`}>模型与思考</span><small>模型不同，可选的思考深度也不同</small></header>
         <div>
-          <label htmlFor={`${id}-model`}><span>模型</span><select id={`${id}-model`} value={agent.selectedThirdPartyModel.id} onChange={(event) => agent.selectThirdPartyModel(event.target.value)}>{agent.selectedProvider.models.map((model) => <option key={model.id} value={model.id}>{model.displayName}{model.description ? ` · ${model.description}` : ""}</option>)}</select></label>
-          <label htmlFor={`${id}-third-party-effort`}><span>思考深度</span><select id={`${id}-third-party-effort`} value={agent.thirdPartyEfforts.includes(draft.thirdParty.effort) ? draft.thirdParty.effort : agent.selectedThirdPartyModel.defaultReasoningEffort} onChange={(event) => agent.setThirdPartyEffort(event.target.value as AgentReasoningEffort)}>{agent.thirdPartyEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</select></label>
+          <label htmlFor={`${id}-model`}><span>模型</span><SelectInput id={`${id}-model`} value={agent.selectedThirdPartyModel.id} onChange={(event) => agent.selectThirdPartyModel(event.target.value)}>{agent.selectedProvider.models.map((model) => <option key={model.id} value={model.id}>{model.displayName}{model.description ? ` · ${model.description}` : ""}</option>)}</SelectInput></label>
+          <label htmlFor={`${id}-third-party-effort`}><span>思考深度</span><SelectInput id={`${id}-third-party-effort`} value={agent.thirdPartyEfforts.includes(draft.thirdParty.effort) ? draft.thirdParty.effort : agent.selectedThirdPartyModel.defaultReasoningEffort} onChange={(event) => agent.setThirdPartyEffort(event.target.value as AgentReasoningEffort)}>{agent.thirdPartyEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</SelectInput></label>
         </div>
       </section>
-      <label className="wide ai-key-field" htmlFor={`${id}-api-key`}><span>{agent.selectedProvider.displayName} API Key <i>{agent.configuredApiKey ? "已保存" : "必填"}</i></span><div><input id={`${id}-api-key`} name={`${id}-api-key`} type="password" autoComplete="new-password" value={agent.apiKey} onChange={(event) => agent.setApiKey(event.target.value)} placeholder={agent.configuredApiKey ? "已安全保存，留空保持不变" : `粘贴 ${agent.selectedProvider.displayName} API Key`} />{agent.configuredApiKey && <button type="button" onClick={agent.removeApiKey}>移除</button>}</div></label>
+      <label className="wide ai-key-field" htmlFor={`${id}-api-key`}><span>{agent.selectedProvider.displayName} API Key <i>{agent.configuredApiKey ? "已保存" : "必填"}</i></span><div><TextInput id={`${id}-api-key`} name={`${id}-api-key`} type="password" autoComplete="new-password" value={agent.apiKey} onChange={(event) => agent.setApiKey(event.target.value)} placeholder={agent.configuredApiKey ? "已安全保存，留空保持不变" : `粘贴 ${agent.selectedProvider.displayName} API Key`} />{agent.configuredApiKey && <button type="button" onClick={agent.removeApiKey}>移除</button>}</div></label>
     </div>}
 
     <footer className="ai-config-footer">

@@ -44,7 +44,7 @@ export function groupedPhotoQueue(memory: PhotoMemory, drafts: Record<string, Ph
   const used = new Set<string>();
   return queue.flatMap((entry) => {
     if (used.has(entry.person.id)) return [];
-    const ids = groups.find((group) => group.includes(entry.person.id)) ?? [entry.person.id];
+    const ids = groups.find((group) => group.includes(entry.person.id)) ?? (entry.person.groupId ? queue.filter((candidate) => candidate.person.groupId === entry.person.groupId).map((candidate) => candidate.person.id) : [entry.person.id]);
     const members = queue.filter((candidate) => ids.includes(candidate.person.id) && !used.has(candidate.person.id));
     // A restored/stale suggestion must never override a separately chosen identity.
     const identities = new Set(members.filter((m) => m.person.name).map((m) => m.person.pageId ?? `name:${m.person.name}`));
@@ -56,4 +56,29 @@ export function groupedPhotoQueue(memory: PhotoMemory, drafts: Record<string, Ph
 
 export function detachFace(groups: FaceGroups, id: string): FaceGroups {
   return groups.map((group) => group.filter((member) => member !== id)).filter((group) => group.length > 1);
+}
+
+// One atomic update preserves each crop while committing a shared identity.
+export function photoIdentityUpdates(memory: PhotoMemory, drafts: Record<string, PhotoPerson[]>, groups: FaceGroups, personId: string, patch: Partial<PhotoPerson>) {
+  const group = groupedPhotoQueue(memory, drafts, groups).find((entry) => entry.members.some((member) => member.person.id === personId));
+  if (!group) return [];
+  const groupId = group.members.length > 1 ? group.members[0]!.person.groupId ?? group.members[0]!.person.id : group.person.groupId;
+  return group.members.map((entry) => ({ photoId: entry.photo.id, people: [
+    ...entry.photo.people.filter((person) => person.id !== entry.person.id),
+    { ...entry.person, name: patch.name ?? entry.person.name, pageId: patch.pageId, groupId, useAsAvatar: patch.useAsAvatar ?? entry.person.useAsAvatar,
+      box: entry.person.id === personId ? patch.box ?? entry.person.box : entry.person.box },
+  ] }));
+}
+
+export function reconcilePhotoDrafts(previous: PhotoMemory, current: PhotoMemory, drafts: Record<string, PhotoPerson[]>) {
+  return Object.fromEntries(Object.entries(drafts).map(([photoId, people]) => {
+    const before = previous.photos.find((photo) => photo.id === photoId)?.people ?? [];
+    const after = current.photos.find((photo) => photo.id === photoId)?.people ?? [];
+    return [photoId, people.map((person) => {
+      const saved = before.find((item) => item.id === person.id);
+      const updated = after.find((item) => item.id === person.id);
+      const unchanged = saved && saved.name === person.name && saved.pageId === person.pageId && saved.groupId === person.groupId && saved.useAsAvatar === person.useAsAvatar && JSON.stringify(saved.box) === JSON.stringify(person.box);
+      return unchanged && updated ? updated : person;
+    })];
+  }));
 }

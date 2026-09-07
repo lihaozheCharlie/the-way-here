@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { PaymentJourneyCluster, PaymentJourneyClusterKind, PaymentJourneySummary, SourceImportFile } from "@the-way-here/shared";
+import type { PaymentJourneyCluster, PaymentJourneyClusterKind, PaymentJourneySummary, PaymentJourneyTransactionEvidence, SourceImportFile } from "@the-way-here/shared";
 import { JOURNEY_REPORT_DRAFT_END, JOURNEY_REPORT_DRAFT_START } from "@the-way-here/shared";
 
 export interface PaymentStatementPreparedFile {
@@ -48,9 +48,9 @@ const categoryKeywords: Array<{ category: PaymentCategory; words: string[] }> = 
 ];
 
 const themeDefinitions: Array<{ title: string; words: string[]; question: string }> = [
-  { title: "运动与骑行线索", words: ["运动", "跑步", "健身", "骑行", "美利达", "迪卡侬", "耐克", "NIKE", "雨衣"], question: "从当时一次具体的运动、骑行或通勤场景讲起吧：你为什么开始准备这些东西，那段变化后来怎样进入了日常？" },
-  { title: "居住与生活整理线索", words: ["电费", "物业", "家居", "洗漱", "相册", "收纳", "无印良品", "杯子", "电池"], question: "请带我回到当时的住处：你那阵子最想把生活整理成什么样，又有哪些变化藏在这些日常物件背后？" },
-  { title: "健康与身体关注线索", words: ["医药", "药房", "医院", "诊所", "体检", "健康", "压力", "运动"], question: "请从那段时间身体或情绪上最清晰的一个感受讲起：你当时在照顾什么，又慢慢意识到了什么？" },
+  { title: "运动与骑行线索", words: ["运动", "跑步", "健身", "骑行", "美利达", "迪卡侬", "耐克", "NIKE", "雨衣"], question: "那段时间，运动或骑行在你的日常里是什么位置？" },
+  { title: "居住与生活整理线索", words: ["电费", "物业", "家居", "洗漱", "相册", "收纳", "无印良品", "杯子", "电池"], question: "那阵子，你最想把住处或日常变成什么样？" },
+  { title: "健康与身体关注线索", words: ["医药", "药房", "医院", "诊所", "体检", "健康", "压力", "运动"], question: "那段时间，你最明确在照顾身体的哪一件事？" },
 ];
 
 function decodeFile(file: SourceImportFile): string {
@@ -174,6 +174,20 @@ function evidenceLine(entry: PaymentEntry): string {
   return `${entry.id} · ${displayDate(entry.date)} ${entry.createdAt.slice(11, 16)} · ${entry.merchant} · ${item}`;
 }
 
+function transactionEvidence(entry: PaymentEntry): PaymentJourneyTransactionEvidence {
+  return {
+    id: entry.id,
+    createdAt: entry.createdAt,
+    merchant: entry.merchant,
+    product: entry.product,
+    amount: entry.amount,
+    direction: entry.direction,
+    status: entry.status,
+    refund: entry.refund,
+    category: entry.category,
+  };
+}
+
 function cluster(
   kind: PaymentJourneyClusterKind,
   title: string,
@@ -194,6 +208,9 @@ function cluster(
     entryCount: sorted.length,
     categories: [...new Set(sorted.map((entry) => entry.category))],
     evidence: sorted.slice(0, 5).map(evidenceLine),
+    transactions: sorted.map(transactionEvidence),
+    proposedMemory: summary.replace(/，可能对应[^。]+。?$/, "。").replace(/，比单笔消费更像一个完整事件。?$/, "。"),
+    confidence: score >= 80 ? "high" : "medium",
     score,
     entryIds: sorted.map((entry) => entry.id),
   };
@@ -215,7 +232,7 @@ function recurringClusters(entries: PaymentEntry[]): ScoredCluster[] {
       "routine",
       `反复出现的「${sorted[0]!.merchant}」`,
       `${periodText(sorted[0]!.date, sorted.at(-1)!.date)}共有 ${sorted.length} 笔相似消费${rhythm}，可能对应一个固定场景或生活节律。`,
-      `请从一次最有画面的消费讲起：那通常是怎样的一天、周围有什么人和事，这个反复出现的小习惯对当时的生活意味着什么？`,
+      `这种反复出现的消费，通常落在一天的哪个片段里？`,
       sorted,
       42 + sorted.length * 4 + concentrated,
     );
@@ -231,7 +248,7 @@ function placeClusters(entries: PaymentEntry[]): ScoredCluster[] {
       "place",
       `围绕「${place}」的生活半径`,
       `${periodText(group.map((entry) => entry.date).sort()[0]!, group.map((entry) => entry.date).sort().at(-1)!)}出现 ${group.length} 笔记录，串联了${categories.join("、")}。`,
-      `请带我走进${place}当时的一天：你常在那里做什么、会遇见谁，哪些消费之外的细节最能说明那段生活？`,
+      `那段时间，你通常为什么去${place}？`,
       group,
       48 + group.length * 2 + categories.length * 7 - (cityNames.includes(place) ? 8 : 0),
     );
@@ -255,7 +272,7 @@ function journeyClusters(entries: PaymentEntry[]): ScoredCluster[] {
       "journey",
       `${periodText(start, end)} · ${city}旅程候选`,
       `${cityEntries.length} 笔明确包含${city}的记录，与附近的出行消费共同形成一段连续轨迹，涉及${categories.join("、")}。`,
-      `请从这次${city}之行最先浮现的一个画面讲起：你为何出发、和谁共享了这段时间，哪件小事后来最值得记住？`,
+      `这趟${city}之行，你现在最想留下哪一件事？`,
       connected,
       100 + connected.length * 4 + categories.length * 8,
     ));
@@ -274,7 +291,7 @@ function dayStoryClusters(entries: PaymentEntry[]): ScoredCluster[] {
       "day-story",
       `${displayDate(date)} · 一天里的多段生活`,
       `从${Math.min(...hours)}点到${Math.max(...hours)}点的 ${group.length} 笔记录串联了${categories.join("、")}，比单笔消费更像一个完整事件。`,
-      `如果把这一天讲成一段短故事，请从早些时候的一个画面说起，慢慢讲到当天最重要的转折，以及那些消费背后的人和心情。`,
+      `回看这一天，你最想留下哪个片段？`,
       group,
       64 + group.length * 3 + categories.length * 9,
     )];
@@ -312,7 +329,13 @@ function selectClusters(candidates: ScoredCluster[]): PaymentJourneyCluster[] {
     if (!duplicate) selected.push(candidate);
     if (selected.length >= 10) break;
   }
-  return selected.sort((left, right) => right.score - left.score).map(({ score: _score, entryIds: _entryIds, ...item }) => item);
+  const ranked = selected.sort((left, right) => right.score - left.score);
+  return ranked.map(({ score: _score, entryIds, ...item }) => ({
+    ...item,
+    relatedClusterIds: ranked
+      .filter((candidate) => candidate.id !== item.id && candidate.entryIds.filter((id) => entryIds.includes(id)).length / Math.min(candidate.entryIds.length, entryIds.length) >= .35)
+      .map((candidate) => candidate.id),
+  }));
 }
 
 function markdownEscape(value: string): string {
@@ -321,7 +344,7 @@ function markdownEscape(value: string): string {
 
 function buildAgentPrompt(reportPath: string, clusters: PaymentJourneyCluster[]): string {
   const clues = clusters.slice(0, 8).map((item, index) => `${index + 1}. ${item.title}：${item.summary}\n   可从这里开始：${item.question}`).join("\n");
-  return `我刚导入了一份消费账单，聚类报告位于 ${reportPath}。请把它当作回忆线索，和我进行一段温柔、有深度的旅程访谈。\n\n这些账单默认都是我的，不要逐笔确认“是不是你”“有没有发生”，也不要连续抛出需要回答是或否的问题。只有我主动指出代付、礼物、误识别或明显冲突时再自然校正。\n\n请优先把重复消费、同一地点、同一天的多种活动和跨日期主题串起来，不要逐笔复述。每轮只展开一个核心画面：先用一两句话温和地说出你看到的联系，再给我一个开放式邀请，让我能够用几句话或一小段故事回答。问题可以沿着地点、同行者、动机、当时的状态、转折、感受、结果和后续影响深入，但不要把这些维度一次性全部列成反问。\n\n听完我的回答后，先简短复述你理解到的重点或其中有意味的细节，再顺着我的原话追问下一层；不要重复确认已经说过的信息。普通消费可以跳过，相互关联的线索要慢慢追深。经过几轮后，帮我整理成一段连贯的旅程叙述，并明确哪些细节来自我的回答。\n\n当前候选线索：\n${clues}\n\n请先选择最可能串起一段完整经历的线索，像一个熟悉我的朋友那样，从一个具体、容易进入的画面开始邀请我讲述。`;
+  return `我刚导入了一份消费账单，聚类报告位于 ${reportPath}。请把它当作回忆线索，陪我留下我愿意讲的部分；不要把对话做成信息采集或深度访谈。\n\n这些账单默认都是我的，不要逐笔确认“是不是你”“有没有发生”。只有我主动指出代付、礼物、误识别或明显冲突时再自然校正。可以联系重复消费、同一地点、同一天的活动和跨日期主题，但不要逐笔复述，也不要把消费推断成我的情绪、关系或人生意义。\n\n开场只从一条线索给出一个轻、单一、容易回答的邀请。听完后先判断是否真的还需要问题：只有我的原话留下自然的未完线索，而且答案会改变叙述时，才问最多一个短问题；不要求每轮追问。我的简短回答、“不记得”“没什么”或“不想展开”都是完整答案，应准确保留并停下。不要为了完整而把人物、动机、感受和结果问齐。\n\n当前候选线索：\n${clues}\n\n请选一条容易进入的线索开始。内容已经足够，或我表示聊得差不多时，就简短确认已经整理好，不再提问。`;
 }
 
 function buildReport(title: string, source: string, createdAt: string, entries: PaymentEntry[], clusters: PaymentJourneyCluster[], agentPrompt: string): string {
@@ -329,7 +352,7 @@ function buildReport(title: string, source: string, createdAt: string, entries: 
   const activeDays = new Set(entries.map((entry) => entry.date)).size;
   const clusterSections = clusters.map((item) => `## ${item.title}\n\n${item.summary}\n\n**适合展开：** ${item.question}\n\n**关联类别：** ${item.categories.join("、")}\n\n${item.evidence.map((line) => `- ${line}`).join("\n")}`).join("\n\n");
   const rows = entries.map((entry) => `| ${entry.id} | ${entry.createdAt} | ${markdownEscape(entry.merchant)} | ${markdownEscape(entry.product)} | ${entry.category} | ${entry.amount.toFixed(2)} | ${entry.status} | ${entry.refund.toFixed(2)} |`).join("\n");
-  return `---\ntype: source\nimport_channel: alipay\nsource: ${JSON.stringify(source)}\nimported_at: ${createdAt}\n---\n\n# ${title}\n\n这是一份由支付宝账单确定性解析得到的消费旅程报告。聚类是回忆候选，不代表已经确认的人生事实。\n\n- 交易记录：${entries.length} 笔\n- 活跃日期：${activeDays} 天\n- 净支出：${netExpense.toFixed(2)} 元\n- 退款记录：${entries.filter((entry) => entry.status === "退款成功").length} 笔\n- 旅程线索：${clusters.length} 组\n\n# 已确认的消费旅程\n\n${JOURNEY_REPORT_DRAFT_START}\n尚未经过对话确认。可以从下方线索开始，慢慢补全人物、动机、感受和后续影响。\n${JOURNEY_REPORT_DRAFT_END}\n\n# 值得继续讲述的线索\n\n${clusterSections}\n\n# 与 Agent 继续回忆\n\n${agentPrompt}\n\n# 规范化交易证据\n\n| 编号 | 时间 | 交易对方 | 商品或说明 | 类别 | 金额 | 状态 | 成功退款 |\n| --- | --- | --- | --- | --- | ---: | --- | ---: |\n${rows}\n`;
+  return `---\ntype: source\nimport_channel: alipay\nsource: ${JSON.stringify(source)}\nimported_at: ${createdAt}\n---\n\n# ${title}\n\n这是一份由支付宝账单确定性解析得到的消费旅程报告。聚类是回忆候选，不代表已经确认的人生事实。\n\n- 交易记录：${entries.length} 笔\n- 活跃日期：${activeDays} 天\n- 净支出：${netExpense.toFixed(2)} 元\n- 退款记录：${entries.filter((entry) => entry.status === "退款成功").length} 笔\n- 旅程线索：${clusters.length} 组\n\n# 已确认的消费旅程\n\n${JOURNEY_REPORT_DRAFT_START}\n尚未经过对话确认。可以从下方线索开始，只留下你愿意讲、也能够确认的部分。\n${JOURNEY_REPORT_DRAFT_END}\n\n# 值得继续讲述的线索\n\n${clusterSections}\n\n# 与 Agent 继续回忆\n\n${agentPrompt}\n\n# 规范化交易证据\n\n| 编号 | 时间 | 交易对方 | 商品或说明 | 类别 | 金额 | 状态 | 成功退款 |\n| --- | --- | --- | --- | --- | ---: | --- | ---: |\n${rows}\n`;
 }
 
 export function prepareAlipayStatement(file: SourceImportFile, createdAt: string): PreparedPaymentStatement {
@@ -367,6 +390,8 @@ export function prepareAlipayStatement(file: SourceImportFile, createdAt: string
       refundCount: entries.filter((entry) => entry.status === "退款成功").length,
       clusters,
       agentPrompt,
+      revision: 1,
+      clueStates: clusters.map((item) => ({ clusterId: item.id, status: "pending" })),
     },
   };
 }

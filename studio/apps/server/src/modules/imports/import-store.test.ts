@@ -1,8 +1,8 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { WikiPage, WikiRun } from "@the-way-here/shared";
+import type { SourceImportBatch, WikiPage, WikiRun } from "@the-way-here/shared";
 import type { KnowledgeRuntime } from "../../runtime/knowledge-runtime.js";
 import { ImportStore } from "./import-store.js";
 
@@ -30,6 +30,8 @@ describe("ImportStore", () => {
     } as unknown as KnowledgeRuntime;
     const store = new ImportStore(knowledge);
 
+    await mkdir(path.join(root, "sources/日记"), { recursive: true });
+    await writeFile(path.join(root, "sources/日记/新记录.md"), "");
     const batch = await store.trackCreatedSource({
       id: "sources/日记/新记录",
       relativePath: "sources/日记/新记录.md",
@@ -75,6 +77,11 @@ describe("ImportStore", () => {
     expect(batch.journey?.reportPath).toMatch(/^sources\/消费账单\/.+\.md$/);
     expect(batch.journey?.agentPrompt).toContain(batch.journey!.reportPath);
     expect(batch.files.some((file) => file.storedPath.endsWith(".csv"))).toBe(true);
+    const manifestPath = path.join(root, "sources/.imports", `${batch.id}.json`);
+    const legacyBatch = JSON.parse(await readFile(manifestPath, "utf8"));
+    for (const cluster of legacyBatch.journey.clusters) delete cluster.transactions;
+    await writeFile(manifestPath, `${JSON.stringify(legacyBatch, null, 2)}\n`);
+    expect((await store.list())[0]?.journey?.clusters[0]?.transactions?.length).toBeGreaterThan(0);
     const journeyRecord = batch.files.find((file) => file.storedPath === batch.journey?.reportPath);
     expect(journeyRecord).toMatchObject({ buildKind: "dialogue", buildStatus: "needs-dialogue", clueCount: batch.journey?.clusters.length });
     await store.updateBuildStatus(batch.id, journeyRecord!.storedPath, "deferred");
@@ -82,6 +89,63 @@ describe("ImportStore", () => {
     expect(await readFile(path.join(root, batch.journey!.reportPath), "utf8")).toContain("反复出现的「24H便利购」");
     expect(rebuild).toHaveBeenCalledOnce();
     expect(broadcast).toHaveBeenCalledWith("index", expect.objectContaining({ importId: batch.id }));
+  });
+
+  it("returns one live record when historical import manifests reference the same bill", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "the-way-here-duplicate-bill-"));
+    roots.push(root);
+    const knowledge = {
+      vaultRoot: root,
+      index: { config: { paths: { sources: "sources" } }, rebuild: vi.fn(async () => undefined), lastIndexedAt: "2026-09-05T00:00:00.000Z" },
+      events: { broadcast: vi.fn() },
+    } as unknown as KnowledgeRuntime;
+    const store = new ImportStore(knowledge);
+    const current = await store.create({ channel: "alipay", targetFolder: "消费账单", files: [{ name: "alipay.csv", content: Buffer.from(smallStatement()).toString("base64"), encoding: "base64" }] });
+    const historical = {
+      ...current,
+      id: "historical-duplicate",
+      createdAt: "2025-01-01T00:00:00.000Z",
+      files: current.files.map((file) => ({ ...file, buildUpdatedAt: "2025-01-01T00:00:00.000Z" })),
+    } satisfies SourceImportBatch;
+    await writeFile(path.join(root, "sources/.imports/historical-duplicate.json"), `${JSON.stringify(historical, null, 2)}\n`);
+
+    const listed = await store.list();
+
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.id).toBe(current.id);
+    expect(listed[0]?.files.map((file) => file.storedPath)).toEqual(current.files.map((file) => file.storedPath));
+  });
+
+  it("persists clue-level confirm, brief and skip decisions with optimistic revisions", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "the-way-here-bill-clues-"));
+    roots.push(root);
+    const knowledge = {
+      vaultRoot: root,
+      index: { config: { paths: { sources: "sources" } }, rebuild: vi.fn(async () => undefined), lastIndexedAt: "2026-09-05T00:00:00.000Z" },
+      events: { broadcast: vi.fn() },
+    } as unknown as KnowledgeRuntime;
+    const store = new ImportStore(knowledge);
+    const created = await store.create({ channel: "alipay", targetFolder: "消费账单", files: [{ name: "alipay.csv", content: Buffer.from(smallStatement()).toString("base64"), encoding: "base64" }] });
+    const journey = created.journey!;
+    const report = created.files.find((file) => file.storedPath === journey.reportPath)!;
+    const clue = journey.clusters[0]!;
+
+    const confirmed = await store.updateJourneyClue(created.id, clue.id, { storedPath: report.storedPath, revision: 1, status: "confirmed" });
+    expect(confirmed.journey?.revision).toBe(2);
+    expect(confirmed.journey?.clueStates).toEqual(expect.arrayContaining([expect.objectContaining({ clusterId: clue.id, status: "confirmed", resultText: clue.proposedMemory })]));
+    expect(confirmed.files.find((file) => file.storedPath === report.storedPath)?.buildStatus).toBe("needs-dialogue");
+    expect(await readFile(path.join(root, report.storedPath), "utf8")).toContain(clue.proposedMemory);
+    await expect(store.updateJourneyClue(created.id, clue.id, { storedPath: report.storedPath, revision: 1, status: "skipped" })).rejects.toThrow("刷新后再试");
+
+    const remaining = journey.clusters.find((candidate) => candidate.id !== clue.id)!;
+    const startedDeep = await store.updateJourneyClue(created.id, remaining.id, { storedPath: report.storedPath, revision: 2, status: "deep" });
+    expect(startedDeep.files.find((file) => file.storedPath === report.storedPath)?.buildStatus).toBe("needs-dialogue");
+    expect(await readFile(path.join(root, report.storedPath), "utf8")).not.toContain("细聊已经开始");
+    const resolved = await store.updateJourneyClue(created.id, remaining.id, { storedPath: report.storedPath, revision: 3, status: "skipped" });
+    expect(resolved.files.find((file) => file.storedPath === report.storedPath)?.buildStatus).toBe("ready-to-build");
+
+    const reopened = (await store.list())[0]!;
+    expect(reopened.journey?.clueStates?.[0]?.status).toBe("confirmed");
   });
 
   it("derives completion and provenance from the real Agent run", async () => {

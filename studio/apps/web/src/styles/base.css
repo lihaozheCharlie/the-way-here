@@ -37,7 +37,6 @@ button:disabled { cursor: not-allowed; }
 .main-area:focus { outline: 0; }
 .topbar { position: sticky; top: 0; z-index: 20; min-height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 34px; background: var(--paper); border-bottom: 1px solid var(--line); }
 .search { width: min(510px, 52vw); display: flex; align-items: center; gap: 9px; padding: 9px 12px; color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
-.search:focus-within { border-color: var(--accent-primary); }
 .search input { width: 100%; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 13px; }
 .search input::placeholder { color: #74756f; opacity: 1; }
 .primary-action { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 8px 13px; color: #fff; background: var(--ink); border: 1px solid var(--ink); border-radius: 6px; font-size: 12px; font-weight: 720; transition: background .18s var(--ease), transform .18s var(--ease); }
@@ -246,7 +245,6 @@ button.primary-action { margin-left: 0; }
 .evidence-panel li { margin-bottom: 7px; overflow-wrap: anywhere; color: var(--muted); }
 .evidence-panel a { color: var(--accent-primary); }
 .editor-pane textarea { width: 100%; min-height: 68vh; resize: vertical; padding: 18px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); outline: 0; font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.editor-pane textarea:focus { border-color: var(--accent-primary); }
 .editor-pane > div { margin-top: 10px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 10px; }
 
 .run-status { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; white-space: nowrap; }

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { TimelineFilter } from "./TimelineFilter";
+import { SelectInput } from "./form-controls";
 
 const base = { label: "按写信年份筛选", value: "", periods: [{ value: "2025", label: "2025 年", count: 3 }], total: 4, allLabel: "全部年份", onChange: vi.fn() };
 
@@ -33,7 +34,8 @@ describe("shared timeline filter", () => {
   it("forwards the selected period and the reset value to its owner", () => {
     const onChange = vi.fn();
     const element = TimelineFilter({ ...base, onChange });
-    const select = element.props.children.find((child: any) => child?.type === "select");
+    const field = element.props.children.find((child: any) => child?.type === SelectInput);
+    const select = SelectInput(field.props);
     select.props.onChange({ target: { value: "2025" } });
     select.props.onChange({ target: { value: "" } });
     expect(onChange.mock.calls).toEqual([["2025"], [""]]);

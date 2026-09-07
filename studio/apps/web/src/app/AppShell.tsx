@@ -1,9 +1,11 @@
+import { SearchField } from "../shared/form-controls";
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import type { VaultInfo } from "@the-way-here/shared";
 import { api, useApi } from "../api";
 import { navigation, type ReturnContext } from "./config";
 import { ConfirmDeleteDialog } from "../shared/ConfirmDeleteDialog";
+import { TruncatedTextTooltip } from "../shared/TruncatedTextTooltip";
 import { Icon } from "../shared/ui";
 import { OrganizedSources } from "../features/sources/Sources";
 import { FocusWorkspace, GrowthHub, KnowledgeHome, QuestionsHub, Today } from "../features/overview/OverviewPages";
@@ -170,10 +172,7 @@ export function AppShell({ revision }: { revision: number }) {
               return <NavLink key={item.to} to={item.to} end={item.to === "/"} className={active ? "active" : ""}>{item.label}</NavLink>;
             })}
           </nav>
-          <form id="global-search" className="global-search" onSubmit={submitSearch} role="search">
-            <Icon name="search" size={16} />
-            <input name="global-search" autoComplete="off" aria-label="搜索生活记录与已有理解" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索记录与已有理解…" />
-          </form>
+          <SearchField className="global-search" formId="global-search" onSubmit={submitSearch} name="global-search" autoComplete="off" aria-label="搜索生活记录与已有理解" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索记录与已有理解…" />
         </div>
       </header>
       {activeSection && activeSection.children.length > 0 ? <div className="local-navigation">
@@ -226,6 +225,7 @@ export function AppShell({ revision }: { revision: number }) {
         onClose={closeDeleteKnowledgeBaseDialog}
         onConfirm={deleteKnowledgeBase}
       /> : null}
+      <TruncatedTextTooltip />
     </div>
   );
 }

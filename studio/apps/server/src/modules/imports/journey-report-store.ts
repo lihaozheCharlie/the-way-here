@@ -7,6 +7,7 @@ import {
   JOURNEY_REPORT_OUTPUT_END,
   JOURNEY_REPORT_OUTPUT_START,
   type JourneyReportOutputTarget,
+  type PaymentJourneyClueState,
   type SourceImportBatch,
   type VaultConfig,
 } from "@the-way-here/shared";
@@ -30,6 +31,7 @@ export class JourneyReportStore {
     if (!file || file.buildKind !== "dialogue" || batch.journey?.reportPath !== target.storedPath) {
       throw new JourneyReportTargetError("要更新的消费旅程报告不存在");
     }
+    if (target.clueId && !batch.journey.clusters.some((cluster) => cluster.id === target.clueId)) throw new JourneyReportTargetError("要继续细聊的账单线索不存在");
     this.resolveReportPath(config, target.storedPath);
   }
 
@@ -39,7 +41,17 @@ export class JourneyReportStore {
     return { ...target, expectedContentHash: contentHash(content) };
   }
 
-  async materialize(config: VaultConfig, target: JourneyReportOutputTarget, output: string): Promise<MaterializedJourneyReport> {
+  async assertBuild(config: VaultConfig, importId: string, storedPath: string): Promise<void> {
+    const batch = await this.readBatch(config, importId);
+    if (batch.channel !== "alipay" || batch.journey?.reportPath !== storedPath) throw new JourneyReportTargetError("要构建的消费旅程不存在");
+    const states = new Map((batch.journey.clueStates || []).map((state) => [state.clusterId, state]));
+    const resolved = batch.journey.clusters.map((cluster) => states.get(cluster.id) || { clusterId: cluster.id, status: "pending" as const });
+    const included = (state: PaymentJourneyClueState) => state.status === "confirmed" || state.status === "brief" || state.status === "deep" && Boolean(state.conversationTurns);
+    if (resolved.some((state) => state.status !== "skipped" && !included(state))) throw new JourneyReportTargetError("请先处理或跳过每一条账单线索，并等待细聊保存完成，再构建这份记录");
+    if (!resolved.some(included)) throw new JourneyReportTargetError("至少保留一条想收录的账单线索，再构建这份记录");
+  }
+
+  async materialize(config: VaultConfig, target: JourneyReportOutputTarget, output: string, runId?: string): Promise<MaterializedJourneyReport> {
     await this.assertTarget(config, target);
     const { visibleAnswer, draft } = extractJourneyReportOutput(output);
     const reportPath = this.resolveReportPath(config, target.storedPath);
@@ -51,7 +63,30 @@ export class JourneyReportStore {
     const temporary = `${reportPath}.${process.pid}.${randomUUID()}.tmp`;
     await writeFile(temporary, updated, "utf8");
     await rename(temporary, reportPath);
+    if (target.clueId) await this.recordClueConversation(config, target, draft, runId);
     return { visibleAnswer, savedAt: new Date().toISOString() };
+  }
+
+  private async recordClueConversation(config: VaultConfig, target: JourneyReportOutputTarget, draft: string, runId?: string): Promise<void> {
+    const batch = await this.readBatch(config, target.importId);
+    const journey = batch.journey!;
+    const cluster = journey.clusters.find((candidate) => candidate.id === target.clueId)!;
+    const states = new Map((journey.clueStates || []).map((state) => [state.clusterId, state]));
+    const previous = states.get(cluster.id);
+    states.set(cluster.id, {
+      clusterId: cluster.id,
+      status: "deep",
+      resultText: summarizeClueDraft(draft, cluster.title) || previous?.resultText || "这条线索的细聊内容已经保存。",
+      conversationRunId: runId || previous?.conversationRunId,
+      conversationTurns: (previous?.conversationTurns || 0) + 1,
+      updatedAt: new Date().toISOString(),
+    });
+    journey.clueStates = journey.clusters.map((item) => states.get(item.id) || { clusterId: item.id, status: "pending" });
+    journey.revision = (journey.revision || 1) + 1;
+    const manifest = path.resolve(this.vaultRoot, config.paths.sources, ".imports", `${target.importId}.json`);
+    const temporary = `${manifest}.${process.pid}.${randomUUID()}.tmp`;
+    await writeFile(temporary, `${JSON.stringify(batch, null, 2)}\n`, "utf8");
+    await rename(temporary, manifest);
   }
 
   private resolveReportPath(config: VaultConfig, storedPath: string): string {
@@ -73,6 +108,13 @@ export class JourneyReportStore {
       throw error;
     }
   }
+}
+
+function summarizeClueDraft(draft: string, title: string): string {
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const section = draft.match(new RegExp(`(?:^|\\n)##\\s+${escaped}\\s*\\n+([^#][\\s\\S]*?)(?=\\n##\\s|$)`))?.[1] || draft;
+  const paragraph = section.split(/\n\s*\n/).map((item) => item.replace(/^\*\*[^*]+:\*\*\s*/g, "").replace(/^[#>*\-\s]+/g, "").trim()).find(Boolean) || "";
+  return paragraph.length > 280 ? `${paragraph.slice(0, 279)}…` : paragraph;
 }
 
 function contentHash(content: string): string {

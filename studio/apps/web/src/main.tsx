@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import "@fontsource-variable/noto-sans-sc";
 import App from "./App";
 import "./styles/base.css";
+import "./styles/form-controls.css";
 import "./styles/features.css";
 import "./styles/archive-foundation.css";
 import "./styles/refinements.css";

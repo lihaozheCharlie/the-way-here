@@ -26,7 +26,7 @@ describe("JourneyReportStore", () => {
     const batch: SourceImportBatch = {
       id: "batch-1", createdAt: "2026-09-03T00:00:00.000Z", fileCount: 1, totalBytes: 1,
       files: [{ originalName: "账单.csv", storedPath: reportPath, bytes: 1, buildKind: "dialogue", buildStatus: "needs-dialogue" }],
-      journey: { provider: "alipay", title: "旅程", reportPath, period: { start: "2026-08-01", end: "2026-08-02" }, transactionCount: 2, activeDays: 2, netExpense: 20, refundCount: 0, clusters: [], agentPrompt: "聊聊" },
+      journey: { provider: "alipay", title: "旅程", reportPath, period: { start: "2026-08-01", end: "2026-08-02" }, transactionCount: 2, activeDays: 2, netExpense: 20, refundCount: 0, clusters: [], agentPrompt: "聊聊", revision: 1, clueStates: [] },
     };
     await mkdir(path.join(sourceRoot, ".imports"), { recursive: true });
     await mkdir(path.dirname(path.join(root, reportPath)), { recursive: true });
@@ -43,6 +43,32 @@ describe("JourneyReportStore", () => {
     const staleTarget = await store.prepareTarget(config, target);
     await writeFile(path.join(root, reportPath), `${await readFile(path.join(root, reportPath), "utf8")}\n手工补充`);
     await expect(store.materialize(config, staleTarget, "回答\n<journey-report>新草稿</journey-report>")).rejects.toThrow("被修改了");
+  });
+
+  it("binds a deep conversation result back to the selected clue", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "the-way-here-journey-clue-"));
+    roots.push(root);
+    const sourceRoot = path.join(root, config.paths.sources);
+    const reportPath = "vault/demo/sources/消费账单/旅程.md";
+    const cluster = { id: "journey-t001", kind: "journey" as const, title: "北京旅程", summary: "两天的连续出行", question: "发生了什么？", startDate: "2026-08-01", endDate: "2026-08-02", entryCount: 2, categories: ["出行"], evidence: [], proposedMemory: "有一段北京出行记录。", confidence: "high" as const };
+    const target: JourneyReportOutputTarget = { kind: "journey-report", importId: "batch-1", storedPath: reportPath, label: cluster.title, clueId: cluster.id };
+    const batch: SourceImportBatch = {
+      id: "batch-1", createdAt: "2026-09-03T00:00:00.000Z", channel: "alipay", fileCount: 1, totalBytes: 1,
+      files: [{ originalName: "账单.csv", storedPath: reportPath, bytes: 1, buildKind: "dialogue", buildStatus: "needs-dialogue" }],
+      journey: { provider: "alipay", title: "旅程", reportPath, period: { start: "2026-08-01", end: "2026-08-02" }, transactionCount: 2, activeDays: 2, netExpense: 20, refundCount: 0, clusters: [cluster], agentPrompt: "聊聊", revision: 2, clueStates: [{ clusterId: cluster.id, status: "deep" }] },
+    };
+    await mkdir(path.join(sourceRoot, ".imports"), { recursive: true });
+    await mkdir(path.dirname(path.join(root, reportPath)), { recursive: true });
+    await writeFile(path.join(sourceRoot, ".imports", "batch-1.json"), JSON.stringify(batch));
+    await writeFile(path.join(root, reportPath), `# 已确认的消费旅程\n\n<!-- the-way-here:journey-draft:start -->\n旧草稿\n<!-- the-way-here:journey-draft:end -->`);
+
+    const store = new JourneyReportStore(root);
+    await expect(store.assertBuild(config, "batch-1", reportPath)).rejects.toThrow("等待细聊保存完成");
+    const prepared = await store.prepareTarget(config, target);
+    await store.materialize(config, prepared, `已经记下来了。\n<journey-report>\n## 北京旅程\n这是去探望朋友的新工作室，也一起逛了西湖。\n</journey-report>`, "run-deep-1");
+    const saved = JSON.parse(await readFile(path.join(sourceRoot, ".imports", "batch-1.json"), "utf8")) as SourceImportBatch;
+    expect(saved.journey).toMatchObject({ revision: 3, clueStates: [{ clusterId: cluster.id, status: "deep", conversationRunId: "run-deep-1", conversationTurns: 1, resultText: "这是去探望朋友的新工作室，也一起逛了西湖。" }] });
+    await expect(store.assertBuild(config, "batch-1", reportPath)).resolves.toBeUndefined();
   });
 
   it("rejects output without a complete report block", () => {

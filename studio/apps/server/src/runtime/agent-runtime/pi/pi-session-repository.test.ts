@@ -25,6 +25,9 @@ describe("PiSessionRepository", () => {
       finalAnswer: "演示回答",
       status: "completed",
     });
+    await repository.delete("session-123");
+    await expect(repository.load("session-123")).resolves.toBeUndefined();
+    await expect(repository.delete("session-123")).resolves.toBeUndefined();
   });
 
   it("rejects session ids that could escape the session directory", async () => {

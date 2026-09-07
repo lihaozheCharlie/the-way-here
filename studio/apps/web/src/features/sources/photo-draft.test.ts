@@ -16,6 +16,11 @@ describe("unconfirmed photo draft recovery", () => {
     expect(parsePhotoDraft(JSON.stringify(draft))).toEqual(draft);
     expect(parsePhotoDraft(JSON.stringify({ ...draft, photoDrafts: { "photo-2": [null] } }))).toBeUndefined();
   });
+  it("accepts a bounded detector version and rejects malformed versions", () => {
+    const draft = { revision: 1, photoId: "photo-1", people: [], peopleDirty: false, story: "", storyDirty: false, detectionVersion: 2 };
+    expect(parsePhotoDraft(JSON.stringify(draft))?.detectionVersion).toBe(2);
+    expect(parsePhotoDraft(JSON.stringify({ ...draft, detectionVersion: 0 }))).toBeUndefined();
+  });
   it("ignores malformed or oversized browser storage", () => {
     expect(parsePhotoDraft("not json")).toBeUndefined();
     expect(parsePhotoDraft(JSON.stringify({ revision: 1, photoId: "photo-1", people: [null], peopleDirty: true, story: "", storyDirty: false }))).toBeUndefined();

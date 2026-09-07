@@ -260,10 +260,6 @@
   transition: border-color .16s var(--ease), box-shadow .16s var(--ease);
 }
 
-.source-global-search:focus-within {
-  border-color: var(--source-accent);
-  box-shadow: 0 0 0 3px rgba(87, 138, 131, .12);
-}
 
 .source-global-search input {
   min-width: 0;
@@ -974,7 +970,6 @@
 .source-compose-dialog .new-source-form > header button { width: 32px; height: 32px; color: var(--source-muted); background: var(--source-canvas); border-radius: 50%; }
 .source-compose-dialog .new-source-form > label { margin: 18px 24px 0; color: var(--source-muted); font-size: 11px; }
 .source-compose-dialog .new-source-form > label :is(input, select) { min-height: 42px; margin-top: 7px; border-color: var(--source-line); border-radius: 10px; }
-.source-compose-dialog .new-source-form > label :is(input, select):focus { border-color: var(--source-accent); box-shadow: 0 0 0 3px rgba(87, 138, 131, .12); }
 .source-compose-dialog .new-source-form > footer { margin-top: 22px; padding: 16px 24px 22px; border-top: 1px solid var(--source-line); }
 .source-compose-dialog .new-source-form > footer button { min-height: 40px; padding: 8px 17px; background: var(--source-accent); border-radius: 999px; }
 

@@ -90,7 +90,14 @@ export function detectImportSelectionKind(paths: string[]): ImportSelectionKind 
 }
 
 export function sourceBuildRecords(batches: SourceImportBatch[]): SourceBuildRecord[] {
-  return batches.flatMap((batch) => batch.files.filter((file) => file.buildKind).map((file) => ({ batch, file })));
+  const seenPaths = new Set<string>();
+  return batches.flatMap((batch) => batch.files.flatMap((file) => {
+    if (!file.buildKind) return [];
+    const key = file.storedPath.replace(/\\/g, "/");
+    if (seenPaths.has(key)) return [];
+    seenPaths.add(key);
+    return [{ batch, file }];
+  }));
 }
 
 export function pendingSourceBuildRecords(batches: SourceImportBatch[]): SourceBuildRecord[] {

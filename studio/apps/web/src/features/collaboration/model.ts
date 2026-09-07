@@ -40,10 +40,17 @@ export type AgentAutoSubmission = {
   sourceContext?: SourceRunContext;
 };
 
+export const JOURNEY_WRAP_UP_DISPLAY_PROMPT = "这段先聊到这里";
+export const JOURNEY_WRAP_UP_PROMPT = "这段旅程已经聊得差不多了，请在这里结束提问。用一两句话确认这次实际保留了什么；没有说清的地方保持未知，不要补充推断，也不要再问新问题。保留当前完整旅程草稿，不要构建 Wiki。";
+
+export function isJourneyWrapUpRun(run: WikiRun): boolean {
+  return run.outputTarget?.kind === "journey-report" && run.displayPrompt === JOURNEY_WRAP_UP_DISPLAY_PROMPT;
+}
+
 export function agentContextIdentity(context: AgentContext): string {
   const target = context.defaultOutputTarget;
   if (target?.kind === "photo-memory") return `photo:${target.importId}:${target.phase}`;
-  if (target?.kind === "journey-report") return `journey:${target.importId}:${target.storedPath}`;
+  if (target?.kind === "journey-report") return `journey:${target.importId}:${target.storedPath}:${target.clueId || "all"}`;
   if (target?.kind === "letter-version") return `letter:${target.pageId}:${target.lensId}`;
   if (context.pageId) return `page:${context.pageId}`;
   const source = context.defaultSourceContext;
@@ -66,7 +73,7 @@ export function attachedContextPrompt(attachedContext: AgentAttachedContext, req
     `- 已有理解：${attachedContext.currentUnderstanding}`,
     `- 为什么值得聊：${attachedContext.reason}`,
     "",
-    "请把这份资料当作背景，先听用户表达具体经历，再结合相关证据帮用户理清线索；一次只问一个真正需要用户补充的具体问题。",
+    "请把这份资料当作背景，先听用户表达具体经历，再结合相关证据帮用户理清线索。只有确实需要用户补充、而且能自然承接原话时，才问最多一个具体问题；不要求每轮都提问。",
     "",
     "用户这次想说：",
     request.trim(),

@@ -1,3 +1,4 @@
+import { SelectInput } from "./form-controls";
 import type { ReactNode } from "react";
 import "./timeline-filter.css";
 
@@ -18,11 +19,11 @@ export function TimelineFilter({ label, value, periods, total, allLabel, onChang
   return <div className="timeline-filter" role="group" aria-label={label}>
     {leading}
     {leading && <i className="timeline-filter-divider" aria-hidden="true" />}
-    <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
+    <SelectInput aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="">{allLabel} · {total}</option>
       {missingPeriod && <option value={value}>{value} · 0</option>}
       {periods.map((period) => <option key={period.value} value={period.value}>{period.label} · {period.count}</option>)}
-    </select>
+    </SelectInput>
     {hint && <span className="timeline-filter-hint">{hint}</span>}
   </div>;
 }

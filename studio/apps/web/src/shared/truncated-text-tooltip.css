@@ -1,0 +1,28 @@
+.truncated-text-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: min(240px, calc(100dvh - 24px));
+  padding: 9px 11px;
+  overflow: auto;
+  color: #fff;
+  background: var(--ink);
+  border-radius: 5px;
+  box-shadow: 0 10px 28px rgba(38, 52, 64, .22);
+  font-size: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+  white-space: pre-wrap;
+  animation: truncated-text-tooltip-in .14s var(--ease) both;
+}
+
+@keyframes truncated-text-tooltip-in {
+  from { opacity: .25; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .truncated-text-tooltip { animation: none; }
+}

@@ -1,59 +1,187 @@
-import { useEffect, useRef } from "react";
-import type { PhotoMemory, PhotoPerson } from "@the-way-here/shared";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { PhotoFilmstrip } from "./PhotoFilmstrip";
+import type { PhotoBox, PhotoMemory, PhotoPerson } from "@the-way-here/shared";
 import { photoAssetUrl } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
 import { PhotoPersonPicker, type PhotoPersonOption } from "./PhotoPersonPicker";
-import { clampPhotoBox } from "./photo-model";
+import { drawnPhotoBox, movePhotoBox, photoPoint, resizePhotoBox, type PhotoBoxHandle, type PhotoPoint } from "./photo-box-interaction";
 import { groupedPhotoQueue, type FaceGroups } from "./photo-face-groups";
 
-export function PhotoCrop({ src, person, alt, width, height }: { src: string; person: PhotoPerson; alt: string; width: number; height: number }) {
-  const box = person.box;
-  return <svg className="photo-crop" viewBox={`${box.x * width} ${box.y * height} ${box.width * width} ${box.height * height}`} preserveAspectRatio="xMidYMid slice" role={alt ? "img" : undefined} aria-label={alt || undefined} aria-hidden={!alt}><image href={src} width={width} height={height} /></svg>;
-}
+type BoxGesture = { pointerId: number; person: PhotoPerson; start: PhotoPoint; last: PhotoBox; handle?: PhotoBoxHandle; moved: boolean };
+const handles: PhotoBoxHandle[] = ["n", "s", "nw", "ne", "sw", "se"];
+const handleNames: Record<PhotoBoxHandle, string> = { n: "上边", s: "下边", nw: "左上角", ne: "右上角", sw: "左下角", se: "右下角" };
 
-export function PhotoPersonQueue({ memory, drafts, groups, onDetach, groupingError, selectedId, people, locked, onSelect, onChange, onConfirm, onSkip, onContinue, detecting, detectionLabel, detectionError, onRetry }: {
+export function PhotoPersonQueue({ memory, drafts, groups, onDetach, groupingError, selectedId, photoId, people, locked, onSelect, onPhoto, onChange, onAdd, onConfirm, onCommitBox, onSkip, detecting, detectionLabel, detectionError, onRetry }: {
   groups: FaceGroups; onDetach: (id: string) => void; groupingError?: string;
-  memory: PhotoMemory; drafts: Record<string, PhotoPerson[]>; selectedId: string;
+  memory: PhotoMemory; drafts: Record<string, PhotoPerson[]>; selectedId: string; photoId: string;
   people: PhotoPersonOption[]; locked: boolean;
-  onSelect: (id: string) => void; onChange: (photoId: string, personId: string, patch: Partial<PhotoPerson>) => void;
-  onConfirm: (photoId: string, person: PhotoPerson) => void; onSkip: (photoId: string, person: PhotoPerson) => void;
-  onContinue: () => void; detecting: boolean; detectionLabel?: string; detectionError?: string; onRetry: () => void;
+  onSelect: (id: string) => void; onPhoto: (id: string) => void;
+  onChange: (photoId: string, personId: string, patch: Partial<PhotoPerson>) => void;
+  onAdd: (photoId: string, box: PhotoBox) => void;
+  onConfirm: (photoId: string, person: PhotoPerson) => void; onCommitBox: (photoId: string, person: PhotoPerson) => void;
+  onSkip: (photoId: string, person: PhotoPerson) => void;
+  detecting: boolean; detectionLabel?: string; detectionError?: string; onRetry: () => void;
 }) {
-  const queue = groupedPhotoQueue(memory, drafts, groups);
-  const selected = queue.find((entry) => entry.members.some((member) => member.person.id === selectedId)) || queue.find((entry) => !entry.confirmed) || queue[0];
-  const preview = selected?.members.find((entry) => entry.person.id === selectedId) ?? selected;
-  const current = selected && preview ? { ...selected, ...preview, confirmed: selected.confirmed, members: selected.members } : undefined;
+  const photo = memory.photos.find((photo) => photo.id === photoId) ?? memory.photos[0]!;
+  const candidates = drafts[photo.id] ?? photo.people;
+  const person = candidates.find((person) => person.id === selectedId);
+  const group = groupedPhotoQueue(memory, drafts, groups).find((entry) => entry.members.some((member) => member.person.id === person?.id));
+  const panelId = useId();
   const formRef = useRef<HTMLFieldSetElement>(null);
-  useEffect(() => { formRef.current?.querySelector<HTMLInputElement>("input[role=combobox]")?.focus({ preventScroll: true }); }, [selected?.person.id]);
-  const index = current ? queue.indexOf(selected!) : 0;
-  const remaining = queue.filter((entry) => !entry.confirmed).length;
-  const source = (photoId: string) => photoAssetUrl(memory.knowledgeBaseId, memory.id, photoId);
-  return <section className="photo-identify">
-    <header className="photo-stage-heading"><h3>照片里的人，逐组来认</h3><p>核对头像并确认人物，也可以先讲故事，稍后再认。</p></header>
-    <div className={`photo-identify-layout${queue.length ? "" : " is-empty"}`}>
-      <nav className="photo-queue-rail" aria-label="人物队列">{queue.map((entry, i) => <button type="button" key={entry.person.id} disabled={locked} aria-pressed={entry === selected} aria-label={`第 ${i + 1} 位，${entry.person.name || "待命名"}，${entry.confirmed ? "已确认" : "待确认"}${entry.members.length > 1 ? `，${entry.members.length} 张照片` : ""}`} onClick={() => onSelect(entry.person.id)}><PhotoCrop src={source(entry.photo.id)} person={entry.person} width={entry.photo.width} height={entry.photo.height} alt="" />{entry.members.length > 1 ? <span className="photo-group-count">{entry.members.length}</span> : null}<span className={entry.confirmed ? "photo-queue-dot done" : "photo-queue-dot"}>{entry.confirmed ? <Icon name="check" size={10} /> : null}</span></button>)}</nav>
-      <div className="photo-queue-main">
-        <div className="photo-queue-heading"><span>{current ? `第 ${index + 1} 组 / 共 ${queue.length} 组 · ${remaining ? `${remaining} 组待确认` : "已全部确认"}` : detecting ? detectionLabel || "正在准备识别人脸…" : detectionError ? "人脸识别未完成" : "没有待确认的人物"}</span></div>
-        {current && current.members.length > 1 ? <section className="photo-face-group" aria-label="疑似同一人的照片">
-          <header><b>疑似同一人 · {current.members.length} 张照片</b><p>确认后关联到同一个人物，分错的头像可以移出。</p></header>
-          <div className="photo-face-group-members">{current.members.map((entry) => <div key={entry.person.id}>
-            <button type="button" disabled={locked} aria-pressed={entry.person.id === current.person.id} aria-label={`查看第 ${entry.photoIndex + 1} 张照片中的头像`} onClick={() => onSelect(entry.person.id)}><PhotoCrop src={source(entry.photo.id)} person={entry.person} width={entry.photo.width} height={entry.photo.height} alt="" /><span>第 {entry.photoIndex + 1} 张</span></button>
-            <button type="button" className="photo-text-action" disabled={locked} aria-label={`将第 ${entry.photoIndex + 1} 张头像移出这组`} onClick={() => onDetach(entry.person.id)}>移出这组</button>
-          </div>)}</div>
-        </section> : null}
-        {current ? <div className="photo-identity-card" key={current.person.id}>
-          <div><PhotoCrop src={source(current.photo.id)} person={current.person} width={current.photo.width} height={current.photo.height} alt={current.person.name || "待确认的人脸裁剪"} />
-            <details className="photo-original"><summary>来自第 {current.photoIndex + 1} 张照片 · 查看完整照片</summary><img src={source(current.photo.id)} alt={current.photo.name} /><a href={photoAssetUrl(memory.knowledgeBaseId, memory.id, current.photo.id, "original")} download={current.photo.name}>保存原图</a></details>
-            <details className="photo-crop-settings"><summary>微调裁剪框</summary>{(["x", "y", "width", "height"] as const).map((axis, i) => <label className="photo-crop-control" key={axis}>{["左右位置", "上下位置", "宽度", "高度"][i]}<input disabled={locked} type="range" min={axis === "x" || axis === "y" ? 0 : 0.02} max={1} step={0.01} value={current.person.box[axis]} onChange={(event) => onChange(current.photo.id, current.person.id, { box: clampPhotoBox({ ...current.person.box, [axis]: Number(event.target.value) }) })} /></label>)}</details>
-          </div>
-          <fieldset ref={formRef} className="photo-identity-form" disabled={locked}><legend>这是谁</legend><PhotoPersonPicker person={current.person} people={people} compact onChange={(patch) => onChange(current.photo.id, current.person.id, patch)} /><p className="photo-help">确认后使用裁剪图作为头像。</p><div className="photo-stage-actions"><button type="button" className="primary-action" disabled={!current.person.name.trim() || current.confirmed} onClick={() => onConfirm(current.photo.id, current.person)}>{current.confirmed ? "已确认" : current.members.length > 1 ? `确认这 ${current.members.length} 张是同一人` : current.person.name.trim() ? current.person.pageId ? "确认关联人物" : "确认新称呼" : "确认人物"}</button><button type="button" className="secondary-action" onClick={() => onSkip(current.photo.id, current.person)}>{current.members.length > 1 ? "不记录这组" : "不记录这个人"}</button></div></fieldset>
-        </div> : <div className="photo-no-faces"><div className="photo-overview-strip">{memory.photos.map((photo) => <a href={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id, "original")} download={photo.name} key={photo.id} title={`保存原图：${photo.name}`}><img src={source(photo.id)} alt={photo.name} /></a>)}</div></div>}
-        {current ? <div className="photo-queue-nav"><button className="photo-text-action" type="button" disabled={locked || index === 0} onClick={() => onSelect(queue[index - 1]!.person.id)}>上一组</button><button className="photo-text-action" type="button" disabled={locked || index === queue.length - 1} onClick={() => onSelect(queue[index + 1]!.person.id)}>下一组</button></div> : null}
-        {current && detecting ? <p className="photo-feedback" role="status">{detectionLabel}</p> : null}
-        {groupingError ? <p className="photo-feedback" role="status">{groupingError}</p> : null}
-        {detectionError ? <p className="photo-feedback" role="alert">{detectionError}<button type="button" disabled={locked} onClick={onRetry}>重试检测</button></p> : null}
-        <footer className="photo-stage-footer"><button type="button" className="primary-action" disabled={locked} onClick={onContinue}>下一步：讲故事<Icon name="arrow" size={14} /></button></footer>
+  const imageRef = useRef<HTMLDivElement>(null);
+  const faceButtons = useRef<Record<string, HTMLButtonElement | null>>({});
+  const faceLabels = useRef<Record<string, HTMLButtonElement | null>>({});
+  const faceTags = useRef<Record<string, HTMLDivElement | null>>({});
+  const gesture = useRef<BoxGesture | undefined>(undefined);
+  const gestureActions = useRef({ photoId: photo.id, onChange, onCommitBox, onSelect });
+  gestureActions.current = { photoId: photo.id, onChange, onCommitBox, onSelect };
+  const suppressClick = useRef(false);
+  const [drawing, setDrawing] = useState(false);
+  const [drawStart, setDrawStart] = useState<PhotoPoint>();
+  const [drawEnd, setDrawEnd] = useState<PhotoPoint>();
+  const [namingId, setNamingId] = useState("");
+
+  useEffect(() => { setDrawing(false); setDrawStart(undefined); setDrawEnd(undefined); setNamingId(""); gesture.current = undefined; }, [photo.id]);
+  useEffect(() => {
+    if (!drawing) return;
+    const cancel = (event: globalThis.KeyboardEvent) => { if (event.key === "Escape") { setDrawing(false); setDrawStart(undefined); setDrawEnd(undefined); } };
+    window.addEventListener("keydown", cancel);
+    return () => window.removeEventListener("keydown", cancel);
+  }, [drawing]);
+  useEffect(() => {
+    if (!selectedId) { setNamingId(""); return; }
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target || faceTags.current[selectedId]?.contains(target)) return;
+      setNamingId(""); onSelect("");
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [selectedId, onSelect]);
+  const previousPerson = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!person && previousPerson.current) faceButtons.current[previousPerson.current]?.focus({ preventScroll: true });
+    previousPerson.current = person?.id;
+  }, [person?.id]);
+  const identified = Object.fromEntries(memory.photos.map((photo) => {
+    const entries = drafts[photo.id] ?? photo.people;
+    return [photo.id, entries.length && entries.every((person) => Boolean(person.name)) ? "done" as const : entries.some((person) => Boolean(person.name)) ? "pending" as const : "empty" as const];
+  }));
+  useEffect(() => { if (namingId && namingId === person?.id) formRef.current?.querySelector<HTMLInputElement>("input[role=combobox]")?.focus({ preventScroll: true }); }, [namingId, person?.id]);
+
+  const closeNaming = (returnFocus = false) => {
+    const previous = namingId;
+    setNamingId("");
+    if (returnFocus && previous) window.requestAnimationFrame(() => faceLabels.current[previous]?.focus({ preventScroll: true }));
+  };
+  const openNaming = (candidate: PhotoPerson) => {
+    onSelect(candidate.id); setNamingId(candidate.id);
+  };
+
+  const pointFor = (event: Pick<ReactPointerEvent, "clientX" | "clientY">) => {
+    const rect = imageRef.current?.getBoundingClientRect();
+    return rect ? photoPoint(event.clientX, event.clientY, rect) : undefined;
+  };
+  const beginDraw = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!drawing || locked || detecting || event.button !== 0) return;
+    const point = pointFor(event);
+    if (!point) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrawStart(point); setDrawEnd(point); onSelect("");
+  };
+  const continueDraw = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!drawStart || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const point = pointFor(event);
+    if (point) setDrawEnd(point);
+  };
+  const finishDraw = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!drawStart) return;
+    const end = pointFor(event) ?? drawEnd ?? drawStart;
+    const box = drawnPhotoBox(drawStart, end);
+    setDrawStart(undefined); setDrawEnd(undefined);
+    if (box) { onAdd(photo.id, box); setDrawing(false); }
+  };
+  const beginBoxGesture = (event: ReactPointerEvent<HTMLButtonElement>, candidate: PhotoPerson, handle?: PhotoBoxHandle) => {
+    if (locked || detecting || drawing || event.button !== 0) return;
+    const start = pointFor(event);
+    if (!start) return;
+    event.preventDefault(); event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setNamingId(""); onSelect(candidate.id);
+    gesture.current = { pointerId: event.pointerId, person: candidate, start, last: candidate.box, handle, moved: false };
+  };
+  useEffect(() => {
+    const continueBoxGesture = (event: globalThis.PointerEvent) => {
+      const active = gesture.current;
+      if (!active || active.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const current = pointFor(event);
+      if (!current) return;
+      const delta = { x: current.x - active.start.x, y: current.y - active.start.y };
+      const next = active.handle ? resizePhotoBox(active.person.box, active.handle, delta) : movePhotoBox(active.person.box, delta);
+      active.last = next;
+      active.moved ||= Math.abs(delta.x) + Math.abs(delta.y) > .004;
+      gestureActions.current.onChange(gestureActions.current.photoId, active.person.id, { box: next });
+    };
+    const finishBoxGesture = (event: globalThis.PointerEvent) => {
+      const active = gesture.current;
+      if (!active || active.pointerId !== event.pointerId) return;
+      gesture.current = undefined;
+      suppressClick.current = active.moved;
+      if (active.moved && active.person.name) gestureActions.current.onCommitBox(gestureActions.current.photoId, { ...active.person, box: active.last });
+      else if (active.moved) gestureActions.current.onSelect(active.person.id);
+      window.setTimeout(() => { suppressClick.current = false; }, 0);
+    };
+    const cancelBoxGesture = (event: globalThis.PointerEvent) => {
+      const active = gesture.current;
+      if (!active || active.pointerId !== event.pointerId) return;
+      gesture.current = undefined;
+      gestureActions.current.onChange(gestureActions.current.photoId, active.person.id, { box: active.person.box });
+    };
+    window.addEventListener("pointermove", continueBoxGesture, { capture: true, passive: false });
+    window.addEventListener("pointerup", finishBoxGesture, true);
+    window.addEventListener("pointercancel", cancelBoxGesture, true);
+    return () => {
+      window.removeEventListener("pointermove", continueBoxGesture, true);
+      window.removeEventListener("pointerup", finishBoxGesture, true);
+      window.removeEventListener("pointercancel", cancelBoxGesture, true);
+    };
+  }, []);
+  const resizeWithKeyboard = (event: KeyboardEvent<HTMLButtonElement>, candidate: PhotoPerson, handle: PhotoBoxHandle) => {
+    const arrows: Record<string, PhotoPoint> = { ArrowLeft: { x: -.01, y: 0 }, ArrowRight: { x: .01, y: 0 }, ArrowUp: { x: 0, y: -.01 }, ArrowDown: { x: 0, y: .01 } };
+    const delta = arrows[event.key];
+    if (!delta) return;
+    event.preventDefault(); event.stopPropagation();
+    const box = resizePhotoBox(candidate.box, handle, delta);
+    onChange(photo.id, candidate.id, { box });
+    if (candidate.name) onCommitBox(photo.id, { ...candidate, box });
+  };
+  const draftBox = drawStart && drawEnd ? drawnPhotoBox(drawStart, drawEnd, 0) : undefined;
+
+  return <section className="photo-identify-step">
+    <PhotoFilmstrip memory={memory} selectedId={photo.id} onSelect={onPhoto} disabled={locked} identified={identified} />
+    <header className="photo-stage-heading"><div><h3>照片里有谁？</h3><p>点人物框后直接拖动或缩放；点框上的姓名标签再填写人物。认出一个人，同组照片会一起更新。</p></div><button type="button" className="photo-manual-face-action" aria-pressed={drawing} disabled={locked || detecting} onClick={() => { setDrawing((value) => !value); setDrawStart(undefined); setDrawEnd(undefined); setNamingId(""); onSelect(""); }}><Icon name={drawing ? "close" : "plus"} size={14} />{drawing ? "取消圈选" : "圈选漏掉的人"}</button></header>
+    {drawing ? <p className="photo-draw-instruction" role="status">在照片上按住并拖动，框住人物的脸部。</p> : null}
+    <div className="photo-tag-stage">
+      <div ref={imageRef} className={`photo-tag-image${drawing ? " drawing" : ""}`} style={{ aspectRatio: `${photo.width} / ${photo.height}`, maxWidth: `${Math.min(740, 620 * photo.width / photo.height)}px` }} onPointerDown={beginDraw} onPointerMove={continueDraw} onPointerUp={finishDraw} onPointerCancel={() => { setDrawStart(undefined); setDrawEnd(undefined); }} onKeyDown={(event) => { if (event.key === "Escape" && drawing) { setDrawing(false); setDrawStart(undefined); setDrawEnd(undefined); } }}>
+        <img src={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id)} alt={photo.name} draggable={false} />
+        {candidates.map((candidate, index) => <div ref={(node) => { faceTags.current[candidate.id] = node; }} key={candidate.id} className={`photo-face-tag ${candidate.name ? "named" : "unassigned"}${candidate.id === person?.id ? " selected" : ""}${candidate.box.x + candidate.box.width / 2 > .5 ? " popover-left" : ""}${candidate.box.y + candidate.box.height / 2 > .55 ? " popover-up" : ""}`} style={{ left: `${candidate.box.x * 100}%`, top: `${candidate.box.y * 100}%`, width: `${candidate.box.width * 100}%`, height: `${candidate.box.height * 100}%` }}>
+          <button ref={(node) => { faceButtons.current[candidate.id] = node; }} type="button" className="photo-face-hit" aria-label={`${candidate.name || `人物 ${index + 1}，待认领`}的圈选范围；点击选中，拖动调整位置`} aria-pressed={candidate.id === person?.id} disabled={locked || detecting || drawing} onPointerDown={(event) => beginBoxGesture(event, candidate)} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } setNamingId(""); onSelect(candidate.id); }} />
+          <button ref={(node) => { faceLabels.current[candidate.id] = node; }} type="button" className="photo-face-label" aria-expanded={namingId === candidate.id} aria-controls={namingId === candidate.id ? panelId : undefined} disabled={locked || detecting || drawing} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); openNaming(candidate); }}>{candidate.name || "填写人物"}</button>
+          {candidate.id === person?.id && !drawing ? handles.map((handle) => <button key={handle} type="button" className={`photo-resize-handle ${handle}`} aria-label={`拖动${handleNames[handle]}调整人物框，方向键可微调`} disabled={locked || detecting} onPointerDown={(event) => beginBoxGesture(event, candidate, handle)} onKeyDown={(event) => resizeWithKeyboard(event, candidate, handle)} />) : null}
+          {candidate.id === person?.id && namingId === candidate.id ? <fieldset ref={formRef} id={panelId} className="photo-name-panel photo-name-popover" disabled={locked || detecting} onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); closeNaming(true); } }}>
+            <legend className="sr-only">标注照片中的人物</legend>
+            <div className="photo-name-panel-head"><b>这是谁？</b><button type="button" className="photo-text-action" aria-label="关闭人物标注" onClick={() => closeNaming(true)}><Icon name="close" size={14} /></button></div>
+            <PhotoPersonPicker key={candidate.id} person={candidate} people={people} onChange={(patch) => onConfirm(photo.id, { ...candidate, ...patch })} />
+            {group && group.members.length > 1 ? <div className="photo-group-hint"><p>另有 {group.members.length - 1} 张照片识别为同一人，选择名字后同步更新。</p><button type="button" className="photo-text-action" onClick={() => onDetach(candidate.id)}>认错了，这张单独标注</button></div> : null}
+            <button type="button" className="photo-person-remove photo-text-action" onClick={() => onSkip(photo.id, candidate)}>不记录这个人</button>
+          </fieldset> : null}
+        </div>)}
+        {draftBox ? <div className="photo-face-draft" aria-hidden="true" style={{ left: `${draftBox.x * 100}%`, top: `${draftBox.y * 100}%`, width: `${draftBox.width * 100}%`, height: `${draftBox.height * 100}%` }} /> : null}
       </div>
     </div>
+    {detecting ? <p className="photo-feedback" role="status">{detectionLabel || "正在认人，相似的人脸会一起整理…"}</p> : !candidates.length ? <p className="photo-help">没有自动找到人脸？点击“圈选漏掉的人”，直接在照片上框出来。</p> : <p className="photo-help">实线是已标注人物，虚线是待认领人物。点框调整范围，点姓名标签填写人物。</p>}
+    {groupingError ? <p className="photo-feedback" role="status">{groupingError}</p> : null}
+    {detectionError ? <p className="photo-feedback" role="alert">{detectionError}<button type="button" disabled={locked} onClick={onRetry}>重试检测</button></p> : null}
   </section>;
 }

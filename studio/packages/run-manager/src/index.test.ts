@@ -52,6 +52,16 @@ describe("RunStore", () => {
     await expect(store.get(run.id)).resolves.toMatchObject({ contextPageId: "sources/日记/今天" });
   });
 
+  it("deletes a completed run together with its snapshots", async () => {
+    const { store, stateRoot } = await storeFixture();
+    const run = await store.create("待删除对话", "测试", "read", "personal", config("personal"));
+    await store.setStatus(run.id, "completed");
+    await expect(store.delete(run.id)).resolves.toBe(true);
+    await expect(store.get(run.id)).resolves.toBeUndefined();
+    await expect(store.delete(run.id)).resolves.toBe(false);
+    await expect(readFile(path.join(stateRoot, "runs", run.id, "run.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("recovers the first complete object from an older corrupted run file", async () => {
     const { store, stateRoot } = await storeFixture();
     const run = await store.create("可恢复任务", "测试", "read", "personal", config("personal"));

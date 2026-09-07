@@ -1,0 +1,49 @@
+/* One focus owner per field. An inset stroke never adds a halo or shifts layout. */
+.text-control {
+  caret-color: var(--accent-primary);
+}
+
+.text-control:focus,
+.text-field-shell:has(> .text-control:focus) {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+.text-field-shell > .text-control:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.search-field > .text-control {
+  min-width: 0;
+  width: 100%;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+}
+
+.search-field > .icon {
+  flex: none;
+}
+
+/* High-contrast modes can suppress shadows; keep a single visible focus owner. */
+@media (forced-colors: active) {
+  .text-control:focus,
+  .text-field-shell:has(> .text-control:focus) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .text-field-shell > .text-control:focus {
+    outline: none;
+  }
+}

@@ -1,3 +1,4 @@
+import { TextInput } from "../../shared/form-controls";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/ui";
 
@@ -61,7 +62,7 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
         </header>
         <div className="kb-dialog-body">
           <label htmlFor="knowledge-base-name">空间名称</label>
-          <input ref={inputRef} id="knowledge-base-name" value={name} maxLength={40} disabled={saving} onChange={(event) => setName(event.target.value)} />
+          <TextInput ref={inputRef} id="knowledge-base-name" value={name} maxLength={40} disabled={saving} onChange={(event) => setName(event.target.value)} />
           <p>创建后会打开一个空白空间。演示内容不会被复制，你可以从第一句话慢慢开始。</p>
           {error ? <div className="kb-dialog-error" role="alert">{error}</div> : null}
         </div>

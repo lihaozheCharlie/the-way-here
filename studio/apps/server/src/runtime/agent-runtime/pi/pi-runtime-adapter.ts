@@ -111,6 +111,11 @@ export class PiRuntimeAdapter extends RuntimeEventSource implements AgentRuntime
     return { status: record.status, finalAnswer: record.finalAnswer, error: record.error };
   }
 
+  async deleteSession(sessionId: string): Promise<void> {
+    if (this.active.has(sessionId)) throw new Error("Pi 会话仍在运行");
+    await this.sessions.delete(sessionId);
+  }
+
   close(): void {
     for (const execution of this.active.values()) execution.agent.abort();
   }

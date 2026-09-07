@@ -3,6 +3,7 @@ import type { FastifyBaseLogger } from "fastify";
 import { RunStore } from "@the-way-here/run-manager";
 import type {
   AgentApprovalDecision,
+  DeletedAgentConversation,
   AgentGlobalSettings,
   AgentModelOption,
   AgentOutputTarget,
@@ -41,7 +42,7 @@ export type StartRunInput = {
 };
 
 export class RunRequestError extends Error {
-  constructor(readonly statusCode: number, message: string, readonly payload?: WikiRun) {
+  constructor(readonly statusCode: number, message: string, readonly payload?: unknown) {
     super(message);
   }
 }
@@ -76,6 +77,35 @@ export class RunCoordinator {
 
   get(id: string): Promise<WikiRun | undefined> {
     return this.runs.get(id);
+  }
+
+  async deleteConversation(id: string): Promise<DeletedAgentConversation> {
+    const visibleRuns = await this.list();
+    const requested = visibleRuns.find((run) => run.id === id);
+    if (!requested) throw new RunRequestError(404, "对话不存在或不属于当前知识库");
+    const threadId = requested.runtimeSessionId || requested.id;
+    const conversationRuns = visibleRuns.filter((run) => requested.runtimeSessionId
+      ? run.runtimeSessionId === requested.runtimeSessionId
+      : run.id === requested.id);
+    if (conversationRuns.some((run) => !["completed", "failed", "interrupted"].includes(run.status))) {
+      throw new RunRequestError(409, "这段对话仍在进行，请先结束后再删除");
+    }
+
+    const sessions = new Map<string, { runtimeId: AgentRuntimeId; sessionId: string }>();
+    for (const run of conversationRuns) {
+      if (run.runtimeId && run.runtimeSessionId) sessions.set(`${run.runtimeId}:${run.runtimeSessionId}`, { runtimeId: run.runtimeId, sessionId: run.runtimeSessionId });
+    }
+    for (const session of sessions.values()) {
+      const runtime = this.runtimes.require(session.runtimeId);
+      await runtime.deleteSession?.(session.sessionId);
+    }
+    for (const run of conversationRuns) {
+      if (run.runtimeId && run.runtimeSessionId && run.runtimeTurnId) this.runByExecution.delete(executionKey(refOf(run)));
+      await this.runs.delete(run.id);
+    }
+    const deleted = { threadId, deletedRunIds: conversationRuns.map((run) => run.id) } satisfies DeletedAgentConversation;
+    this.knowledge.events.broadcast("run", { deleted });
+    return deleted;
   }
 
   models(): Promise<AgentModelOption[]> {
@@ -174,7 +204,7 @@ export class RunCoordinator {
         normalizedInput.outputTarget = await this.photoMemories.prepare(taskConfig, target);
         if (await this.hasActiveKnowledgeBaseRun(taskConfig.knowledgeBaseId)) throw new PhotoMemoryError(409, "请等当前任务完成后，再继续照片记忆");
         normalizedInput.sourceContext = target.phase === "enrich" ? { importId: target.importId, storedPath: target.storedPath, flow: "dialogue", operation: "enrich" } : undefined;
-        photoInput = target.phase === "analyze" ? await this.photoMemories.analysisInput(taskConfig, target.importId) : { prompt: await this.photoMemories.context(taskConfig, target.importId) };
+        photoInput = target.phase === "draft" ? await this.photoMemories.storyInput(taskConfig, target.importId, target.photoId!) : { prompt: await this.photoMemories.context(taskConfig, target.importId) };
       }
       if (normalizedInput.sourceContext?.operation === "build") {
         const source = normalizedInput.sourceContext;
@@ -183,8 +213,13 @@ export class RunCoordinator {
           await this.photoMemories.assertBuild(taskConfig, source.importId, source.storedPath);
           photoInput = { prompt: await this.photoMemories.buildContext(taskConfig, source.importId, resolvedKnowledge.index) };
         }
+        if (page?.importChannel === "alipay") await this.journeyReports.assertBuild(taskConfig, source.importId, source.storedPath);
       }
-    } catch (error) { if (error instanceof PhotoMemoryError) throw new RunRequestError(error.statusCode, error.message); throw error; }
+    } catch (error) {
+      if (error instanceof PhotoMemoryError) throw new RunRequestError(error.statusCode, error.message);
+      if (error instanceof JourneyReportTargetError) throw new RunRequestError(409, error.message);
+      throw error;
+    }
     if (normalizedInput.outputTarget?.kind === "journey-report" && mode !== "read") {
       throw new RunRequestError(400, "消费旅程对话必须保持只读；请另行点击构建这份记录");
     }
@@ -389,7 +424,7 @@ export class RunCoordinator {
       }
       if (run.outputTarget?.kind === "journey-report") {
         try {
-          const saved = await this.journeyReports.materialize(run.configSnapshot, run.outputTarget, run.result?.finalAnswer || "");
+          const saved = await this.journeyReports.materialize(run.configSnapshot, run.outputTarget, run.result?.finalAnswer || "", run.id);
           await this.knowledge.rebuildIfActive(run.knowledgeBaseId);
           await this.runs.update(runId, { status: "completed", result: { ...run.result, finalAnswer: saved.visibleAnswer, outputSavedAt: saved.savedAt, completedAt: saved.savedAt } });
         } catch (error: any) {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { stateRootForVault } from "@the-way-here/run-manager";
@@ -36,6 +36,10 @@ export class PiSessionRepository {
     const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
     await writeFile(temporary, `${JSON.stringify({ ...record, updatedAt: new Date().toISOString() }, null, 2)}\n`, "utf8");
     await rename(temporary, target);
+  }
+
+  async delete(id: string): Promise<void> {
+    await rm(this.file(id), { force: true });
   }
 
   private file(id: string): string {
