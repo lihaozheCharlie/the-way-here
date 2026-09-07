@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { access, chmod, copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -23,6 +23,56 @@ async function executable(file: string, content: string) {
 }
 
 describe("fresh-clone startup", () => {
+  it("builds a server that starts and serves HTTP using plain Node", async () => {
+    const root = await temporaryWorkspace();
+    const server = path.join(studio, "apps/server");
+    const dist = path.join(root, "dist");
+    const vault = path.join(root, "workspace");
+    await mkdir(vault);
+    await writeFile(path.join(vault, "the-way-here.config.yaml"), "version: 3\ndefaultKnowledgeBase: demo\nknowledgeBases:\n  demo:\n    name: Startup demo\n");
+    await symlink(path.join(server, "node_modules"), path.join(root, "node_modules"), "dir");
+    const manifest = JSON.parse(await readFile(path.join(server, "package.json"), "utf8"));
+    await exec("/bin/sh", ["-c", `${manifest.scripts.build} --out-dir "$STARTUP_TEST_DIST"`], {
+      cwd: server,
+      env: { ...process.env, PATH: `${path.join(server, "node_modules/.bin")}:${process.env.PATH}`, STARTUP_TEST_DIST: dist },
+    });
+    const child = spawn(process.execPath, ["--input-type=module", "--eval", `
+      import os from "node:os";
+      import { pathToFileURL } from "node:url";
+      os.homedir = () => process.env.STARTUP_TEST_ROOT;
+      await import(pathToFileURL(process.env.STARTUP_TEST_ENTRY).href);
+    `], {
+      env: {
+        ...process.env,
+        NODE_OPTIONS: "",
+        STARTUP_TEST_ROOT: root,
+        STARTUP_TEST_ENTRY: path.join(dist, "index.js"),
+        THE_WAY_HERE_VAULT: vault,
+        THE_WAY_HERE_KNOWLEDGE_BASE: "demo",
+        THE_WAY_HERE_PORT: "0",
+        THE_WAY_HERE_DEV: "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    child.stdout.on("data", (chunk) => { output += chunk; });
+    child.stderr.on("data", (chunk) => { output += chunk; });
+    const exited = new Promise<void>((resolve) => child.once("close", () => resolve()));
+    try {
+      await expect.poll(() => {
+        if (child.exitCode !== null) throw new Error(output);
+        return output.match(/Server listening at (http:\/\/127\.0\.0\.1:\d+)/)?.[1];
+      }, { timeout: 10_000 }).toBeTruthy();
+      const address = output.match(/Server listening at (http:\/\/127\.0\.0\.1:\d+)/)![1];
+      const response = await fetch(`${address}/api/health`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ ok: true, vaultRoot: vault });
+    } finally {
+      child.kill("SIGTERM");
+      await exited;
+    }
+  }, 20_000);
+
   it("uses the workspace build pipeline before starting the server", async () => {
     const root = await temporaryWorkspace();
     const project = path.join(root, "studio");

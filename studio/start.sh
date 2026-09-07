@@ -205,7 +205,7 @@ echo "[3/4] 构建本地服务"
 # build prepares ignored MediaPipe/ONNX assets before Vite copies public/.
 "${PNPM[@]}" build
 
-echo "[4/4] 启动完成"
+echo "[4/4] 正在启动服务"
 echo "按 Ctrl+C 停止 the-way-here。"
 echo ""
 

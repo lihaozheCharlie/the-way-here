@@ -1,7 +1,7 @@
 version: 3
 name: "The Way Here 知识空间"
 adapter: "personal-growth"
-defaultKnowledgeBase: "demo"
+defaultKnowledgeBase: "personal"
 
 paths:
   skills: "knowledge-engine/skills"
@@ -10,13 +10,19 @@ paths:
 
 knowledgeBases:
   demo:
-    name: "The Way Here 演示 Wiki"
-    description: "不包含私人信息的产品演示知识库"
+    name: The Way Here 演示 Wiki
+    description: 不包含私人信息的产品演示知识库
     paths:
-      wiki: "vault/demo/wiki"
-      sources: "vault/demo/sources"
+      wiki: vault/demo/wiki
+      sources: vault/demo/sources
     validation:
       commands: []
+  personal:
+    name: 测试空间
+    description: 你的私人材料与持续构建的个人知识库
+    paths:
+      wiki: vault/personal/wiki
+      sources: vault/personal/sources
 
 agents:
   defaultRuntime: "auto"
@@ -31,7 +37,7 @@ agents:
 
 validation:
   commands:
-    - ["python3", "knowledge-engine/tools/update_obsidian_tags.py"]
-    - ["python3", "knowledge-engine/tools/update_obsidian_tags.py"]
-    - ["python3", "knowledge-engine/tools/validate_wiki_links.py"]
-    - ["python3", "knowledge-engine/tools/validate_skill_system.py"]
+    - [ "python3", "knowledge-engine/tools/update_obsidian_tags.py" ]
+    - [ "python3", "knowledge-engine/tools/update_obsidian_tags.py" ]
+    - [ "python3", "knowledge-engine/tools/validate_wiki_links.py" ]
+    - [ "python3", "knowledge-engine/tools/validate_skill_system.py" ]
