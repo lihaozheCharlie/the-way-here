@@ -1,4 +1,4 @@
-# Contributing to TwhWiki
+# Contributing to the-way-here
 
 感谢你帮助这套个人 Wiki 构建框架变得更可靠、更容易理解。
 
@@ -15,15 +15,18 @@
 1. 不要提交未经当事人许可的日记、聊天记录、联系方式、公司内部信息或可识别附件。
 2. 示例优先使用虚构人物、虚构组织和经过改写的日期。
 3. 新 Skill 必须职责单一，并由根 `AGENTS.md` 的唯一路由表覆盖。
-4. 查询流程必须保持只读；写入需要清晰的用户授权。
+4. 查询 Skill 自身必须保持只读；普通对话由 Agent 按当前目标、耐久价值、证据质量和影响范围判断是否转入构建 Skill。
 
 ## 本地检查
 
 ```bash
-python3 tools/check.py
+cd studio
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-若修改了 Markdown，先连续运行两次标签更新，第二次应显示 `updated=0`。所有 WikiLink、Skill 路由和隐私检查都应通过。
+若修改了演示 Wiki，回到仓库根目录并设置 `THE_WAY_HERE_KNOWLEDGE_BASE=demo`，连续运行两次标签更新，再运行链接检查；第二次标签更新必须显示 `updated=0`。修改 Skill、路由或维护工具时还要运行 `knowledge-engine/tools/validate_skill_system.py`。
 
 ## Pull Request 建议
 

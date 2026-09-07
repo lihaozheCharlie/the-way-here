@@ -1,0 +1,10 @@
+node_modules/
+**/node_modules/
+**/dist/
+**/.vite/
+.env.local
+.runtime/
+*.log
+
+# Generated ONNX runtime copies (prepared from installed dependency)
+apps/web/public/onnx/

@@ -1,0 +1,143 @@
+import { describe, expect, it } from "vitest";
+import type { SourceImportBatch, WikiPageSummary } from "@the-way-here/shared";
+import { buildableSourceRecordForPage, countRecentSources, detectImportSelectionKind, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceMonthOptions, sourceRecordMonth, sourceRecordType } from "./source-model";
+
+function page(overrides: Partial<WikiPageSummary>): WikiPageSummary {
+  return {
+    id: "source",
+    relativePath: "sources/日记/今天.md",
+    title: "今天",
+    category: "sources",
+    aliases: [],
+    tags: [],
+    locations: [],
+    sources: [],
+    excerpt: "",
+    modifiedAt: "2026-08-31T10:00:00.000Z",
+    isSource: true,
+    ...overrides,
+  };
+}
+
+describe("life record presentation model", () => {
+  it("classifies the supported source families from their durable metadata", () => {
+    expect(sourceRecordType(page({ relativePath: "sources/AI聊天记录/ChatGPT/对话.md" }))).toBe("ai");
+    expect(sourceRecordType(page({ relativePath: "sources/AI聊天记录/Claude/对话.md" }))).toBe("ai");
+    expect(sourceRecordType(page({ relativePath: "sources/未分类/对话.md", importChannel: "claude" }))).toBe("ai");
+    expect(sourceRecordType(page({ relativePath: "sources/未分类/对话.md", importChannel: "other-ai" }))).toBe("ai");
+    expect(sourceRecordType(page({ tags: ["支付宝"] }))).toBe("bill");
+    expect(sourceRecordType(page({ relativePath: "sources/随手笔记/灵感.md" }))).toBe("notes");
+  });
+
+  it("prefers the record date embedded in the source over the file modification time", () => {
+    expect(sourceRecordMonth(page({ title: "2024-06-30 离开熟悉轨道" }))).toBe("2024-06");
+    expect(sourceRecordMonth(page({ title: "2017，11,20 苟日新" }))).toBe("2017-11");
+  });
+
+  it("orders populated months newest first and keeps their counts", () => {
+    const options = sourceMonthOptions([
+      page({ id: "a", title: "2025-12-01" }),
+      page({ id: "b", title: "2026-01-03" }),
+      page({ id: "c", title: "2026-01-18" }),
+    ]);
+    expect(options).toEqual([{ id: "2026-01", count: 2 }, { id: "2025-12", count: 1 }]);
+  });
+
+  it("counts only files modified during the latest seven days", () => {
+    const now = new Date("2026-09-02T12:00:00.000Z");
+    expect(countRecentSources([
+      page({ id: "new", modifiedAt: "2026-08-31T10:00:00.000Z" }),
+      page({ id: "old", modifiedAt: "2026-08-01T10:00:00.000Z" }),
+    ], now)).toBe(1);
+  });
+
+  it("opens the common folder that actually received an imported directory", () => {
+    const batch = {
+      targetFolder: "日记",
+      files: [
+        { originalName: "一月.md", storedPath: "sources/日记/2026/一月.md", bytes: 12 },
+        { originalName: "二月.md", storedPath: "sources/日记/2026/二月.md", bytes: 12 },
+      ],
+    } satisfies Pick<SourceImportBatch, "files" | "targetFolder">;
+
+    expect(importedFolderForBatch(batch)).toBe("日记/2026");
+  });
+
+  it("falls back to the selected destination when a batch has no stored file details", () => {
+    expect(importedFolderForBatch({ targetFolder: "AI聊天记录/ChatGPT", files: [] })).toBe("AI聊天记录/ChatGPT");
+  });
+
+  it("recognizes files, folders, and archives from one material selection", () => {
+    expect(detectImportSelectionKind(["日记.md"])).toBe("file");
+    expect(detectImportSelectionKind(["一月.md", "二月.txt"])).toBe("files");
+    expect(detectImportSelectionKind(["2026/一月.md", "2026/二月.md"])).toBe("folder");
+    expect(detectImportSelectionKind(["旧日记.zip"])).toBe("archive");
+  });
+
+  it("does not treat a matching nested segment as a shared folder", () => {
+    expect(importedFolderForBatch({
+      targetFolder: "",
+      files: [
+        { originalName: "一月.md", storedPath: "sources/甲/2026/一月.md", bytes: 12 },
+        { originalName: "二月.md", storedPath: "sources/乙/2026/二月.md", bytes: 12 },
+      ],
+    })).toBe("");
+  });
+
+  it("maps durable import build states back to indexed source pages", () => {
+    const batches = [{
+      id: "batch-1",
+      createdAt: "2026-09-02T10:00:00.000Z",
+      fileCount: 2,
+      totalBytes: 42,
+      files: [
+        { originalName: "今天.md", storedPath: "sources/日记/今天.md", bytes: 20, buildKind: "direct" as const, buildStatus: "ready" as const },
+        { originalName: "旧记录.md", storedPath: "sources/日记/旧记录.md", bytes: 22, buildKind: "direct" as const, buildStatus: "built" as const },
+      ],
+    }];
+    const pending = pendingSourceBuildRecords(batches);
+    expect(pending).toHaveLength(1);
+    expect(sourceBuildRecordForPage(page({ relativePath: "sources/日记/今天.md" }), pending)?.batch.id).toBe("batch-1");
+    expect(sourceBuildRecordForPage(page({ relativePath: "sources/日记/旧记录.md" }), pending)).toBeUndefined();
+  });
+
+  it("offers an untracked source the same direct build action as an imported record", () => {
+    const record = buildableSourceRecordForPage(page({ id: "sources/日记/新记录", relativePath: "sources/日记/新记录.md", title: "新记录" }), []);
+
+    expect(record).toMatchObject({
+      batch: { id: "source:sources/日记/新记录" },
+      file: { originalName: "新记录.md", storedPath: "sources/日记/新记录.md", buildKind: "direct", buildStatus: "ready" },
+    });
+    expect(sourceBuildActionPresentation(record.file)).toEqual({ kind: "start", label: "构建这份记录" });
+  });
+
+  it("reduces a completed build to one quiet status without warnings or a destination", () => {
+    expect(sourceBuildPresentation({
+      originalName: "旧记录.md",
+      storedPath: "sources/日记/旧记录.md",
+      bytes: 22,
+      buildKind: "direct",
+      buildStatus: "built",
+      buildError: "知识质量检查未通过",
+      builtRefs: [{ pageId: "wiki/阶段", path: "wiki/阶段.md", title: "阶段" }],
+    })).toEqual({ label: "已构建", tone: "done" });
+  });
+
+  it("uses the same concrete build language for ready and deferred direct records", () => {
+    expect(sourceBuildPresentation({ originalName: "新记录.md", storedPath: "sources/新记录.md", bytes: 12, buildKind: "direct", buildStatus: "ready" })).toEqual({ label: "待构建", detail: "可直接构建", tone: "attention" });
+    expect(sourceBuildPresentation({ originalName: "稍后.md", storedPath: "sources/稍后.md", bytes: 12, buildKind: "direct", buildStatus: "deferred" })).toEqual({ label: "稍后再说", detail: "可直接构建", tone: "quiet" });
+  });
+
+  it("returns to an existing journey conversation instead of starting another one", () => {
+    const journey = { originalName: "账单.md", storedPath: "sources/消费账单/账单.md", bytes: 12, buildKind: "dialogue" as const, buildRunId: "run-journey" };
+    expect(sourceBuildActionPresentation({ ...journey, buildStatus: "in-dialogue" })).toEqual({ kind: "open", label: "查看进度", runId: "run-journey" });
+    expect(sourceBuildActionPresentation({ ...journey, buildStatus: "needs-dialogue" })).toEqual({ kind: "open", label: "继续聊聊", runId: "run-journey" });
+    expect(sourceBuildActionPresentation({ ...journey, buildStatus: "built" })).toEqual({ kind: "open", label: "继续聊聊", runId: "run-journey" });
+  });
+
+  it("marks an enriched journey as ready for an explicit build", () => {
+    const journey = { originalName: "账单.md", storedPath: "sources/消费账单/账单.md", bytes: 12, buildKind: "dialogue" as const, buildStatus: "ready-to-build" as const, dialogueRunId: "run-enrich" };
+    expect(sourceBuildPresentation(journey)).toEqual({ label: "草稿已更新", detail: "对话补充已保存 · 尚未构建", tone: "attention" });
+    expect(sourceBuildActionPresentation(journey)).toEqual({ kind: "open", label: "继续聊聊", runId: "run-enrich" });
+  });
+});

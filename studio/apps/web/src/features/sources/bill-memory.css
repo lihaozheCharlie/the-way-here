@@ -1,0 +1,109 @@
+.source-memory-dialog:has(.bill-memory-wall) { width: min(1280px, calc(100vw - 64px)); max-height: calc(100dvh - 48px); background: var(--canvas); }
+.source-memory-dialog:has(.bill-memory-wall) .source-memory-dialog-header { z-index: 9; height: 0; padding: 0; border: 0; background: transparent; pointer-events: none; }
+.source-memory-dialog:has(.bill-memory-wall) .source-memory-dialog-header h2 { display: none; }
+.source-memory-dialog:has(.bill-memory-wall) .source-memory-dialog-header button { position: absolute; top: 20px; right: 20px; width: 38px; height: 38px; display: grid; place-items: center; color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: 50%; pointer-events: auto; cursor: pointer; }
+.source-memory-dialog:has(.bill-memory-wall) .source-memory-dialog-header button:hover { color: var(--ink); border-color: var(--accent-primary); }
+.source-memory-dialog:has(.bill-memory-wall) .source-memory-dialog-body { padding: 0; }
+
+.bill-memory-wall { --bill-deep: #a8615a; --bill-gold: #9a6c32; min-height: 620px; color: var(--ink); }
+.bill-memory-head { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(280px, 1fr) minmax(310px, .8fr) minmax(210px, auto); gap: 30px; align-items: center; padding: 26px 76px 24px 30px; background: color-mix(in srgb, var(--paper) 96%, transparent); border-bottom: 1px solid var(--line); }
+.bill-memory-title { min-width: 0; }
+.bill-memory-title h2 { margin: 0; overflow: hidden; font: 500 21px/1.35 var(--font-display); letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.bill-memory-title p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.bill-memory-progress { min-width: 0; }
+.bill-memory-progress-track { height: 5px; overflow: hidden; background: var(--line); border-radius: 999px; }
+.bill-memory-progress-track > span { display: block; width: 100%; height: 100%; background: var(--accent-primary); border-radius: inherit; transform-origin: left center; transition: transform .24s var(--ease); }
+.bill-memory-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 8px; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.bill-memory-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.bill-memory-legend span::before { width: 6px; height: 6px; content: ""; background: var(--line); border-radius: 50%; }
+.bill-memory-legend .confirmed::before { background: var(--accent-primary); }
+.bill-memory-legend .brief::before { background: var(--attention-gold); }
+.bill-memory-legend .deep::before { background: var(--bill-deep); }
+.bill-memory-legend .skipped::before { background: var(--muted); }
+.bill-memory-build { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.bill-memory-build > button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 16px; color: #fff; background: var(--ink); border: 1px solid var(--ink); border-radius: 5px; font-size: 12px; font-weight: 680; }
+.bill-memory-build > button:disabled { color: var(--muted); background: var(--paper); border-color: var(--line); opacity: .72; }
+.bill-memory-build small { max-width: 250px; color: var(--muted); font-size: 9.5px; line-height: 1.5; text-align: right; }
+
+.bill-clue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; padding: 24px 30px 36px; }
+.bill-clue-card { min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 17px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; transition: border-color .16s var(--ease), background-color .16s var(--ease), opacity .16s var(--ease); }
+.bill-clue-card:hover, .bill-clue-card.is-open { border-color: color-mix(in srgb, var(--accent-primary) 52%, var(--line)); }
+.bill-clue-card.is-open { position: relative; z-index: 2; }
+.bill-clue-card.is-confirmed, .bill-clue-card.is-brief, .bill-clue-card.is-deep, .bill-clue-card.is-skipped { background: color-mix(in srgb, var(--paper) 82%, var(--canvas)); }
+.bill-clue-card.is-skipped { opacity: .68; }
+.bill-clue-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.bill-clue-card h3 { margin: 0; font-size: 13px; font-weight: 680; line-height: 1.55; text-wrap: balance; }
+.bill-clue-count { position: relative; flex: none; padding: 2px 7px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; outline: none; font-size: 9.5px; white-space: nowrap; }
+.bill-clue-count.has-tooltip { cursor: help; }
+.bill-clue-count:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent-primary) 28%, transparent); outline-offset: 2px; border-color: var(--accent-primary); }
+.bill-clue-summary { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.bill-clue-status { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; color: var(--muted); background: var(--canvas); border: 1px solid var(--line); border-radius: 999px; font-size: 9.5px; font-weight: 630; }
+.bill-clue-status i { width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
+.bill-clue-status.is-confirmed { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 8%, #fff); border-color: transparent; }
+.bill-clue-status.is-brief { color: var(--bill-gold); background: color-mix(in srgb, var(--attention-gold) 10%, #fff); border-color: transparent; }
+.bill-clue-status.is-deep { color: var(--bill-deep); background: color-mix(in srgb, var(--bill-deep) 8%, #fff); border-color: transparent; }
+.bill-clue-status.is-skipped { color: var(--muted); }
+.bill-clue-related { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding-top: 8px; color: var(--muted); border-top: 1px dashed var(--line); font-size: 10px; line-height: 1.55; }
+.bill-clue-related .icon { margin-top: 1px; color: var(--accent-primary); }
+.bill-clue-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 3px; }
+.bill-clue-actions button, .bill-clue-panel footer button { min-height: 32px; padding: 6px 9px; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 5px; font-size: 10.5px; }
+.bill-clue-actions button:hover { border-color: var(--accent-primary); }
+.bill-clue-actions button.deep { color: var(--bill-deep); border-color: color-mix(in srgb, var(--bill-deep) 60%, var(--line)); }
+.bill-clue-actions button.skip { margin-left: auto; color: var(--muted); border-color: transparent; }
+.bill-clue-panel { display: grid; gap: 12px; margin: 2px -4px -4px; padding: 14px; background: var(--canvas); border: 1px solid var(--line); border-radius: 5px; animation: bill-panel-in .2s var(--ease) both; }
+.bill-clue-panel > p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+.bill-clue-panel > p b { color: var(--ink); font-weight: 650; }
+.bill-clue-evidence { min-width: 0; padding: 11px 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 5px; }
+.bill-clue-evidence > span { color: var(--muted); font-size: 9.5px; font-weight: 680; }
+.bill-clue-evidence ul { display: grid; gap: 0; margin: 7px 0 0; padding: 0; color: var(--ink); font-size: 10px; line-height: 1.55; list-style: none; }
+.bill-clue-evidence-row, .bill-clue-evidence-more { position: relative; min-width: 0; padding: 5px 0; border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent); outline: none; }
+.bill-clue-evidence-row > span:first-child, .bill-clue-evidence-more > span:first-child { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bill-clue-evidence-row:hover::before, .bill-clue-evidence-more:hover::before { width: min(360px, calc(100vw - 96px)); height: 10px; position: absolute; left: 0; bottom: 100%; z-index: 9; content: ""; }
+.bill-clue-evidence-row:focus-visible, .bill-clue-evidence-more:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-primary); border-radius: 5px; }
+.bill-clue-evidence-more { color: var(--muted); font-size: 9.5px; }
+.bill-clue-evidence-tooltip { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 10; width: min(360px, calc(100vw - 96px)); max-height: 220px; overflow: auto; padding: 9px 11px; color: #fff; background: var(--ink); border-radius: 5px; box-shadow: 0 10px 28px rgba(38, 52, 64, .2); font-size: 10px; line-height: 1.65; white-space: pre-line; opacity: 0; visibility: hidden; transform: translateY(3px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility .16s var(--ease); pointer-events: none; }
+.bill-clue-count:hover::after { width: min(360px, calc(100vw - 96px)); height: 10px; position: absolute; top: 100%; right: 0; z-index: 9; content: ""; }
+.bill-clue-count > .bill-clue-evidence-tooltip { top: calc(100% + 6px); right: 0; bottom: auto; left: auto; text-align: left; overflow-wrap: anywhere; }
+.bill-clue-evidence-row:hover > .bill-clue-evidence-tooltip, .bill-clue-evidence-row:focus-visible > .bill-clue-evidence-tooltip, .bill-clue-evidence-more:hover > .bill-clue-evidence-tooltip, .bill-clue-evidence-more:focus-visible > .bill-clue-evidence-tooltip, .bill-clue-count:hover > .bill-clue-evidence-tooltip, .bill-clue-count:focus-visible > .bill-clue-evidence-tooltip, .bill-clue-evidence-tooltip:hover { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+.bill-clue-panel > label { display: block; padding-left: 10px; color: var(--ink); border-left: 1px solid var(--attention-gold); font-size: 11px; line-height: 1.6; }
+.bill-clue-panel textarea { width: 100%; min-height: 84px; resize: vertical; padding: 9px 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; line-height: 1.65; }
+.bill-clue-deep-hint { display: flex; gap: 6px; align-items: flex-start; color: var(--bill-deep) !important; }
+.bill-clue-panel footer { display: flex; justify-content: space-between; gap: 8px; }
+.bill-clue-panel footer button.primary { color: #fff; background: var(--ink); border-color: var(--ink); }
+.bill-clue-result { margin-top: auto; padding-top: 2px; }
+.bill-clue-result > button { width: 100%; display: grid; gap: 5px; padding: 10px 0 0; text-align: left; color: var(--muted); background: transparent; border: 0; border-top: 1px dashed var(--line); }
+.bill-clue-result > button span { color: var(--ink); font-size: 10.5px; line-height: 1.65; }
+.bill-clue-result > button small { color: var(--muted); font-size: 9.5px; }
+.bill-clue-result > button:hover small { color: var(--accent-primary); }
+
+.bill-memory-error { position: sticky; bottom: 16px; z-index: 6; width: max-content; max-width: calc(100% - 60px); margin: -20px 30px 24px; padding: 10px 13px; color: #8b2d25; background: #fff0ee; border: 1px solid #efcbc6; border-radius: 5px; font-size: 11px; }
+.bill-memory-toast { position: fixed; top: 28px; right: max(28px, calc((100vw - min(1280px, calc(100vw - 64px))) / 2 + 28px)); z-index: 20; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 15px; color: #fff; background: var(--ink); border-radius: 5px; box-shadow: 0 14px 34px rgba(38, 52, 64, .22); font-size: 11px; }
+.bill-memory-toast small { color: rgba(255, 255, 255, .68); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+.bill-memory-toast button { min-height: 30px; padding: 4px 9px; color: #fff; background: transparent; border: 1px solid rgba(255, 255, 255, .45); border-radius: 5px; font-size: 10px; }
+
+.bill-build-layer { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; padding: 30px; background: rgba(30, 43, 47, .34); }
+.bill-build-dialog { width: min(640px, 100%); overflow: hidden; background: var(--paper); border-radius: 8px; box-shadow: 0 28px 72px rgba(38, 52, 64, .22); }
+.bill-build-dialog > header { padding: 21px 25px 18px; border-bottom: 1px solid var(--line); }
+.bill-build-dialog h3 { margin: 0 0 5px; font: 500 18px/1.4 var(--font-display); }
+.bill-build-dialog header p { margin: 0; color: var(--muted); font-size: 11px; }
+.bill-build-list { max-height: min(480px, 58dvh); overflow: auto; padding: 8px 25px; }
+.bill-build-row { display: grid; grid-template-columns: 7px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.bill-build-row:last-child { border-bottom: 0; }
+.bill-build-row > i { width: 7px; height: 7px; margin-top: 5px; background: var(--accent-primary); border-radius: 50%; }
+.bill-build-row.is-brief > i { background: var(--attention-gold); }
+.bill-build-row.is-deep > i { background: var(--bill-deep); }
+.bill-build-row.is-skipped > i { background: var(--line); }
+.bill-build-row > span { min-width: 0; display: grid; gap: 3px; }
+.bill-build-row b { font-size: 11.5px; font-weight: 650; }
+.bill-build-row small { overflow: hidden; color: var(--muted); font-size: 10px; line-height: 1.55; text-overflow: ellipsis; white-space: nowrap; }
+.bill-build-row em { color: var(--muted); font-size: 10px; font-style: normal; white-space: nowrap; }
+.bill-build-row.is-skipped > span { opacity: .62; }
+.bill-build-dialog > footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15px 25px; background: var(--canvas); border-top: 1px solid var(--line); }
+.bill-build-dialog > footer button { min-height: 38px; padding: 8px 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; }
+.bill-build-dialog > footer button.primary { color: #fff; background: var(--ink); border-color: var(--ink); }
+
+@keyframes bill-panel-in { from { opacity: .25; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .bill-clue-panel { animation: none; }
+  .bill-memory-progress-track > span { transition: none; }
+}
