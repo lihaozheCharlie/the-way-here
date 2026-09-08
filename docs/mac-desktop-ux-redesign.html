@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>The Way Here · Mac 桌面端 UX 重设计</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --bg-page:#EDEBE6;
+    --ink:#221F1B;
+    --ink-soft:#6B6862;
+    --ink-faint:#9A968D;
+    --line:#DEDAD1;
+    --line-strong:#C9C4B8;
+    --panel:#FBFAF8;
+    --panel-alt:#F3F1EC;
+    --sidebar:#EFEDE7;
+    --accent:#3F5B4E;
+    --accent-strong:#2E4438;
+    --accent-tint:#E1E9E2;
+    --warn:#C4712F;
+    --warn-tint:#F6E4D2;
+    --shadow-win: 0 30px 60px -20px rgba(30,26,20,0.35), 0 2px 8px rgba(30,26,20,0.12);
+    --radius-win: 12px;
+    --radius-card: 10px;
+    --font-sans: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-sans);
+    color:var(--ink);
+    background:var(--bg-page);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  a{color:inherit;}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 32px 120px;}
+
+  /* ---------- Intro ---------- */
+  .intro{padding:72px 32px 40px;max-width:1320px;margin:0 auto;}
+  .intro .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong);font-weight:600;}
+  .intro h1{font-size:34px;line-height:1.25;margin:10px 0 12px;letter-spacing:-0.01em;}
+  .intro p.lead{font-size:16px;color:var(--ink-soft);max-width:760px;margin:0 0 28px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:36px;}
+  .chip{
+    font-size:12.5px;padding:6px 12px;border-radius:999px;background:var(--panel);
+    border:1px solid var(--line);color:var(--ink-soft);font-weight:500;
+  }
+  .principle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:8px;}
+  .principle{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-card);padding:18px 20px;}
+  .principle b{display:block;font-size:14px;margin-bottom:6px;color:var(--ink);}
+  .principle span{font-size:13px;color:var(--ink-soft);}
+  @media (max-width:1000px){.principle-grid{grid-template-columns:1fr 1fr;}}
+
+  section.block{margin:64px 0;}
+  .block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;gap:16px;flex-wrap:wrap;}
+  .block-head h2{font-size:20px;margin:0;letter-spacing:-0.01em;}
+  .block-head .note{font-size:13px;color:var(--ink-soft);max-width:560px;}
+  .tag{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-strong);background:var(--accent-tint);padding:3px 8px;border-radius:5px;font-weight:600;}
+
+  /* ---------- macOS menu bar ---------- */
+  .menubar{
+    height:26px;display:flex;align-items:center;gap:18px;
+    background:rgba(246,245,241,0.92);backdrop-filter:blur(20px);
+    border:1px solid var(--line);border-radius:8px;
+    padding:0 14px;font-size:12.5px;color:var(--ink);margin-bottom:22px;
+  }
+  .menubar .app-logo{width:14px;height:14px;border-radius:3px;background:var(--accent);}
+  .menubar b{font-weight:600;}
+  .menubar span.dim{color:var(--ink-faint);}
+  .menubar .spacer{flex:1;}
+  .menubar .status-items{display:flex;gap:12px;align-items:center;color:var(--ink-soft);}
+
+  /* ---------- Window chrome ---------- */
+  .desktop-stage{
+    background:linear-gradient(160deg,#DED9CC 0%, #C9C2AE 55%, #B7AF98 100%);
+    border-radius:16px;padding:48px 44px 56px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4);
+  }
+  .window{
+    background:var(--panel);
+    border-radius:var(--radius-win);
+    box-shadow:var(--shadow-win);
+    overflow:hidden;
+    border:1px solid rgba(0,0,0,0.06);
+  }
+  .titlebar{
+    height:44px;display:flex;align-items:center;gap:14px;
+    padding:0 14px;background:linear-gradient(180deg,#F7F6F3,#EFEDE7);
+    border-bottom:1px solid var(--line);position:relative;
+  }
+  .traffic{display:flex;gap:8px;}
+  .traffic i{width:12px;height:12px;border-radius:50%;display:block;}
+  .traffic i.r{background:#EC6A5E;}
+  .traffic i.y{background:#F4BF4F;}
+  .traffic i.g{background:#61C554;}
+  .win-title{
+    position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:var(--ink-soft);
+    pointer-events:none;
+  }
+  .titlebar .kb-switcher{
+    display:flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:7px;
+    background:rgba(0,0,0,0.045);font-size:12.5px;font-weight:600;color:var(--ink);margin-left:6px;
+  }
+  .titlebar .kb-switcher .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+  .titlebar .right-controls{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{
+    width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);cursor:default;
+  }
+  .icon-btn svg{width:16px;height:16px;}
+  .icon-btn.active{background:rgba(0,0,0,0.06);color:var(--ink);}
+
+  .toolbar{
+    height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;
+    background:var(--panel);border-bottom:1px solid var(--line);
+  }
+  .seg{display:flex;background:rgba(0,0,0,0.045);border-radius:7px;padding:2px;gap:2px;}
+  .seg button{
+    border:none;background:transparent;font-size:12.5px;padding:5px 11px;border-radius:6px;color:var(--ink-soft);
+    font-weight:500;cursor:default;font-family:var(--font-sans);
+  }
+  .seg button.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,0.08);}
+  .toolbar .search{
+    margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.045);
+    border-radius:7px;padding:5px 10px;font-size:12.5px;color:var(--ink-faint);width:220px;
+  }
+  .toolbar .search svg{width:13px;height:13px;flex:none;}
+  .kbd{
+    font-family:var(--font-mono);font-size:10.5px;background:rgba(0,0,0,0.06);color:var(--ink-soft);
+    border-radius:4px;padding:1px 5px;margin-left:auto;
+  }
+
+  .win-body{display:flex;height:600px;}
+  .sidebar{
+    width:224px;flex:none;background:var(--sidebar);border-right:1px solid var(--line);
+    padding:14px 10px;overflow-y:auto;
+  }
+  .sidebar .kb-picker{
+    display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;margin-bottom:14px;
+  }
+  .sidebar .kb-picker .avatar{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:none;}
+  .sidebar .kb-picker .meta b{display:block;font-size:12.5px;}
+  .sidebar .kb-picker .meta span{font-size:11px;color:var(--ink-faint);}
+  .sidebar .kb-picker svg{margin-left:auto;width:11px;height:11px;color:var(--ink-faint);}
+
+  .nav-group{margin-bottom:16px;}
+  .nav-group .label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);padding:0 8px 6px;font-weight:600;}
+  .nav-item{
+    display:flex;align-items:center;gap:9px;padding:6.5px 8px;border-radius:7px;font-size:13px;color:var(--ink);
+    font-weight:500;position:relative;
+  }
+  .nav-item svg{width:15px;height:15px;color:var(--ink-soft);flex:none;}
+  .nav-item.active{background:var(--accent);color:#fff;}
+  .nav-item.active svg{color:#fff;}
+  .nav-item .badge{
+    margin-left:auto;background:var(--warn);color:#fff;font-size:10.5px;font-weight:700;
+    min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;
+  }
+  .nav-item.active .badge{background:rgba(255,255,255,0.28);}
+  .nav-sub{margin-left:22px;margin-top:2px;}
+  .nav-sub .nav-item{font-size:12.5px;font-weight:400;padding:5px 8px;}
+  .nav-sub .nav-item svg{width:12px;height:12px;}
+  .nav-item.child-active{background:rgba(63,91,78,0.12);color:var(--accent-strong);font-weight:600;}
+
+  .content-pane{flex:1;overflow-y:auto;background:var(--panel);padding:28px 30px;min-width:0;}
+  .inspector{
+    width:300px;flex:none;background:var(--panel-alt);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;
+  }
+  .inspector .insp-head{
+    padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;
+  }
+  .inspector .insp-head svg{width:14px;height:14px;color:var(--accent-strong);}
+  .inspector .insp-head b{font-size:13px;}
+  .inspector .insp-head span{font-size:11px;color:var(--ink-faint);display:block;}
+  .insp-thread{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
+  .msg{max-width:92%;font-size:12.5px;padding:9px 11px;border-radius:11px;line-height:1.5;}
+  .msg.agent{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px;}
+  .msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+  .msg small{display:block;font-size:10px;color:var(--ink-faint);margin-top:5px;}
+  .msg.user small{color:rgba(255,255,255,0.7);}
+  .insp-input{
+    margin:10px 14px 14px;display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);
+    border-radius:9px;padding:8px 10px;
+  }
+  .insp-input input{border:none;outline:none;font-size:12.5px;flex:1;font-family:var(--font-sans);background:transparent;color:var(--ink-faint);}
+  .insp-input svg{width:15px;height:15px;color:var(--accent);}
+
+  /* content typography inside panes */
+  .pane-title{font-size:20px;font-weight:700;margin:0 0 4px;letter-spacing:-0.01em;}
+  .pane-sub{font-size:13px;color:var(--ink-soft);margin:0 0 22px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius-card);padding:16px 18px;margin-bottom:10px;}
+  .card b{font-size:13.5px;display:block;margin-bottom:4px;}
+  .card p{font-size:12.5px;color:var(--ink-soft);margin:0;}
+  .row-list .row{
+    display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);font-size:13px;
+  }
+  .row-list .row:last-child{border-bottom:none;}
+  .dot-tag{width:8px;height:8px;border-radius:50%;flex:none;}
+  .pill{font-size:11px;background:var(--accent-tint);color:var(--accent-strong);padding:3px 8px;border-radius:5px;font-weight:600;}
+  .drop-zone{
+    border:1.5px dashed var(--line-strong);border-radius:12px;padding:34px 20px;text-align:center;color:var(--ink-faint);
+    font-size:13px;margin-bottom:18px;background:var(--panel-alt);
+  }
+  .drop-zone b{display:block;color:var(--ink-soft);font-size:13.5px;margin-bottom:4px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* ---------- annotation list ---------- */
+  .annotate{
+    margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-card);
+    padding:16px 20px;
+  }
+  .annotate li{font-size:13px;color:var(--ink-soft);margin-bottom:7px;}
+  .annotate li:last-child{margin-bottom:0;}
+  .annotate li b{color:var(--ink);font-weight:600;}
+  .annotate ul{margin:0;padding-left:18px;}
+
+  /* ---------- secondary mockups grid ---------- */
+  .mock-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+  @media(max-width:980px){.mock-grid{grid-template-columns:1fr;}}
+  .mock-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;}
+  .mock-card h3{font-size:14.5px;margin:0 0 4px;}
+  .mock-card p.desc{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;}
+  .mini-stage{background:linear-gradient(160deg,#DED9CC,#C4BDA6);border-radius:10px;padding:26px;display:flex;justify-content:center;}
+
+  /* command palette */
+  .cmdk{width:420px;background:rgba(250,249,246,0.97);border-radius:12px;box-shadow:var(--shadow-win);border:1px solid rgba(0,0,0,0.08);overflow:hidden;}
+  .cmdk .cmdk-input{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);}
+  .cmdk .cmdk-input svg{width:15px;height:15px;color:var(--ink-faint);}
+  .cmdk .cmdk-input span{font-size:13.5px;color:var(--ink-faint);}
+  .cmdk .cmdk-list{padding:8px;}
+  .cmdk .cmdk-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:12.5px;}
+  .cmdk .cmdk-row.active{background:var(--accent);color:#fff;}
+  .cmdk .cmdk-row.active svg{color:#fff;}
+  .cmdk .cmdk-row svg{width:14px;height:14px;color:var(--ink-soft);}
+  .cmdk .cmdk-row .kbd{background:rgba(0,0,0,0.08);}
+  .cmdk .cmdk-row.active .kbd{background:rgba(255,255,255,0.25);color:#fff;}
+
+  /* status item */
+  .statusbar-mock{display:flex;justify-content:flex-end;}
+  .statusbar-mock .bar{height:26px;background:rgba(246,245,241,0.95);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;padding:0 10px;gap:14px;font-size:12px;color:var(--ink-soft);width:100%;}
+  .statusbar-mock .bar svg{width:13px;height:13px;}
+  .capture-drop{
+    margin-top:8px;width:260px;background:var(--panel);border-radius:11px;box-shadow:var(--shadow-win);
+    border:1px solid rgba(0,0,0,0.08);padding:14px;
+  }
+  .capture-drop textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--font-sans);resize:none;height:56px;color:var(--ink-soft);}
+  .capture-actions{display:flex;gap:6px;margin-top:8px;}
+  .capture-actions button{flex:1;font-size:11.5px;padding:6px;border-radius:6px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);font-weight:600;}
+  .capture-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  /* preferences window */
+  .prefs{width:460px;}
+  .prefs .titlebar{justify-content:center;}
+  .prefs-tabs{display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel-alt);}
+  .prefs-tab{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--ink-soft);padding:6px 12px;border-radius:8px;}
+  .prefs-tab.active{background:var(--accent-tint);color:var(--accent-strong);font-weight:600;}
+  .prefs-tab svg{width:16px;height:16px;}
+  .prefs-body{padding:18px 20px;}
+  .field-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .field-row:last-child{border-bottom:none;}
+  .field-row span.desc{color:var(--ink-faint);font-size:11.5px;display:block;margin-top:2px;}
+  .toggle{width:34px;height:20px;border-radius:10px;background:var(--accent);position:relative;flex:none;}
+  .toggle i{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff;}
+  .toggle.off{background:var(--line-strong);}
+  .toggle.off i{left:2px;right:auto;}
+
+  /* notification */
+  .notif{width:320px;background:rgba(250,249,246,0.98);border-radius:12px;box-shadow:var(--shadow-win);border:1px solid rgba(0,0,0,0.08);padding:12px 14px;display:flex;gap:10px;}
+  .notif .n-icon{width:30px;height:30px;border-radius:8px;background:var(--accent);flex:none;}
+  .notif b{font-size:12.5px;display:block;}
+  .notif p{font-size:12px;color:var(--ink-soft);margin:2px 0 0;}
+  .notif time{font-size:10px;color:var(--ink-faint);}
+
+  /* dock */
+  .dock-mock{background:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.5);backdrop-filter:blur(10px);border-radius:20px;padding:8px 12px;display:flex;gap:10px;align-items:flex-end;}
+  .dock-icon{width:46px;height:46px;border-radius:11px;background:var(--accent);position:relative;flex:none;}
+  .dock-icon.badge::after{content:"3";position:absolute;top:-5px;right:-5px;background:var(--warn);color:#fff;font-size:10.5px;font-weight:700;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--panel);}
+  .dock-icon.plain{background:#B9B4A6;}
+
+  /* feature coverage table */
+  table.coverage{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border-radius:12px;overflow:hidden;border:1px solid var(--line);}
+  table.coverage th{text-align:left;background:var(--panel-alt);padding:11px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--line);}
+  table.coverage td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  table.coverage tr:last-child td{border-bottom:none;}
+  table.coverage td.feat{color:var(--ink);font-weight:600;white-space:nowrap;}
+  table.coverage td.web{color:var(--ink-faint);}
+
+  footer{padding:60px 32px;text-align:center;color:var(--ink-faint);font-size:12px;}
+
+  [data-tabpanel]{display:none;}
+  [data-tabpanel].show{display:block;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="kicker">The Way Here · UX Redesign Proposal</div>
+  <h1>从网页到 Mac 桌面端：<br/>把「这里的路」重新设计成一个原生的 macOS 应用</h1>
+  <p class="lead">
+    「这里的路」目前是一个网页产品：顶部横向导航、居中的内容列、以及散落在各页面里的 AI 协作面板。
+    要把它变成一个真正「像 Mac 应用」的产品，不是简单地套上圆角窗口，而是要按照 macOS 的心智模型重新组织信息架构——
+    侧边栏取代顶部导航、常驻 Inspector 取代弹出式对话框、菜单栏与状态栏承担轻量任务、命令面板取代到处都是的搜索框、
+    「偏好设置」窗口取代设置弹层。下面按原产品的每一个功能模块，给出对应的桌面端设计方案。
+  </p>
+  <div class="chips">
+    <span class="chip">① 原生窗口铬合 + 三栏布局</span>
+    <span class="chip">② 侧边栏导航替代顶部 Tab</span>
+    <span class="chip">③ 常驻 Inspector（AI 协作面板）</span>
+    <span class="chip">④ ⌘K 命令面板</span>
+    <span class="chip">⑤ 菜单栏状态项 · 随手记</span>
+    <span class="chip">⑥ 偏好设置窗口（⌘,）</span>
+    <span class="chip">⑦ 多窗口 · 独立聚焦工作区</span>
+    <span class="chip">⑧ 拖拽导入 · 原生文件选择</span>
+    <span class="chip">⑨ 通知中心 + Dock 徽章</span>
+    <span class="chip">⑩ 键盘优先 · 浅/深色外观</span>
+  </div>
+
+  <div class="principle-grid">
+    <div class="principle"><b>信息架构：从「页面」到「空间」</b><span>顶部四个横向 Tab（此刻 / 值得聊聊 / 生活记录 / 已有理解）收进左侧边栏，「已有理解」下的五个子栏作为可展开的二级列表，符合 Mail、Notes 一类原生应用的浏览习惯。</span></div>
+    <div class="principle"><b>AI 协作从「弹层」到「常驻面板」</b><span>ContextualAgentDock 不再是页面里的一块区域，而是固定在窗口右侧的 Inspector——像 Xcode 的助手编辑器一样，随左侧内容切换话题，但始终可见、不打断阅读。</span></div>
+    <div class="principle"><b>知识库切换：像切换邮箱账户</b><span>GlobalKnowledgeBaseSwitcher 移到侧边栏顶部，做成账户切换器的形态，支持 ⌘1–⌘9 直接跳转，新建/删除知识库走系统级确认弹窗样式。</span></div>
+    <div class="principle"><b>搜索：从输入框到命令面板</b><span>全局搜索框升级为 ⌘K 呼出的命令面板——既能全文搜索生活记录与理解，也能直接跳转到任意栏目、触发「新建记录」「打开近况回信」等动作。</span></div>
+    <div class="principle"><b>录入：从「打开网页」到「随手记」</b><span>生活记录的拍照/账单/日记录入，新增菜单栏状态项常驻小窗，无需打开主窗口即可随手记一笔，配合 Continuity Camera 直接用 iPhone 扫描账单和照片。</span></div>
+    <div class="principle"><b>设置：从弹窗到系统级偏好设置</b><span>AgentSettings 从页面内的对话框，改为标准的 macOS 偏好设置窗口（⌘,），分「通用 / AI 助手 / 知识库 / 高级」四个标签页。</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- =============== MAIN WINDOW =============== -->
+  <section class="block">
+    <div class="block-head">
+      <h2>主窗口：侧边栏 + 内容 + 常驻 AI Inspector 三栏结构</h2>
+      <div class="note">一套统一的窗口骨架承载全部功能，切换栏目只替换中间内容区，右侧协作面板与顶部工具栏始终保持不变。</div>
+    </div>
+
+    <div class="menubar">
+      <div class="app-logo"></div>
+      <b>这里的路</b>
+      <span class="dim">文件</span><span class="dim">编辑</span><span class="dim">查看</span><span class="dim">记录</span><span class="dim">窗口</span><span class="dim">帮助</span>
+      <div class="spacer"></div>
+      <div class="status-items">
+        <span>周二 14:02</span>
+      </div>
+    </div>
+
+    <div class="desktop-stage">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="kb-switcher"><span class="dot"></span>晓年的空间<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+          <div class="win-title">这里的路</div>
+          <div class="right-controls">
+            <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="seg">
+            <button class="active" onclick="showTab('now')">此刻</button>
+            <button onclick="showTab('questions')">值得聊聊</button>
+            <button onclick="showTab('sources')">生活记录</button>
+            <button onclick="showTab('knowledge')">已有理解</button>
+          </div>
+          <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>搜索记录与理解…<span class="kbd">⌘K</span></div>
+        </div>
+
+        <div class="win-body">
+          <!-- Sidebar -->
+          <div class="sidebar">
+            <div class="kb-picker">
+              <div class="avatar"></div>
+              <div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-item active" onclick="showTab('now')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+                此刻
+              </div>
+              <div class="nav-item" onclick="showTab('questions')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>
+                值得聊聊
+                <span class="badge">3</span>
+              </div>
+              <div class="nav-item" onclick="showTab('sources')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>
+                生活记录
+              </div>
+              <div class="nav-item child-active" onclick="showTab('knowledge')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>
+                已有理解
+              </div>
+              <div class="nav-sub">
+                <div class="nav-item" onclick="showTab('knowledge')">总览</div>
+                <div class="nav-item child-active" onclick="showTab('knowledge')">理解自己</div>
+                <div class="nav-item" onclick="showTab('knowledge')">人生轨迹</div>
+                <div class="nav-item" onclick="showTab('knowledge')">近况回信</div>
+                <div class="nav-item" onclick="showTab('knowledge')">人与世界</div>
+              </div>
+            </div>
+
+            <div class="nav-group" style="margin-top:auto">
+              <div class="nav-item" onclick="showPrefs()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.6 1z"/></svg>
+                偏好设置
+              </div>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="content-pane">
+
+            <div data-tabpanel="now" class="show">
+              <h1 class="pane-title">早上好，晓年</h1>
+              <p class="pane-sub">今天是记录的第 214 天 · 3 条值得聊聊的话题 · 1 篇新的近况回信</p>
+              <div class="card"><b>今日提醒</b><p>上周提到的「和妈妈的通话」还没有展开聊——右侧协作面板里可以直接接着说。</p></div>
+              <div class="card"><b>快速记一笔</b><p>拖入照片、账单，或直接在下方输入框写一段今天发生的事。⌘N 随时可从任意页面呼出。</p></div>
+              <div class="grid-2">
+                <div class="card"><b>本周关键词</b><p>搬家 · 新同事 · 复诊</p></div>
+                <div class="card"><b>近期成长</b><p>「理解自己」新增了一条关于工作节奏的洞察。</p></div>
+              </div>
+            </div>
+
+            <div data-tabpanel="questions">
+              <h1 class="pane-title">值得聊聊</h1>
+              <p class="pane-sub">AI 从最近的生活记录里，梳理出一些值得深入聊聊的话头 —— 单击任意一条，在右侧面板里展开成专注对话。</p>
+              <div class="row-list">
+                <div class="row"><span class="dot-tag" style="background:var(--warn)"></span>「和妈妈的通话」里提到的顾虑，要不要聊聊看？<span class="pill" style="margin-left:auto">新</span></div>
+                <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>这周三次提到「累」，最近是不是节奏有点紧？</div>
+                <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>新同事那次午饭聊得挺开心，想多记一点吗？</div>
+              </div>
+              <div class="annotate">
+                <b style="font-size:13px">桌面端调整</b>
+                <ul>
+                  <li>点击话题不再整页跳转到 <b>/focus/:id</b>，而是在右侧 Inspector 里原地展开成对话线程（FocusWorkspace 并入常驻协作面板）。</li>
+                  <li>支持 <b>⌘⇧F</b> 把某个话题「取出」为独立悬浮窗口，专注聊完再收回，对应原来的聚焦工作区。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div data-tabpanel="sources">
+              <h1 class="pane-title">生活记录</h1>
+              <p class="pane-sub">日记、照片、账单与外部导入的材料，统一整理在这里。</p>
+              <div class="drop-zone"><b>拖拽文件到这里导入</b>把照片、账单截图、聊天记录导出文件拖进窗口即可，也支持从 Finder 用「打开方式」直接发送到这里。</div>
+              <div class="grid-2">
+                <div class="card"><b>📷 照片记忆</b><p>128 张照片已识别地点与人物，本周新增 6 张。</p></div>
+                <div class="card"><b>🧾 账单记忆</b><p>42 张账单已归类消费类型，本月待确认 3 条。</p></div>
+              </div>
+              <div class="card"><b>写今天的日记</b><p>在这里直接写，或用菜单栏「随手记」小窗随时补一句。</p></div>
+              <div class="annotate">
+                <b style="font-size:13px">桌面端调整</b>
+                <ul>
+                  <li>ImportMaterialsModal 的导入弹窗替换为原生「打开」文件选择对话框 + 拖拽区，符合 macOS 文件交互习惯。</li>
+                  <li>照片记忆可接入 Continuity Camera，用 iPhone 直接扫描相册/账单传到 Mac。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div data-tabpanel="knowledge">
+              <h1 class="pane-title">理解自己</h1>
+              <p class="pane-sub">已有理解 › 理解自己 —— 侧边栏二级列表里的当前选中项。</p>
+              <div class="grid-2">
+                <div class="card"><b>个人特质</b><p>13 条持续更新的性格与偏好观察。</p></div>
+                <div class="card"><b>反复出现的周期</b><p>识别出 4 组情绪/精力的循环模式。</p></div>
+              </div>
+              <div class="card"><b>思维方式卡片</b><p>7 张关于你如何做决定、如何应对压力的思维模型卡片。</p></div>
+              <div class="annotate">
+                <b style="font-size:13px">桌面端调整</b>
+                <ul>
+                  <li>KnowledgeHome / GrowthHub / Timeline / Letters / Relationships 共用侧边栏二级导航，切换即时局部刷新，不做整页跳转。</li>
+                  <li>「人生轨迹」时间线、「人与世界」关系图，支持 ⌘↩ 在独立窗口中打开做更大画布的浏览。</li>
+                </ul>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Inspector: contextual agent dock -->
+          <div class="inspector">
+            <div class="insp-head">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>
+              <div><b>协作面板</b><span>围绕「理解自己」聊聊</span></div>
+            </div>
+            <div class="insp-thread">
+              <div class="msg agent">最近关于工作节奏的记录多了不少，想不想聊聊这周「累」出现了三次的具体原因？<small>10:24</small></div>
+              <div class="msg user">主要是新项目排期比较紧，加上通勤时间变长了。<small>10:26</small></div>
+              <div class="msg agent">明白了，我把「通勤变长」记到了「个人特质」里的精力管理部分，需要我帮你梳理一下这周的时间分配吗？<small>10:26</small></div>
+            </div>
+            <div class="insp-input">
+              <input placeholder="回复，或换个话题…" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="annotate" style="margin-top:24px">
+      <b style="font-size:13px">整体骨架的设计理由</b>
+      <ul>
+        <li><b>侧边栏替代顶部横向导航</b>：网页版的四个顶部 Tab + 二级横向子导航，在窗口变窄、纵向空间充裕的桌面场景里效率更低；侧边栏配合可展开的二级列表，是 Mail、Notes、Things 等原生应用统一使用的模式，也让"已有理解"下的 5 个子栏一次性可见，不需要先进入总览再横向切换。</li>
+        <li><b>Inspector 常驻而不是内嵌区块</b>：原来的 ContextualAgentDock 是页面里的一块内容，现在做成窗口级的固定面板（类似 Xcode 助手编辑器 / Pages 格式面板），任何栏目下都能继续和 AI 聊，不必等页面里的对话框滚动到视野内。</li>
+        <li><b>知识库切换器上移到侧边栏顶部</b>：原网页里放在全局 Header 左侧的下拉菜单，现在挂到侧边栏顶部，视觉上更像"切换邮箱账户"，并保留新建/删除知识库的入口。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- =============== Command Palette =============== -->
+  <section class="block">
+    <div class="block-head">
+      <h2>⌘K 命令面板：取代到处都是的搜索框</h2>
+      <div class="note">全局搜索、跳转到任意栏目、触发新建动作，统一收进一个 Spotlight 风格的浮层，任何界面按 ⌘K 呼出。</div>
+    </div>
+    <div class="mock-grid">
+      <div class="mock-card">
+        <h3>命令面板浮层</h3>
+        <p class="desc">输入内容会先匹配到「跳转」「新建」等动作，再匹配全文搜索结果，对应网页版分散在 Header 与各栏目里的搜索框（含 /search 页面）。</p>
+        <div class="mini-stage">
+          <div class="cmdk">
+            <div class="cmdk-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span>妈妈</span></div>
+            <div class="cmdk-list">
+              <div class="cmdk-row active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊 · 「和妈妈的通话」的话头<span class="kbd">↵</span></div>
+              <div class="cmdk-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/></svg>人与世界 · 妈妈的关系卡片</div>
+              <div class="cmdk-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/></svg>生活记录 · 3 条提到「妈妈」的日记</div>
+              <div class="cmdk-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>新建近况回信…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-card">
+        <h3>菜单栏状态项 · 随手记</h3>
+        <p class="desc">点按菜单栏图标，随时随地写一句话、贴一张图，无需打开主窗口，对应网页版必须打开「生活记录」页面才能新增内容的流程。</p>
+        <div class="mini-stage" style="flex-direction:column;align-items:flex-end;gap:0;">
+          <div class="statusbar-mock" style="width:100%;margin-bottom:0;">
+            <div class="bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><span>周二 14:02</span></div>
+          </div>
+          <div class="capture-drop">
+            <b style="font-size:12.5px;display:block;margin-bottom:8px;">随手记一笔</b>
+            <textarea placeholder="今天发生了什么…">和新同事一起吃了午饭，聊得挺开心</textarea>
+            <div class="capture-actions">
+              <button>📎 加图片/账单</button>
+              <button class="primary">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Preferences window =============== -->
+  <section class="block">
+    <div class="block-head">
+      <h2>偏好设置窗口：取代弹层里的 Agent 设置</h2>
+      <div class="note">AgentSettings 从「已有理解」页面里的一块弹出配置，改为标准的 macOS 偏好设置窗口（快捷键 ⌘,），按用途拆成四个标签页。</div>
+    </div>
+    <div class="mock-grid">
+      <div class="mock-card">
+        <h3>AI 助手标签页</h3>
+        <p class="desc">对应原 AgentSettings 组件：人设语气、主动打招呼的频率、可以调用哪些工具。</p>
+        <div class="mini-stage">
+          <div class="window prefs">
+            <div class="titlebar"><div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div><div class="win-title">偏好设置</div></div>
+            <div class="prefs-tabs">
+              <div class="prefs-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>通用</div>
+              <div class="prefs-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>AI 助手</div>
+              <div class="prefs-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/></svg>知识库</div>
+              <div class="prefs-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/></svg>高级</div>
+            </div>
+            <div class="prefs-body">
+              <div class="field-row"><span>主动提起「值得聊聊」<span class="desc">每天最多主动打招呼的次数</span></span><b>2 次</b></div>
+              <div class="field-row"><span>语气风格<span class="desc">影响近况回信与对话的措辞</span></span><b>温和 ›</b></div>
+              <div class="field-row"><span>允许读取照片元数据<span class="desc">用于识别拍摄地点与人物</span></span><div class="toggle"><i></i></div></div>
+              <div class="field-row"><span>后台自动整理账单<span class="desc">新账单到账后自动归类</span></span><div class="toggle off"><i></i></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-card">
+        <h3>知识库标签页 &amp; 删除确认</h3>
+        <p class="desc">对应 CreateKnowledgeBaseDialog / ConfirmDeleteDialog：网页里的居中弹窗，替换为偏好设置里的列表管理 + 系统级警告样式确认框。</p>
+        <div class="mini-stage" style="flex-direction:column;gap:14px;align-items:center;">
+          <div class="window prefs" style="width:380px">
+            <div class="titlebar"><div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div><div class="win-title">删除知识库</div></div>
+            <div class="prefs-body">
+              <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 14px;">「旧笔记本」中的生活记录和已有理解会从本机永久删除，此操作不能撤销。</p>
+              <div class="capture-actions"><button>取消</button><button class="primary" style="background:#C0392B;border-color:#C0392B;">删除知识库</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Multi window / notification / dock =============== -->
+  <section class="block">
+    <div class="block-head">
+      <h2>多窗口、通知与 Dock：让「值得聊聊」和「近况回信」主动找到你</h2>
+      <div class="note">桌面端可以做网页做不到的事——独立窗口专注阅读、系统通知主动提醒、Dock 图标显示未读数。</div>
+    </div>
+    <div class="mock-grid">
+      <div class="mock-card">
+        <h3>阅读器独立窗口</h3>
+        <p class="desc">对应 Reader（/page/*）：双击一条导入材料或近况回信，用 ⌘↩ 在独立窗口打开，方便一边读一边在主窗口做别的事。</p>
+        <div class="mini-stage">
+          <div class="window" style="width:320px">
+            <div class="titlebar"><div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div><div class="win-title">近况回信 · 三月</div></div>
+            <div class="prefs-body" style="padding:20px 22px;">
+              <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.7;margin:0">这个月你提到搬家的次数比平时多，也第一次写到「新同事」……</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-card">
+        <h3>系统通知 + Dock 徽章</h3>
+        <p class="desc">新的「值得聊聊」话题、AI 写好的近况回信，通过通知中心横幅提醒，Dock 图标叠加未读数徽章。</p>
+        <div class="mini-stage" style="flex-direction:column;gap:16px;align-items:flex-end;">
+          <div class="notif">
+            <div class="n-icon"></div>
+            <div><b>这里的路</b><p>本周的近况回信写好了，想现在看看吗？</p><time>刚刚</time></div>
+          </div>
+          <div class="dock-mock">
+            <div class="dock-icon plain"></div>
+            <div class="dock-icon badge"></div>
+            <div class="dock-icon plain"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Coverage table =============== -->
+  <section class="block">
+    <div class="block-head">
+      <h2>功能覆盖清单</h2>
+      <div class="note">逐一核对网页版的每个模块，确认都有对应的桌面端处理方式，没有遗漏。</div>
+    </div>
+    <table class="coverage">
+      <tr><th>网页功能</th><th>桌面端方案</th></tr>
+      <tr><td class="feat">此刻（Today）</td><td>侧边栏首项，内容区展示今日摘要、快速记一笔卡片，右侧 Inspector 始终待命。</td></tr>
+      <tr><td class="feat">值得聊聊 · 聚焦工作区</td><td>话题列表在内容区，点击后在右侧 Inspector 原地展开对话；⌘⇧F 可取出为独立悬浮窗深入聊。侧边栏图标带未处理数量徽章，触发系统通知与 Dock 徽章。</td></tr>
+      <tr><td class="feat">生活记录 · 导入材料弹窗</td><td>原生拖拽区 + 系统文件选择对话框；菜单栏状态项「随手记」小窗支持随时补记，无需打开主窗口。</td></tr>
+      <tr><td class="feat">生活记录 · 照片/账单记忆</td><td>内容区两张卡片入口，可接 Continuity Camera 从 iPhone 直接扫描导入。</td></tr>
+      <tr><td class="feat">已有理解 · 总览/理解自己/人生轨迹/近况回信/人与世界</td><td>侧边栏二级可展开列表，局部切换内容区，不做整页跳转；人生轨迹、人与世界支持 ⌘↩ 独立窗口打开做大画布浏览。</td></tr>
+      <tr><td class="feat">阅读器（Reader）</td><td>默认在内容区内嵌打开，⌘↩ 或双击可弹出独立只读窗口。</td></tr>
+      <tr><td class="feat">全局搜索 / 搜索结果页</td><td>合并进 ⌘K 命令面板，输入即预览跳转项与全文匹配结果，取代原来的搜索框 + 独立结果页。</td></tr>
+      <tr><td class="feat">常驻协作面板（ContextualAgentDock）</td><td>窗口级 Inspector，随左侧内容切换话题上下文，标题栏图标可一键隐藏/展开（⌘⌥I）。</td></tr>
+      <tr><td class="feat">Agent 设置</td><td>偏好设置窗口「AI 助手」标签页（⌘,），替代页面内弹层。</td></tr>
+      <tr><td class="feat">知识库切换 / 新建 / 删除</td><td>侧边栏顶部账户式切换器 + ⌘1–⌘9 快捷跳转；新建/删除走偏好设置「知识库」标签页与系统级确认弹窗。</td></tr>
+      <tr><td class="feat">顶部全局 Header</td><td>拆分为系统菜单栏（File/Edit/View…）+ 窗口工具栏（分段控件 + 搜索）+ 侧边栏，不再有独立的横向大 Header。</td></tr>
+    </table>
+  </section>
+
+</div>
+
+<footer>The Way Here · Mac 桌面端 UX 重设计提案 · 静态设计稿，用于评审与开发排期参考</footer>
+
+<script>
+  function showTab(name){
+    document.querySelectorAll('[data-tabpanel]').forEach(function(el){
+      el.classList.toggle('show', el.getAttribute('data-tabpanel') === name);
+    });
+    document.querySelectorAll('.toolbar .seg button').forEach(function(btn, i){
+      var map = ['now','questions','sources','knowledge'];
+      btn.classList.toggle('active', map[i] === name);
+    });
+  }
+  function showPrefs(){ /* visual only in this static mock */ }
+</script>
+
+</body>
+</html>
