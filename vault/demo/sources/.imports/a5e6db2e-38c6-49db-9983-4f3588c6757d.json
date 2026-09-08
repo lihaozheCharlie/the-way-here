@@ -1,0 +1,46 @@
+{
+  "id": "a5e6db2e-38c6-49db-9983-4f3588c6757d",
+  "channel": "photos",
+  "createdAt": "2026-09-07T12:35:33.636Z",
+  "targetFolder": "照片记忆",
+  "fileCount": 1,
+  "totalBytes": 2659740,
+  "files": [
+    {
+      "originalName": "那只空碗是我刚吃完的 · 虚构照片记忆",
+      "storedPath": "vault/demo/sources/照片记忆/2025-06-14 那只空碗是我刚吃完的.md",
+      "bytes": 2238,
+      "buildKind": "dialogue",
+      "buildStatus": "built",
+      "builtRefs": [
+        {
+          "pageId": "wiki/07 人物与城市/人物/认识的人/家人/陈素琴",
+          "path": "vault/demo/wiki/07 人物与城市/人物/认识的人/家人/陈素琴.md",
+          "title": "陈素琴"
+        },
+        {
+          "pageId": "wiki/07 人物与城市/人物/认识的人/家人/林建国",
+          "path": "vault/demo/wiki/07 人物与城市/人物/认识的人/家人/林建国.md",
+          "title": "林建国"
+        },
+        {
+          "pageId": "wiki/07 人物与城市/人物/认识的人/家人/林小满",
+          "path": "vault/demo/wiki/07 人物与城市/人物/认识的人/家人/林小满.md",
+          "title": "林小满"
+        },
+        {
+          "pageId": "wiki/03 关键事件与决策/06 一顿没有理由的团圆饭",
+          "path": "vault/demo/wiki/03 关键事件与决策/06 一顿没有理由的团圆饭.md",
+          "title": "06 一顿没有理由的团圆饭"
+        },
+        {
+          "pageId": "wiki/01 个人主线/把重要的人放回普通日子",
+          "path": "vault/demo/wiki/01 个人主线/把重要的人放回普通日子.md",
+          "title": "把重要的人放回普通日子"
+        }
+      ]
+    }
+  ],
+  "demo": true,
+  "fictional": true
+}

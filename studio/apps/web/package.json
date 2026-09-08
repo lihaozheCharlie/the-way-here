@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/prepare-photo-assets.mjs && vite --host 127.0.0.1 --open",
-    "build": "node scripts/prepare-photo-assets.mjs && npm run design:check && tsc --noEmit && vite build",
+    "build": "node scripts/prepare-photo-assets.mjs && node scripts/check-design-contract.mjs && tsc --noEmit && vite build",
     "design:check": "node scripts/check-design-contract.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

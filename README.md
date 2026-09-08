@@ -58,23 +58,32 @@ The Way Here 想让这两件事都容易一点：已经写下的生活，在需�
 
 环境要求：
 
-- macOS 或 Linux
-- Python 3
-- Node.js 22.19+ 与 pnpm 11.19.0；一键启动脚本会在需要时为项目准备本地版本
+- macOS、Linux 或 Windows WSL（在 WSL 的 Linux 终端运行）
+- 首次准备环境需要联网；系统需提供 Bash、tar、curl 或 wget，以及 shasum 或 sha256sum
+- 已安装的 Node.js 22.19+、Python 3.9+ 和项目指定版本的 pnpm 会直接复用；缺少时自动安装到 `studio/.runtime/`，无需管理员权限
+- 自动下载 Node.js 支持 x64 / ARM64；Linux 与 WSL 需要可运行官方 Node.js 二进制的 glibc 环境（例如 Ubuntu 22.04+）
 - 使用 AI 对话时，需要可用的 Codex CLI，或在配置中提供 Pi 模型服务
 
 克隆或下载仓库后，在项目根目录运行：
 
 ```bash
-./start.sh
+bash start.sh
 ```
 
-脚本会自动检查环境、安装依赖并构建前后端。启动完成后，打开 <http://127.0.0.1:4321>；按 `Ctrl+C` 可以同时停止所有服务。
+脚本会自动检查环境、补齐依赖并构建前后端。使用 `bash start.sh` 也适用于下载 ZIP 后没有执行权限的情况。启动完成后，打开 <http://127.0.0.1:4321>；按 `Ctrl+C` 可以停止服务。
+
+首次启动会校验并记录安装状态。后续启动中，依赖清单和运行环境未变化、依赖仍完整时跳过安装；源码、构建配置和产物未变化时也跳过构建。需要补包时优先复用已有下载缓存。Python 和 pnpm 已安装的可用版本同样不会重复下载。
+
+若需要主动重新检查依赖或重新构建，可以分别使用 `bash start.sh --reinstall`（同时重新构建）和 `bash start.sh --rebuild`。失败后可直接重试，只有成功的步骤会记录为可复用状态。端口被占用时会提前报错，可通过 `--port` 改用其他端口。
+
+全新下载默认打开随仓库提供的 demo；当已注册的个人库目录实际存在时优先打开个人库。也可以用 `--knowledge-base` 明确指定。
+
+项目依赖与首次安装 pnpm 都使用公网源 `https://registry.npmjs.org/`。启动脚本会覆盖当前 shell 中的 npm/pnpm 源配置，避免继承公司内网源；不会修改系统或用户级配置。
 
 指定端口：
 
 ```bash
-./start.sh --port 8080
+bash start.sh --port 8080
 ```
 
 想开始记录自己的生活时，从演示页提示或左上角入口创建个人空间即可。新空间是空的，和演示记录分开保存。
@@ -95,13 +104,13 @@ knowledgeBases:
 需要临时指定空间时，可以运行：
 
 ```bash
-./start.sh --knowledge-base personal
+bash start.sh --knowledge-base personal
 ```
 
 也可以打开另一套完整工作区：
 
 ```bash
-./start.sh --vault /absolute/path/to/your-workspace --knowledge-base personal
+bash start.sh --vault /absolute/path/to/your-workspace --knowledge-base personal
 ```
 
 该工作区需要有自己的 `the-way-here.config.yaml`，其中配置的路径都必须在该工作区内。

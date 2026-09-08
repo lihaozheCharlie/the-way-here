@@ -1,0 +1,10 @@
+{
+  "demo": true,
+  "fictional": true,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in",
+  "prompt": "Use case: photorealistic-natural. Asset type: a fictional photo-memory sample in an anonymous Chinese personal knowledge-base demo. Create one natural candid landscape family lunch photograph, 1536x1024. Scene: modest lived-in apartment dining room in a small Jiangnan town on a rainy early-summer Saturday. Three fictional Chinese adults clearly visible and spatially separated across the far side of a wooden dining table: left a mother around 57 with short dark hair wearing muted light blue, center a father around 60 with greying hair and thin glasses wearing a faded grey polo, right their daughter around 25 with shoulder-length hair wearing cream. Father is slightly awkward smiling toward camera, mother is amused reaching toward a small bowl, daughter is laughing. Tomato eggs and simple green vegetables, three rice bowls, one empty used bowl and pulled-out chair in near foreground for the adult son who is taking the photo. A small pot of fresh gardenias near rain-streaked window. Warm quiet daylight, honest imperfect phone snapshot, subtle grain, no luxurious styling, no dramatic sentimentality, no funeral imagery, no text, no watermark, no logos. All people fictional, no resemblance to a specific real person.",
+  "original": "photo-1.original",
+  "preview": "photo-1.jpg",
+  "identitySource": "虚构演示设定；未根据真实照片识别人名"
+}

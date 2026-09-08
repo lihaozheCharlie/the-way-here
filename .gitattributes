@@ -1,0 +1,2 @@
+# Keep launchers executable by Bash after a Windows checkout used from WSL.
+*.sh text eol=lf
