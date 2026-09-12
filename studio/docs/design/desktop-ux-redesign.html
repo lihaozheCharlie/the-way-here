@@ -209,6 +209,11 @@
   .confirm-modal h3{font-size:15px;margin-bottom:8px;}
   .confirm-modal p{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
   .confirm-modal .row{display:flex;gap:10px;justify-content:flex-end;}
+ .demo-kb-notice{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-panel);padding:14px 16px;}
+ .demo-kb-notice-mark{flex-shrink:0;width:36px;height:36px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;}
+ .demo-kb-notice strong{display:block;font-size:13px;margin-bottom:3px;}
+ .demo-kb-notice p{font-size:12px;color:var(--muted);margin:0;}
+ .demo-kb-notice .btn{flex-shrink:0;}
 
   footer.doc-footer{border-top:1px solid var(--line);padding:32px 56px 60px;color:var(--faint);font-size:12px;}
 
@@ -246,6 +251,8 @@
       <span class="nav-group-label">次级页面</span>
       <a href="#questions">值得聊聊 / 聚焦工作区</a>
       <a href="#inspector">AI 协作面板</a>
+      <a href="#onboarding">知识库切换 / 新建</a>
+      <a href="#capture">随手记 · 悬浮速记</a>
       <a href="#preferences">偏好设置</a>
       <a href="#modals">弹层 / 二次确认</a>
     </div>
@@ -588,11 +595,11 @@
         <tr><td>1</td><td>文件名（唯一标题）</td><td>18–19px / 700，非编辑态纯文本展示，去掉输入框描边；双击或聚焦才切换为带描边可编辑态</td></tr>
         <tr><td>2</td><td>次要元信息行</td><td>12px / <code>--muted</code>，路径 + 更新时间 + 「在原文件中显示」文字按钮，一行展示，不再和文件名抢权重</td></tr>
         <tr><td>3</td><td>标签徽标条</td><td>默认折叠为一行摘要（类型 · 标签数 · 日期），点击「展开全部属性」才铺开完整 frontmatter 网格；chip 改为描边风格，弱化背景色</td></tr>
-        <tr><td>4</td><td>右侧目录</td><td>默认收起为 44px 图标条，点击展开为 240px 目录列表，200ms width 过渡；文档目录 ≥3 级或超长时可建议自动展开一次</td></tr>
+        <tr><td>4</td><td>右侧目录</td><td>默认收起为 44px 图标条，点击展开为 240px 目录列表，200ms width 过渡；文档目录 ≥3 级或超长��可建议自动展开一次</td></tr>
         <tr><td>保存反馈</td><td colspan="2">输入停顿 800ms 后，右上角浮现「已保存」轻提示：200ms 淡入 → 停留 1.2s → 淡出；不再常驻小圆点文案</td></tr>
       </table>
 
-      <h3 style="font-size:13px;margin:28px 0 12px;color:var(--ink-soft);">编辑态：字体与阅读态统一</h3>
+      <h3 style="font-size:13px;margin:28px 0 12px;color:var(--ink-soft);">编辑态：字体��阅读态统一</h3>
       <div class="grid-2">
         <div class="compare-card before"><div class="cc-head">现状 · 等宽代码框感</div><div class="cc-body"><textarea class="edit-textarea" style="font-family:var(--font-mono);font-size:13px;border-color:var(--line-strong);box-shadow:none;" readonly>## 通话内容
 周六下午，妈妈打电话来问阳台的花草长得怎么样了…</textarea></div></div>
@@ -615,11 +622,13 @@
         <p>与 Reader 共用同一套折叠式标签规范；卡片密度对齐 Sources 文件列表的字号规格（14px 标题 / 12px 摘要）。</p>
       </div>
       <div class="grid-3">
-        <div class="mini-card"><h3>人物线</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「和母亲的关系」· 更新于 3 天前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>亲密关系</span></div></div>
-        <div class="mini-card"><h3>生活周期</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「周末与工作日的节律」· 更新于 1 周前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>作息</span><span class="tag-chip"><i></i>节律</span></div></div>
-        <div class="mini-card"><h3>系统与习惯</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「阳台种植记录」· 更新于 2 天前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip attn"><i></i>待续写</span></div></div>
+        <div class="mini-card"><h3>个人主线</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「和母亲的关系」· 更新于 3 天前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>亲密关系</span></div></div>
+        <div class="mini-card"><h3>反复循环</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「周末与工作日的节律」· 更新于 1 周前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>作息</span><span class="tag-chip"><i></i>节律</span></div></div>
+        <div class="mini-card"><h3>现实系统</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「阳台种植记录」· 更新于 2 天前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip attn"><i></i>待续写</span></div></div>
+        <div class="mini-card"><h3>思维模型</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「决策前先问代价」· 摘要态 / 校准态可切换</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>判断工具</span></div></div>
+        <div class="mini-card" style="background:var(--surface-tinted);border-style:dashed;"><h3 style="color:var(--ink-soft);">循环详情态（展开后）</h3><p style="font-size:12px;color:var(--muted);margin-bottom:8px;">点击卡片展开 4 个阶段标签，横向排列，不再是一段长文本</p><div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;"><span class="tag-chip">触发</span><span class="tag-chip">惯性反应</span><span class="tag-chip">代价</span><span class="tag-chip attn">有效中断</span></div></div>
       </div>
-      <div class="spec-note"><b>规格：</b>卡片圆角 <code>--radius-panel</code>，阴影 <code>--shadow-panel</code>，标题 13px/700，摘要 12.5px/<code>--muted</code>，标签行最多展示 3 个 + 「+N」省略，不再无限换行铺满卡片。</div>
+      <div class="spec-note"><b>规格：</b>卡片圆角 <code>--radius-panel</code>，阴影 <code>--shadow-panel</code>，标题 13px/700，摘要 12.5px/<code>--muted</code>，标签行最多展示 3 个 + 「+N」省略；「反复循环」卡片点击后原地展开为 4 阶段标签行（触发/惯性反应/代价/有效中断），不跳出弹层；「思维模型」卡片支持「摘要 / 校准」两态切换（复用 <code>.tabbar</code> 组件，非跳转）。</div>
     </section>
 
     <!-- ============ 搜索 ============ -->
@@ -670,10 +679,76 @@
       </div>
     </section>
 
+    <!-- ============ 知识库切换 / 新建 ============ -->
+    <section class="doc-section" id="onboarding">
+      <div class="section-head">
+        <span class="tag">11 · 次级页面</span>
+        <h2>知识库切换 / 新建</h2>
+        <p>演示知识库提示条与「新建知识库」弹层是新用户唯一的破冰路径，现状文案与按钮样式各页不一致；统一为一条 banner + 一个轻量弹层，视觉权重明显低于日常操作但不能被忽略。</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:640px;margin-bottom:24px;">
+        <div class="demo-kb-notice">
+          <div class="demo-kb-notice-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5"/></svg></div>
+          <div style="flex:1;">
+            <strong>先看看我会怎样记住一段生活</strong>
+            <p>这里是一段匿名故事。准备好之后，可以建立只属于你的空间；你说过的话不会和演示内容混在一起。</p>
+          </div>
+          <button class="btn btn-primary">开始我的空间<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="demo-kb-notice" style="opacity:.6;">
+          <div class="demo-kb-notice-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5"/></svg></div>
+          <div style="flex:1;"><strong>已有自己的空间</strong><p>这里是匿名故事，适合随便逛逛。你自己的空间与它完全分开。</p></div>
+          <button class="btn btn-secondary">回到我的空间</button>
+        </div>
+      </div>
+      <div class="modal-overlay" style="position:relative;background:transparent;padding:0;">
+        <div class="confirm-modal" style="max-width:400px;">
+          <h3>新建知识库</h3>
+          <p style="margin-bottom:14px;">给这个空间起个名字，之后可以在偏好设置里重命名。</p>
+          <div class="field" style="width:100%;margin-bottom:6px;"><input value="我的 The Way Here" /></div>
+          <div class="row"><button class="btn btn-secondary">取消</button><button class="btn btn-primary">创建</button></div>
+        </div>
+      </div>
+      <div class="spec-note"><b>规格：</b>Banner 高度自适应内容，左侧图标 36px 圆角方形 <code>--accent-soft</code> 底、图标 18px；主 CTA 为 <code>btn-primary</code>，已开通状态降级为 <code>btn-secondary</code> 且整条 banner <code>opacity:.6</code> 弱化。新建弹层复用 <code>.confirm-modal</code> 容器，输入框聚焦即全选文本，<kbd>Esc</kbd> 关闭、<kbd>Enter</kbd> 提交，标题唯一必填校验错误显示在输入框下方 12px 处、<code>--danger</code> 色。</div>
+    </section>
+
+    <!-- ============ 随手记 · 悬浮速记窗口 ============ -->
+    <section class="doc-section" id="capture">
+      <div class="section-head">
+        <span class="tag">11 · 次级页面</span>
+        <h2>随手记 · 悬浮速记窗口</h2>
+        <p>全局快捷键唤起的小型独立窗口，用于「此刻发生了什么，先留下来」，与主窗口解耦；语音输入作为文字之外的等价录入方式，而非附加功能。</p>
+      </div>
+      <div class="window-mock" style="max-width:420px;">
+        <div class="window-chrome"><div class="traffic"><i></i><i></i><i></i></div><span class="win-title">随手记</span><span style="margin-left:auto;font-size:11px;color:var(--faint);">⌘⇧N 唤起</span></div>
+        <div style="padding:20px 22px;">
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">此刻发生了什么，先留下来。</p>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft);margin-bottom:10px;">保存到 <span class="tag-chip"><i></i>个人空间</span></div>
+          <div class="field" style="width:100%;margin-bottom:10px;"><input placeholder="标题（可选）" /></div>
+          <div style="position:relative;">
+            <textarea rows="5" placeholder="写一段，或点麦克风说说…" style="width:100%;border:1px solid var(--line-strong);border-radius:var(--radius-control);padding:10px 40px 10px 12px;font-family:inherit;font-size:13px;resize:none;"></textarea>
+            <button class="btn-icon" style="position:absolute;right:8px;bottom:8px;background:var(--accent-soft);color:var(--accent-ink);" aria-label="语音输入"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg></button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+            <span style="font-size:11.5px;color:var(--faint);">确认后才保存原始记录</span>
+            <button class="btn btn-primary">保存记录</button>
+          </div>
+        </div>
+      </div>
+      <table class="spec-table">
+        <tr><th>元素</th><th>行为</th><th>规格</th></tr>
+        <tr><td>窗口</td><td>置顶悬浮，不占用 Dock/任务栏主窗口位</td><td>宽 420px，圆角 <code>--radius-panel</code>，<code>--shadow-float</code></td></tr>
+        <tr><td>草稿</td><td>输入即本地暂存，意外关闭不丢失</td><td>失焦 300ms 后写入 <code>localStorage</code>，保存成功后清空</td></tr>
+        <tr><td>麦克风按钮</td><td>点击开始录音，转文字追加到光标处</td><td>录音中图标变红并 1.4s 呼吸动画，非阻塞式覆盖 <code>--danger</code> 色</td></tr>
+        <tr><td>保存</td><td>无草稿或知识库未就绪时禁用</td><td>禁用态 <code>opacity:.4</code>，保存中文案变为「正在保存…」</td></tr>
+        <tr><td>反馈</td><td>保存成功后的确认文案</td><td>底部状态行淡入「已保存到生活记录，原话完整保留」，1.6s 后自动淡出</td></tr>
+      </table>
+    </section>
+
     <!-- ============ 偏好设置 ============ -->
     <section class="doc-section" id="preferences">
       <div class="section-head">
-        <span class="tag">11 · 次级页面</span>
+        <span class="tag">12 · 次级页面</span>
         <h2>偏好设置</h2>
         <p>套用统一控件规范（32px 高度输入/开关、8px 圆角），与其它页面视觉语言对齐，分区用 24px 留白替代描边分隔。</p>
       </div>
@@ -692,7 +767,7 @@
     <!-- ============ 弹层 ============ -->
     <section class="doc-section" id="modals">
       <div class="section-head">
-        <span class="tag">12 · 弹层</span>
+        <span class="tag">13 · 弹层</span>
         <h2>二次确认 / 删除弹层</h2>
         <p>维持现状「危险操作二次确认」的交互模型，仅统一到新的圆角/阴影 token。</p>
       </div>
@@ -708,7 +783,7 @@
     <!-- ============ 落地映射 ============ -->
     <section class="doc-section" id="mapping">
       <div class="section-head">
-        <span class="tag">13 · 落地</span>
+        <span class="tag">14 · 落地</span>
         <h2>类名映射与实施清单</h2>
         <p>对照现有代码结构，标出每项改动对应的文件与选择器，方便工程直接定位。</p>
       </div>
