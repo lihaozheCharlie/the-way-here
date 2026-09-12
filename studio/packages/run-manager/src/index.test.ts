@@ -2,6 +2,7 @@ import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/pro
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { RunSnapshots } from "./snapshots";
 import { RunStore } from "./index";
 import type { VaultConfig } from "@the-way-here/shared";
 
@@ -29,6 +30,22 @@ afterEach(async () => {
 });
 
 describe("RunStore", () => {
+  it("does not attribute background source reference changes to an Agent run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "twh-reference-diff-"));
+    temporaryRoots.push(root);
+    const bound = config("demo");
+    const reference = path.join(root, bound.paths.sources, "外部来源", "connection", "note.source.md");
+    const wiki = path.join(root, bound.paths.wiki, "理解.md");
+    await mkdir(path.dirname(reference), { recursive: true });
+    await mkdir(path.dirname(wiki), { recursive: true });
+    await writeFile(reference, "来源版本一"); await writeFile(wiki, "理解一");
+    const snapshots = new RunSnapshots(root);
+    const snapshot = path.join(root, "snapshot");
+    await snapshots.snapshot(snapshot, bound);
+    await writeFile(reference, "后台同步来源版本二"); await writeFile(wiki, "理解二");
+    expect(await snapshots.collectChanges(snapshot, bound)).toMatchObject([{ path: `${bound.paths.wiki}/理解.md`, kind: "modified" }]);
+    expect(await readFile(path.join(snapshot, "manifest.json"), "utf8")).not.toContain("note.source.md");
+  });
   it("serializes concurrent event writes without losing records", async () => {
     const { store } = await storeFixture();
     const run = await store.create("并发任务", "测试", "read", "personal", config("personal"));

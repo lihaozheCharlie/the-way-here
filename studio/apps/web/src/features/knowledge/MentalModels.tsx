@@ -1,10 +1,11 @@
+import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { SectionedPageView } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { growthTabs } from "../../features/knowledge/navigation";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { MarkdownBody } from "../../shared/markdown";
 import { PageLink } from "../../shared/routing";
 import { CollapsibleIndexPane, Empty, Icon, Loading, PageHeader, SectionHeading, SectionTabs } from "../../shared/ui";
@@ -14,7 +15,7 @@ export function MentalModels({ revision }: { revision: number }) {
   const [selectedHeading, setSelectedHeading] = useState("");
   const [indexOpen, setIndexOpen] = useState(true);
   if (loading) return <Loading label="正在展开判断工具箱" />;
-  if (error || !view) return <Empty>{error || "暂无思维模型"}</Empty>;
+  if (error || !view) return <div><SectionTabs items={growthTabs} /><PageHeader title="思维模型" description="从真实经历中形成可以反复检验的判断工具。" /><Empty>{error || "还没有形成思维模型。先连接资料或记录一段经历，再与 AI 一起整理。"}</Empty><NavLink to="/sources">查看生活记录</NavLink></div>;
   const { page, sections } = view;
   const definition = sections.find((section) => section.heading === "什么才算一个思维模型");
   const modelSections = sections.filter((section) => /^[一二三四五六七]、/.test(section.heading));
@@ -39,7 +40,7 @@ export function MentalModels({ revision }: { revision: number }) {
         {priorities && <section><SectionHeading title="当前优先观察" /><ReactMarkdown remarkPlugins={[remarkGfm]}>{priorities.body}</ReactMarkdown></section>}
       </div>
       <PageLink page={page} className="source-page-link">阅读完整模型总览 <Icon name="arrow" size={15} /></PageLink>
-      <ContextualAgentDock revision={revision} context={{ scope: "理解自己 · 思维模型", title: selected?.heading.replace(/^[一二三四五六七]、/, "") || "思维模型", pageId: page.id, summary: selected?.body.slice(0, 260), defaultMode: "write", launcherLabel: "校准这个模型", suggestions: ["结合最近的经历，为当前模型补充一个真实反例或适用边界。", "请用当前模型解释最近的一次选择，并明确证据、推断和竞争解释。"] }} />
+      <PageAgentContext context={{ scope: "理解自己 · 思维模型", title: selected?.heading.replace(/^[一二三四五六七]、/, "") || "思维模型", pageId: page.id, summary: selected?.body.slice(0, 260), defaultMode: "write", suggestions: ["结合最近的经历，为当前模型补充一个真实反例或适用边界。", "请用当前模型解释最近的一次选择，并明确证据、推断和竞争解释。"] }} />
     </div>
   );
 }

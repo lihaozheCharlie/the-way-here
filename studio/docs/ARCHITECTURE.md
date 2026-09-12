@@ -1,5 +1,56 @@
 # Architecture
 
+## 原目录连接与应用管理内容
+
+知识库分为只读原目录和工作区内生成内容两层。新库的 `paths.wiki` / `paths.sources` 为 `app/<id>/wiki` / `app/<id>/sources`；旧 `vault/<id>` 库继续兼容，未执行隐式搬移。`paths.*` 仍全部为工作区相对路径。
+
+每个库可显式登记 `sourceConnections: [{ id, name, path, autoBuild }]`，其中 `path` 是注册时经 realpath 校验的外部目录；它只构成读取能力，不加入任何写入根。注册拒绝与工作区互相包含的目录及重复/重叠连接。服务器端校验所有连接操作的知识库 ID，配置变更复用知识库串行写队列。
+
+`runtime/source-connections.ts` 编排目录监听、版本检测、持久队列与 RunCoordinator。它只写 `sources/.connections/<id>.json` 状态和 `sources/外部来源/<id>/**/*.source.md` 引用；引用包含原路径、SHA-256 和可用状态，不保存正文。来源引用不参与 Agent 文件快照和差异归因，避免把后台同步误报为 Agent 修改。引用文件使既有 Wiki 链接及质量工具仍有稳定的可验证目标。同内容改名保留引用路径；删除保留失效引用。
+
+`wiki-core/external-sources.ts` 只解引用已登记连接中的引用，校验实际路径和文件大小，拒绝符号链接越界。索引、Reader、全文搜索与 Pi read_file 使用原正文；PageWriter 和 Pi write_file 拒绝编辑引用。Codex 在存在外部连接时显式使用工作区写入沙箱，禁用外部写入升级，原目录不属于可写范围。生成任务遵循公共 Skill，产品层不复制知识判断规则。
+
+连接监听覆盖各库，合并短时间文件变动。自动构建按库互斥，Run 保留原来的配置快照；完成时只清除与任务开始时版本相同的待更新项。失败保留队列并等待重试，目录离线不批量误判删除。界面切换活动库不会改变后台任务归属。关闭应用停止监听，重启重新比对原目录，不依赖进程中的临时状态。
+
+照片、账单与显式一次性上传继续使用原有 ImportStore 缓存和确认流程。外部引用不会自动迁移、覆盖或清理历史导入副本。
+
+
+## macOS 桌面架构（2026-09）
+
+```text
+apps/desktop
+  主进程：窗口、菜单、状态项、通知、系统权限、工作区选择
+  preload：隔离的少量 IPC 方法（不向页面提供文件系统或 Node）
+  native/SpeechCapture.swift：用户主动触发的系统语音识别
+        │ authenticated loopback HTTP + SSE
+apps/server（Electron utilityProcess 托管，动态端口）
+  HTTP 运行时校验 / 内容与导入 / 知识库编排 / Agent 与 Run
+        │
+  wiki-core / life-views / run-manager / codex-bridge / shared
+        │
+  持久化知识空间（自动创建或已选择的旧空间）
+
+apps/web
+  app/AppShell：窗口导航、路由、知识库生命周期
+  features/desktop：命令面板、偏好设置、随手记、语音、通知、窗口桥接
+  InspectorProvider + PageAgentContext：页面发布上下文
+  AgentDock：窗口中唯一的会话界面，保留任务、审批与差异能力
+  shared/voice-input：低层输入组件的可注入语音插槽
+```
+
+桌面宿主不实现知识判断、不读取或改写笔记。Web 页面只通过本地 API 访问内容。原有领域 package 职责保持不变；迁移主要发生在运行宿主、应用组合层、共享交互和呈现层。
+
+生产依赖由 `scripts/package-server.mjs` 从已安装依赖图物化，保留各版本及许可证，排除工作区源码、私人库和开发依赖。桌面构建通过白名单打包 app、web、server 与原生辅助程序；知识引擎、Python 校验环境和原 Web 演示库随包提供，用户数据保存在应用包之外。应用仅监听 `127.0.0.1` 动态端口；桌面模式要求进程随机会话令牌，界面使用按工作区散列确定的稳定 `https://workspace-….localhost` origin，Electron 协议处理器转发到动态端口并添加令牌；外部 HTTPS 请求不携带令牌。由此 localStorage 与 IndexedDB 在重启后保持原有空间，照片草稿、随手记与偏好不会因端口变化丢失。渲染进程启用 sandbox、contextIsolation，禁用 nodeIntegration；IPC 校验来源与本地路由，外链只允许 http/https/mailto。
+
+现有 Agent Run 的知识库与配置快照继续决定 Prompt、审批、验证与差异。新增 `POST /api/capture` 验证显式知识库 ID，绑定当时的索引与导入清单，首次写入即包含完整确认正文，使用排他创建避免覆盖同名记录。页面 API 对内容写入携带首次加载的知识库 ID；切库后服务端拒绝旧窗口内容写入，窗口刷新以清除过期页面上下文。随手记草稿按库存储。
+
+各页面通过 `PageAgentContext` 发布上下文，卸载时释放；`AgentDock` 由 Shell 或独立对话窗口挂载，旧浮动入口、模态遮罩、Tab 陷阱和内嵌设置弹层已删除；关闭 Inspector 只隐藏而不销毁会话。独立深聊窗口通过当前 Run ID 恢复对话；独立阅读窗口使用 ReadOnlyDocument。内容、侧栏和 Inspector 分别滚动，Markdown 目录与编辑位置改为跟随内容滚动容器。
+
+语音遵循录音、原话、整理、确认四步；共享控件依赖可注入的语音插槽，避免 shared 反向依赖 feature。偏好设置复用原有 AI 全局配置服务。通知只对新的话题/回信触发，初始状态静默，偏好保存在本机。更多操作与验收见 [DESKTOP.md](DESKTOP.md)。
+
+以下章节记录保留的领域与数据能力。
+
+
 ## 工作区与知识库模型
 
 ```text
@@ -197,3 +248,22 @@ flowchart LR
 - 替代 Obsidian/IDE 的完整 Markdown 编辑体验。
 - 在 UI 中重写个人知识抽取规则。
 - 自动发布或提交 Git。
+
+
+### 构建 Skill 与双链兼容
+
+公共 `wiki-build/references/linked-sources.md` 规定解引用和稳定双链协议。维护工具通过 `knowledge-engine/tools/source_access.py` 读取原文和 `linkTarget`，不把引用元数据当证据，也不向原文写入反链。标签维护保留新来源路径并跳过系统引用；人物/日记证据脚本使用同一只读来源入口。
+
+界面和 Python 验证器同时支持库内路径、工作区完整路径、别名、Wiki 相对路径和原目录相对路径。歧义不自动选一个目标；入链从已解析出链计算。只读及独立窗口展示解析后的 Markdown，保留章节链接。失效来源仍有稳定引用目标，链接有效与原文可用性分开检查。断链或歧义使验证器以非零状态退出，不能被构建流程当作质量门成功。
+
+### 已安装桌面端的首次运行
+
+Electron 的 `workspace.mjs` 负责选择持久化位置：显式开发覆盖 → 已保存的旧知识空间 → 自动创建的 userData/workspace。首次运行直接提供 `app/personal/wiki` 与 `sources`，不依赖源码仓库。数据、配置和应用包分离。知识引擎由打包脚本从根目录权威资源收集，启动时阶段性替换应用管理副本，不复制领域判断到 Studio 代码。Python 与 PyYAML 随包分发，通过本地服务 PATH 提供给现有质量命令。已保存的外部空间失效时保留原设置并提供重新选择，禁止静默回退空库。升级只更新程序和管理资源；持久化 origin 仍由真实空间路径确定。
+
+桌面端演示内容直接从 Web 端的 `vault/demo` 打包，不从 UX 设计稿生成故事或数据。保留 Wiki、原始记录、照片、账单及隐藏附件目录，继续使用 `vault/demo` 路径以维持已有资源引用。首次启动和旧版托管空间升级会注册缺失的 demo；个人库仍为默认，已有 demo 和个人内容不覆盖。
+
+### 运行生命周期与资源上限
+
+桌面 `service-process.mjs` 将握手、超时、异常退出和监听器清理集中管理：仅接受 loopback HTTP 地址，60 秒未就绪会终止进程，未换行缓冲不超过 64 KiB。校验命令独立绑定 Run 的知识库，默认每条限时 120 秒，超时在 macOS/Linux 终止进程组；累计和实时输出各限制 50,000 字符，以 close 事件确认输出管道已排空。
+
+SSE 连接绑定响应的关闭/错误事件，心跳和连接共同释放；单客户端缓冲超过 1 MiB 后断开，由浏览器重连。服务关闭会结束已接管的事件流。来源同步定时器在上次完成后再调度，避免慢扫描造成队列积压；监听错误持久化到连接状态。知识库创建、删除与连接配置更新复用同一修改队列。

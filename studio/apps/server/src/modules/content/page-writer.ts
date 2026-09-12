@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pageIdForPath } from "@the-way-here/wiki-core";
+import { pageIdForPath, isExternalSourcePath } from "@the-way-here/wiki-core";
 import type { WikiPage } from "@the-way-here/shared";
 import { isPathInside, markdownFileName, normalizeSourceFolder } from "../../path-policy.js";
 import type { ContentWorkspace } from "./content-workspace.js";
@@ -16,7 +16,7 @@ export class ContentRequestError extends Error {
 export class PageWriter {
   constructor(private readonly knowledge: ContentWorkspace) {}
 
-  async createSource(titleValue: string | undefined, folderValue: string | undefined): Promise<WikiPage | undefined> {
+  async createSource(titleValue: string | undefined, folderValue: string | undefined, initialMarkdown = ""): Promise<WikiPage | undefined> {
     if (!titleValue?.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");
     const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
     let target: string;
@@ -25,10 +25,11 @@ export class PageWriter {
     } catch (error: any) {
       throw new ContentRequestError(400, error.message);
     }
+    if (isExternalSourcePath(path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"), this.knowledge.index.config) || folderValue === "外部来源") throw new ContentRequestError(403, "连接目录由系统管理，请在原目录中操作");
     if (!isPathInside(sourceRoot, target)) throw new ContentRequestError(403, "路径超出知识源目录");
     await mkdir(path.dirname(target), { recursive: true });
     try {
-      await writeFile(target, "", { encoding: "utf8", flag: "wx" });
+      await writeFile(target, initialMarkdown, { encoding: "utf8", flag: "wx" });
     } catch (error: any) {
       if (error?.code === "EEXIST") throw new ContentRequestError(409, "同名文件已经存在，请修改文件名后重试");
       throw error;
@@ -45,6 +46,7 @@ export class PageWriter {
     if (!page) throw new ContentRequestError(404, "页面不存在，请刷新后重试");
     if (!fileName?.trim()) throw new ContentRequestError(400, "请输入文件名后再保存");
     const absolutePath = this.editablePath(page.relativePath, "路径超出可编辑目录，请检查知识库配置");
+    if (page.externalSource) throw new ContentRequestError(403, "这是连接的原始文件，请在原目录中编辑；应用会自动同步");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     let target: string;
     try {
@@ -76,6 +78,7 @@ export class PageWriter {
     const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
     const absolutePath = path.resolve(this.knowledge.vaultRoot, page.relativePath);
     if (!isPathInside(sourceRoot, absolutePath)) throw new ContentRequestError(403, "只能删除生活记录中的文件");
+    if (page.externalSource) throw new ContentRequestError(403, "这是连接的原始文件，请在原目录中编辑；应用会自动同步");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     await rm(absolutePath);
     await this.knowledge.index.rebuild();
@@ -94,6 +97,7 @@ export class PageWriter {
     if (folder.split(path.sep).some((part) => part.startsWith("."))) throw new ContentRequestError(403, "系统目录不能删除");
     const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
     const target = path.resolve(sourceRoot, folder);
+    if (isExternalSourcePath(path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"), this.knowledge.index.config) || folderValue === "外部来源") throw new ContentRequestError(403, "连接目录由系统管理，请在原目录中操作");
     if (!isPathInside(sourceRoot, target)) throw new ContentRequestError(403, "文件夹超出生活记录目录");
     if (expectedFileCount !== undefined && (!Number.isInteger(expectedFileCount) || Number(expectedFileCount) < 0)) throw new ContentRequestError(400, "文件夹记录数量无效");
     const relativeFolder = path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/");
@@ -119,6 +123,7 @@ export class PageWriter {
     if (!page) throw new ContentRequestError(404, "页面不存在");
     if (typeof markdown !== "string") throw new ContentRequestError(400, "缺少 Markdown 内容");
     const absolutePath = this.editablePath(page.relativePath, "路径超出可编辑目录");
+    if (page.externalSource) throw new ContentRequestError(403, "这是连接的原始文件，请在原目录中编辑；应用会自动同步");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     const temporary = `${absolutePath}.${process.pid}.tmp`;
     await writeFile(temporary, markdown, "utf8");
@@ -132,7 +137,7 @@ export class PageWriter {
   async openInEditor(pageId: string | undefined): Promise<{ ok: true }> {
     const page = pageId ? this.knowledge.index.get(pageId) : undefined;
     if (!page) throw new ContentRequestError(404, "页面不存在");
-    const absolutePath = path.resolve(this.knowledge.vaultRoot, page.relativePath);
+    const absolutePath = page.externalSource?.status === "available" ? page.externalSource.originalPath : path.resolve(this.knowledge.vaultRoot, page.relativePath);
     const configuredEditor = process.env.THE_WAY_HERE_EDITOR?.trim();
     const editor = configuredEditor || (process.platform === "darwin" ? "/usr/bin/open" : process.platform === "win32" ? "cmd" : "xdg-open");
     const args = configuredEditor

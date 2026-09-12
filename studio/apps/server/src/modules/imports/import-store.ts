@@ -152,6 +152,7 @@ export class ImportStore {
       throw new ImportRequestError(400, error.message);
     }
 
+    if (targetFolder === "外部来源" || targetFolder.startsWith("外部来源/")) throw new ImportRequestError(403, "连接目录不接收副本，请选择应用内目录");
     const createdAt = new Date().toISOString();
     const id = importBatchId(createdAt, files.map((file) => file.relativePath || file.name));
     const sourceRoot = this.sourceRoot();

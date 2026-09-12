@@ -13,7 +13,7 @@ description: "分析、设计、验证或更新本 wiki 的 Codex Skill 体系�
 
 - 顶层单一入口：根 `AGENTS.md` 只保存工作区协作边界和任务分发；`studio/AGENTS.md` 是目录级产品工程协议，不参与 Wiki 路由。
 - 单一路由索引：`knowledge-engine/skills/registry.yaml` 是 Wiki Skill 的唯一机器可读索引，`knowledge-engine/skills/` 是唯一 Skill 内容源。
-- 多知识库共享：每个知识库只保存自己的 `原始知识库/` 与 `wiki/`；`knowledge-engine/skills/`、`knowledge-engine/tools/` 和根路由协议位于工作区根，由全部知识库公用。
+- 多知识库共享：每个知识库按根配置使用自己的来源与 Wiki 目录，新库位于 `app/<id>/`，旧 `vault/<id>/` 保持兼容；原目录连接只读，应用目录保存引用；`knowledge-engine/skills/`、`knowledge-engine/tools/` 和根路由协议位于工作区根，由全部知识库公用。
 - 每个 `SKILL.md` 保持聚焦。较长的模式专用配方放入 `references/`，只读取当前选中的参考文件。
 - 确定性工作放进工具，需要判断的工作放进 Skill。
 - 根 `AGENTS.md` 保持可直接执行：先区分产品与 Wiki、再区分读写模式；Wiki 请求通过注册表路由到准确的规范 Skill。
@@ -27,7 +27,7 @@ description: "分析、设计、验证或更新本 wiki 的 Codex Skill 体系�
 - `studio/AGENTS.md`：只适用于产品工程的目录级协作协议。
 - `knowledge-engine/skills/registry.yaml`：规范 Skill 的 ID、路径、模式、职责和触发索引。
 - `the-way-here.config.yaml`：知识库注册表、默认知识库和各库内容路径。
-- `vault/<id>/`：彼此隔离的原始证据层与 Wiki 综合层。
+- `app/<id>/` 或旧 `vault/<id>/`：根配置指定的、彼此隔离的应用管理内容。外部原文通过已登记的来源引用只读访问。
 - `knowledge-engine/skills/common/skill-system/module-map.md`：构建、通用、消费模块的职责和保留映射。
 - `knowledge-engine/skills/build/*/SKILL.md`：构建模块入口。
 - `knowledge-engine/skills/common/*/SKILL.md`：共享质量和 Skill 体系规则。

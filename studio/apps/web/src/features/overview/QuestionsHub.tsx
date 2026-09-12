@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import type { PaymentJourneySummary, SourceImportBatch, TodayView, WikiPageSummary } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { ImportMaterialsModal, RecordImportTrigger } from "../sources/ImportMaterialsModal";
 import { cleanSourcePath, importedFolderForBatch } from "../sources/source-model";
 import { Empty, Icon, Loading } from "../../shared/ui";
@@ -83,6 +83,6 @@ export function QuestionsHub({ revision }: { revision: number }) {
       </div>
       <RecordImportTrigger onClick={() => setImportOpen(true)} />
     </section>
-    <ContextualAgentDock revision={revision} context={{ scope: "值得聊聊", title: topicCards[0]?.question || "最近值得聊的话题", summary: "从具体线索里挑一个想说的，我会沿着它继续问。", defaultMode: "read", launcherLabel: "继续聊", compactLauncher: true, suggestions: [topicCards[0]?.agentPrompt || "我想从最近一件还没有说清楚的事开始。", "我觉得这里有一条理解不符合我。请先让我说明哪里不准确，再帮我找可能的反例。"] }} />
+    <PageAgentContext context={{ scope: "值得聊聊", title: topicCards[0]?.question || "最近值得聊的话题", summary: "从具体线索里挑一个想说的，我会沿着它继续问。", defaultMode: "read", suggestions: [topicCards[0]?.agentPrompt || "我想从最近一件还没有说清楚的事开始。", "我觉得这里有一条理解不符合我。请先让我说明哪里不准确，再帮我找可能的反例。"] }} />
   </div>;
 }

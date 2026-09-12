@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import type { LifeMapView, WikiPageSummary } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { PageLink } from "../../shared/routing";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { UnderstandingBanner } from "./UnderstandingLayout";
@@ -36,7 +36,7 @@ export function Timeline({ revision }: { revision: number }) {
           ["相关的人", selected.relatedPeople], ["地点", selected.relatedPlaces], ["生活系统", selected.relatedSystems], ["近况回信", selected.relatedLetters],
         ] as Array<[string, WikiPageSummary[]]>).map(([label, pages]) => pages.length ? <div key={label}><b>{label}</b><span>{pages.slice(0, 5).map((page) => <PageLink key={page.id} page={page}>{page.title}</PageLink>)}</span></div> : null)}</div>
       </section>}
-      <ContextualAgentDock revision={revision} context={{ scope: "人生地图", title: selected?.page.title || "人生阶段", pageId: selected?.page.id, summary: selected?.focus, defaultMode: "write", launcherLabel: "补充这个阶段", suggestions: ["我想起一件属于这个阶段的重要经历，请帮我判断应该补充到哪里。", "结合这个阶段的证据，帮我梳理它如何影响了后来的选择。", "这个阶段还有一条并行的人生线没有记录，请帮我补充。"] }} />
+      <PageAgentContext context={{ scope: "人生地图", title: selected?.page.title || "人生阶段", pageId: selected?.page.id, summary: selected?.focus, defaultMode: "write", suggestions: ["我想起一件属于这个阶段的重要经历，请帮我判断应该补充到哪里。", "结合这个阶段的证据，帮我梳理它如何影响了后来的选择。", "这个阶段还有一条并行的人生线没有记录，请帮我补充。"] }} />
     </div>
   );
 }

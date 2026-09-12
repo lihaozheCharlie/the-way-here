@@ -10,15 +10,12 @@ import re
 import tempfile
 from pathlib import Path
 
-from vault_context import KNOWLEDGE_BASE_ROOT
+from vault_context import KNOWLEDGE_BASE_ROOT, SOURCES_ROOT
+from source_access import diary_files, read_source
 
 
 ROOT = KNOWLEDGE_BASE_ROOT
-DIARY_DIRS = [
-    ROOT / "原始知识库" / "日记2013-2017",
-    ROOT / "原始知识库" / "日记2018-2023",
-    ROOT / "原始知识库" / "日记2024至今",
-]
+
 OUT_DIR = ROOT / "wiki" / "08 来源索引"
 PER_DIARY_OUT = OUT_DIR / "逐篇日记实体索引.md"
 CLASSMATE_OUT = OUT_DIR / "同学与同辈实体索引.md"
@@ -191,7 +188,7 @@ def normalize_display_name(name: str) -> str:
 
 
 def extract_diary(path: Path) -> tuple[dict[str, set[str]], list[tuple[str, str, int, str]]]:
-    text, fm_entities = strip_frontmatter(path.read_text(encoding="utf-8"))
+    text, fm_entities = strip_frontmatter(read_source(path))
     entities: dict[str, set[str]] = {}
     evidence: list[tuple[str, str, int, str]] = []
 
@@ -332,9 +329,7 @@ def apply_generated_output(path: Path, content: str, *, write: bool) -> bool:
 
 def main() -> int:
     args = parse_args()
-    diaries = []
-    for d in DIARY_DIRS:
-        diaries.extend(sorted(p for p in d.glob("*.md") if p.is_file()))
+    diaries = list(diary_files())
 
     per_diary = []
     classmate_hits: dict[str, list[tuple[Path, str, int, str]]] = collections.defaultdict(list)
@@ -369,9 +364,7 @@ def main() -> int:
         f"end: {end_date}",
         "location: []",
         "source:",
-        '  - "原始知识库/日记2013-2017"',
-        '  - "原始知识库/日记2018-2023"',
-        '  - "原始知识库/日记2024至今"',
+        f'  - "{SOURCES_ROOT.relative_to(ROOT).as_posix()}"',
         "---",
         "# 逐篇日记实体索引",
         "",
@@ -411,9 +404,7 @@ def main() -> int:
         f"end: {end_date}",
         "location: []",
         "source:",
-        '  - "原始知识库/日记2013-2017"',
-        '  - "原始知识库/日记2018-2023"',
-        '  - "原始知识库/日记2024至今"',
+        f'  - "{SOURCES_ROOT.relative_to(ROOT).as_posix()}"',
         "---",
         "# 同学与同辈实体索引",
         "",

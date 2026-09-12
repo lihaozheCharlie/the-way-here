@@ -80,3 +80,13 @@ The friend framing is an experience promise, not a claim of consciousness, emoti
 
 - Keyboard navigation, visible focus, semantic headings, readable Chinese typography, sufficient contrast, and reduced-motion support are baseline requirements for the desktop experience.
 - The interface must not rely on color alone to distinguish evidence state, attention state, or confirmation status.
+
+
+## 2026-09 桌面迁移
+
+主交付平台为 macOS Electron 桌面应用。沿用用户提供的暖纸色、森林绿三栏设计：左侧空间与栏目、中间工作内容、右侧常驻 AI Inspector。新增原生菜单、独立阅读/深聊、随手记、偏好设置与语音确认。原有知识、来源、照片/账单、任务及多知识库能力必须保留。浏览器入口继续供开发与兼容使用。
+
+
+### 原目录连接
+
+生活记录优先连接用户已有目录，原文留在原处并随外部编辑刷新；生成 Wiki、来源引用和允许的缓存属于应用目录。外部来源只读，自动 Wiki 更新可关闭，失败和待更新状态可见。旧式复制导入作为明确的一次性操作保留，照片与账单缓存流程保持不变。

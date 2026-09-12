@@ -7,7 +7,7 @@ import { EditableDocument } from "../../shared/markdown";
 
 const mocks = vi.hoisted(() => ({ useApi: vi.fn() }));
 vi.mock("../../shared/use-api", () => ({ useApi: mocks.useApi }));
-vi.mock("../collaboration/Collaboration", () => ({ ContextualAgentDock: () => null }));
+vi.mock("../desktop/InspectorContext", () => ({ PageAgentContext: () => null }));
 
 const page: WikiPageSummary = { id: "letter-new", title: "2026-02-20 给自己的信", relativePath: "wiki/letters/new.md", excerpt: "不应重复出现在列表的摘要", tags: [], aliases: [], category: "letters", locations: [], sources: [], modifiedAt: "2026-02-20T00:00:00Z", isSource: false };
 const markdown = "# 给自己的信\n\n## 这段时间\n\n原始回信正文。";

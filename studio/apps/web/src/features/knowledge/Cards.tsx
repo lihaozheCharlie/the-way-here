@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import type { StructuredCard } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { categoryMeta, growthTabs } from "../../features/knowledge/navigation";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { CollapsibleIndexPane, Empty, Icon, Loading, PageHeader, SectionTabs } from "../../shared/ui";
 import { EditablePageContent } from "./PagePreview";
 
@@ -37,14 +37,15 @@ export function StructuredExplorer({ cards, revision, contextScope, emptyLabel =
       </> : <Empty>没有匹配内容</Empty>}
     </article>
     </div>
-    {selected && <ContextualAgentDock revision={revision} context={{ scope: contextScope, title: selected.title, pageId: selected.id, summary: selected.excerpt, defaultMode: "write", launcherLabel: "补充当前内容", suggestions: suggestions.length ? suggestions : ["我想补充一段新经历，请帮我放到当前内容的合适位置。", "请沿着当前页面的证据，告诉我还有什么值得继续追问。"] }} />}
+    {selected && <PageAgentContext context={{ scope: contextScope, title: selected.title, pageId: selected.id, summary: selected.excerpt, defaultMode: "write", suggestions: suggestions.length ? suggestions : ["我想补充一段新经历，请帮我放到当前内容的合适位置。", "请沿着当前页面的证据，告诉我还有什么值得继续追问。"] }} />}
   </>;
 }
 
 export function Cards({ revision, category }: { revision: number; category: "personal-lines" | "cycles" | "systems" }) {
   const meta = categoryMeta[category] || { title: category, intro: "" };
-  const { data, loading } = useApi<StructuredCard[]>(`/api/views/cards/${category}`, revision);
-  if (loading || !data) return <Loading />;
+  const { data, loading, error } = useApi<StructuredCard[]>(`/api/views/cards/${category}`, revision);
+  if (loading) return <Loading />;
+  if (error || !data) return <Empty>{error || "暂时无法读取这些内容，请刷新重试。"}</Empty>;
   return (
     <div>
       <SectionTabs items={growthTabs} />

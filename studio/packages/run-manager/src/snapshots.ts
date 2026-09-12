@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import fg from "fast-glob";
 import { createTwoFilesPatch } from "diff";
-import type { RunFileChange, VaultConfig } from "@the-way-here/shared";
+import { EXTERNAL_SOURCE_FOLDER, type RunFileChange, type VaultConfig } from "@the-way-here/shared";
 import { atomicWriteJson } from "./run-record.js";
 
 interface SnapshotManifest {
@@ -22,6 +22,8 @@ function snapshotPatterns(config: VaultConfig): string[] {
     `${config.paths.skills}/**/*`,
     `${config.paths.tools}/**/*`,
     `${config.paths.sources}/**/*`,
+    // Directory sync owns these references; they are not Agent edits or source copies.
+    `!${config.paths.sources}/${EXTERNAL_SOURCE_FOLDER}/**/*`,
   ];
 }
 
@@ -58,6 +60,7 @@ export class RunSnapshots {
     const paths = new Set([...Object.keys(manifest.files), ...currentFiles]);
     const changes: RunFileChange[] = [];
     for (const relativePath of [...paths].sort()) {
+      if (relativePath.startsWith(`${config.paths.sources}/${EXTERNAL_SOURCE_FOLDER}/`)) continue;
       const beforeMeta = manifest.files[relativePath];
       const afterExists = current.has(relativePath);
       if (!beforeMeta && afterExists) {

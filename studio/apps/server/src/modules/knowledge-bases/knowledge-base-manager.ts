@@ -39,8 +39,8 @@ export async function createPersonalKnowledgeBase(vaultRoot: string, requestedNa
   let id = "personal";
   for (let suffix = 2; knowledgeBases[id]; suffix += 1) id = `personal-${suffix}`;
 
-  const wiki = `vault/${id}/wiki`;
-  const sources = `vault/${id}/sources`;
+  const wiki = `app/${id}/wiki`;
+  const sources = `app/${id}/sources`;
   const nextKnowledgeBases = {
     ...knowledgeBases,
     [id]: {
@@ -101,9 +101,9 @@ export async function deletePersonalKnowledgeBase(vaultRoot: string, requestedId
     ? configuredDefault
     : remainingIds.find((candidateId) => candidateId.toLowerCase() !== "demo") || remainingIds[0]!;
 
-  const managedRoot = path.resolve(vaultRoot, "vault");
+  const managedRoots = ["vault", "app"].map((name) => path.resolve(vaultRoot, name));
   const deletionPaths = [target.paths.wiki, target.paths.sources].map((entry) => path.resolve(vaultRoot, entry!));
-  if (deletionPaths.some((candidate) => !isPathInside(managedRoot, candidate))) {
+  if (deletionPaths.some((candidate) => !managedRoots.some((root) => isPathInside(root, candidate)))) {
     throw new KnowledgeBaseRequestError(409, "这个知识库使用了自定义目录，请在文件系统中手动处理");
   }
   if (deletionPaths[0] === deletionPaths[1]

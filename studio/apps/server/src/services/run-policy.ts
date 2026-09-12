@@ -76,6 +76,7 @@ export function buildRunPrompt(mode: Exclude<WikiRun["mode"], "validate">, promp
     `本次任务绑定知识库 ID：${config.knowledgeBaseId}`,
     `Wiki 路径：${config.paths.wiki}`,
     `来源路径：${config.paths.sources}`,
+    "来源目录中的外部来源是系统维护的引用文件，不是原文副本。读取其 twh_external 元数据后只读访问原始路径；使用 Pi read_file 时已自动解引用。引用 Wiki 时链接引用文件，保留追溯关系。不得修改外部原文或这些引用文件；不可用的来源不得当作当前有效证据。",
     `运行维护命令时必须显式设置 THE_WAY_HERE_KNOWLEDGE_BASE=${config.knowledgeBaseId}。`,
   ].join("\n");
   const boundary = mode === "read"

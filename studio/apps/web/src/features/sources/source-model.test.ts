@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SourceImportBatch, WikiPageSummary } from "@the-way-here/shared";
-import { buildableSourceRecordForPage, countRecentSources, detectImportSelectionKind, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceMonthOptions, sourceRecordMonth, sourceRecordType } from "./source-model";
+import { buildableSourceRecordForPage, countRecentSources, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceMonthOptions, sourceRecordMonth, sourceRecordType } from "./source-model";
 
 function page(overrides: Partial<WikiPageSummary>): WikiPageSummary {
   return {
@@ -67,12 +67,6 @@ describe("life record presentation model", () => {
     expect(importedFolderForBatch({ targetFolder: "AI聊天记录/ChatGPT", files: [] })).toBe("AI聊天记录/ChatGPT");
   });
 
-  it("recognizes files, folders, and archives from one material selection", () => {
-    expect(detectImportSelectionKind(["日记.md"])).toBe("file");
-    expect(detectImportSelectionKind(["一月.md", "二月.txt"])).toBe("files");
-    expect(detectImportSelectionKind(["2026/一月.md", "2026/二月.md"])).toBe("folder");
-    expect(detectImportSelectionKind(["旧日记.zip"])).toBe("archive");
-  });
 
   it("does not treat a matching nested segment as a shared folder", () => {
     expect(importedFolderForBatch({

@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { VoiceInputSlot } from "./voice-input";
 import type { ComponentProps, FormEventHandler, ReactNode } from "react";
 import { Icon } from "./ui";
 
@@ -7,7 +9,15 @@ export function TextInput({ className = "", ...props }: ComponentProps<"input">)
 }
 
 export function TextArea({ className = "", ...props }: ComponentProps<"textarea">) {
-  return <textarea {...props} className={`text-control ${className}`.trim()} />;
+  const control = useRef<HTMLTextAreaElement | null>(null);
+  return <><textarea {...props} ref={(node) => { control.current = node; if (typeof props.ref === "function") props.ref(node); else if (props.ref) props.ref.current = node; }} className={`text-control ${className}`.trim()} />{props.onChange && !props.readOnly && !props.disabled ? <VoiceInputSlot onConfirm={(text) => {
+    const node = control.current;
+    if (!node) return;
+    const next = `${node.value}${node.value ? "\n" : ""}${text}`;
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(node, next);
+    node.dispatchEvent(new Event("input", { bubbles: true }));
+    node.focus();
+  }} /> : null}</>;
 }
 
 export function SelectInput({ className = "", ...props }: ComponentProps<"select">) {

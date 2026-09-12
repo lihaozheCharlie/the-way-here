@@ -33,12 +33,12 @@ knowledgeBases:
         demo: { name: "Anonymous Demo" },
         personal: {
           name: "我的生活记录",
-          paths: { wiki: "vault/personal/wiki", sources: "vault/personal/sources" },
+          paths: { wiki: "app/personal/wiki", sources: "app/personal/sources" },
         },
       },
     });
-    await expect(access(path.join(root, "vault/personal/wiki"))).resolves.toBeUndefined();
-    await expect(access(path.join(root, "vault/personal/sources"))).resolves.toBeUndefined();
+    await expect(access(path.join(root, "app/personal/wiki"))).resolves.toBeUndefined();
+    await expect(access(path.join(root, "app/personal/sources"))).resolves.toBeUndefined();
   });
 
   it("keeps existing personal libraries and chooses a new id", async () => {

@@ -160,10 +160,23 @@ export async function loadVaultConfig(vaultRoot: string, requestedKnowledgeBase?
     name: String(selected.name || raw.name || DEFAULT_CONFIG.name),
     adapter: String(selected.adapter || raw.adapter || DEFAULT_CONFIG.adapter),
     paths,
+    sourceConnections: normalizeSourceConnections(selected.sourceConnections),
     views,
     agents,
     validation: {
       commands: commands.map((command: string[]) => [...command]),
     },
   };
+}
+
+function normalizeSourceConnections(value: unknown): NonNullable<VaultConfig["sourceConnections"]> {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 50) throw new Error("来源目录配置无效");
+  const ids = new Set<string>();
+  return value.map((entry) => {
+    if (!isRecord(entry) || typeof entry.id !== "string" || !/^[a-z0-9-]+$/.test(entry.id) || ids.has(entry.id)
+      || typeof entry.path !== "string" || !path.isAbsolute(entry.path) || typeof entry.name !== "string" || typeof entry.autoBuild !== "boolean") throw new Error("来源目录配置无效");
+    ids.add(entry.id);
+    return { id: entry.id, path: path.normalize(entry.path), name: entry.name, autoBuild: entry.autoBuild };
+  });
 }

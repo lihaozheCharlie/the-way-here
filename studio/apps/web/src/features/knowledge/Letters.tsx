@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { LettersView, ReasoningLens, WikiRun } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { letterRunVersions, openContextAgent, type LetterRunVersion } from "../collaboration/model";
 import { ReadOnlyDocument } from "../../shared/markdown";
 import { PageLink } from "../../shared/routing";
@@ -75,7 +75,7 @@ export function Letters({ revision }: { revision: number }) {
         </section>
         {activeVersion?.id !== "original" ? <LetterVersionPreview key={activeVersion?.id} pageTitle={selected.page.title} version={activeVersion as LetterRunVersion} /> : <EmbeddedPagePreview key={selected.page.id} page={selected.page} revision={revision} onRenamed={(renamed) => selectLetter(renamed.id, true)} />}</> : <Empty>当前范围暂无回信，可以切换筛选查看。</Empty>}</div>
       </div>
-      <ContextualAgentDock revision={revision} context={{ scope: view === "themes" ? `近况回信 · ${selectedThread?.title || "全部主题"}` : `近况回信 · ${year}`, title: selected?.page.title || `${year === "全部" ? "最近" : year + " 年"}的近况回信`, pageId: selected?.page.id, summary: selected?.page.excerpt || "从选定年份的日记和已有知识生成回信。", defaultMode: "write", launcherLabel: selected ? "回应或重写这封信" : "写一封新回信", suggestions: [year === "全部" ? "从 2025 年日记中抽样几篇，结合已有知识写一封新的近况回信。" : `从 ${year} 年日记中抽样几篇，结合已有知识写一封新的近况回信。`, selected ? "根据更多原始证据重新写这封回信，保留朋友式回应，不做绩效复盘。" : "请先帮我选择最值得回看的一个时间切片，再写回信。"] }} />
+      <PageAgentContext context={{ scope: view === "themes" ? `近况回信 · ${selectedThread?.title || "全部主题"}` : `近况回信 · ${year}`, title: selected?.page.title || `${year === "全部" ? "最近" : year + " 年"}的近况回信`, pageId: selected?.page.id, summary: selected?.page.excerpt || "从选定年份的日记和已有知识生成回信。", defaultMode: "write", suggestions: [year === "全部" ? "从 2025 年日记中抽样几篇，结合已有知识写一封新的近况回信。" : `从 ${year} 年日记中抽样几篇，结合已有知识写一封新的近况回信。`, selected ? "根据更多原始证据重新写这封回信，保留朋友式回应，不做绩效复盘。" : "请先帮我选择最值得回看的一个时间切片，再写回信。"] }} />
     </div>
   );
 }

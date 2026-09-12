@@ -18,3 +18,5 @@ process.on("SIGINT", () => void shutdown().finally(() => process.exit(0)));
 process.on("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
 
 await server.listen(host, port);
+
+console.log(`TWH_READY ${server.app.listeningOrigin}`);

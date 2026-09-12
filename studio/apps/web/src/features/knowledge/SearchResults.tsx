@@ -8,8 +8,9 @@ import { Empty, Loading, PageHeader, SectionHeading } from "../../shared/ui";
 export function SearchResults({ revision }: { revision: number }) {
   const [params] = useSearchParams();
   const query = params.get("q") || "";
-  const { data, loading } = useApi<WikiPageSummary[]>(`/api/search?q=${encodeURIComponent(query)}`, revision);
-  if (loading || !data) return <Loading label="正在知识与原始材料中寻找" />;
+  const { data, loading, error } = useApi<WikiPageSummary[]>(`/api/search?q=${encodeURIComponent(query)}`, revision);
+  if (loading) return <Loading label="正在知识与原始材料中寻找" />;
+  if (error || !data) return <Empty>{error || "搜索暂时不可用，请刷新重试。"}</Empty>;
   const knowledge = data.filter((page) => !page.isSource);
   const sources = data.filter((page) => page.isSource);
   return (

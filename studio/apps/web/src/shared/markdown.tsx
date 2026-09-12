@@ -1,6 +1,6 @@
 import { TextArea, TextInput } from "./form-controls";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { WikiPage } from "@the-way-here/shared";
@@ -45,7 +45,7 @@ export function DocumentOutline({ markdown, headingPrefix, title = "本页目录
   const outlineRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const scrollContainer = scrollContainerRef?.current;
+    const scrollContainer = scrollContainerRef?.current || document.getElementById("main-content");
     const headings = items.map((item) => document.getElementById(item.id)).filter((heading): heading is HTMLElement => Boolean(heading));
     if (!headings.length) return;
     let frame = 0;
@@ -99,7 +99,7 @@ export function DocumentOutline({ markdown, headingPrefix, title = "本页目录
       <h3>{title}</h3>
       <ol>{items.map((item) => <li key={item.id} style={{ "--outline-depth": Math.min(item.level - baseLevel, 3) } as React.CSSProperties}>{inactive
         ? <span>{item.label}</span>
-        : <a className={activeId === item.id ? "active" : ""} aria-current={activeId === item.id ? "location" : undefined} href={`#${item.id}`} title={item.label} onClick={(event) => { event.preventDefault(); setActiveId(item.id); const heading = document.getElementById(item.id); const scrollContainer = scrollContainerRef?.current; const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"; if (heading && scrollContainer) { const top = scrollContainer.scrollTop + heading.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top - 24; scrollContainer.scrollTo({ top, behavior }); } else heading?.scrollIntoView({ behavior, block: "start" }); window.history.replaceState(window.history.state, "", `#${item.id}`); }}>{item.label}</a>}</li>)}</ol>
+        : <a className={activeId === item.id ? "active" : ""} aria-current={activeId === item.id ? "location" : undefined} href={`#${item.id}`} title={item.label} onClick={(event) => { event.preventDefault(); setActiveId(item.id); const heading = document.getElementById(item.id); const scrollContainer = scrollContainerRef?.current || document.getElementById("main-content"); const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"; if (heading && scrollContainer) { const top = scrollContainer.scrollTop + heading.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top - 24; scrollContainer.scrollTo({ top, behavior }); } else heading?.scrollIntoView({ behavior, block: "start" }); window.history.replaceState(window.history.state, "", `#${item.id}`); }}>{item.label}</a>}</li>)}</ol>
     </div>
   </nav>;
 }
@@ -214,6 +214,17 @@ function pageNoteProperties(page: WikiPage): Record<string, unknown> {
 
 export function MarkdownBody({ children, headingPrefix, properties }: { children: string; headingPrefix?: string; properties?: Record<string, unknown> }) {
   const returnContext = useReturnContext();
+  const location = useLocation();
+  useEffect(() => {
+    if (!headingPrefix || !location.hash) return;
+    let target: string;
+    try { target = decodeURIComponent(location.hash.slice(1)); } catch { return; }
+    const frame = requestAnimationFrame(() => {
+      const headings = [...document.querySelectorAll<HTMLElement>(`[id^="${headingPrefix}-heading-"]`)];
+      headings.find((heading) => heading.textContent?.trim() === target || heading.id === target)?.scrollIntoView({ block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [children, headingPrefix, location.hash]);
   const markdown = markdownWithoutFrontmatter(children);
   const hasProperties = Boolean(properties && Object.keys(properties).length);
   const hasLevelOneHeading = /^#\s+.+$/m.test(markdown);
@@ -260,7 +271,13 @@ export function ReadOnlyDocument({ id, markdown, toolbar }: { id: string; markdo
   </DocumentFrame>;
 }
 
-export function EditableDocument({ page, variant = "reader", startEditing = false, showOutline = false, showIdentity = true, identityActions, fileNameFocusToken = 0, beforeContent, afterContent, onRenamed }: { page: WikiPage; variant?: "reader" | "preview"; startEditing?: boolean; showOutline?: boolean; showIdentity?: boolean; identityActions?: ReactNode; fileNameFocusToken?: number; beforeContent?: ReactNode; afterContent?: ReactNode; onRenamed?: (page: WikiPage) => void }) {
+export function EditableDocument(props: Parameters<typeof EditableDocumentEditor>[0]) {
+  if (props.page.externalSource) return <><div className="external-source-notice">{props.page.externalSource.status === "available" ? "原目录只读连接 · 在原文件中编辑后会自动同步" : "原始来源不可用 · 请检查目录连接"}{props.page.externalSource.originalPath ? <div>{props.page.externalSource.originalPath}</div> : null}</div><ReadOnlyDocument id={props.page.id} markdown={props.page.renderedMarkdown} toolbar={props.identityActions} />{props.afterContent}</>;
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("detached")) return <ReadOnlyDocument id={props.page.id} markdown={props.page.renderedMarkdown} toolbar={props.identityActions} />;
+  return <EditableDocumentEditor {...props} />;
+}
+
+function EditableDocumentEditor({ page, variant = "reader", startEditing = false, showOutline = false, showIdentity = true, identityActions, fileNameFocusToken = 0, beforeContent, afterContent, onRenamed }: { page: WikiPage; variant?: "reader" | "preview"; startEditing?: boolean; showOutline?: boolean; showIdentity?: boolean; identityActions?: ReactNode; fileNameFocusToken?: number; beforeContent?: ReactNode; afterContent?: ReactNode; onRenamed?: (page: WikiPage) => void }) {
   const identity = documentIdentity(page.relativePath);
   const [editing, setEditing] = useState(startEditing);
   const [draft, setDraft] = useState(page.markdown);
@@ -338,7 +355,7 @@ export function EditableDocument({ page, variant = "reader", startEditing = fals
       editorRef.current.style.height = `${editorRef.current.scrollHeight}px`;
       editorRef.current.focus({ preventScroll: true });
     }
-    window.scrollTo({ top: documentScrollTopRef.current, behavior: "auto" });
+    (document.getElementById("main-content") || window).scrollTo({ top: documentScrollTopRef.current, behavior: "auto" });
   }, [editing]);
 
   useLayoutEffect(() => {
@@ -438,7 +455,7 @@ export function EditableDocument({ page, variant = "reader", startEditing = fals
 
   function beginEditing() {
     if (editing) return;
-    documentScrollTopRef.current = window.scrollY;
+    documentScrollTopRef.current = document.getElementById("main-content")?.scrollTop ?? window.scrollY;
     setEditing(true);
   }
 
@@ -466,6 +483,6 @@ export function EditableDocument({ page, variant = "reader", startEditing = fals
       <div className="editable-document-identity-actions"><span className="document-save-state" aria-live="polite"><i className={saveState.includes("失败") || saveState.includes("不能为空") ? "error" : ""} />{statusMessage}{editing && <kbd>⌘ S</kbd>}</span>{identityActions}</div>
     </header>}
     {toolbar}{propertyPanel}
-    {editing ? <TextArea ref={editorRef} name={`page-${page.id}`} aria-label={`${page.title} Markdown 正文`} value={documentBody} onChange={(event) => changeDocumentBody(event.target.value)} onBlur={() => { documentScrollTopRef.current = window.scrollY; void persist(draftRef.current); setEditing(false); }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "s") { event.preventDefault(); void persist(draftRef.current); } if (event.key === "Escape") event.currentTarget.blur(); }} spellCheck={false} /> : <div ref={documentBodyRef} className="editable-document-body editable-document-activate" role="textbox" aria-label={`${page.title} 正文，双击后编辑`} aria-readonly="true" tabIndex={0} onDoubleClick={requestEditing} onKeyDown={(event) => { if (event.key === "Enter" || event.key === "F2") { event.preventDefault(); beginEditing(); } }}>{beforeContent}<MarkdownBody headingPrefix={headingPrefix} properties={propertiesPinned ? undefined : properties}>{readingMarkdown}</MarkdownBody>{afterContent}</div>}
+    {editing ? <TextArea ref={editorRef} name={`page-${page.id}`} aria-label={`${page.title} Markdown 正文`} value={documentBody} onChange={(event) => changeDocumentBody(event.target.value)} onBlur={(event) => { if ((event.relatedTarget as HTMLElement | null)?.closest(".voice-dialog")) return; documentScrollTopRef.current = document.getElementById("main-content")?.scrollTop ?? window.scrollY; void persist(draftRef.current); setEditing(false); }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "s") { event.preventDefault(); void persist(draftRef.current); } if (event.key === "Escape") event.currentTarget.blur(); }} spellCheck={false} /> : <div ref={documentBodyRef} className="editable-document-body editable-document-activate" role="textbox" aria-label={`${page.title} 正文，双击后编辑`} aria-readonly="true" tabIndex={0} onDoubleClick={requestEditing} onKeyDown={(event) => { if (event.key === "Enter" || event.key === "F2") { event.preventDefault(); beginEditing(); } }}>{beforeContent}<MarkdownBody headingPrefix={headingPrefix} properties={propertiesPinned ? undefined : properties}>{readingMarkdown}</MarkdownBody>{afterContent}</div>}
   </DocumentFrame>;
 }

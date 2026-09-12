@@ -1,3 +1,4 @@
+import { readExternalSource, isExternalSourcePath } from "@the-way-here/wiki-core";
 import { createHash, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { lstat, mkdir, readFile, readdir, realpath, rename, stat, writeFile } from "node:fs/promises";
@@ -82,7 +83,7 @@ class WorkspaceAccess {
   private readonly readableFiles: string[];
   private readonly writableDirs: string[];
 
-  constructor(cwd: string, config: VaultConfig) {
+  constructor(cwd: string, private readonly config: VaultConfig) {
     this.root = canonicalPath(path.resolve(cwd));
     this.readableDirs = [config.paths.wiki, config.paths.sources, config.paths.skills, config.paths.tools].map((entry) => configuredPath(this.root, entry));
     this.readableFiles = [configuredPath(this.root, config.paths.agentInstructions)];
@@ -125,13 +126,16 @@ class WorkspaceAccess {
     const info = await stat(target);
     if (!info.isFile()) throw new Error("只能读取文件");
     if (info.size > maxReadBytes) throw new Error("文件过大，无法通过 Agent 工具读取");
-    const content = await readFile(target, "utf8");
+    const reference = await readFile(target, "utf8");
+    const external = await readExternalSource(this.root, this.config, this.relative(target), reference);
+    const content = external?.content ?? reference;
     return { path: this.relative(target), content, sha256: hash(content) };
   }
 
   async write(relativePath: string, content: string, expectedSha256?: string): Promise<{ path: string; sha256: string; bytes: number }> {
     if (Buffer.byteLength(content, "utf8") > maxReadBytes) throw new Error("写入内容过大");
     const target = this.resolveLexical(relativePath);
+    if (isExternalSourcePath(this.relative(target), this.config)) throw new Error("连接的来源引用为只读，请在原始目录编辑");
     if (!this.writableDirs.some((root) => inside(target, root))) throw new Error("写入路径不在当前知识库允许目录内");
     let exists = false;
     try {

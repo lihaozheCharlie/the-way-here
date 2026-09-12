@@ -8,7 +8,7 @@ export {
   type SourceChatImportChannel,
   type SourceImportChannel,
 } from "./content.js";
-export { type VaultConfig, type VaultInfo } from "./config.js";
+export { EXTERNAL_SOURCE_FOLDER, type SourceConnection, type VaultConfig, type VaultInfo } from "./config.js";
 export {
   type SourceImportFile,
   type SourceBuildKind,

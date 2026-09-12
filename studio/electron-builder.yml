@@ -1,0 +1,39 @@
+appId: com.thewayhere.desktop
+productName: The Way Here
+directories:
+  app: apps/desktop
+  output: .runtime/releases
+files:
+  - src/**
+  - package.json
+asar: true
+extraResources:
+  - from: .runtime/package/workspace-template
+    to: workspace-template
+  - from: .runtime/package/python
+    to: python
+  - from: .runtime/package/server
+    to: server
+  - from: apps/web/dist
+    to: web
+  - from: apps/desktop/dist/app-icon.png
+    to: native/app-icon.png
+  - from: apps/desktop/dist/trayTemplate.png
+    to: native/trayTemplate.png
+  - from: apps/desktop/dist/trayTemplate@2x.png
+    to: native/trayTemplate@2x.png
+  - from: apps/desktop/dist/speech-capture
+    to: native/speech-capture
+mac:
+  icon: apps/desktop/dist/app.icns
+  category: public.app-category.lifestyle
+  target: dir
+  identity: null
+  extendInfo:
+    NSMicrophoneUsageDescription: 将你主动录制的生活片段转成文字，确认后才保存。
+    NSSpeechRecognitionUsageDescription: 将你说的话转成可编辑的原话，优先使用设备上的语音识别。
+    NSCameraUsageDescription: 导入你选择的照片与生活记录。
+dmg:
+  title: The Way Here
+
+afterPack: scripts/after-pack.cjs

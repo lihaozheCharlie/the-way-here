@@ -11,7 +11,7 @@ import { ConfirmDeleteDialog } from "../../shared/ConfirmDeleteDialog";
 import { useReturnContext } from "../../shared/routing";
 import { resizeComposerTextarea } from "../../shared/composer-input";
 import { Icon, Loading } from "../../shared/ui";
-import { AiConfiguration, reasoningLabels, useAgentSelection } from "./AgentSettings";
+import { reasoningLabels, useAgentSelection } from "./AgentSettings";
 import { localWikiHref } from "./local-page-link";
 import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, runConversation, runDisplayPrompt, runFinalAnswer, runTechnicalEvents, shouldSubmitAgentInput, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
 
@@ -26,16 +26,15 @@ function submitAgentFormOnEnter(event: React.KeyboardEvent<HTMLTextAreaElement>)
   event.currentTarget.form?.requestSubmit();
 }
 
-export function ContextualAgentDock({ revision, context }: { revision: number; context: AgentContext }) {
+export function AgentDock({ revision, context, initialRunId = "" }: { revision: number; context: AgentContext; initialRunId?: string }) {
   const { data: vault, loading: vaultLoading } = useApi<VaultInfo>("/api/vault", revision);
   const [runListRevision, setRunListRevision] = useState(0);
   const { data: runList, loading: runsLoading, error: runsError } = useApi<WikiRun[]>("/api/runs", revision + runListRevision);
   const agent = useAgentSelection(revision);
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<DockView>("compose");
+  const [view, setView] = useState<DockView>(initialRunId ? "history" : "compose");
   const [draft, setDraft] = useState("");
   const [attachedContext, setAttachedContext] = useState<AgentAttachedContext>();
-  const [runId, setRunId] = useState("");
+  const [runId, setRunId] = useState(initialRunId);
   const [historyReturnRunId, setHistoryReturnRunId] = useState("");
   const [mode, setMode] = useState<WikiRun["mode"]>(() => resolveComposerMode(context.defaultMode, context.defaultOutputTarget));
   const [outputTarget, setOutputTarget] = useState<AgentOutputTarget | undefined>(() => context.defaultOutputTarget);
@@ -43,10 +42,6 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
-  const launcherRef = useRef<HTMLButtonElement>(null);
-  const openerRef = useRef<HTMLElement | null>(null);
-  const wasOpenRef = useRef(false);
   const restoredContextRef = useRef("");
   const submittingRef = useRef(false);
   const pendingAutoSubmissionRef = useRef<AgentAutoSubmission | undefined>(undefined);
@@ -58,8 +53,7 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
     const openDock = (event: Event) => {
       const request = (event as CustomEvent<OpenContextAgentRequest>).detail || {};
       pendingAutoSubmissionRef.current = undefined;
-      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      setOpen(true);
+      window.dispatchEvent(new Event("show-inspector"));
       setError("");
       if (request.runId) {
         setRunId(request.runId);
@@ -83,56 +77,20 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
     return () => window.removeEventListener("open-context-agent", openDock);
   }, [context.defaultMode, context.defaultOutputTarget, context.defaultSourceContext]);
 
-  useEffect(() => {
-    if (!open) {
-      if (wasOpenRef.current) {
-        const opener = openerRef.current;
-        if (opener?.isConnected) opener.focus();
-        else launcherRef.current?.focus();
-      }
-      wasOpenRef.current = false;
-      return;
-    }
-    wasOpenRef.current = true;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const timer = window.setTimeout(() => {
-      if (view === "compose" && !runId) textareaRef.current?.focus();
-    }, 80);
-    const manageKeyboard = (event: KeyboardEvent) => {
-      if (panelRef.current?.querySelector(".delete-confirm-dialog")) return;
-      if (event.key === "Escape") { setOpen(false); return; }
-      if (event.key !== "Tab") return;
-      const focusable = [...(panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], textarea:not([disabled]), input:not([disabled]), select:not([disabled]), summary, [tabindex]:not([tabindex="-1"])') || [])];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable.at(-1)!;
-      if (!panelRef.current?.contains(document.activeElement)) { event.preventDefault(); (event.shiftKey ? last : first).focus(); }
-      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", manageKeyboard);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.clearTimeout(timer);
-      window.removeEventListener("keydown", manageKeyboard);
-    };
-  }, [open, runId, view]);
-
   useLayoutEffect(() => {
-    if (open && view === "compose" && !runId) resizeComposerTextarea(textareaRef.current);
-  }, [draft, open, runId, view]);
+    if (view === "compose" && !runId) resizeComposerTextarea(textareaRef.current);
+  }, [draft, runId, view]);
 
   useEffect(() => {
     if (runsLoading || restoredContextRef.current === contextIdentity) return;
     restoredContextRef.current = contextIdentity;
     setDraft("");
     setAttachedContext(undefined);
-    setRunId(boundRunId);
+    setRunId(initialRunId || boundRunId);
     setMode(resolveComposerMode(context.defaultMode, context.defaultOutputTarget));
     setOutputTarget(context.defaultOutputTarget);
     setSourceContext(context.defaultSourceContext);
-    setView(boundRunId ? "history" : "compose");
+    setView(initialRunId || boundRunId ? "history" : "compose");
     // Restore the bound conversation quietly; only an explicit action opens the dock.
     setError("");
     pendingAutoSubmissionRef.current = undefined;
@@ -140,10 +98,10 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
 
   useEffect(() => {
     const pending = pendingAutoSubmissionRef.current;
-    if (!pending || !open || view !== "compose" || runId || submitting || vaultLoading || agent.loading || !vault?.agentAvailable) return;
+    if (!pending || view !== "compose" || runId || submitting || vaultLoading || agent.loading || !vault?.agentAvailable) return;
     pendingAutoSubmissionRef.current = undefined;
     void startRun(pending.prompt, pending.mode, pending.outputTarget, pending.displayPrompt, pending.sourceContext);
-  }, [agent.loading, open, runId, submitting, vault?.agentAvailable, vaultLoading, view]);
+  }, [agent.loading, runId, submitting, vault?.agentAvailable, vaultLoading, view]);
 
   function startNewQuestion() {
     setRunId("");
@@ -233,14 +191,12 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
 
   const selectedRun = runList?.find((candidate) => candidate.id === runId);
   const panelTitle = runId ? selectedRun?.title || `处理：${context.title}` : view === "history" ? "聊过的事" : "一起往下想";
-  const closeDock = () => setOpen(false);
+  const closeDock = () => new URLSearchParams(window.location.search).has("detached") ? window.close() : window.dispatchEvent(new Event("hide-inspector"));
   const submitDisabled = submitting || (mode !== "validate" && !draft.trim()) || vaultLoading || (mode !== "validate" && agent.loading) || !vault?.agentAvailable;
 
   return <>
-    {!open && <button ref={launcherRef} className={`context-agent-launcher${context.compactLauncher ? " compact" : ""}`} title={context.launcherLabel || "找我聊聊"} onClick={() => { openerRef.current = launcherRef.current; setOpen(true); }} aria-label={`${context.launcherLabel || "找我聊聊"}，已带入当前页面`}><Icon name="spark" size={16} />{!context.compactLauncher && <b>{context.launcherLabel || "找我聊聊"}</b>}</button>}
-    {open && <div className="context-agent-layer">
-      <button className="context-agent-backdrop" aria-label="关闭对话窗口" onClick={closeDock} />
-      <aside ref={panelRef} className="context-agent-panel" role="dialog" aria-modal="true" aria-labelledby="context-agent-title">
+    <div className="context-agent-layer">
+      <aside className="context-agent-panel" data-run-id={runId} role="complementary" aria-labelledby="context-agent-title">
         <header className="context-agent-header">
           <div className="context-agent-title">
             {runId || view === "history" ? <button type="button" className="context-agent-icon-button" aria-label={runId ? "返回对话历史" : "返回对话"} onClick={() => runId ? showHistory(runId) : leaveHistory()}><Icon name="back" size={17} /></button> : <span className="context-agent-spark"><Icon name="spark" size={14} /></span>}
@@ -272,19 +228,16 @@ export function ContextualAgentDock({ revision, context }: { revision: number; c
             </details>}
             <div className={`text-field-shell context-composer-shell${mode === "validate" ? " validate" : ""}`}>
               {mode === "validate" ? <span>运行标签、链接与结构检查</span> : <TextArea ref={textareaRef} id={`context-prompt-${context.pageId || context.scope}`} name="context-prompt" autoComplete="off" value={draft} onChange={(event) => { setDraft(event.target.value); if (error) setError(""); }} onKeyDown={submitAgentFormOnEnter} placeholder={attachedContext ? "我已经带上了这页的上下文，说说你想聊、补充或整理什么" : "想从哪里开始？"} rows={1} />}
-              {mode !== "validate" && <details className="context-agent-options">
-                <summary aria-label="AI 设置" title="AI 设置"><Icon name="controls" size={16} /></summary>
-                <div className="context-agent-settings-popover"><AiConfiguration id={`context-ai-${context.pageId || context.scope}`} agent={agent} /></div>
-              </details>}
+              {mode !== "validate" && <button type="button" className="context-agent-icon-button" aria-label="AI 偏好设置" onClick={() => window.dispatchEvent(new Event("open-preferences"))}><Icon name="controls" size={16} /></button>}
               <button type="submit" className="context-agent-send" disabled={submitDisabled} aria-label={submitting ? "正在开始" : collaborationModes[mode].action} title={submitting ? "正在开始…" : collaborationModes[mode].action}><Icon name="up" size={16} /></button>
             </div>
             <p className="context-agent-boundary">{outputTarget?.kind === "photo-memory" ? "只保存对话或故事草稿；回到讲故事后收进理解" : outputTarget?.kind === "journey-report" ? "Wiki 仅检索；本轮只更新消费旅程报告" : collaborationModes[mode].boundary}</p>
             {error && <p className="context-agent-error" role="alert">{error}</p>}
-            {!vaultLoading && !vault?.agentAvailable && <p className="context-agent-offline">暂时无法开始对话；安装 Codex 或配置 Pi 模型后即可使用。</p>}
+            {!vaultLoading && !vault?.agentAvailable && <p className="context-agent-offline">暂时无法开始对话；请在偏好设置中连接 AI 助手。</p>}
           </div>
         </form>}
       </aside>
-    </div>}
+    </div>
   </>;
 }
 

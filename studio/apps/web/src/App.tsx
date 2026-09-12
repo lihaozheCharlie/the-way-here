@@ -1,3 +1,6 @@
+import { VoiceInputContext } from "./shared/voice-input";
+import { VoiceInput } from "./features/desktop/VoiceInput";
+import { InspectorProvider } from "./features/desktop/InspectorContext";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AppShell } from "./app/AppShell";
 import { useLiveRevision } from "./shared/routing";
@@ -14,12 +17,12 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error?: Erro
   }
 
   render() {
-    if (this.state.error) return <div className="fatal-error"><div><span>页面没有正确展开</span><h1>这次没有让整个产品变成白屏</h1><p>{this.state.error.message}</p><button onClick={() => window.location.reload()}>重新加载</button></div></div>;
+    if (this.state.error) return <div className="fatal-error"><div><span>页面没有正确展开</span><h1>页面暂时无法打开</h1><p>{this.state.error.message}</p><button onClick={() => window.location.reload()}>重新加载</button></div></div>;
     return this.props.children;
   }
 }
 
 export default function App() {
   const revision = useLiveRevision();
-  return <AppErrorBoundary><AppShell revision={revision} /></AppErrorBoundary>;
+  return <AppErrorBoundary><VoiceInputContext.Provider value={(onConfirm) => <VoiceInput onConfirm={onConfirm} />}><InspectorProvider><AppShell revision={revision} /></InspectorProvider></VoiceInputContext.Provider></AppErrorBoundary>;
 }

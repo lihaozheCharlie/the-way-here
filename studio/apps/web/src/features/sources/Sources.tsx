@@ -1,3 +1,4 @@
+import { SourceConnectionsPanel } from "./SourceConnectionsPanel";
 import { SearchField, SelectInput, TextInput } from "../../shared/form-controls";
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -7,7 +8,7 @@ import { api } from "../../api";
 import { useApi } from "../../shared/use-api";
 import { graphCategoryNames } from "../../shared/categories";
 import { type ReturnContext } from "../../shared/routing";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
 import { journeyDeepConversationPrompt, journeyOverviewConversationPrompt } from "./journey-conversation";
 import { EditableDocument, ReadOnlyDocument, documentIdentity } from "../../shared/markdown";
@@ -15,7 +16,7 @@ import { apiPageHref, pageDestination, pageHref } from "../../shared/routing";
 import { ConfirmDeleteDialog } from "../../shared/ConfirmDeleteDialog";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { TimelineFilter } from "../../shared/TimelineFilter";
-import { ImportMaterialsModal, RecordImportTrigger } from "./ImportMaterialsModal";
+import { ImportMaterialsModal, RecordImportTrigger, type ImportRoute } from "./ImportMaterialsModal";
 import { PhotoMemoryPanel } from "./PhotoMemoryPanel";
 import { BillMemoryPanel } from "./BillMemoryPanel";
 import { SourceMemoryCards, SourceMemoryDialog } from "./SourceMemories";
@@ -264,9 +265,11 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const [params, setParams] = useSearchParams();
   const [creatingSource, setCreatingSource] = useState(false);
   const [createdPageId, setCreatedPageId] = useState<string>();
-  const [folderPaneOpen, setFolderPaneOpen] = useState(true);
+  const [folderPaneOpen, setFolderPaneOpen] = useState(false);
   const [filePaneOpen, setFilePaneOpen] = useState(true);
-  const [importOpen, setImportOpen] = useState(false);
+  const [importRoute, setImportRoute] = useState<ImportRoute>();
+  const [importOpen, setImportOpen] = useState(params.get("import") === "true");
+  useEffect(() => { if (params.get("import") === "true") { setImportOpen(true); const next = new URLSearchParams(params); next.delete("import"); setParams(next, { replace: true }); } }, [params, setParams]);
   const [recentJourney, setRecentJourney] = useState<PaymentJourneySummary>();
   const [recentBatch, setRecentBatch] = useState<SourceImportBatch>();
   const [recentBatchAcknowledged, setRecentBatchAcknowledged] = useState(false);
@@ -356,7 +359,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
     defaultMode: "read" as const,
     defaultOutputTarget: { kind: "journey-report" as const, importId: selectedBuildRecord.batch.id, storedPath: selectedBuildRecord.file.storedPath, label: "消费旅程报告" },
     defaultSourceContext: { importId: selectedBuildRecord.batch.id, storedPath: selectedBuildRecord.file.storedPath, flow: "dialogue" as const, operation: "enrich" as const },
-    launcherLabel: selectedBuildRecord.file.dialogueRunId ? "继续聊聊" : "聊聊这段旅程",
     suggestions: selectedBuildRecord.batch.journey?.clusters.length
       ? [`请从「${selectedBuildRecord.batch.journey.clusters[0]!.title}」开始，一次问我一个关于人物、动机或感受的问题。`, "先从最有画面的一段线索开始，邀请我慢慢讲出来。"]
       : ["请从最完整的一条消费线索开始，一次只问我一个开放式问题。", "帮我从这份账单里找到值得继续讲述的一段经历。"],
@@ -367,7 +369,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
     defaultMode: "read" as const,
     defaultOutputTarget: { kind: "journey-report" as const, importId: recentBatch.id, storedPath: recentJourneyRecord.storedPath, label: "消费旅程报告" },
     defaultSourceContext: { importId: recentBatch.id, storedPath: recentJourneyRecord.storedPath, flow: "dialogue" as const, operation: "enrich" as const },
-    launcherLabel: "聊聊这段旅程",
     suggestions: [`请从「${recentJourney.title}」里最有画面的一段线索开始，一次问我一个关于人物、动机或感受的问题。先陪我把经历说出来。`, "先从最有画面的一次出行、聚会或生活变化开始，邀请我慢慢讲出来。"],
   } : {
     scope: "生活记录",
@@ -375,10 +376,10 @@ export function OrganizedSources({ revision }: { revision: number }) {
     pageId: selected?.id,
     summary: selected?.excerpt || `当前有 ${pages.length} 份原始记录。`,
     defaultMode: "read" as const,
-    launcherLabel: "聊聊这份记录",
     suggestions: ["这份记录里有哪些还没有真正说清楚、值得我继续补充的地方？", "请概括这份记录，并区分事实、感受和后来的解释。"],
   }, [pages.length, recentBatch, recentJourney, recentJourneyRecord, selected?.excerpt, selected?.id, selected?.title, selectedBuildRecord]);
-  if (loading || !data) return <Loading label="正在打开生活记录" />;
+  if (loading) return <Loading label="正在打开生活记录" />;
+  if (!data) return <Empty>生活记录暂时无法读取，请刷新重试。</Empty>;
   function update(next: Record<string, string | undefined>) {
     setParams((current) => {
       const value = new URLSearchParams(current);
@@ -523,7 +524,8 @@ export function OrganizedSources({ revision }: { revision: number }) {
     <header className="source-workspace-intro">
       <div><h1>生活记录</h1><p>日记、笔记、对话和其他原话都留在这里。它们让我记得你的来路，也让每一次理解都能回到真正发生过的生活。</p><div className="source-record-stats" aria-label={`${pages.length} 份记录，本周新增 ${recentCount} 份`}><span><b>{new Intl.NumberFormat("zh-CN").format(pages.length)}</b> 份记录</span><i aria-hidden="true" /><span>本周新增 <b>+{recentCount}</b></span></div></div>
     </header>
-    {importOpen ? <ImportMaterialsModal folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); setMemoryRecord(importedMemoryRecord(batch)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onJourney={setRecentJourney} /> : null}
+    <SourceConnectionsPanel compact />
+    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); setMemoryRecord(importedMemoryRecord(batch)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onJourney={setRecentJourney} /> : null}
     {deleteTarget ? <ConfirmDeleteDialog
       title={deleteTarget.kind === "folder" ? "删除这个文件夹？" : "删除这份生活记录？"}
       description={deleteTarget.kind === "folder" ? "文件夹内的记录和所有子文件夹都会一起删除。" : "文件会从生活记录中永久移除。"}
@@ -534,6 +536,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       onConfirm={deleteSelectedTarget}
     /> : null}
     {creatingSource ? <div className="source-compose-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreatingSource(false); }}><div className="source-compose-dialog" role="dialog" aria-modal="true" aria-label="写一条生活记录"><NewSourceForm folder={folder} folders={folderPaths} foldersLoading={sourceFoldersLoading} foldersError={sourceFoldersError} onCancel={() => setCreatingSource(false)} onCreated={(page) => { const nextFolder = cleanSourcePath(page.relativePath).split("/").slice(0, -1).join("/"); setCreatingSource(false); setCreatedPageId(page.id); update({ q: undefined, type: undefined, month: undefined, folder: nextFolder || undefined, file: page.id, limit: undefined }); }} /></div></div> : null}
+    <div className="desktop-memory-entry"><button onClick={() => { setImportRoute("photos"); setImportOpen(true); }}><Icon name="image" size={22} /><span><b>照片记忆</b><small>从一张照片，找回当时的人和事</small></span><Icon name="plus" size={16} /></button><button onClick={() => { setImportRoute("bill"); setImportOpen(true); }}><Icon name="receipt" size={22} /><span><b>账单记忆</b><small>沿着消费记录，回看生活里的片段</small></span><Icon name="plus" size={16} /></button></div>
     <SourceMemoryCards records={memoryCards} revision={revision} onOpen={(record) => void beginBuild(record, "open")} />
     {openedMemory ? <SourceMemoryDialog title={openedMemory.batch.channel === "photos" ? "照片记忆" : "账单记忆"} onClose={() => setMemoryRecord(undefined)}>
       {openedMemory.batch.channel === "photos" ? <PhotoMemoryPanel key={openedMemory.batch.id} batch={openedMemory.batch} revision={revision} /> : openedMemory.batch.journey ? <BillMemoryPanel key={openedMemory.batch.id} record={openedMemory} busy={busyBuildPath === openedMemory.file.storedPath} onBuild={(batch) => void beginBuild({ ...openedMemory, batch }, "build")} onDeep={(batch, cluster, state) => beginJourneyDeep(openedMemory, batch, cluster, state)} /> : memoryPage ? <SourcePreview page={memoryPage} revision={revision} fileNameFocusToken={renameRequest?.pageId === memoryPage.id ? renameRequest.token : 0} buildRecord={openedMemory} buildBusy={busyBuildPath === openedMemory.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => update({ file: renamed.id })} /> : <Empty>正在等待记录进入列表，请稍后重新打开。</Empty>}
@@ -562,7 +565,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
             const recordType = sourceRecordType({ relativePath: name, tags: [], type: undefined });
             return <div key={name} className={`source-folder-row${folder === name ? " active" : ""}`}>
               <button type="button" className="source-folder-select" style={{ paddingLeft: 10 + Math.min(name.split("/").length - 1, 3) * 16 }} onClick={() => { setCreatedPageId(undefined); update({ folder: name, file: undefined, limit: undefined }); }}><Icon name={recordType === "notes" ? "journal" : recordType === "ai" ? "spark" : "receipt"} size={15} /><span>{name.split("/").at(-1)}</span><small>{count}</small></button>
-              <SourceItemMenu label={`更多文件夹操作：${name}`} actions={[{ label: "删除文件夹…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "folder", folder: name, count }) }]} />
+              {name.startsWith("外部来源") ? null : <SourceItemMenu label={`更多文件夹操作：${name}`} actions={[{ label: "删除文件夹…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "folder", folder: name, count }) }]} />}
             </div>;
           })}
         </div></aside>
@@ -578,7 +581,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
             </div> : null}
             <div className="source-file-order"><span>按记录时间排列</span></div><div className="source-file-list">
             {visiblePages.map((page) => {
-              const fileName = documentIdentity(page.relativePath).fileName;
+              const fileName = page.externalSource ? page.title : documentIdentity(page.relativePath).fileName;
               const recordType = sourceRecordType(page);
               const trackedBuildRecord = sourceBuildRecordForPage(page, buildRecords);
               const buildRecord = trackedBuildRecord || buildableSourceRecordForPage(page, buildRecords);
@@ -590,7 +593,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
                   <span className="source-file-card-meta"><em className={`source-type-chip source-type-chip--${recordType}`}><Icon name={recordType === "photos" ? "image" : recordType === "notes" ? "journal" : recordType === "ai" ? "spark" : "receipt"} size={11} />{sourceRecordTypes.find((item) => item.id === recordType)?.label}</em></span>
                   <b>{fileName}</b><small data-overflow-tooltip="off">{page.excerpt || cleanSourcePath(page.relativePath)}</small>
                 </button>
-                <SourceItemMenu label={`更多文件操作：${fileName}`} actions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", icon: recordType === "photos" || recordType === "bill" ? undefined : "build", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }, ...(recordType === "photos" ? [] : [{ label: "重命名", icon: "edit" as const, onSelect: () => requestRename(page) }]), { label: "删除文件…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "file", page }) }]} />
+                {page.externalSource ? <small>原目录 · 只读</small> : <SourceItemMenu label={`更多文件操作：${fileName}`} actions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", icon: recordType === "photos" || recordType === "bill" ? undefined : "build", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }, ...(recordType === "photos" ? [] : [{ label: "重命名", icon: "edit" as const, onSelect: () => requestRename(page) }]), { label: "删除文件…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "file", page }) }]} />}
                 {trackedBuildRecord && buildState ? <div className={`source-file-build${trackedBuildRecord.file.buildKind === "dialogue" && trackedBuildRecord.file.buildStatus === "ready-to-build" ? " is-dual" : ""}`}><span className={`source-build-chip is-${buildState.tone}`}><i aria-hidden="true" />{buildState.label}{buildState.detail ? <small>{buildState.detail}</small> : null}</span><SourceBuildAction record={trackedBuildRecord} busy={busyBuildPath === trackedBuildRecord.file.storedPath} onStart={beginBuild} /></div> : null}
               </article>;
             })}
@@ -601,6 +604,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
       </div>
       {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={renameRequest?.pageId === selected.id ? renameRequest.token : 0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>没有匹配的来源</span><p>换一个文件夹或搜索词。</p></div>}
     </div>
-    <ContextualAgentDock revision={revision} context={photoBatch ? { scope: "照片记忆", title: photoBatch.files[0]?.originalName || "照片记忆", pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: "记忆报告", phase: "enrich" }, suggestions: ["我想讲讲这批照片里的故事，一次问我一个具体问题。"], launcherLabel: "聊聊照片里的故事" } : agentContext} />
+    <PageAgentContext context={photoBatch ? { scope: "照片记忆", title: photoBatch.files[0]?.originalName || "照片记忆", pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: "记忆报告", phase: "enrich" }, suggestions: ["我想讲讲这批照片里的故事，一次问我一个具体问题。"], } : agentContext} />
   </div>;
 }

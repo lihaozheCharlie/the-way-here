@@ -11,12 +11,20 @@
     "dev": "node scripts/dev.mjs",
     "build": "pnpm --filter @the-way-here/web build && pnpm --filter @the-way-here/server build",
     "start": "node scripts/start.mjs",
-    "typecheck": "pnpm --filter @the-way-here/server typecheck && pnpm --filter @the-way-here/web typecheck",
-    "test": "pnpm --filter @the-way-here/wiki-core test && pnpm --filter @the-way-here/life-views test && pnpm --filter @the-way-here/run-manager test && pnpm --filter @the-way-here/server test && pnpm --filter @the-way-here/web test",
-    "doctor": "node scripts/doctor.mjs"
+    "typecheck": "pnpm --filter @the-way-here/server typecheck && pnpm --filter @the-way-here/web typecheck && pnpm --filter @the-way-here/desktop typecheck",
+    "test": "pnpm --filter @the-way-here/wiki-core test && pnpm --filter @the-way-here/life-views test && pnpm --filter @the-way-here/run-manager test && pnpm --filter @the-way-here/server test && pnpm --filter @the-way-here/web test && pnpm test:desktop",
+    "doctor": "node scripts/doctor.mjs",
+    "desktop": "pnpm build && pnpm desktop:native && pnpm --filter @the-way-here/desktop dev",
+    "desktop:package": "pnpm build && node scripts/package-desktop.mjs",
+    "test:desktop": "pnpm --filter @the-way-here/desktop test",
+    "desktop:native": "node scripts/build-desktop-native.mjs",
+    "desktop:verify": "node scripts/verify-desktop.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "concurrently": "^9.2.1",
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
     "yaml": "^2.8.1"
   }
 }

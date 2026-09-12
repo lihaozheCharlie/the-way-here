@@ -1,4 +1,11 @@
-import { SearchField } from "../shared/form-controls";
+import { ConversationWindow } from "../features/desktop/ConversationWindow";
+import { useDesktopNotifications } from "../features/desktop/use-desktop-notifications";
+import { CommandPalette } from "../features/desktop/CommandPalette";
+import { Preferences } from "../features/desktop/Preferences";
+import { QuickCapture } from "../features/desktop/QuickCapture";
+import { useInspector } from "../features/desktop/InspectorContext";
+import { AgentDock } from "../features/collaboration/Collaboration";
+import { openDesktopWindow, type DesktopCommand } from "../features/desktop/bridge";
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import type { VaultInfo } from "@the-way-here/shared";
@@ -72,7 +79,7 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
               <span className="global-kb-check">{selected ? <Icon name="check" size={15} /> : null}</span>
               <span className="global-kb-option-copy"><span>{knowledgeBase.name}{demo ? <small>演示</small> : null}</span><small>{demo ? "预置的示例记忆，可以先感受被记住的体验" : `来自「${knowledgeBase.name}」的生活记录与已有理解`}</small></span>
             </button>
-            {!demo ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={`删除知识库「${knowledgeBase.name}」`} title="删除知识库"><Icon name="trash" size={15} /></button> : null}
+            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={`删除知识库「${knowledgeBase.name}」`} title="删除知识库"><Icon name="trash" size={15} /></button> : null}
           </div>;
         })}
       </div>
@@ -83,22 +90,40 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
 
 export function AppShell({ revision }: { revision: number }) {
   const { data: vault } = useApi<VaultInfo>("/api/vault", revision);
+  const initialKnowledgeBase = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!vault) return;
+    if (initialKnowledgeBase.current && initialKnowledgeBase.current !== vault.knowledgeBaseId) {
+      window.location.replace(location.pathname === "/capture" ? "/capture" : location.pathname === "/preferences" ? "/preferences" : "/");
+    } else initialKnowledgeBase.current = vault.knowledgeBaseId;
+  }, [vault?.knowledgeBaseId]);
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
+  const topicCount = useDesktopNotifications(revision, vault, location.pathname);
   const readerReturnContext = location.state as ReturnContext | null;
   const isSourceReader = location.pathname.startsWith("/page/") && readerReturnContext?.returnTo.startsWith("/sources");
-  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [inspectorVisible, setInspectorVisible] = useState(() => localStorage.getItem("desktop.inspector") === "true");
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
+  const inspector = useInspector()!;
+  const utilityWindow = location.pathname === "/preferences" || location.pathname === "/capture";
+  const detached = new URLSearchParams(location.search).has("detached");
+  const openCapture = () => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture");
+  const openPreferences = () => window.desktop ? void openDesktopWindow("/preferences", "settings") : navigate("/preferences");
+  useEffect(() => {
+    const show = () => setInspectorVisible(true);
+    const hide = () => setInspectorVisible(false);
+    window.addEventListener("show-inspector", show); window.addEventListener("hide-inspector", hide);
+    return () => { window.removeEventListener("show-inspector", show); window.removeEventListener("hide-inspector", hide); };
+  }, []);
+  useEffect(() => { localStorage.setItem("desktop.inspector", String(inspectorVisible)); }, [inspectorVisible]);
   const [knowledgeBaseSwitching, setKnowledgeBaseSwitching] = useState(false);
   const [switchingKnowledgeBaseName, setSwitchingKnowledgeBaseName] = useState("");
   const [knowledgeBaseError, setKnowledgeBaseError] = useState("");
   const [createKnowledgeBaseOpen, setCreateKnowledgeBaseOpen] = useState(false);
   const [deleteKnowledgeBaseTarget, setDeleteKnowledgeBaseTarget] = useState<KnowledgeBaseSummary>();
-
-  function submitSearch(event: React.FormEvent) {
-    event.preventDefault();
-    if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`);
-  }
 
   function mainItemActive(item: (typeof navigation)[number]): boolean {
     if (item.to === "/") return location.pathname === "/";
@@ -115,7 +140,7 @@ export function AppShell({ revision }: { revision: number }) {
 
   const activeSection = navigation.find((item) => mainItemActive(item));
   useEffect(() => {
-    if (navigationType !== "POP") window.scrollTo({ top: 0 });
+    if (navigationType !== "POP") document.getElementById("main-content")?.scrollTo({ top: 0 });
     document.getElementById("main-content")?.focus({ preventScroll: true });
   }, [location.pathname, navigationType]);
 
@@ -167,36 +192,75 @@ export function AppShell({ revision }: { revision: number }) {
     window.setTimeout(() => document.querySelector<HTMLButtonElement>(".global-kb-trigger")?.focus(), 0);
   }
 
+  useEffect(() => {
+    function command(value: DesktopCommand) {
+      if (value === "search") setSearchOpen(true);
+      else if (value === "inspector") setInspectorVisible((current) => !current);
+      else if (value === "capture") openCapture();
+      else if (value === "settings") openPreferences();
+      else if (value === "import") navigate("/sources?import=true");
+      else if (value === "back") navigate(-1);
+      else if (value === "forward") navigate(1);
+      else if (value === "focus") {
+        const params = new URLSearchParams({ detached:"true", title:inspector.context.title });
+        const run = document.querySelector<HTMLElement>(".context-agent-panel")?.dataset.runId;
+        if (run) params.set("run",run);
+        if (inspector.context.pageId) params.set("pageId",inspector.context.pageId);
+        void openDesktopWindow(`/conversation?${params}`, "focus");
+      }
+      else if (value === "detach") {
+        const params = new URLSearchParams(location.search); params.set("detached", "true");
+        void openDesktopWindow(`${location.pathname}?${params}`, "reader");
+      } else if (value.startsWith("knowledge-base:")) {
+        const item = vault?.knowledgeBases[Number(value.split(":")[1]) - 1];
+        if (item) void switchKnowledgeBase(item.id);
+      }
+    }
+    const prefs = () => openPreferences();
+    window.addEventListener("open-preferences", prefs);
+    const unsubscribe = window.desktop?.onCommand(command);
+    const keyboard = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.isComposing) return;
+      let action: DesktopCommand | undefined;
+      if (event.key.toLowerCase() === "k") action = "search";
+      if (event.key === ",") action = "settings";
+      if (event.key.toLowerCase() === "n") action = "capture";
+      if (event.altKey && event.key.toLowerCase() === "i") action = "inspector";
+      if (event.key === "Enter") action = "detach";
+      if (event.shiftKey && event.key.toLowerCase() === "f") action = "focus";
+      if (/^[1-9]$/.test(event.key)) action = `knowledge-base:${Number(event.key)}`;
+      if (action) { event.preventDefault(); command(action); }
+    };
+    // Native accelerators are handled by the application menu, once per key press.
+    if (!window.desktop) window.addEventListener("keydown", keyboard);
+    return () => { unsubscribe?.(); window.removeEventListener("open-preferences", prefs); window.removeEventListener("keydown", keyboard); };
+  }, [location.pathname, location.search, vault, inspector.context]);
+
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
   return (
-    <div className={`app-shell${activeSection?.children.length ? " has-local-nav" : ""}`}>
+    <div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorVisible && !utilityWindow && !detached ? " inspector-visible" : ""}${!sidebarVisible ? " sidebar-hidden" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">跳到主要内容</a>
-      <header className="global-header">
-        <div className="global-header-inner">
-          <div className="global-identity">
-            <NavLink to="/" className="global-brand" translate="no" aria-label="The Way Here 首页"><span>The Way</span><b>Here</b></NavLink>
-            {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(knowledgeBaseId) => void switchKnowledgeBase(knowledgeBaseId)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
-          </div>
-          <nav id="main-navigation" className="global-navigation" aria-label="主要导航">
-            {navigation.map((item) => {
-              const active = mainItemActive(item);
-              return <NavLink key={item.to} to={item.to} end={item.to === "/"} className={active ? "active" : ""}>{item.label}</NavLink>;
-            })}
-          </nav>
-          <SearchField className="global-search" formId="global-search" onSubmit={submitSearch} name="global-search" autoComplete="off" aria-label="搜索生活记录与已有理解" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索记录与已有理解…" />
-        </div>
+      <header className="desktop-titlebar">
+        <div className="desktop-window-space" aria-hidden="true" />
+        <button className="desktop-icon" aria-label="切换侧边栏" title="侧边栏" onClick={() => setSidebarVisible((value) => !value)}><Icon name="library" size={17} /></button>
+        <button className="desktop-icon" aria-label="返回" onClick={() => navigate(-1)}><Icon name="back" size={16} /></button>
+        <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
+        <button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={() => setSearchOpen(true)}><Icon name="search" size={17} /></button>
+        <button className="desktop-icon" aria-label="在独立窗口打开" title="在独立窗口打开 ⌘↩" onClick={() => { const params = new URLSearchParams(location.search); params.set("detached", "true"); void openDesktopWindow(`${location.pathname}?${params}`); }}><Icon name="arrow" size={17} /></button>
+        <button className={`desktop-icon${inspectorVisible ? " selected" : ""}`} aria-label="切换 AI 协作面板" aria-pressed={inspectorVisible} title="AI 协作面板 ⌘⌥I" onClick={() => setInspectorVisible((value) => !value)}><Icon name="spark" size={17} /></button>
       </header>
-      {activeSection && activeSection.children.length > 0 ? <div className="local-navigation">
-        <div className="local-navigation-inner">
-          <nav id="local-navigation-links" aria-label={`${activeSection.label}分类`}>
-            {activeSection.children.map((child, index) => <React.Fragment key={child.to}>
-              <NavLink to={child.to} end={child.to === "/knowledge"} aria-current={childItemActive(child) ? "page" : undefined} className={`${childItemActive(child) ? "active" : ""}${index === 0 ? " root-tab" : ""}`}>{child.label}</NavLink>
-              {index === 0 ? <span className="local-navigation-separator" aria-hidden="true" /> : null}
-            </React.Fragment>)}
-          </nav>
-        </div>
-      </div> : null}
+      <aside className="desktop-sidebar" aria-label="侧边栏">
+        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=cream" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
+        {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
+        <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航">
+          {navigation.map((item) => <React.Fragment key={item.to}>
+            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{item.label}</span>{item.to === "/questions" && topicCount > 0 ? <small className="desktop-nav-badge">{topicCount}</small> : null}</NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? "收起已有理解" : "展开已有理解"} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
+            {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{child.label}</NavLink>)}</div> : null}
+          </React.Fragment>)}
+        </nav>
+        <div className="desktop-sidebar-bottom"><button onClick={openCapture}><Icon name="plus" size={16} />随手记<kbd>⌘N</kbd></button><button onClick={openPreferences}><Icon name="controls" size={16} />偏好设置<kbd>⌘,</kbd></button><span><i />{vault ? "本机知识库" : "正在连接本机…"}</span></div>
+      </aside>
       <main className="main-area" id="main-content" tabIndex={-1}>
         {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />正在打开「{switchingKnowledgeBaseName}」…</div> : null}
         {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{knowledgeBaseError}</div> : null}
@@ -207,6 +271,9 @@ export function AppShell({ revision }: { revision: number }) {
             onOpenPersonal={() => personalKnowledgeBase && void switchKnowledgeBase(personalKnowledgeBase.id)}
           /> : null}
           <Routes>
+            <Route path="/conversation" element={<ConversationWindow revision={revision} />} />
+            <Route path="/preferences" element={<Preferences revision={revision} vault={vault} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} onSwitch={(id) => void switchKnowledgeBase(id)} />} />
+            <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">正在打开知识库…</p>} />
             <Route path="/" element={<Today revision={revision} />} />
             <Route path="/questions" element={<QuestionsHub revision={revision} />} />
             <Route path="/sources" element={<OrganizedSources revision={revision} />} />
@@ -227,6 +294,8 @@ export function AppShell({ revision }: { revision: number }) {
           </Routes>
         </div>
       </main>
+      {!utilityWindow && !detached ? <div className="desktop-inspector" hidden={!inspectorVisible}><AgentDock revision={revision} context={inspector.context} /></div> : null}
+      {searchOpen ? <CommandPalette routes={navigation.flatMap(item => [{ title: item.label, to: item.to }, ...item.children.map(child => ({ title: child.label, to: child.to }))])} onClose={() => setSearchOpen(false)} onCapture={openCapture} onSettings={openPreferences} /> : null}
       {createKnowledgeBaseOpen ? <CreateKnowledgeBaseDialog onClose={() => setCreateKnowledgeBaseOpen(false)} onSubmit={createKnowledgeBase} /> : null}
       {deleteKnowledgeBaseTarget ? <ConfirmDeleteDialog
         title="删除这个知识库？"

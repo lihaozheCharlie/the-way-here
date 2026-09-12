@@ -10,15 +10,12 @@ import re
 import tempfile
 from pathlib import Path
 
-from vault_context import KNOWLEDGE_BASE_ROOT
+from vault_context import KNOWLEDGE_BASE_ROOT, SOURCES_ROOT
+from source_access import diary_files, read_source
 
 
 ROOT = KNOWLEDGE_BASE_ROOT
-DIARY_DIRS = [
-    ROOT / "原始知识库" / "日记2013-2017",
-    ROOT / "原始知识库" / "日记2018-2023",
-    ROOT / "原始知识库" / "日记2024至今",
-]
+
 WIKI_ENTITY_ROOT = ROOT / "wiki" / "07 人物与城市"
 WIKI_PERSON_ROOT = WIKI_ENTITY_ROOT / "人物"
 OUT = ROOT / "wiki" / "08 来源索引" / "日记实体抽取索引.md"
@@ -116,7 +113,7 @@ def clean_person_candidate(name: str, title: str) -> str | None:
 
 
 def scan_diary(path: Path, existing_people: set[str]):
-    text = strip_frontmatter(path.read_text(encoding="utf-8"))
+    text = strip_frontmatter(read_source(path))
     buckets = {
         "known_people": collections.defaultdict(list),
         "candidate_people": collections.defaultdict(list),
@@ -283,9 +280,7 @@ def main() -> int:
         "org_projects": collections.defaultdict(list),
         "wikilinks": collections.defaultdict(list),
     }
-    diaries = []
-    for d in DIARY_DIRS:
-        diaries.extend(sorted(p for p in d.glob("*.md") if p.is_file()))
+    diaries = list(diary_files())
 
     for path in diaries:
         merge(all_buckets, scan_diary(path, existing_people))
@@ -313,9 +308,7 @@ def main() -> int:
         f"end: {end_date}",
         "location: []",
         "source:",
-        '  - "原始知识库/日记2013-2017"',
-        '  - "原始知识库/日记2018-2023"',
-        '  - "原始知识库/日记2024至今"',
+        f'  - "{SOURCES_ROOT.relative_to(ROOT).as_posix()}"',
         "---",
         "# 日记实体抽取索引",
         "",

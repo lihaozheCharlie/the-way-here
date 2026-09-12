@@ -1,14 +1,15 @@
 import { NavLink } from "react-router-dom";
 import type { VaultInfo } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
-import { Icon, Loading } from "../../shared/ui";
+import { Empty, Icon, Loading } from "../../shared/ui";
 import { UnderstandingGlyph } from "../knowledge/UnderstandingLayout";
 
 export function KnowledgeHome({ revision }: { revision: number }) {
-  const { data: vault, loading } = useApi<VaultInfo>("/api/vault", revision);
-  if (loading || !vault) return <Loading label="正在整理已有理解" />;
+  const { data: vault, loading, error } = useApi<VaultInfo>("/api/vault", revision);
+  if (loading) return <Loading label="正在整理已有理解" />;
+  if (error || !vault) return <Empty>{error || "暂时无法读取知识库，请刷新重试。"}</Empty>;
   const selfCount = (vault.categories["personal-lines"] || 0) + (vault.categories.cycles || 0) + (vault.categories.systems || 0) + (vault.categories["mental-models"] || 0);
   const lifeCount = (vault.categories["life-stages"] || 0) + (vault.categories.events || 0);
   const letterCount = vault.categories.letters || 0;
@@ -36,6 +37,6 @@ export function KnowledgeHome({ revision }: { revision: number }) {
       <div><h2>这些理解会继续变化</h2><p>新的生活记录可能补充证据，也可能让旧判断失效。你随时可以打开一条理解，说明哪里不像你。</p></div>
       <button type="button" onClick={() => openContextAgent({ mode: "read" })}><Icon name="spark" size={16} />一起核对</button>
     </section>
-    <ContextualAgentDock revision={revision} context={{ scope: "已有理解", title: "已有理解总览", summary: `当前有 ${vault.pageCount} 条已有理解，来自 ${vault.sourceCount} 份生活记录。`, defaultMode: "read", launcherLabel: "一起往下想", suggestions: ["当前哪些理解证据最充分，哪些地方还需要我亲自补充？", "结合最近更新的内容，现在最值得继续聊什么？"] }} />
+    <PageAgentContext context={{ scope: "已有理解", title: "已有理解总览", summary: `当前有 ${vault.pageCount} 条已有理解，来自 ${vault.sourceCount} 份生活记录。`, defaultMode: "read", suggestions: ["当前哪些理解证据最充分，哪些地方还需要我亲自补充？", "结合最近更新的内容，现在最值得继续聊什么？"] }} />
   </div>;
 }

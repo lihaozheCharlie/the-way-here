@@ -224,7 +224,7 @@ export function AiConfiguration({ id, agent }: { id: string; agent: AgentSetting
         <span className="ai-runtime-mark"><Icon name="spark" size={16} /></span><span><b>Codex</b><small>使用本机 Codex 登录与模型能力</small></span><i>{agent.codexRuntime.available ? "已就绪" : "不可用"}</i>
       </button>
       <button type="button" role="radio" aria-checked={!codexSelected} className={!codexSelected ? "active" : ""} onClick={() => agent.selectRuntime("pi")}>
-        <span className="ai-runtime-mark"><Icon name="controls" size={16} /></span><span><b>第三方模型</b><small>由 pi-agent 连接模型厂商官方服务</small></span><i>{agent.configuredApiKey ? "已配置" : "待配置"}</i>
+        <span className="ai-runtime-mark"><Icon name="controls" size={16} /></span><span><b>第三方模型</b><small>使用你选择的模型服务和密钥</small></span><i>{agent.configuredApiKey ? "已配置" : "待配置"}</i>
       </button>
     </div>
 
@@ -234,7 +234,7 @@ export function AiConfiguration({ id, agent }: { id: string; agent: AgentSetting
       <label htmlFor={`${id}-codex-effort`}><span>思考深度</span><SelectInput id={`${id}-codex-effort`} value={agent.codexEfforts.includes(draft.codex.effort) ? draft.codex.effort : agent.codexEfforts[0]} onChange={(event) => agent.setCodexEffort(event.target.value as AgentReasoningEffort)}>{agent.codexEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</SelectInput></label>
       {!agent.codexRuntime.available && <p className="ai-config-warning">{agent.codexRuntime.reason || "本机没有可用的 Codex。"}</p>}
     </div> : <div className="ai-config-fields ai-config-fields--third-party">
-      <div className="ai-config-intro"><b>第三方请求由 pi-agent 执行</b><span>选择厂商即可使用官方服务地址，密钥只保存在本机。</span></div>
+      <div className="ai-config-intro"><b>连接你的 AI 服务</b><span>选择厂商即可使用官方服务地址，密钥只保存在本机。</span></div>
       <label className="wide" htmlFor={`${id}-provider`}><span>模型厂商</span><SelectInput id={`${id}-provider`} value={agent.selectedProvider.id} onChange={(event) => agent.selectProvider(event.target.value)}>{agent.providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.displayName} · {provider.description}</option>)}</SelectInput></label>
       <section className="wide ai-model-bundle" aria-labelledby={`${id}-model-bundle-label`}>
         <header><span id={`${id}-model-bundle-label`}>模型与思考</span><small>模型不同，可选的思考深度也不同</small></header>
@@ -247,7 +247,7 @@ export function AiConfiguration({ id, agent }: { id: string; agent: AgentSetting
     </div>}
 
     <footer className="ai-config-footer">
-      <span><Icon name="spark" size={14} /><b>一处设置，所有 Agent 入口共用</b><small>{agent.dirty ? "有更改尚未应用" : agent.saved ? "全局设置已更新" : "已使用当前全局设置"}</small></span>
+      <span><Icon name="spark" size={14} /><b>一处设置，所有 AI 对话共用</b><small>{agent.dirty ? "有更改尚未应用" : agent.saved ? "全局设置已更新" : "已使用当前全局设置"}</small></span>
       <button type="button" onClick={() => void agent.save().catch(() => undefined)} disabled={agent.loading || agent.saving || !agent.dirty}>{agent.saving ? "正在应用…" : "应用到所有入口"}</button>
     </footer>
     {(agent.error || agent.loadError) && <p className="ai-config-error" role="alert">{agent.error || agent.loadError}</p>}

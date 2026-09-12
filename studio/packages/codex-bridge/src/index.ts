@@ -50,7 +50,7 @@ export class CodexAppServer extends EventEmitter {
   }
 
   static isAvailable(command = "codex"): boolean {
-    return spawnSync(resolveExecutable(command), ["--version"], { stdio: "ignore" }).status === 0;
+    return spawnSync(resolveExecutable(command), ["--version"], { stdio: "ignore", timeout:5_000 }).status === 0;
   }
 
   async start(): Promise<void> {
@@ -67,17 +67,21 @@ export class CodexAppServer extends EventEmitter {
     const lines = readline.createInterface({ input: this.process.stdout });
     lines.on("line", (line) => this.handleLine(line));
     this.process.stderr.on("data", (chunk) => this.emit("stderr", chunk.toString()));
-    this.process.on("exit", (code, signal) => {
-      const error = new Error(`Codex app-server 已退出（code=${code ?? "null"}, signal=${signal ?? "null"}）`);
-      for (const pending of this.pending.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(error);
-      }
+    const child = this.process;
+    const fail = (error: Error) => {
+      if (this.process !== child) return false;
+      for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(error); }
       this.pending.clear();
       this.process = undefined;
       this.ready = undefined;
-      this.emit("exit", { code, signal });
+      return true;
+    };
+    child.on("error", (error) => { fail(error); });
+    child.stdin.on("error", (error) => { if (fail(error)) child.kill("SIGTERM"); });
+    child.on("exit", (code, signal) => {
+      if (fail(new Error(`Codex app-server 已退出（code=${code ?? "null"}, signal=${signal ?? "null"}）`))) this.emit("exit", { code, signal });
     });
+    try {
     await this.request("initialize", {
       clientInfo: {
         name: "the_way_here",
@@ -86,6 +90,11 @@ export class CodexAppServer extends EventEmitter {
       },
     });
     this.notify("initialized", {});
+    } catch (error) {
+      fail(error instanceof Error ? error : new Error(String(error)));
+      child.kill("SIGTERM");
+      throw error;
+    }
   }
 
   async request<T = any>(method: string, params: Record<string, unknown>, timeoutMs = 30_000): Promise<T> {
@@ -137,13 +146,13 @@ export class CodexAppServer extends EventEmitter {
     await this.request("thread/resume", { threadId, cwd });
   }
 
-  async startTurn(threadId: string, prompt: string, cwd: string, options: { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean } = {}): Promise<string> {
+  async startTurn(threadId: string, prompt: string, cwd: string, options: { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean; workspaceWrite?: boolean } = {}): Promise<string> {
     const response = await this.request<{ turn: { id: string } }>("turn/start", {
       threadId,
       cwd,
       ...(options.model ? { model: options.model } : {}),
       ...(options.effort ? { effort: options.effort } : {}),
-      ...(options.readOnly ? { sandboxPolicy: { type: "readOnly" }, approvalPolicy: "never" } : {}),
+      ...(options.readOnly ? { sandboxPolicy: { type: "readOnly" }, approvalPolicy: "never" } : options.workspaceWrite ? { sandboxPolicy: { type: "workspaceWrite", writableRoots: [], excludeTmpdirEnvVar: true, excludeSlashTmp: true }, approvalPolicy: "never" } : {}),
       input: [{ type: "text", text: prompt }, ...(options.imagePaths || []).map((imagePath) => ({ type: "localImage", path: imagePath }))],
     });
     return response.turn.id;

@@ -21,15 +21,11 @@ from typing import Iterable
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(WORKSPACE_ROOT / "knowledge-engine" / "tools"))
-from vault_context import KNOWLEDGE_BASE_ROOT  # noqa: E402
+from vault_context import KNOWLEDGE_BASE_ROOT, SOURCES_ROOT  # noqa: E402
+from source_access import source_files, read_source, REFERENCE_ROOT, SourceUnavailable  # noqa: E402
 
 ROOT = KNOWLEDGE_BASE_ROOT
-DEFAULT_RAW_DIRS = [
-    "原始知识库/日记2013-2017",
-    "原始知识库/日记2018-2023",
-    "原始知识库/日记2024至今",
-    "原始知识库/对话分析",
-]
+DEFAULT_RAW_DIRS = [str(SOURCES_ROOT / name) for name in ("日记2013-2017", "日记2018-2023", "日记2024至今", "对话分析")] + [str(REFERENCE_ROOT)]
 GENERIC_ALIASES = {
     "老师",
     "领导",
@@ -212,10 +208,17 @@ def collect_for_person(name: str, aliases: list[str], raw_dirs: list[Path], max_
     evidence: list[Evidence] = []
     seen: set[tuple[str, str]] = set()
     for raw_dir in raw_dirs:
+        if not raw_dir.is_absolute():
+            candidates = [WORKSPACE_ROOT / raw_dir, ROOT / raw_dir]
+            raw_dir = next((candidate for candidate in candidates if candidate.exists()), ROOT / raw_dir)
         if not raw_dir.exists():
             continue
-        for path in sorted(raw_dir.rglob("*.md")):
-            text = path.read_text(encoding="utf-8", errors="ignore")
+        raw_dir = raw_dir.resolve()
+        for path in source_files(raw_dir):
+            try:
+                text = read_source(path)
+            except SourceUnavailable:
+                continue
             body = strip_generated_sections(text)
             matches_in_doc = find_matches(body, names)
             if not matches_in_doc:
@@ -269,6 +272,8 @@ def collect_targets(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     if args.page:
         return [person_from_page(Path(args.page))]
     people_root = Path(args.people_root)
+    if not people_root.is_absolute():
+        people_root = ROOT / people_root
     targets: list[tuple[str, list[str]]] = []
     for page in sorted(people_root.rglob("*.md")):
         if page.name in {"自己.md", "同学与同辈总览.md"}:

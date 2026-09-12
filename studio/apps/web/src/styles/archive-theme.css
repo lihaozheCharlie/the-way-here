@@ -30,16 +30,6 @@
 html { scroll-padding-top: 126px; }
 body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui); }
 ::selection { color: #1f3535; background: #cfe2df; }
-
-.global-header {
-  height: 64px;
-  background: var(--paper);
-  border-bottom-color: var(--line);
-}
-.global-header-inner { width: min(1600px, calc(100% - 96px)); position: relative; gap: 22px; }
-.global-brand { gap: 5px; font-family: var(--font-display); font-size: 19px; letter-spacing: -.025em; }
-.global-brand span { font-weight: 500; }
-.global-brand b { color: inherit; font-weight: 500; }
 .global-kb-switcher {
   width: 156px;
   height: 28px;
@@ -53,10 +43,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .global-kb-switcher:hover { background: var(--surface-subtle); }
 .global-kb-switcher:focus-within { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgba(87, 138, 131, .14); }
 .global-kb-switcher select option[disabled] { color: var(--line-strong); }
-.global-navigation { width: max-content; position: absolute; left: 50%; justify-content: center; gap: 2px; margin: 0; transform: translateX(-50%); }
-.global-navigation > a { min-height: 64px; padding: 0 10px; color: var(--muted); font-size: 14px; }
-.global-navigation > a.active { color: var(--ink); font-weight: 600; }
-.global-navigation > a.active::after { right: 14px; left: 14px; height: 1px; background: var(--accent-primary); }
 .global-search {
   width: 256px;
   min-height: 36px;
@@ -155,7 +141,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 
 /* Questions · ask one thing at a time */
 .questions-hub { display: grid; gap: 28px; }
-.home-overview .context-agent-launcher { display: none; }
 
 /* Knowledge overview and collections */
 
@@ -272,13 +257,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .pane-collapse-button { color: var(--muted); background: var(--paper); border-color: var(--line); border-radius: 4px; }
 
 /* Floating Agent dialog — compact conversation first, controls second. */
-.context-agent-launcher { min-height: 42px; gap: 7px; padding: 7px 14px 7px 9px; color: #fff; background: var(--ink); border: 0; border-radius: 999px; box-shadow: 0 12px 28px rgba(39, 62, 61, .22); }
-.context-agent-launcher > .icon { box-sizing: content-box; padding: 4px; background: rgba(255, 255, 255, .12); border-radius: 50%; }
-.context-agent-launcher b { font-size: 12px; font-weight: 650; }
-.context-agent-launcher:hover { background: #344651; box-shadow: 0 16px 34px rgba(39, 62, 61, .25); }
-.context-agent-launcher.compact { width: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
 .context-agent-layer { --muted: #5f706f; --faint: #73817f; }
-.context-agent-backdrop { background: rgba(30, 43, 47, .22); }
 .context-agent-panel { width: min(520px, calc(100vw - 40px)); height: min(760px, calc(100dvh - 32px)); position: absolute; inset: auto 16px 16px auto; overflow: hidden; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 24px 64px rgba(39, 62, 61, .18); animation: context-panel-in .24s var(--ease) both; }
 @keyframes context-panel-in { from { opacity: .4; transform: translateY(18px) scale(.985); } }
 .context-agent-panel :focus-visible { outline-color: var(--accent-primary); outline-offset: 2px; }
@@ -318,16 +297,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .context-agent-attached-context p { display: grid; gap: 3px; margin: 0; padding-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.65; }
 .context-agent-attached-context p + p { border-top: 1px solid var(--line); }
 .context-agent-attached-context p > b { color: var(--ink); font-size: 10px; font-weight: 680; }
-.context-agent-options { position: relative; flex: none; margin: 0; border: 0; }
-.context-agent-options > summary { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; color: var(--muted); list-style: none; border-radius: 8px; cursor: pointer; }
-.context-agent-options > summary::-webkit-details-marker { display: none; }
-.context-agent-options > summary:hover, .context-agent-options[open] > summary { color: var(--accent-primary); background: var(--surface-tinted); }
-.context-agent-options[open] > summary .icon { transform: none; }
-.context-agent-settings-popover { width: min(440px, calc(100vw - 40px)); max-height: min(520px, calc(100dvh - 210px)); position: absolute; right: 0; bottom: 40px; z-index: 7; overflow: auto; padding: 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 18px 48px rgba(39, 62, 61, .2); }
-.context-agent-settings-popover .ai-configuration { margin: 0; padding: 10px; background: var(--surface-subtle); border: 0; border-radius: 8px; }
-.context-agent-settings-popover .ai-runtime-choices, .context-agent-settings-popover .ai-config-fields, .context-agent-settings-popover .ai-model-bundle > div { grid-template-columns: minmax(0, 1fr); }
-.context-agent-settings-popover .ai-runtime-choices > button { min-height: 64px; }
-.context-agent-settings-popover .ai-configuration label, .context-agent-settings-popover .ai-config-intro { grid-column: 1 / -1; }
 .context-composer-shell { min-height: 54px; display: flex; align-items: flex-end; gap: 8px; padding: 7px 7px 7px 12px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 14px; transition: border-color .16s var(--ease), box-shadow .16s var(--ease); }
 .context-composer-shell > textarea { min-width: 0; width: 100%; min-height: 38px; max-height: 200px; padding: 7px 2px 6px 0; overflow-y: hidden; resize: none; scrollbar-gutter: stable; color: var(--ink); background: transparent; border: 0; outline: 0; font-size: 14px; line-height: 1.65; caret-color: var(--accent-primary); }
 .context-composer-shell > textarea::placeholder { color: var(--faint); opacity: 1; }
@@ -429,7 +398,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
   .context-agent-panel { width: 100vw; height: 100dvh; inset: 0; border: 0; border-radius: 0; box-shadow: none; }
   .context-agent-context-chip { margin-right: 14px; margin-left: 14px; }
   .context-agent-compose-body, .context-run-body { padding-right: 14px; padding-left: 14px; }
-  .context-agent-settings-popover { width: calc(100vw - 28px); right: -1px; }
 }
 
 @media (pointer: coarse) {
@@ -439,7 +407,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 @keyframes archive-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 980px) {
-  .global-header-inner, .local-navigation-inner, .page-frame { width: calc(100% - 40px); }
+  .local-navigation-inner, .page-frame { width: calc(100% - 40px); }
   .global-search { width: 220px; }
   .knowledge-home .page-hero { grid-template-columns: minmax(0, 1fr); }
   .knowledge-home .page-hero-aside { min-width: 0; align-items: start; padding: 20px 0 0; border-top: 1px solid var(--line); border-left: 0; }
@@ -449,14 +417,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 }
 
 /* 2026-08 conversational entry redesign — compact memory-led pages from the supplied prototype. */
-.global-header-inner {
-  display: grid;
-  grid-template-columns: minmax(280px, 1fr) auto minmax(280px, 1fr);
-  align-items: center;
-  gap: 24px;
-}
-.global-identity { min-width: 0; display: flex; align-items: center; gap: 16px; }
-.global-navigation { width: auto; position: static; justify-self: center; transform: none; }
 .global-search { justify-self: end; }
 
 .global-kb-switcher {
@@ -629,7 +589,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .home-opener-foot > span { color: #687b75; font-size: 11px; }
 .home-opener-cycle { width: max-content; min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0; color: #2e665e; background: transparent; border: 0; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
 .home-opener-cycle:hover { color: #173f3b; }
-.home-overview .context-agent-launcher { display: none; }
 
 .questions-hub { width: min(var(--content-wide), 100%); gap: clamp(38px, 5vw, 56px); margin: 0 auto; padding: 35px 0 54px; }
 .questions-intro h1 { max-width: none; margin: 0; font-family: var(--font-display); font-size: var(--type-primary-title); font-weight: 500; line-height: 1.48; letter-spacing: -.02em; white-space: nowrap; }
@@ -682,16 +641,10 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .questions-import p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .questions-import > button { white-space: nowrap; background: #2e665e; border-color: #2e665e; border-radius: 999px; }
 .questions-import > button:hover { background: #214f49; }
-.questions-hub .context-agent-launcher { display: none; }
 
 @media (max-width: 1120px) {
   html { scroll-padding-top: 168px; }
-  .global-header { height: 106px; }
-  .global-header-inner { height: 106px; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); grid-template-rows: 56px 50px; gap: 0 24px; }
-  .global-identity { grid-column: 1; grid-row: 1; }
   .global-search { width: 100%; grid-column: 2; grid-row: 1; }
-  .global-navigation { max-width: 100%; grid-column: 1 / -1; grid-row: 2; justify-self: stretch; justify-content: center; overflow-x: auto; }
-  .global-navigation > a { min-height: 50px; }
   .local-navigation { top: 106px; }
   .knowledge-base-transition { inset: 106px 0 0; }
   .knowledge-home .page-hero { grid-template-columns: minmax(0, 1fr); }
@@ -704,13 +657,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 
 @media (max-width: 700px) {
   html { scroll-padding-top: 216px; }
-  .global-header { height: 158px; }
-  .global-header-inner { width: calc(100% - 32px); height: 158px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px 50px 52px; }
-  .global-identity { grid-column: 1; grid-row: 1; gap: 10px; }
-  .global-brand { font-size: 17px; }
   .global-kb-trigger { max-width: min(190px, 52vw); padding: 0 11px; }
-  .global-navigation { grid-column: 1; grid-row: 2; justify-content: flex-start; }
-  .global-navigation > a { padding: 0 9px; font-size: 13px; }
   .global-search { grid-column: 1; grid-row: 3; align-self: center; }
   .local-navigation { top: 158px; }
   .knowledge-base-transition { inset: 158px 0 0; }
@@ -747,7 +694,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 }
 
 @media (max-width: 440px) {
-  .global-brand { display: none; }
   .global-kb-trigger { max-width: calc(100vw - 32px); }
   .global-kb-menu { width: auto; position: fixed; top: 54px; right: 16px; left: 16px; }
   .home-intro-main { display: grid; }
@@ -758,7 +704,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 }
 
 @media (pointer: coarse) {
-  .global-kb-trigger, .global-navigation > a, .questions-concerns button, .questions-filters > button, .home-opener-cycle, .home-opener-starters > button { min-height: 44px; }
+  .global-kb-trigger, .questions-concerns button, .questions-filters > button, .home-opener-cycle, .home-opener-starters > button { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -22,6 +22,10 @@ description: "编排个人 wiki 摄取，适用于宽泛运行、变更日记、
 
 当 `update` 涉及个人主线、人生阶段、事件复盘、循环、思维模型、现实系统、城市、关系综合或近况回信时，由各领域负责人按 `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` 选择视角。编排器不得为整篇来源指定一个统一人物：同一来源进入不同层可以使用不同视角，来源索引和中性事实始终不使用。
 
+## 连接目录的兼容契约
+
+目标包含 `外部来源/` 引用或目录同步时，先读取 `references/linked-sources.md`，再进入上面的日记、冷启或其他来源模式。读取引用本身不算读取原文；所有下游负责人使用已经核对的原文和稳定链接目标。
+
 ## 分发负责人
 
 - 个人主线、人生阶段、事件/决策、反复循环、思维模型和金句集锦：`knowledge-engine/skills/build/life-review/SKILL.md`

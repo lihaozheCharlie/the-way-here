@@ -1,6 +1,16 @@
 import { type AgentRuntimeConfig, type AgentRuntimeDescriptor } from "./agents.js";
 
+export const EXTERNAL_SOURCE_FOLDER = "外部来源";
+
+export interface SourceConnection {
+  id: string;
+  name: string;
+  path: string;
+  autoBuild: boolean;
+}
+
 export interface VaultConfig {
+  sourceConnections?: SourceConnection[];
   version: number;
   name: string;
   knowledgeBaseId: string;

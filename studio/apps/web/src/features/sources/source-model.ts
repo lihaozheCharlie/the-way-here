@@ -1,7 +1,6 @@
 import type { SourceImportBatch, WikiPageSummary } from "@the-way-here/shared";
 
 export type SourceRecordType = "notes" | "ai" | "bill" | "photos";
-export type ImportSelectionKind = "file" | "files" | "folder" | "archive";
 export type SourceBuildRecord = { batch: SourceImportBatch; file: SourceImportBatch["files"][number] };
 export type SourceBuildPresentation = {
   label: string;
@@ -75,13 +74,6 @@ export function countRecentSources(pages: WikiPageSummary[], now = new Date()): 
     const modified = new Date(page.modifiedAt).getTime();
     return Number.isFinite(modified) && modified >= weekAgo && modified <= now.getTime();
   }).length;
-}
-
-export function detectImportSelectionKind(paths: string[]): ImportSelectionKind {
-  if (paths.some((path) => path.replace(/\\/g, "/").includes("/"))) return "folder";
-  if (paths.length > 1) return "files";
-  if (paths.some((path) => /\.zip$/i.test(path))) return "archive";
-  return "file";
 }
 
 export function sourceBuildRecords(batches: SourceImportBatch[]): SourceBuildRecord[] {

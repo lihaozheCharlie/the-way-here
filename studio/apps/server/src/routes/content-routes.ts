@@ -11,8 +11,9 @@ import { KnowledgeBaseRequestError } from "../modules/knowledge-bases/knowledge-
 import { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
 import { PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
 
-export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, imports: ImportStore, runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
-  const writer = new PageWriter(knowledge);
+export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, _imports: ImportStore, runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
+  const contentWorkspace = () => ({ vaultRoot: knowledge.vaultRoot, index: knowledge.index, events: knowledge.events });
+  const writer = () => new PageWriter(contentWorkspace());
   app.get("/api/health", async () => ({ ok: true, vaultRoot: knowledge.vaultRoot, indexedAt: knowledge.index.lastIndexedAt }));
   app.get("/api/vault", async () => knowledge.vaultInfo(await runtimeCatalog()));
   app.post<{ Body: { name?: string } }>("/api/vault", async (request, reply) => {
@@ -56,15 +57,26 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
 
   app.get("/api/sources/folders", async () => listSourceFolders(knowledge));
   app.post<{ Body: { title?: string; folder?: string } }>("/api/sources", async (request, reply) => handleContent(reply, async () => {
-    const page = await writer.createSource(request.body?.title, request.body?.folder);
-    if (page) await imports.trackCreatedSource(page);
+    const bound = contentWorkspace();
+    const page = await new PageWriter(bound).createSource(request.body?.title, request.body?.folder);
+    if (page) await new ImportStore(bound).trackCreatedSource(page);
     return page;
   }, 201));
-  app.delete<{ Body: { pageId?: string; expectedModifiedAt?: string } }>("/api/sources/file", async (request, reply) => handleContent(reply, () => writer.deleteSource(request.body?.pageId, request.body?.expectedModifiedAt)));
-  app.delete<{ Body: { folder?: string; expectedFileCount?: number } }>("/api/sources/folder", async (request, reply) => handleContent(reply, () => writer.deleteSourceFolder(request.body?.folder, request.body?.expectedFileCount)));
-  app.post<{ Body: { pageId?: string } }>("/api/files/open-in-editor", async (request, reply) => handleContent(reply, () => writer.openInEditor(request.body?.pageId)));
-  app.post<{ Body: { pageId?: string; fileName?: string; expectedModifiedAt?: string } }>("/api/pages/rename", async (request, reply) => handleContent(reply, () => writer.rename(request.body?.pageId, request.body?.fileName, request.body?.expectedModifiedAt)));
-  app.put<{ Params: { "*": string }; Body: { markdown?: string; expectedModifiedAt?: string } }>("/api/pages/*", async (request, reply) => handleContent(reply, () => writer.save(decodeURIComponent(request.params["*"]), request.body?.markdown, request.body?.expectedModifiedAt)));
+  app.post<{ Body: { title?: string; markdown?: string; knowledgeBaseId?: string } }>("/api/capture", async (request, reply) => handleContent(reply, async () => {
+    const body = request.body;
+    if (!body || typeof body.title !== "string" || body.title.length > 180 || /[\\/]/.test(body.title) || typeof body.markdown !== "string" || !body.markdown.trim() || body.markdown.length > 200_000) return reply.code(400).send({ error: "请填写有效的记录标题和正文" });
+    if (body.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) return reply.code(409).send({ error: "知识库已经切换，请重新打开随手记后保存" });
+    const boundWorkspace = contentWorkspace();
+    const boundWriter = new PageWriter(boundWorkspace);
+    const page = await boundWriter.createSource(body.title, "随手记", body.markdown);
+    if (page) await new ImportStore(boundWorkspace).trackCreatedSource(page);
+    return page;
+  }, 201));
+  app.delete<{ Body: { pageId?: string; expectedModifiedAt?: string } }>("/api/sources/file", async (request, reply) => handleContent(reply, () => writer().deleteSource(request.body?.pageId, request.body?.expectedModifiedAt)));
+  app.delete<{ Body: { folder?: string; expectedFileCount?: number } }>("/api/sources/folder", async (request, reply) => handleContent(reply, () => writer().deleteSourceFolder(request.body?.folder, request.body?.expectedFileCount)));
+  app.post<{ Body: { pageId?: string } }>("/api/files/open-in-editor", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId)));
+  app.post<{ Body: { pageId?: string; fileName?: string; expectedModifiedAt?: string } }>("/api/pages/rename", async (request, reply) => handleContent(reply, () => writer().rename(request.body?.pageId, request.body?.fileName, request.body?.expectedModifiedAt)));
+  app.put<{ Params: { "*": string }; Body: { markdown?: string; expectedModifiedAt?: string } }>("/api/pages/*", async (request, reply) => handleContent(reply, () => writer().save(decodeURIComponent(request.params["*"]), request.body?.markdown, request.body?.expectedModifiedAt)));
 
   app.get("/api/build/skills", async () => listBuildSkills(knowledge.vaultRoot, knowledge.index));
   app.get("/api/build/skill-tree", async () => readSkillTree(knowledge.vaultRoot, knowledge.index));

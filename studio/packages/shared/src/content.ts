@@ -32,6 +32,7 @@ export interface PageSection {
 }
 
 export interface WikiPageSummary {
+  externalSource?: { connectionId: string; originalPath: string; status: "available" | "unavailable"; sha256?: string };
   id: string;
   relativePath: string;
   title: string;

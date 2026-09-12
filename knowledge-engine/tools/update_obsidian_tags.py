@@ -7,7 +7,8 @@ import re
 from pathlib import Path
 from typing import Iterable
 
-from vault_context import KNOWLEDGE_BASE_ROOT
+from vault_context import KNOWLEDGE_BASE_ROOT, SOURCES_ROOT, WORKSPACE_ROOT
+from source_access import REFERENCE_ROOT
 
 
 ROOT = KNOWLEDGE_BASE_ROOT
@@ -449,6 +450,9 @@ def all_markdown_files() -> list[Path]:
         p
         for p in ROOT.rglob("*.md")
         if not any(part in skipped for part in p.relative_to(ROOT).parts)
+        and not p.is_relative_to(REFERENCE_ROOT)
+        and not p.is_symlink()
+        and p.resolve().is_relative_to(ROOT)
     )
 
 
@@ -623,10 +627,12 @@ def basename_from_target(target: str) -> str:
 
 
 def normalize_raw_target(target: str) -> str | None:
-    normalized = target.replace("\\", "/")
-    if "原始知识库/" not in normalized:
-        return None
-    return normalized[normalized.index("原始知识库/") :].rstrip("/")
+    normalized = target.split("|", 1)[0].split("#", 1)[0].replace("\\", "/").strip("/")
+    for prefix in (SOURCES_ROOT.relative_to(WORKSPACE_ROOT).as_posix(), SOURCES_ROOT.relative_to(ROOT).as_posix()):
+        if normalized.startswith(prefix + "/"):
+            value = SOURCES_ROOT.relative_to(ROOT).as_posix() + normalized[len(prefix):]
+            return value[:-3] if value.lower().endswith(".md") else value
+    return None
 
 
 def extract_dates_from_text(text: str) -> list[str]:

@@ -3,6 +3,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import matter from "gray-matter";
 import type { PageCategory, PageSection, VaultConfig, WikiLink, WikiPage, WikiPageSummary } from "@the-way-here/shared";
+import { readExternalSource } from "./external-sources.js";
 import { loadVaultConfig } from "./config.js";
 import { toPosix, withoutExtension, categoryForPath, pageIdForPath } from "./page-paths.js";
 import { stringArray, sourceImportChannel, dateValue, normalizeFrontmatterProperties, plainText, extractTitle, extractSections, extractWikiLinks } from "./markdown.js";
@@ -20,8 +21,10 @@ export class WikiIndex {
   readonly knowledgeBaseId?: string;
   config!: VaultConfig;
   lastIndexedAt = "";
+  private rebuildQueue: Promise<void> = Promise.resolve();
   private pages = new Map<string, InternalPage>();
   private lookup = new Map<string, string[]>();
+  private originalLookup = new Map<string, string[]>();
   private incoming = new Map<string, Set<string>>();
 
   constructor(vaultRoot: string, knowledgeBaseId?: string) {
@@ -29,7 +32,13 @@ export class WikiIndex {
     this.knowledgeBaseId = knowledgeBaseId;
   }
 
-  async rebuild(): Promise<void> {
+  rebuild(): Promise<void> {
+    const next = this.rebuildQueue.then(() => this.rebuildNow());
+    this.rebuildQueue = next.catch(() => undefined);
+    return next;
+  }
+
+  private async rebuildNow(): Promise<void> {
     this.config = await loadVaultConfig(this.vaultRoot, this.knowledgeBaseId);
     const patterns = [
       `${toPosix(this.config.paths.wiki)}/**/*.md`,
@@ -47,7 +56,9 @@ export class WikiIndex {
       const relativePath = toPosix(relativeFile);
       const absolutePath = path.resolve(this.vaultRoot, relativePath);
       if (!absolutePath.startsWith(`${this.vaultRoot}${path.sep}`)) continue;
-      const [content, fileStat] = await Promise.all([readFile(absolutePath, "utf8"), stat(absolutePath)]);
+      const [referenceContent, fileStat] = await Promise.all([readFile(absolutePath, "utf8"), stat(absolutePath)]);
+      const external = await readExternalSource(this.vaultRoot, this.config, relativePath, referenceContent);
+      const content = external?.content ?? referenceContent;
       let parsedContent = content;
       let parsedData: Record<string, any> = {};
       try {
@@ -61,9 +72,10 @@ export class WikiIndex {
       const id = pageIdForPath(relativePath, this.config);
       const body = parsedContent.trim();
       const isSource = !relativePath.startsWith(`${this.config.paths.wiki}/`);
-      const title = isSource ? path.posix.basename(withoutExtension(relativePath)) : extractTitle(body, relativePath);
+      const title = external?.externalSource.originalPath ? path.basename(external.externalSource.originalPath).replace(/\.(md|txt)$/i, "") : isSource ? path.posix.basename(withoutExtension(relativePath)) : extractTitle(body, relativePath);
       pages.set(id, {
         id,
+        externalSource: external?.externalSource,
         relativePath,
         title,
         category: categoryForPath(relativePath, this.config),
@@ -94,8 +106,13 @@ export class WikiIndex {
 
   private rebuildLookups(): void {
     this.lookup.clear();
+    this.originalLookup.clear();
     this.incoming.clear();
     for (const page of this.pages.values()) {
+      if (page.externalSource?.originalPath) {
+        const key = page.externalSource.originalPath.replace(/\.(md|txt)$/i, "").toLocaleLowerCase();
+        this.originalLookup.set(key, [...(this.originalLookup.get(key) || []), page.id]);
+      }
       for (const key of [page.id, withoutExtension(page.relativePath), path.posix.basename(page.id), page.title, ...page.aliases]) {
         const normalized = key.trim().toLocaleLowerCase();
         if (!normalized) continue;
@@ -106,7 +123,7 @@ export class WikiIndex {
     }
     for (const page of this.pages.values()) {
       page.outgoingLinks = page.outgoingLinks.map((link) => {
-        const candidates = this.lookup.get(link.target.toLocaleLowerCase()) || [];
+        const candidates = this.linkCandidates(page, link.target);
         const resolvedId = candidates.length === 1 ? candidates[0] : undefined;
         if (resolvedId) {
           const incoming = this.incoming.get(resolvedId) || new Set<string>();
@@ -116,6 +133,21 @@ export class WikiIndex {
         return { ...link, resolvedId, ambiguous: candidates.length > 1 };
       });
     }
+  }
+
+  private linkCandidates(page: InternalPage, target: string): string[] {
+    const normalized = withoutExtension(toPosix(target.trim()));
+    if (!normalized) return [page.id];
+    if (page.externalSource?.originalPath && !/^(wiki|sources?|原始知识库|app|vault)\//.test(normalized)) {
+      const originalTarget = path.resolve(path.dirname(page.externalSource.originalPath), normalized).replace(/\.(md|txt)$/i, "").toLocaleLowerCase();
+      const original = this.originalLookup.get(originalTarget);
+      if (original?.length) return original;
+    }
+    if (normalized.startsWith(".")) {
+      const relative = path.posix.normalize(path.posix.join(path.posix.dirname(page.relativePath), normalized));
+      return this.lookup.get(relative.toLocaleLowerCase()) || [];
+    }
+    return this.lookup.get(normalized.toLocaleLowerCase()) || [];
   }
 
   list(options: { category?: PageCategory; sources?: boolean } = {}): WikiPageSummary[] {
@@ -143,10 +175,11 @@ export class WikiIndex {
       (_raw, rawTarget: string, rawLabel?: string) => {
         const target = rawTarget.split("#", 1)[0]!.trim();
         const label = (rawLabel || rawTarget.split("#").at(-1) || target).trim();
-        const candidates = this.lookup.get(withoutExtension(target).toLocaleLowerCase()) || [];
+        const candidates = this.linkCandidates(page, target);
         if (candidates.length !== 1) return label;
         const href = candidates[0]!.split("/").map(encodeURIComponent).join("/");
-        return `[${label}](/page/${href})`;
+        const fragment = rawTarget.includes("#") ? `#${encodeURIComponent(rawTarget.slice(rawTarget.indexOf("#") + 1).trim())}` : "";
+        return `[${label}](/page/${href}${fragment})`;
       },
     );
     return {
@@ -189,6 +222,7 @@ export class WikiIndex {
 
   private summary = (page: InternalPage): WikiPageSummary => ({
     id: page.id,
+    externalSource: page.externalSource,
     relativePath: page.relativePath,
     title: page.title,
     category: page.category,

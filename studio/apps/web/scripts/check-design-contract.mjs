@@ -38,8 +38,8 @@ assert(/\.editable-document--preview[^}]*overflow:\s*visible/.test(css) && /\.so
 assert(/--source-workspace-min-height:\s*clamp\(/.test(css) && /\.source-preview[^}]*min-height:\s*var\(--source-workspace-min-height\)/.test(css) && /\.source-preview[^}]*min-height:\s*min\(620px/.test(css), "sparse source lists and documents must retain a useful working height across breakpoints");
 assert(/\.collapsible-index-pane[^}]*height:\s*100%/.test(css) && /\.collection-detail[^}]*overflow:\s*visible/.test(css), "sticky Markdown navigation cannot be clipped or constrained by a short master-detail parent");
 assert(/function CollapsibleIndexPane/.test(source) && [...source.matchAll(/<CollapsibleIndexPane\b/g)].length >= 3 && /relationships-person-detail/.test(source), "indexed master-detail views must reuse the shared collapsible index; relationships must keep its approved inline detail");
-assert(/function ContextualAgentDock/.test(source) && [...source.matchAll(/<ContextualAgentDock\b/g)].length >= 12, "contextual collaboration must reuse the shared dock");
-assert(/\/api\/agent-settings/.test(source) && /"agent-settings"/.test(source) && /一处设置，所有 Agent 入口共用/.test(source), "Agent settings must persist through one global interface and refresh every entry");
+assert(/function PageAgentContext/.test(source) && [...source.matchAll(/<PageAgentContext\b/g)].length >= 12, "pages must publish context to the shared inspector");
+assert(/\/api\/agent-settings/.test(source) && /"agent-settings"/.test(source) && /一处设置，所有 AI 对话共用/.test(source), "Agent settings must persist through one global interface and refresh every entry");
 assert(/\/api\/agent-provider-presets/.test(source) && /模型厂商/.test(source) && /模型与思考/.test(source) && /选择厂商即可使用官方服务地址/.test(source), "third-party Agent settings must use the shared vendor catalog without asking for an endpoint");
 
 console.log(`Design contract passed across ${files.length} modular source files.`);

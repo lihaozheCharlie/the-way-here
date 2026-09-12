@@ -49,18 +49,22 @@ export class KnowledgeRuntime {
     this.events.broadcast("index", { knowledgeBaseId: nextId, at: nextIndex.lastIndexedAt });
   }
 
-  createKnowledgeBase(name: unknown): Promise<{ id: string; name: string }> {
-    const task = this.mutationQueue.then(async () => {
-      const created = await createPersonalKnowledgeBase(this.vaultRoot, name);
-      await this.activate(created.id);
-      return created;
-    });
+  serializeMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const task = this.mutationQueue.then(operation);
     this.mutationQueue = task.then(() => undefined, () => undefined);
     return task;
   }
 
+  createKnowledgeBase(name: unknown): Promise<{ id: string; name: string }> {
+    return this.serializeMutation(async () => {
+      const created = await createPersonalKnowledgeBase(this.vaultRoot, name);
+      await this.activate(created.id);
+      return created;
+    });
+  }
+
   deleteKnowledgeBase(knowledgeBaseId: unknown): Promise<DeletedKnowledgeBase> {
-    const task = this.mutationQueue.then(async () => {
+    return this.serializeMutation(async () => {
       const deletingActive = knowledgeBaseId === this.activeIndex.config.knowledgeBaseId;
       const deleted = await deletePersonalKnowledgeBase(this.vaultRoot, knowledgeBaseId);
       if (deletingActive) await this.activate(deleted.fallbackId);
@@ -71,8 +75,6 @@ export class KnowledgeRuntime {
       }
       return deleted;
     });
-    this.mutationQueue = task.then(() => undefined, () => undefined);
-    return task;
   }
 
   async rebuildIfActive(knowledgeBaseId: string): Promise<void> {
@@ -97,6 +99,7 @@ export class KnowledgeRuntime {
   }
 
   async close(): Promise<void> {
+    this.events.close();
     clearTimeout(this.rebuildTimer);
     await this.watcher?.close();
   }
@@ -112,7 +115,7 @@ export class KnowledgeRuntime {
       this.events.broadcast("file", { event: eventName, path: changedPath, at: new Date().toISOString() });
       clearTimeout(this.rebuildTimer);
       this.rebuildTimer = setTimeout(() => {
-        void watchedIndex.rebuild().then(() => this.events.broadcast("index", { at: watchedIndex.lastIndexedAt, path: changedPath }));
+        void watchedIndex.rebuild().then(() => this.events.broadcast("index", { at: watchedIndex.lastIndexedAt, path: changedPath })).catch((error) => this.events.broadcast("index-error", { message: String(error), knowledgeBaseId: watchedIndex.config.knowledgeBaseId }));
       }, 500);
     });
     return watcher;

@@ -24,6 +24,7 @@ studio/apps/web/artifacts/
 **/coverage/
 
 # Private knowledge bases: the public repository ships only the anonymous demo.
+/app/
 /vault/*
 !/vault/README.md
 !/vault/demo/
@@ -48,3 +49,6 @@ studio/.runtime/
 *.tmp
 *.temp
 *.bak
+
+# Rebuilt from the product logo by build-brand-assets.mjs
+studio/apps/web/public/brand/

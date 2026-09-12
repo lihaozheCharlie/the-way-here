@@ -9,8 +9,6 @@ export type AgentContext = {
   defaultMode?: "read" | "write";
   defaultOutputTarget?: AgentOutputTarget;
   defaultSourceContext?: SourceRunContext;
-  launcherLabel?: string;
-  compactLauncher?: boolean;
 };
 
 export type AgentAttachedContext = {

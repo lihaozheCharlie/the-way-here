@@ -8,3 +8,6 @@ allowBuilds:
   '@google/genai': false
   esbuild: true
   protobufjs: false
+
+  electron: true
+  electron-winstaller: false

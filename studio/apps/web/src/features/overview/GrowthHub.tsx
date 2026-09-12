@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import type { SectionedPageView, StructuredCard } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
-import { ContextualAgentDock } from "../collaboration/Collaboration";
+import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { insightCardDetail, insightCoreJudgment, insightExcerpt, insightSectionText, mentalModelPanels } from "./insights-model";
@@ -147,6 +147,6 @@ export function GrowthHub({ revision }: { revision: number }) {
     </section>
 
     <section className="insights-foot-cta"><div><h2>这些理解会继续变化</h2><p>新的生活记录可能补充证据，也可能让旧判断失效。你随时可以打开一条理解，说明哪里不像你。</p></div><button type="button" onClick={() => openContextAgent({ mode: "read", prompt: "我想一起核对这页已有的理解。请先问我哪一条最不像我，再结合证据和反例继续聊。" })}><Icon name="spark" size={15} />一起核对</button></section>
-    <ContextualAgentDock revision={revision} context={{ scope: "理解自己", title: "个人主线、反复循环、现实系统与思维模型", summary: "从当前问题出发，结合已有的长期命题、循环、系统和判断工具。", defaultMode: "read", launcherLabel: "一起理解", suggestions: ["结合我的个人主线、反复循环和近期状态，现在最值得理解的一个问题是什么？", "最近发生的事更像哪一种旧模式？请给出证据和竞争解释。", "我有一个新的自我观察，帮我判断它应该补充到哪条路径。"] }} />
+    <PageAgentContext context={{ scope: "理解自己", title: "个人主线、反复循环、现实系统与思维模型", summary: "从当前问题出发，结合已有的长期命题、循环、系统和判断工具。", defaultMode: "read", suggestions: ["结合我的个人主线、反复循环和近期状态，现在最值得理解的一个问题是什么？", "最近发生的事更像哪一种旧模式？请给出证据和竞争解释。", "我有一个新的自我观察，帮我判断它应该补充到哪条路径。"] }} />
   </div>;
 }

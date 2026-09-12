@@ -22,6 +22,7 @@ export async function listSourceFolders(knowledge: ContentWorkspace): Promise<So
         (entry) =>
           entry.isDirectory() &&
           !entry.name.startsWith(".") &&
+          entry.name !== "外部来源" &&
           !entry.name.endsWith(".assert"),
       )
       .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));

@@ -1,3 +1,4 @@
+import { SourceConnectionsPanel } from "./SourceConnectionsPanel";
 import { SelectInput, TextInput } from "../../shared/form-controls";
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -104,6 +105,7 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [route, setRoute] = useState<ImportRoute>(() => initialRoute || rememberedImportRoute("files"));
   const [provider, setProvider] = useState<ChatImportProvider>(rememberedImportProvider);
+  const [copyImport, setCopyImport] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [files, setFiles] = useState<SelectedImportFile[]>([]);
   const [folderMode, setFolderMode] = useState<"existing" | "new">("existing");
@@ -323,7 +325,7 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
         <div className="import-modal-body">
           {step === 1 ? <section className="import-step-panel" aria-label="选择记录类型并添加材料">
             <div className="import-type-grid" role="group" aria-label="记录类型">
-              <button type="button" disabled={importing} data-autofocus={route === "files" ? "true" : undefined} aria-pressed={route === "files"} className={route === "files" ? "active" : ""} onClick={() => changeRoute("files")}><span className="import-type-icon"><Icon name="journal" size={18} /></span><b>日记与笔记</b><p>Markdown、TXT、ZIP，保留文件夹层级</p><small><Icon name="down" size={12} />下方可选文件或文件夹</small></button>
+              <button type="button" disabled={importing} data-autofocus={route === "files" ? "true" : undefined} aria-pressed={route === "files"} className={route === "files" ? "active" : ""} onClick={() => changeRoute("files")}><span className="import-type-icon"><Icon name="journal" size={18} /></span><b>日记与笔记</b><p>连接原目录，持续同步 Markdown、TXT</p><small><Icon name="down" size={12} />连接目录，也可一次性导入副本</small></button>
               <button type="button" disabled={importing} data-autofocus={route === "chat" ? "true" : undefined} aria-pressed={route === "chat"} className={route === "chat" ? "active" : ""} onClick={() => changeRoute("chat")}><span className="import-type-icon"><Icon name="message" size={18} /></span><b>聊天记录</b><p>Claude、ChatGPT、Gemini、DeepSeek、豆包</p><small><Icon name="down" size={12} />下方先选平台，再加材料</small></button>
               <button type="button" disabled={importing} data-autofocus={route === "bill" ? "true" : undefined} aria-pressed={route === "bill"} className={route === "bill" ? "active" : ""} onClick={() => changeRoute("bill")}><span className="import-type-icon"><Icon name="receipt" size={18} /></span><b>消费账单</b><p>支付宝导出 CSV，自动串成旅程线索</p><small><Icon name="down" size={12} />下方只接收一份 CSV</small></button>
               <button type="button" disabled={importing} data-autofocus={route === "photos" ? "true" : undefined} aria-pressed={route === "photos"} className={route === "photos" ? "active" : ""} onClick={() => changeRoute("photos")}><span className="import-type-icon"><Icon name="image" size={18} /></span><b>照片</b><p>同一段旅程的照片，一起留下回忆</p><small><Icon name="down" size={12} />下方选照片，最多 10 张</small></button>
@@ -331,6 +333,8 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
             <div className="import-material-zone">
               <header><div><Icon name="down" size={14} /><b>加材料</b></div><span>随上方记录类型自动切换</span></header>
               {route === "chat" ? <div className="import-provider-list" role="group" aria-label="聊天平台">{chatImportProviders.map((item) => <button type="button" key={item.id} aria-pressed={provider === item.id} className={provider === item.id ? "active" : ""} onClick={() => { setProvider(item.id); setFiles([]); setError(""); }}>{item.label}</button>)}</div> : null}
+              {route === "files" ? <><SourceConnectionsPanel /><button type="button" className="secondary-action" onClick={() => setCopyImport((value) => !value)}>{copyImport ? "收起一次性导入" : "一次性导入副本（文件 / ZIP）"}</button></> : null}
+              <div hidden={route === "files" && !copyImport}>
               <div
                 className={`import-file-picker is-dropzone${draggingMaterials ? " is-dragging" : ""}`}
                 onDragEnter={(event) => { event.preventDefault(); dragDepthRef.current += 1; setDraggingMaterials(true); }}
@@ -348,6 +352,7 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
                 </div>
                 <input ref={fileInputRef} key={`${route}-${provider}-files`} name="import-files" type="file" accept={accept} multiple={route !== "bill"} tabIndex={-1} aria-hidden="true" onChange={selectInputFiles} />
                 {route !== "bill" ? <input ref={(node) => { folderInputRef.current = node; if (node) node.webkitdirectory = true; }} key={`${route}-${provider}-folder`} name="import-folder" type="file" accept={accept} multiple tabIndex={-1} aria-hidden="true" onChange={selectInputFiles} /> : null}
+              </div>
               </div>
               {route === "photos" ? <div className="import-photo-selection" aria-label="已选择的照片">{files.map((item, index) => <figure key={item.relativePath}><img src={thumbnails[index]} alt={item.file.name} /><button type="button" disabled={Boolean(preparing) || importing} aria-label={`移除 ${item.file.name}`} onClick={() => setFiles(files.filter((_, i) => i !== index))}><Icon name="close" size={12} /></button><figcaption>{item.file.name}</figcaption></figure>)}</div> : files.length ? <div className="import-selection-list" aria-label="已选择的材料">
                 {files.slice(0, 3).map((item) => <div key={item.relativePath}><span><Icon name="journal" size={13} /></span><b>{item.relativePath}</b><small>{formatImportBytes(item.file.size)}</small></div>)}
