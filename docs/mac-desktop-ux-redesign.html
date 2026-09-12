@@ -100,11 +100,6 @@
     position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:var(--ink-soft);
     pointer-events:none;
   }
-  .titlebar .kb-switcher{
-    display:flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-radius:7px;
-    background:rgba(0,0,0,0.045);font-size:12.5px;font-weight:600;color:var(--ink);margin-left:6px;
-  }
-  .titlebar .kb-switcher .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
   .titlebar .right-controls{margin-left:auto;display:flex;align-items:center;gap:10px;}
   .icon-btn{
     width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
@@ -112,22 +107,6 @@
   }
   .icon-btn svg{width:16px;height:16px;}
   .icon-btn.active{background:rgba(0,0,0,0.06);color:var(--ink);}
-
-  .toolbar{
-    height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;
-    background:var(--panel);border-bottom:1px solid var(--line);
-  }
-  .seg{display:flex;background:rgba(0,0,0,0.045);border-radius:7px;padding:2px;gap:2px;}
-  .seg button{
-    border:none;background:transparent;font-size:12.5px;padding:5px 11px;border-radius:6px;color:var(--ink-soft);
-    font-weight:500;cursor:default;font-family:var(--font-sans);
-  }
-  .seg button.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,0.08);}
-  .toolbar .search{
-    margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.045);
-    border-radius:7px;padding:5px 10px;font-size:12.5px;color:var(--ink-faint);width:220px;
-  }
-  .toolbar .search svg{width:13px;height:13px;flex:none;}
   .kbd{
     font-family:var(--font-mono);font-size:10.5px;background:rgba(0,0,0,0.06);color:var(--ink-soft);
     border-radius:4px;padding:1px 5px;margin-left:auto;
@@ -336,7 +315,7 @@
   <section class="block">
     <div class="block-head">
       <h2>主窗口：侧边栏 + 内容 + 常驻 AI Inspector 三栏结构</h2>
-      <div class="note">一套统一的窗口骨架承载全部功能，切换栏目只替换中间内容区，右侧协作面板与顶部工具栏始终保持不变。</div>
+      <div class="note">一套统一的窗口骨架承载全部功能：侧边栏是唯一的栏目导航入口，标题栏只显示当前栏目名与两个功能图标，切换栏目只替换中间内容区，右侧协作面板始终保持不变。</div>
     </div>
 
     <div class="menubar">
@@ -353,57 +332,46 @@
       <div class="window">
         <div class="titlebar">
           <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
-          <div class="kb-switcher"><span class="dot"></span>晓年的空间<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
-          <div class="win-title">这里的路</div>
+          <div class="win-title" id="winTitle">此刻</div>
           <div class="right-controls">
-            <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
-            <div class="icon-btn active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
           </div>
-        </div>
-
-        <div class="toolbar">
-          <div class="seg">
-            <button class="active" onclick="showTab('now')">此刻</button>
-            <button onclick="showTab('questions')">值得聊聊</button>
-            <button onclick="showTab('sources')">生活记录</button>
-            <button onclick="showTab('knowledge')">已有理解</button>
-          </div>
-          <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>搜索记录与理解…<span class="kbd">⌘K</span></div>
         </div>
 
         <div class="win-body">
           <!-- Sidebar -->
           <div class="sidebar">
-            <div class="kb-picker">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9">
               <div class="avatar"></div>
               <div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
             </div>
 
             <div class="nav-group">
-              <div class="nav-item active" onclick="showTab('now')">
+              <div class="nav-item active" data-nav="now" onclick="showTab('now')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
                 此刻
               </div>
-              <div class="nav-item" onclick="showTab('questions')">
+              <div class="nav-item" data-nav="questions" onclick="showTab('questions')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>
                 值得聊聊
                 <span class="badge">3</span>
               </div>
-              <div class="nav-item" onclick="showTab('sources')">
+              <div class="nav-item" data-nav="sources" onclick="showTab('sources')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>
                 生活记录
               </div>
-              <div class="nav-item child-active" onclick="showTab('knowledge')">
+              <div class="nav-item" data-nav="knowledge" onclick="showTab('knowledge')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>
                 已有理解
               </div>
-              <div class="nav-sub">
-                <div class="nav-item" onclick="showTab('knowledge')">总览</div>
-                <div class="nav-item child-active" onclick="showTab('knowledge')">理解自己</div>
-                <div class="nav-item" onclick="showTab('knowledge')">人生轨迹</div>
-                <div class="nav-item" onclick="showTab('knowledge')">近况回信</div>
-                <div class="nav-item" onclick="showTab('knowledge')">人与世界</div>
+              <div class="nav-sub" id="knowledgeSub">
+                <div class="nav-item" onclick="selectSub(this,'总览')">总览</div>
+                <div class="nav-item child-active" onclick="selectSub(this,'理解自己')">理解自己</div>
+                <div class="nav-item" onclick="selectSub(this,'人生轨迹')">人生轨迹</div>
+                <div class="nav-item" onclick="selectSub(this,'近况回信')">近况回信</div>
+                <div class="nav-item" onclick="selectSub(this,'人与世界')">人与世界</div>
               </div>
             </div>
 
@@ -509,6 +477,7 @@
         <li><b>侧边栏替代顶部横向导航</b>：网页版的四个顶部 Tab + 二级横向子导航，在窗口变窄、纵向空间充裕的桌面场景里效率更低；侧边栏配合可展开的二级列表，是 Mail、Notes、Things 等原生应用统一使用的模式，也让"已有理解"下的 5 个子栏一次性可见，不需要先进入总览再横向切换。</li>
         <li><b>Inspector 常驻而不是内嵌区块</b>：原来的 ContextualAgentDock 是页面里的一块内容，现在做成窗口级的固定面板（类似 Xcode 助手编辑器 / Pages 格式面板），任何栏目下都能继续和 AI 聊，不必等页面里的对话框滚动到视野内。</li>
         <li><b>知识库切换器上移到侧边栏顶部</b>：原网页里放在全局 Header 左侧的下拉菜单，现在挂到侧边栏顶部，视觉上更像"切换邮箱账户"，并保留新建/删除知识库的入口。</li>
+        <li><b>每个信息只出现在一个地方</b>：栏目名称只在侧边栏出现一次，标题栏不再重复放置知识库切换器，也没有另一套分段控件重复「此刻／值得聊聊／生活记录／已有理解」——标题栏只做两件事：显示当前栏目的动态标题，提供搜索与协作面板两个高频图标按钮。</li>
       </ul>
     </div>
   </section>
@@ -608,7 +577,7 @@
     <div class="mock-grid">
       <div class="mock-card">
         <h3>阅读器独立窗口</h3>
-        <p class="desc">对应 Reader（/page/*）：双击一条导入材料或近况回信，用 ⌘↩ 在独立窗口打开，方便一边读一边在主窗口做别的事。</p>
+        <p class="desc">对应 Reader（/page/*）：双击一条导入材料或近况回信，用 ⌘↩ 在独立窗口打开，方便一边读一边在主��口做别的事。</p>
         <div class="mini-stage">
           <div class="window" style="width:320px">
             <div class="titlebar"><div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div><div class="win-title">近况回信 · 三月</div></div>
@@ -654,7 +623,7 @@
       <tr><td class="feat">常驻协作面板（ContextualAgentDock）</td><td>窗口级 Inspector，随左侧内容切换话题上下文，标题栏图标可一键隐藏/展开（⌘⌥I）。</td></tr>
       <tr><td class="feat">Agent 设置</td><td>偏好设置窗口「AI 助手」标签页（⌘,），替代页面内弹层。</td></tr>
       <tr><td class="feat">知识库切换 / 新建 / 删除</td><td>侧边栏顶部账户式切换器 + ⌘1–⌘9 快捷跳转；新建/删除走偏好设置「知识库」标签页与系统级确认弹窗。</td></tr>
-      <tr><td class="feat">顶部全局 Header</td><td>拆分为系统菜单栏（File/Edit/View…）+ 窗口工具栏（分段控件 + 搜索）+ 侧边栏，不再有独立的横向大 Header。</td></tr>
+      <tr><td class="feat">顶部全局 Header</td><td>拆分为系统菜单栏（File/Edit/View…）+ 窗口标题栏（动态标题 + 搜索/协作面板图标）+ 侧边栏导航，不再有独立的横向大 Header，也不与侧边栏重复出现同一套栏目。</td></tr>
     </table>
   </section>
 
@@ -663,15 +632,45 @@
 <footer>The Way Here · Mac 桌面端 UX 重设计提案 · 静态设计稿，用于评审与开发排期参考</footer>
 
 <script>
+  var TITLES = { now:'此刻', questions:'值得聊聊', sources:'生活记录', knowledge:'已有理解 · 理解自己' };
+  var INSPECTOR_CONTEXT = {
+    now:'今天的记录',
+    questions:'接着聊「和妈妈的通话」',
+    sources:'关于这条生活记录多说说',
+    knowledge:'围绕「理解自己」聊聊'
+  };
+
   function showTab(name){
     document.querySelectorAll('[data-tabpanel]').forEach(function(el){
       el.classList.toggle('show', el.getAttribute('data-tabpanel') === name);
     });
-    document.querySelectorAll('.toolbar .seg button').forEach(function(btn, i){
-      var map = ['now','questions','sources','knowledge'];
-      btn.classList.toggle('active', map[i] === name);
+    document.querySelectorAll('.sidebar [data-nav]').forEach(function(el){
+      el.classList.remove('active', 'child-active');
     });
+    var target = document.querySelector('.sidebar [data-nav="' + name + '"]');
+    if (target) target.classList.add(name === 'knowledge' ? 'child-active' : 'active');
+
+    document.getElementById('winTitle').textContent = TITLES[name] || '这里的路';
+    var ctx = document.querySelector('.insp-head span');
+    if (ctx) ctx.textContent = INSPECTOR_CONTEXT[name] || '';
   }
+
+  function selectSub(el, label){
+    showTab('knowledge');
+    document.querySelectorAll('#knowledgeSub .nav-item').forEach(function(n){
+      n.classList.remove('child-active');
+    });
+    el.classList.add('child-active');
+
+    document.getElementById('winTitle').textContent = '已有理解 · ' + label;
+    var title = document.querySelector('[data-tabpanel="knowledge"] .pane-title');
+    var sub = document.querySelector('[data-tabpanel="knowledge"] .pane-sub');
+    if (title) title.textContent = label;
+    if (sub) sub.textContent = '已有理解 › ' + label + ' —— 侧边栏二级列表里的当前选中项。';
+    var ctx = document.querySelector('.insp-head span');
+    if (ctx) ctx.textContent = '围绕「' + label + '」聊聊';
+  }
+
   function showPrefs(){ /* visual only in this static mock */ }
 </script>
 
