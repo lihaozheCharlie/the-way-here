@@ -270,9 +270,6 @@
   table.coverage td.web{color:var(--ink-faint);}
 
   footer{padding:60px 32px;text-align:center;color:var(--ink-faint);font-size:12px;}
-
-  [data-tabpanel]{display:none;}
-  [data-tabpanel].show{display:block;}
 </style>
 </head>
 <body>
@@ -284,7 +281,7 @@
     「这里的路」目前是一个网页产品：顶部横向导航、居中的内容列、以及散落在各页面里的 AI 协作面板。
     要把它变成一个真正「像 Mac 应用」的产品，不是简单地套上圆角窗口，而是要按照 macOS 的心智模型重新组织信息架构——
     侧边栏取代顶部导航、常驻 Inspector 取代弹出式对话框、菜单栏与状态栏承担轻量任务、命令面板取代到处都是的搜索框、
-    「偏好设置」窗口取代设置弹层。下面按原产品的每一个功能模块，给出对应的桌面端设计方案。
+    「偏好设置」窗口取代设置弹层。下面按原产品的每一个功能页面逐一给出对应的桌面端设计稿——「此刻」「值得聊聊」「生活记录」，以及「已有理解」下的五个子栏（总览 / 理解自己 / 人生轨迹 / 近况回信 / 人与世界），全部静态平铺展示，不需要点击才能看到；每张设计稿下面都附一段「与网页版对照」，说明具体改了什么、为什么改。
   </p>
   <div class="chips">
     <span class="chip">① 原生窗口铬合 + 三栏布局</span>
@@ -332,7 +329,7 @@
       <div class="window">
         <div class="titlebar">
           <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
-          <div class="win-title" id="winTitle">此刻</div>
+          <div class="win-title">此刻</div>
           <div class="right-controls">
             <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
             <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
@@ -349,113 +346,58 @@
             </div>
 
             <div class="nav-group">
-              <div class="nav-item active" data-nav="now" onclick="showTab('now')">
+              <div class="nav-item active">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
                 此刻
               </div>
-              <div class="nav-item" data-nav="questions" onclick="showTab('questions')">
+              <div class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>
                 值得聊聊
                 <span class="badge">3</span>
               </div>
-              <div class="nav-item" data-nav="sources" onclick="showTab('sources')">
+              <div class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>
                 生活记录
               </div>
-              <div class="nav-item" data-nav="knowledge" onclick="showTab('knowledge')">
+              <div class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>
                 已有理解
-              </div>
-              <div class="nav-sub" id="knowledgeSub">
-                <div class="nav-item" onclick="selectSub(this,'总览')">总览</div>
-                <div class="nav-item child-active" onclick="selectSub(this,'理解自己')">理解自己</div>
-                <div class="nav-item" onclick="selectSub(this,'人生轨迹')">人生轨迹</div>
-                <div class="nav-item" onclick="selectSub(this,'近况回信')">近况回信</div>
-                <div class="nav-item" onclick="selectSub(this,'人与世界')">人与世界</div>
               </div>
             </div>
 
             <div class="nav-group" style="margin-top:auto">
-              <div class="nav-item" onclick="showPrefs()">
+              <div class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.6 1z"/></svg>
                 偏好设置
               </div>
             </div>
           </div>
 
-          <!-- Content -->
+          <!-- Content: 此刻 -->
           <div class="content-pane">
-
-            <div data-tabpanel="now" class="show">
-              <h1 class="pane-title">早上好，晓年</h1>
-              <p class="pane-sub">今天是记录的第 214 天 · 3 条值得聊聊的话题 · 1 篇新的近况回信</p>
-              <div class="card"><b>今日提醒</b><p>上周提到的「和妈妈的通话」还没有展开聊——右侧协作面板里可以直接接着说。</p></div>
-              <div class="card"><b>快速记一笔</b><p>拖入照片、账单，或直接在下方输入框写一段今天发生的事。⌘N 随时可从任意页面呼出。</p></div>
-              <div class="grid-2">
-                <div class="card"><b>本周关键词</b><p>搬家 · 新同事 · 复诊</p></div>
-                <div class="card"><b>近期成长</b><p>「理解自己」新增了一条关于工作节奏的洞察。</p></div>
-              </div>
+            <h1 class="pane-title">早上好，晓年</h1>
+            <p class="pane-sub">今天是记录的第 214 天 · 3 条值得聊聊的话题 · 1 篇新的近况回信</p>
+            <div class="card"><b>此刻的话头</b><p>「这周三次提到‘累’，最近是不是节奏有点紧？」<br/><span class="pill" style="margin-top:6px;display:inline-block">帮我起个头 · 是最近换了新项目</span> <span class="pill" style="margin-top:6px;display:inline-block">帮我起个头 · 说来话长</span></p></div>
+            <div class="card"><b>今日提醒</b><p>上周提到的「和妈妈的通话」还没有展开聊——右侧协作面板里可以直接接着说。</p></div>
+            <div class="grid-2">
+              <div class="card"><b>本周关键词</b><p>搬家 · 新同事 · 复诊</p></div>
+              <div class="card"><b>近期成长</b><p>「理解自己」新增了一条关于工作节奏的洞察。</p></div>
             </div>
-
-            <div data-tabpanel="questions">
-              <h1 class="pane-title">值得聊聊</h1>
-              <p class="pane-sub">AI 从最近的生活记录里，梳理出一些值得深入聊聊的话头 —— 单击任意一条，在右侧面板里展开成专注对话。</p>
-              <div class="row-list">
-                <div class="row"><span class="dot-tag" style="background:var(--warn)"></span>「和妈妈的通话」里提到的顾虑，要不要聊聊看？<span class="pill" style="margin-left:auto">新</span></div>
-                <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>这周三次提到「累」，最近是不是节奏有点紧？</div>
-                <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>新同事那次午饭聊得挺开心，想多记一点吗？</div>
-              </div>
-              <div class="annotate">
-                <b style="font-size:13px">桌面端调整</b>
-                <ul>
-                  <li>点击话题不再整页跳转到 <b>/focus/:id</b>，而是在右侧 Inspector 里原地展开成对话线程（FocusWorkspace 并入常驻协作面板）。</li>
-                  <li>支持 <b>⌘⇧F</b> 把某个话题「取出」为独立悬浮窗口，专注聊完再收回，对应原来的聚焦工作区。</li>
-                </ul>
-              </div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>网页版原样</b>：整页只有一张「对话启动卡」——一句系统挑选的「此刻的话头」问题、几个「帮我起个头」的短语按钮，以及一个可以直接接着说的输入框（对应 Today.tsx），没有「今日提醒 / 本周关键词 / 近期成长」这类仪表盘式卡片。</li>
+                <li><b>桌面端改动</b>：保留「此刻的话头」作为最上方主卡片，在它下面新增了状态摘要卡片。</li>
+                <li><b>改动原因</b>：桌面应用打开频率更高，「此刻」更适合承担 Mail / Calendar 里「Today」智能邮箱的角色——先给一眼「有什么新变化」，再决定要不要开始对话；网页首次打开更强调「立刻开始聊」，所以两端在保留同一个对话式开场白的基础上，桌面端多做了一层每日摘要。</li>
+              </ul>
             </div>
-
-            <div data-tabpanel="sources">
-              <h1 class="pane-title">生活记录</h1>
-              <p class="pane-sub">日记、照片、账单与外部导入的材料，统一整理在这里。</p>
-              <div class="drop-zone"><b>拖拽文件到这里导入</b>把照片、账单截图、聊天记录导出文件拖进窗口即可，也支持从 Finder 用「打开方式」直接发送到这里。</div>
-              <div class="grid-2">
-                <div class="card"><b>📷 照片记忆</b><p>128 张照片已识别地点与人物，本周新增 6 张。</p></div>
-                <div class="card"><b>🧾 账单记忆</b><p>42 张账单已归类消费类型，本月待确认 3 条。</p></div>
-              </div>
-              <div class="card"><b>写今天的日记</b><p>在这里直接写，或用菜单栏「随手记」小窗随时补一句。</p></div>
-              <div class="annotate">
-                <b style="font-size:13px">桌面端调整</b>
-                <ul>
-                  <li>ImportMaterialsModal 的导入弹窗替换为原生「打开」文件选择对话框 + 拖拽区，符合 macOS 文件交互习惯。</li>
-                  <li>照片记忆可接入 Continuity Camera，用 iPhone 直接扫描相册/账单传到 Mac。</li>
-                </ul>
-              </div>
-            </div>
-
-            <div data-tabpanel="knowledge">
-              <h1 class="pane-title">理解自己</h1>
-              <p class="pane-sub">已有理解 › 理解自己 —— 侧边栏二级列表里的当前选中项。</p>
-              <div class="grid-2">
-                <div class="card"><b>个人特质</b><p>13 条持续更新的性格与偏好观察。</p></div>
-                <div class="card"><b>反复出现的周期</b><p>识别出 4 组情绪/精力的循环模式。</p></div>
-              </div>
-              <div class="card"><b>思维方式卡片</b><p>7 张关于你如何做决定、如何应对压力的思维模型卡片。</p></div>
-              <div class="annotate">
-                <b style="font-size:13px">桌面端调整</b>
-                <ul>
-                  <li>KnowledgeHome / GrowthHub / Timeline / Letters / Relationships 共用侧边栏二级导航，切换即时局部刷新，不做整页跳转。</li>
-                  <li>「人生轨迹」时间线、「人与世界」关系图，支持 ⌘↩ 在独立窗口中打开做更大画布的浏览。</li>
-                </ul>
-              </div>
-            </div>
-
           </div>
 
           <!-- Inspector: contextual agent dock -->
           <div class="inspector">
             <div class="insp-head">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>
-              <div><b>协作面板</b><span>围绕「理解自己」聊聊</span></div>
+              <div><b>协作面板</b><span>此刻 · 随口话头</span></div>
             </div>
             <div class="insp-thread">
               <div class="msg agent">最近关于工作节奏的记录多了不少，想不想聊聊这周「累」出现了三次的具体原因？<small>10:24</small></div>
@@ -463,7 +405,7 @@
               <div class="msg agent">明白了，我把「通勤变长」记到了「个人特质」里的精力管理部分，需要我帮你梳理一下这周的时间分配吗？<small>10:26</small></div>
             </div>
             <div class="insp-input">
-              <input placeholder="回复，或换个话题…" />
+              <input placeholder="接着说，先说一句就行…" />
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
             </div>
           </div>
@@ -478,7 +420,406 @@
         <li><b>Inspector 常驻而不是内嵌区块</b>：原来的 ContextualAgentDock 是页面里的一块内容，现在做成窗口级的固定面板（类似 Xcode 助手编辑器 / Pages 格式面板），任何栏目下都能继续和 AI 聊，不必等页面里的对话框滚动到视野内。</li>
         <li><b>知识库切换器上移到侧边栏顶部</b>：原网页里放在全局 Header 左侧的下拉菜单，现在挂到侧边栏顶部，视觉上更像"切换邮箱账户"，并保留新建/删除知识库的入口。</li>
         <li><b>每个信息只出现在一个地方</b>：栏目名称只在侧边栏出现一次，标题栏不再重复放置知识库切换器，也没有另一套分段控件重复「此刻／值得聊聊／生活记录／已有理解」——标题栏只做两件事：显示当前栏目的动态标题，提供搜索与协作面板两个高频图标按钮。</li>
+        <li><b>下方逐页说明</b>：这一节只展示「此刻」，用来讲清楚三栏骨架本身；「值得聊聊」「生活记录」「已有理解」下的五个子栏，逐一在下一节里各给出一张完整设计稿和对照说明，不省略任何页面。</li>
       </ul>
+    </div>
+  </section>
+
+  <!-- =============== Every remaining page, in full ============= -->
+  <section class="block">
+    <div class="block-head">
+      <h2>逐页设计：值得聊聊、生活记录、已有理解下的五个子栏</h2>
+      <div class="note">同一套三栏骨架，下面把网页版剩下的每一个功能页面都完整画出来，并在每张设计稿下面说明它和网页版内容的差异、以及为什么这样改。</div>
+    </div>
+
+    <!-- 值得聊聊 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">值得聊聊（QuestionsHub）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;margin-bottom:14px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">值得聊聊</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">这段时间你说的话，我都还记得。</h1>
+            <p class="pane-sub">从你现在想说的开始，或者看看留意到的几条还没说完的线索。</p>
+            <div class="chips" style="margin-bottom:14px">
+              <span class="chip">全部</span><span class="chip">情绪与状态</span><span class="chip">反复出现的念头</span><span class="chip">还没展开的线索</span>
+            </div>
+            <div class="card"><span class="pill">情绪状态</span><b style="display:block;margin-top:6px">「和妈妈的通话」里提到的顾虑，要不要聊聊看？</b><p>●●●&nbsp;&nbsp;3 条相关记录</p><p style="margin-top:6px">聊聊这个 →</p></div>
+            <div class="card"><span class="pill">反复出现的念头</span><b style="display:block;margin-top:6px">这周三次提到「累」，最近是不是节奏有点紧？</b><p>●●○&nbsp;&nbsp;2 条相关记录</p></div>
+            <div class="card"><b>你之前有点在意的</b><p>「和妈妈的通话」 · 「搬家后的睡眠」 · 「和新同事的边界」</p></div>
+            <div class="card"><b>日记、对话和账单，都可以带进来</b><p>留下原话，让之后的问题更具体——不用替我总结，原样丢给我就好。</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：标题文案「这段时间你说的话，我都还记得」、按分类筛选话题、每条话题的证据强度点与相关记录数、「你之前有点在意的」追问区、底部的导入引导。分类标签与证据条数为示意样例，实际以 QuestionsHub 返回的 kind / evidenceCount 渲染。</li>
+                <li><b>改动</b>：点击「聊聊这个」不再整页跳转到 <b>/focus/:id</b>（FocusWorkspace 独立路由页），而是在右侧常驻 Inspector 里原地展开成对话线程。</li>
+                <li><b>改动原因</b>：桌面应用里「列表 + 常驻侧栏」比「点击后离开列表页」更符合「边看边聊」的心智，也能保留话题墙的滚动位置；确实需要沉浸式深聊时，用 <b>⌘⇧F</b> 把这条话题「取出」为独立悬浮窗口，对应原来 FocusWorkspace 整页专注的体验。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>接着聊「和妈妈的通话」</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">上周提到给妈妈打电话时有点犹豫，是在担心什么吗？<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 生活记录 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">生活记录（Sources · 导入 / 照片记忆 / 账单记忆）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;margin-bottom:14px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">生活记录</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">生活记录</h1>
+            <p class="pane-sub">日记、照片、账单与外部导入的材料，统一整理在这里。</p>
+            <div class="drop-zone"><b>拖拽文件到这里导入</b>把照片、账单截图、聊天记录导出文件拖进窗口即可，也支持从 Finder 用「打开方式」直接发送到这里。</div>
+            <div class="grid-2">
+              <div class="card"><b>照片记忆</b><p>128 张照片已识别地点与人物，本周新增 6 张；有 4 组人脸还没确认是谁。</p></div>
+              <div class="card"><b>账单记忆</b><p>识别出 3 段可能的生活旅程，42 笔账单待确认，1 段已构建成完整记录。</p></div>
+            </div>
+            <div class="card"><b>写今天的日记</b><p>在这里直接写，或用菜单栏「随手记」小窗随时补一句。</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：拖拽 / 打开导入材料、照片记忆的人脸识别与标注、账单记忆按「生活旅程」聚类并逐条确认、写日记入口。</li>
+                <li><b>改动</b>：ImportMaterialsModal 原本是页面内居中的导入弹窗，现在改为拖拽区常驻页面顶部 + 原生「打开」文件选择对话框；照片记忆新增 Continuity Camera 入口，可直接用 iPhone 扫描相册 / 账单传到 Mac。</li>
+                <li><b>改动原因</b>：Mac 用户习惯直接拖文件到某个应用，或用 Finder「打开方式」发送过去，不必先打开网页再点「导入」进弹窗；Continuity Camera 是 Mac 生态独有能力，网页做不到，能省掉「先在手机上导出再上传」这一步。</li>
+                <li><b>简化说明</b>：这份静态设计稿只用两张汇总卡片代表照片记忆 / 账单记忆入口，没有画出 PhotoMemoryPanel 逐张标注人脸、BillMemoryPanel 逐条确认 / 编辑简述 / 「确认构建这份记录」对话框的完整多步交互——真正实现时这几步流程原样保留，只是把「确认构建」这一步的弹层换成系统级对话框样式。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>关于这条生活记录多说说</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">这段账单里有一笔去宜家的消费，是在为搬家做准备吗？<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已有理解 · 总览 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">已有理解 · 总览（KnowledgeHome）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;margin-bottom:14px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">已有理解 · 总览</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item child-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+              <div class="nav-sub">
+                <div class="nav-item child-active">总览</div>
+                <div class="nav-item">理解自己</div>
+                <div class="nav-item">人生轨迹</div>
+                <div class="nav-item">近况回信</div>
+                <div class="nav-item">人与世界</div>
+              </div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">已有理解</h1>
+            <p class="pane-sub">汇总系统从生活记录中持续读出的理解：关于你自己的判断、人生轨迹、近况回信，以及关于身边人与关系的记录 · 共 186 条理解 · 来自 214 份生活记录</p>
+            <div class="row-list">
+              <div class="row"><span class="dot-tag" style="background:var(--accent)"></span><b style="margin-right:8px">理解自己</b>把个人主线、反复循环、现实系统与思维模型放在同一张判断地图里<span class="pill" style="margin-left:auto">62 条自我理解</span></div>
+              <div class="row"><span class="dot-tag" style="background:var(--accent)"></span><b style="margin-right:8px">人生轨迹</b>沿着阶段与转折，回到一段经历当时真实的处境<span class="pill" style="margin-left:auto">9 个阶段与片段</span></div>
+              <div class="row"><span class="dot-tag" style="background:var(--warn)"></span><b style="margin-right:8px">近况回信</b>从过去的记录回望此刻，让当时的经历与现在重新发生联系<span class="pill" style="margin-left:auto">14 封近况回信</span></div>
+              <div class="row"><span class="dot-tag" style="background:var(--accent)"></span><b style="margin-right:8px">人与世界</b>看见具体的人，也看见一段关系在生命中长期承担的功能<span class="pill" style="margin-left:auto">37 个人与关系页面</span></div>
+            </div>
+            <div class="card"><b>这些理解会继续变化</b><p>新的生活记录可能补充证据，也可能让旧判断失效。你随时可以打开一条理解，说明哪里不像你。「一起核对」</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：四个分类卡片的文案与统计口径（条自我理解 / 个阶段与片段 / 封近况回信 / 个人与关系页面），以及底部「这些理解会继续变化」的说明与「一起核对」入口，全部原样保留。</li>
+                <li><b>改动</b>：四个分类过去是可点击跳转整页的大卡片（NavLink），现在变成侧边栏「已有理解」下二级列表的四个入口的说明——总览页只负责「介绍这四个子栏分别是什么、有多少内容」，点击某一行只是把侧边栏选中态切到对应子栏，不再有单独的整页路由跳转。</li>
+                <li><b>改动原因</b>：侧边栏已经是唯一的导航入口，总览页不需要重复承担「跳转导航」的职责，只需要做说明和统计，避免和侧边栏出现两套导航语义。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>已有理解总览</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">当前哪些理解证据最充分，哪些地方还需要你亲自补充？<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已有理解 · 理解自己 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">已有理解 · 理解自己（GrowthHub）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;margin-bottom:14px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">已有理解 · 理解自己</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item child-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+              <div class="nav-sub">
+                <div class="nav-item">总览</div>
+                <div class="nav-item child-active">理解自己</div>
+                <div class="nav-item">人生轨迹</div>
+                <div class="nav-item">近况回信</div>
+                <div class="nav-item">人与世界</div>
+              </div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">理解自己</h1>
+            <p class="pane-sub">不是一组给你下结论的标签，而是能够回到经历、证据与反例继续修正的判断 · 共 62 条判断与模型</p>
+            <div class="grid-2">
+              <div class="card"><b>个人主线</b><p>这一生反复在解决什么，以及它怎样穿过不同阶段 · 13 条</p></div>
+              <div class="card"><b>反复循环</b><p>触发 → 惯性反应 → 代价 → 有效中断，4 组正在追踪的循环</p></div>
+            </div>
+            <div class="card"><b>现实系统</b><p>职业、家庭、身体、资产、注意力与表达怎样共同运行 · 9 个系统</p></div>
+            <div class="card"><b>思维模型</b><p>带着边界、反例和校准使用的判断工具 · 7 张卡片</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：个人主线 / 反复循环 / 现实系统 / 思维模型四个分区的标题、说明文字与条目统计（对应 GrowthHub.tsx 的四个 route）。</li>
+                <li><b>简化</b>：网页版每个分区都有可展开的详情卡片、循环阶段流程图、系统详情面板、模型「核心要点 / 边界与反例」双视图切换，这份静态稿只画出分区摘要卡片，展开态与切换交互按原有逻辑保留，不在设计稿里逐一展开。</li>
+                <li><b>改动原因</b>：静态设计稿的目的是确认信息架构和整体基调，不需要把每个可展开状态都画成一张图；实际实现时四个分区内部的交互（展开判断、循环流程、系统详情、模型双视图）原样搬到桌面端，只是外层从「整页滚动」换成「侧边栏子栏 + 内容区局部滚动」。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>围绕「理解自己」聊聊</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">最近发生的事更像哪一种旧模式？我可以给出证据和竞争解释。<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已有理解 · 人生轨迹 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">已有理解 · 人生轨迹（Timeline）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;margin-bottom:14px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">已有理解 · 人生轨迹</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item child-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+              <div class="nav-sub">
+                <div class="nav-item">总览</div>
+                <div class="nav-item">理解自己</div>
+                <div class="nav-item child-active">人生轨迹</div>
+                <div class="nav-item">近况回信</div>
+                <div class="nav-item">人与世界</div>
+              </div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">人生轨迹</h1>
+            <p class="pane-sub">沿着阶段与转折回看一路走来的变化，保留时间顺序，也保留同一时期并行发生的人生线索 · 9 个阶段与转折</p>
+            <div class="row-list">
+              <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>现在 · 从此刻向过去回看，新的经历会继续补在最上方</div>
+              <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>2024–现在 · 新工作与搬家 <span class="pill" style="margin-left:auto">2 个转折</span></div>
+              <div class="row"><span class="dot-tag" style="background:var(--ink-faint)"></span>2021–2024 · 上一段职业阶段 <span class="pill" style="margin-left:auto">并行人生线</span></div>
+              <div class="row"><span class="dot-tag" style="background:var(--accent)"></span>2018–2021 · 读研与独立生活的开始</div>
+            </div>
+            <div class="card"><b>「新工作与搬家」的转折坐标</b><p>入职新公司 · 从合租搬到独居 —— 相关的人：新同事、房东；生活系统：通勤、住房</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：按时间倒序排列的阶段列表、当前阶段的「转折坐标」、以及与该阶段关联的人 / 地点 / 生活系统 / 近况回信四个维度。</li>
+                <li><b>改动</b>：新增 <b>⌘↩</b> 支持把某个阶段单独在独立窗口中打开，铺满更大画布查看完整时间线和关联维度。</li>
+                <li><b>改动原因</b>：网页只有一个页面，没有「多窗口」的概念；桌面端可以一边在主窗口里切换其他栏目，一边在独立窗口里长期铺开人生轨迹做比对，这是网页版做不到的能力。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>补充「新工作与搬家」这个阶段</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">这个阶段还有一条并行的人生线没有记录，要不要补充一下？<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已有理解 · 近况回信 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">已有理解 · 近况回信（Letters）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;margin-bottom:14px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">已有理解 · 近况回信</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item child-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+              <div class="nav-sub">
+                <div class="nav-item">总览</div>
+                <div class="nav-item">理解自己</div>
+                <div class="nav-item">人生轨迹</div>
+                <div class="nav-item child-active">近况回信</div>
+                <div class="nav-item">人与世界</div>
+              </div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">近况回信</h1>
+            <p class="pane-sub">从过去的记录回望此刻，让当时的经历与现在重新发生联系 · 14 封回信</p>
+            <div class="chips" style="margin-bottom:14px"><span class="chip">按时间阅读</span><span class="chip">沿主题追踪</span><span class="chip">2025 年 · 6 封</span><span class="chip">2024 年 · 8 封</span></div>
+            <div class="card"><b>2025-03 · 这个月你提到搬家的次数比平时多</b><p>也第一次写到「新同事」……写于 2025-03-30 · 依据 3 月 1 日至 30 日的日记</p></div>
+            <div class="card"><b>重读视角</b><p>可以切换「更体谅自己的朋友」「更直接的教练」等视角，让 AI 用不同口吻重新写一版这封信；也可以在下拉里切回历史版本。</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：按时间 / 主题两种阅读方式、每封信的写信日期与依据材料范围、正文下方的「重读视角」生成器与历史版本切换。</li>
+                <li><b>改动</b>：网页版左侧有一个可折叠的回信索引栏（CollapsibleIndexPane），桌面端把这一层索引收进侧边栏的二级导航里，内容区只保留筛选条 + 正文 + 版本 / 视角切换，不再单独渲染一个功能重复的折叠列表。</li>
+                <li><b>改动原因</b>：侧边栏本身已经能承担「列表导航」的角色，如果内容区里再放一个可折叠索引，会出现两套功能相同的导航层级，增加认知负担而不是减少。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>回应或重写这封信</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">这封信的语气可以更直接一点，还是保持现在这种体谅的口吻？<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已有理解 · 人与世界 -->
+    <h3 style="font-size:15px;margin:0 0 10px;">已有理解 · 人与世界（Relationships）</h3>
+    <div class="desktop-stage" style="padding:28px 26px 34px;">
+      <div class="window">
+        <div class="titlebar">
+          <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="win-title">已有理解 · 人与世界</div>
+          <div class="right-controls">
+            <div class="icon-btn" title="搜索 ⌘K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+            <div class="icon-btn active" title="协作面板 ⌘⌥I"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></div>
+          </div>
+        </div>
+        <div class="win-body">
+          <div class="sidebar">
+            <div class="kb-picker" title="切换知识库 ⌘1–⌘9"><div class="avatar"></div><div class="meta"><b>晓年的空间</b><span>个人 · 3 个知识库</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="nav-group">
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>此刻</div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg>值得聊聊<span class="badge">3</span></div>
+              <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l3-4h12l3 4"/></svg>生活记录</div>
+              <div class="nav-item child-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11a3 3 0 013 3v13H7a3 3 0 01-3-3V4z"/><path d="M4 4v13a3 3 0 003 3"/></svg>已有理解</div>
+              <div class="nav-sub">
+                <div class="nav-item">总览</div>
+                <div class="nav-item">理解自己</div>
+                <div class="nav-item">人生轨迹</div>
+                <div class="nav-item">近况回信</div>
+                <div class="nav-item child-active">人与世界</div>
+              </div>
+            </div>
+          </div>
+          <div class="content-pane">
+            <h1 class="pane-title">人与世界</h1>
+            <p class="pane-sub">看见具体的人，也看见一段关系在生命中长期承担的功能 · 37 个人与关系页面</p>
+            <div class="chips" style="margin-bottom:14px"><span class="chip">全部关系角色</span><span class="chip">家人</span><span class="chip">朋友</span><span class="chip">同事</span><span class="chip">按最近提及排序</span></div>
+            <div class="card"><b>关系网络图</b><p>以关系角色为中心的力导向图：家人、朋友、同事等角色节点围绕在中间，具体的人按提及频率分布在外圈，点击任意一人可在下方展开详情卡片。</p></div>
+            <div class="card"><b>妈妈 · 家人</b><p>最近提及 6 次 · 上一次记录来自「和妈妈的通话」这条生活记录。</p></div>
+            <div class="annotate">
+              <b style="font-size:13px">与网页版对照</b>
+              <ul>
+                <li><b>保留</b>：按关系角色筛选 / 排序 / 搜索人物、点击人物在关系网络图中定位、选中后展开该人物的详情卡片。</li>
+                <li><b>改动</b>：网页版的关系网络图是页面里固定大小的一块 SVG 区域，桌面端保留同样的力导向布局，但新增 <b>⌘↩</b> 支持把关系图单独弹出为独立窗口，用更大画布浏览、拖动更多人物节点。</li>
+                <li><b>改动原因</b>：与人生轨迹一样，独立窗口是桌面端才有的能力——关系图人物一多，固定大小的页面区域会很快显得拥挤，独立窗口能给到更大、可自由调整大小的画布。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="inspector">
+            <div class="insp-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/></svg><div><b>协作面板</b><span>说说「妈妈」这段关系</span></div></div>
+            <div class="insp-thread">
+              <div class="msg agent">这段关系最近多了「顾虑」这个新维度，要不要说说具体是什么？<small>刚刚</small></div>
+            </div>
+            <div class="insp-input"><input placeholder="回复，或换个话题…" /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -630,49 +971,6 @@
 </div>
 
 <footer>The Way Here · Mac 桌面端 UX 重设计提案 · 静态设计稿，用于评审与开发排期参考</footer>
-
-<script>
-  var TITLES = { now:'此刻', questions:'值得聊聊', sources:'生活记录', knowledge:'已有理解 · 理解自己' };
-  var INSPECTOR_CONTEXT = {
-    now:'今天的记录',
-    questions:'接着聊「和妈妈的通话」',
-    sources:'关于这条生活记录多说说',
-    knowledge:'围绕「理解自己」聊聊'
-  };
-
-  function showTab(name){
-    document.querySelectorAll('[data-tabpanel]').forEach(function(el){
-      el.classList.toggle('show', el.getAttribute('data-tabpanel') === name);
-    });
-    document.querySelectorAll('.sidebar [data-nav]').forEach(function(el){
-      el.classList.remove('active', 'child-active');
-    });
-    var target = document.querySelector('.sidebar [data-nav="' + name + '"]');
-    if (target) target.classList.add(name === 'knowledge' ? 'child-active' : 'active');
-
-    document.getElementById('winTitle').textContent = TITLES[name] || '这里的路';
-    var ctx = document.querySelector('.insp-head span');
-    if (ctx) ctx.textContent = INSPECTOR_CONTEXT[name] || '';
-  }
-
-  function selectSub(el, label){
-    showTab('knowledge');
-    document.querySelectorAll('#knowledgeSub .nav-item').forEach(function(n){
-      n.classList.remove('child-active');
-    });
-    el.classList.add('child-active');
-
-    document.getElementById('winTitle').textContent = '已有理解 · ' + label;
-    var title = document.querySelector('[data-tabpanel="knowledge"] .pane-title');
-    var sub = document.querySelector('[data-tabpanel="knowledge"] .pane-sub');
-    if (title) title.textContent = label;
-    if (sub) sub.textContent = '已有理解 › ' + label + ' —— 侧边栏二级列表里的当前选中项。';
-    var ctx = document.querySelector('.insp-head span');
-    if (ctx) ctx.textContent = '围绕「' + label + '」聊聊';
-  }
-
-  function showPrefs(){ /* visual only in this static mock */ }
-</script>
 
 </body>
 </html>
