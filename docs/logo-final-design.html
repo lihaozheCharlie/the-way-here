@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>「这里的路」Logo 详细设计 —— 书页成路</title>
+<style>
+  :root{
+    --bg:#f2ede2;
+    --ink:#2b271f;
+    --ink-soft:#6b6255;
+    --line:#ddd4c2;
+    --card:#fbf8f1;
+    --brand-dark:#2b271f;
+    --brand-mid:#4b4438;
+    --brand-light:#4b4438;
+    --paper:#f0e9da;
+    --accent:#a9682f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    line-height:1.6;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:64px 32px 120px;}
+  header.page-head{margin-bottom:56px;}
+  .eyebrow{
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--accent); font-weight:600; margin-bottom:14px;
+  }
+  h1{font-size:34px; font-weight:700; letter-spacing:-.01em; margin-bottom:12px;}
+  .lede{font-size:16px; color:var(--ink-soft); max-width:640px;}
+
+  section{margin-bottom:72px;}
+  .section-head{display:flex; align-items:baseline; gap:12px; margin-bottom:24px;}
+  .section-num{font-size:13px; color:var(--accent); font-weight:700; letter-spacing:.05em;}
+  .section-title{font-size:20px; font-weight:700;}
+  .section-desc{font-size:14px; color:var(--ink-soft); margin-top:-10px; margin-bottom:24px; max-width:620px;}
+
+  /* Hero mark showcase */
+  .hero-mark{
+    display:flex; align-items:center; gap:48px;
+    background:linear-gradient(160deg,#4b4438,#2b271f);
+    border-radius:28px; padding:48px; color:#f0e9da;
+    flex-wrap:wrap;
+  }
+  .hero-mark svg{width:140px;height:140px;flex-shrink:0;}
+  .hero-mark .cap{font-size:15px; color:#c9bda4; letter-spacing:.04em;}
+  .hero-mark .name{font-size:26px; font-weight:700; margin-top:6px; color:#f0e9da;}
+
+  /* Construction grid */
+  .construct-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .construct-card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px;
+    text-align:center;
+  }
+  .construct-card svg{width:100px;height:100px;margin-bottom:14px;}
+  .construct-card .ctitle{font-size:13px; font-weight:700; margin-bottom:4px;}
+  .construct-card .cdesc{font-size:12.5px; color:var(--ink-soft);}
+
+  /* Color variants */
+  .variant-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  .variant{
+    border-radius:16px; padding:28px 16px 16px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .variant svg{width:64px;height:64px;}
+  .variant .vlabel{font-size:12.5px; font-weight:600;}
+  .variant .vhex{font-size:11px; opacity:.65; font-family:ui-monospace,monospace;}
+
+  /* Size scale */
+  .scale-row{display:flex; align-items:flex-end; gap:28px; flex-wrap:wrap; padding:28px 0;}
+  .scale-item{display:flex; flex-direction:column; align-items:center; gap:10px;}
+  .scale-icon{
+    background:linear-gradient(160deg,#4b4438,#2b271f); border-radius:22%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .scale-label{font-size:12px; color:var(--ink-soft); text-align:center;}
+
+  /* Contexts (dock, menubar, spotlight, about) */
+  .context-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:20px;}
+  .context-card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  }
+  .context-preview{
+    height:180px; display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .context-label{padding:14px 20px; font-size:13px; color:var(--ink-soft); border-top:1px solid var(--line);}
+
+  /* macOS dock mock */
+  .mock-dock{
+    background:linear-gradient(180deg,#d8cdb8,#c7b99f);
+    width:100%; height:100%; display:flex; align-items:flex-end; justify-content:center; gap:16px; padding-bottom:22px;
+  }
+  .mock-dock .app{
+    width:56px;height:56px;border-radius:13px; box-shadow:0 4px 10px rgba(0,0,0,.2);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .mock-dock .app.ghost{background:#fff; opacity:.5;}
+  .mock-dock .app.active{background:linear-gradient(160deg,#4b4438,#2b271f); transform:translateY(-6px);}
+
+  /* menu bar mock */
+  .mock-menubar{
+    background:#e7ddc7; width:100%; height:100%; position:relative;
+  }
+  .mock-menubar .bar{
+    position:absolute; top:0; left:0; right:0; height:28px; background:rgba(255,255,255,.7);
+    backdrop-filter:blur(6px); display:flex; align-items:center; padding:0 14px; gap:14px;
+    font-size:12px; color:#6b6255; border-bottom:1px solid rgba(0,0,0,.06);
+  }
+  .mock-menubar .bar .mark{width:16px;height:16px; margin-right:auto;}
+  .mock-menubar .win{
+    position:absolute; top:50px; left:20px; right:20px; bottom:20px; background:#fbf8f1;
+    border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.12);
+  }
+
+  /* spotlight mock */
+  .mock-spotlight{
+    background:radial-gradient(circle at 50% 30%, rgba(0,0,0,.55), rgba(0,0,0,.75));
+    width:100%; height:100%; display:flex; align-items:flex-start; justify-content:center; padding-top:30px;
+  }
+  .spotlight-bar{
+    width:80%; background:rgba(255,255,255,.94); border-radius:12px; padding:10px 14px;
+    display:flex; align-items:center; gap:10px; box-shadow:0 20px 40px rgba(0,0,0,.3);
+  }
+  .spotlight-bar svg{width:22px;height:22px;flex-shrink:0;}
+  .spotlight-bar .stext{font-size:13px; color:#333;}
+  .spotlight-bar .sresult{
+    width:100%; margin-top:8px; display:flex; align-items:center; gap:8px; padding:6px 4px;
+  }
+
+  /* about window */
+  .mock-about{
+    background:linear-gradient(180deg,#fbf8f1,#f0e9da); width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  }
+  .mock-about svg{width:72px;height:72px;}
+  .mock-about .aname{font-size:15px; font-weight:700;}
+  .mock-about .aver{font-size:11px; color:var(--ink-soft);}
+
+  /* Clear space diagram */
+  .clearspace-box{
+    background:var(--card); border:1px solid var(--line); border-radius:16px; padding:40px;
+    display:flex; justify-content:center;
+  }
+  .clearspace-diagram{position:relative; width:220px; height:220px;}
+  .clearspace-diagram .unit-mark{
+    position:absolute; top:55px; left:55px; width:110px; height:110px;
+    background:linear-gradient(160deg,#4b4438,#2b271f); border-radius:24%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .clearspace-diagram .unit-mark svg{width:64px;height:64px;}
+  .clearspace-diagram .guide{
+    position:absolute; border:1.5px dashed #b9ab8e;
+  }
+  .clearspace-diagram .g-top{top:0;left:55px;width:110px;height:55px;border-bottom:none;}
+  .clearspace-diagram .g-bottom{bottom:0;left:55px;width:110px;height:55px;border-top:none;}
+  .clearspace-diagram .g-left{top:55px;left:0;width:55px;height:110px;border-right:none;}
+  .clearspace-diagram .g-right{top:55px;right:0;width:55px;height:110px;border-left:none;}
+  .clearspace-note{font-size:11px; color:var(--ink-soft); text-align:center; margin-top:14px;}
+
+  /* Do / Don't */
+  .dodont-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  .dodont-col h3{font-size:14px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;}
+  .dodont-col.do h3{color:#3d6b3f;}
+  .dodont-col.dont h3{color:#a8422f;}
+  .dodont-item{
+    display:flex; align-items:center; gap:16px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:16px; margin-bottom:12px;
+  }
+  .dodont-item .thumb{
+    width:56px;height:56px;border-radius:13px; flex-shrink:0; display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(160deg,#4b4438,#2b271f);
+  }
+  .dodont-item .thumb svg{width:32px;height:32px;}
+  .dodont-item p{font-size:12.5px; color:var(--ink-soft);}
+
+  /* App Store icon full */
+  .appstore-showcase{
+    display:flex; gap:40px; align-items:center; flex-wrap:wrap;
+    background:linear-gradient(135deg,#eee5d2,#e2d6bd); border-radius:24px; padding:48px;
+  }
+  .appstore-icon{
+    width:220px;height:220px; border-radius:22%;
+    background:linear-gradient(160deg,#4b4438 0%, #322d24 55%, #2b271f 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 24px 48px rgba(43,39,31,.35), inset 0 1px 0 rgba(255,255,255,.08);
+    position:relative;
+  }
+  .appstore-icon svg{width:128px;height:128px;}
+  .appstore-meta{flex:1; min-width:240px;}
+  .appstore-meta .aname{font-size:22px; font-weight:700; margin-bottom:6px;}
+  .appstore-meta .adesc{font-size:14px; color:var(--ink-soft); margin-bottom:16px;}
+  .spec-list{list-style:none; font-size:13px; color:var(--ink-soft);}
+  .spec-list li{margin-bottom:6px; display:flex; gap:8px;}
+  .spec-list li b{color:var(--ink); font-weight:600;}
+
+  footer{text-align:center; padding:40px 0 0; font-size:12px; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <div class="eyebrow">「这里的路」 · Logo 详细设计</div>
+    <h1>方向二：书页成路 —— 完整规范</h1>
+    <p class="lede">
+      在你选定的方向基础上，把图形本身、色彩系统、多尺寸适配、macOS 场景应用、留白规则和使用禁忌全部落定，
+      可以直接交付给开发去做 App Icon 和菜单栏图标资源。
+    </p>
+  </header>
+
+  <!-- 1. 核心图形 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <span class="section-title">核心图形</span>
+    </div>
+    <p class="section-desc">
+      一本摊开的书，书脊自然垂落成一条路的曲线。上半部是「记录」——摊开的书页；下半部是「路」——记录沉淀后走出来的痕迹。
+      两者共用同一条脊线，寓意「写下的每一段，都是路的一部分」。
+    </p>
+    <div class="hero-mark">
+      <svg viewBox="0 0 100 100" fill="none">
+        <path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="6.5" stroke-linecap="round"/>
+        <path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <div class="cap">最终定稿标志</div>
+        <div class="name">书页成路</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 结构拆解 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <span class="section-title">图形结构拆解</span>
+    </div>
+    <p class="section-desc">三个元素叠加而成，任何一部分单独存在时都仍可辨认，保证在极小尺寸下也不会糊成一团。</p>
+    <div class="construct-grid">
+      <div class="construct-card">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="6" stroke-linejoin="round"/></svg>
+        <div class="ctitle">书页</div>
+        <div class="cdesc">左右两页对称摊开，中间脊线微微下垂，像真的被翻阅过</div>
+      </div>
+      <div class="construct-card">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="7" stroke-linecap="round"/></svg>
+        <div class="ctitle">路径</div>
+        <div class="cdesc">一条向下弯的弧线，从书页延伸而出，是记录走过的痕迹</div>
+      </div>
+      <div class="construct-card">
+        <svg viewBox="0 0 100 100" fill="none">
+          <path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="6.5" stroke-linecap="round"/>
+          <path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="6" stroke-linejoin="round"/>
+        </svg>
+        <div class="ctitle">合成标志</div>
+        <div class="cdesc">书页与路径共享同一条脊线，一笔气韵贯通</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 色彩系统 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <span class="section-title">色彩系统</span>
+    </div>
+    <p class="section-desc">主色调是暖棕色，像一本用旧的笔记本封面。深色适合作为图标底色，浅色变体用于亮色界面中的小尺寸场景。</p>
+    <div class="variant-grid">
+      <div class="variant" style="background:linear-gradient(160deg,#4b4438,#2b271f);">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+        <div class="vlabel" style="color:#f0e9da;">主色 · 图标底</div>
+        <div class="vhex" style="color:#f0e9da;">#4B4438 → #2B271F</div>
+      </div>
+      <div class="variant" style="background:#f0e9da;">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="6" stroke-linejoin="round"/></svg>
+        <div class="vlabel">浅底 · 正型</div>
+        <div class="vhex">线条 #4B4438</div>
+      </div>
+      <div class="variant" style="background:#2b271f;">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+        <div class="vlabel" style="color:#f0e9da;">深色模式 · 菜单栏</div>
+        <div class="vhex" style="color:#f0e9da;">纯色 #2B271F 底</div>
+      </div>
+      <div class="variant" style="background:#a9682f;">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg>
+        <div class="vlabel" style="color:#fff;">强调色 · 高亮场景</div>
+        <div class="vhex" style="color:#fff;">#A9682F 焦糖橘</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. App Store 完整展示 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <span class="section-title">App Store 图标</span>
+    </div>
+    <p class="section-desc">1024×1024 主图标，圆角比例遵循 macOS 22% 规则，深色渐变加轻微内高光，让图标在深色/浅色桌面背景下都不会显得单薄。</p>
+    <div class="appstore-showcase">
+      <div class="appstore-icon">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="6.5" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="appstore-meta">
+        <div class="aname">这里的路</div>
+        <div class="adesc">写给自己的记录与回信 · macOS App Icon</div>
+        <ul class="spec-list">
+          <li><b>底色渐变：</b>#4B4438 → #2B271F，135° 对角</li>
+          <li><b>圆角：</b>22.5% 半径，符合 macOS 大图标规范</li>
+          <li><b>线条色：</b>#F0E9DA 暖纸白，非纯白，避免刺眼</li>
+          <li><b>描边宽度：</b>按 100 视窗计，路径 6.5pt / 书页 6pt</li>
+          <li><b>内高光：</b>顶部 1px 白色 8% 透明度，增加立体感</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 多尺寸适配 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <span class="section-title">多尺寸适配</span>
+    </div>
+    <p class="section-desc">从 App Store 大图标到菜单栏 16px 极小尺寸，线条粗细按比例增粗，保证任何尺寸下都清晰可辨，不糊边。</p>
+    <div class="scale-row">
+      <div class="scale-item">
+        <div class="scale-icon" style="width:128px;height:128px;">
+          <svg viewBox="0 0 100 100" fill="none" style="width:74px;height:74px;"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="6.5" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scale-label">1024px<br>App Store</div>
+      </div>
+      <div class="scale-item">
+        <div class="scale-icon" style="width:88px;height:88px;">
+          <svg viewBox="0 0 100 100" fill="none" style="width:50px;height:50px;"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scale-label">128px<br>Dock</div>
+      </div>
+      <div class="scale-item">
+        <div class="scale-icon" style="width:56px;height:56px;">
+          <svg viewBox="0 0 100 100" fill="none" style="width:32px;height:32px;"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="8" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="7.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scale-label">64px<br>Finder 侧栏</div>
+      </div>
+      <div class="scale-item">
+        <div class="scale-icon" style="width:36px;height:36px;">
+          <svg viewBox="0 0 100 100" fill="none" style="width:22px;height:22px;"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="9" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="8.5" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scale-label">32px<br>通知中心</div>
+      </div>
+      <div class="scale-item">
+        <div class="scale-icon" style="width:24px;height:24px;border-radius:30%;">
+          <svg viewBox="0 0 100 100" fill="none" style="width:16px;height:16px;"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="11" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="10" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scale-label">16px<br>菜单栏</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. macOS 场景 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <span class="section-title">macOS 场景应用</span>
+    </div>
+    <p class="section-desc">同一枚标志在真实系统场景下的表现：Dock、菜单栏、Spotlight 搜索结果、关于本机窗口。</p>
+    <div class="context-grid">
+
+      <div class="context-card">
+        <div class="context-preview">
+          <div class="mock-dock">
+            <div class="app ghost"></div>
+            <div class="app ghost"></div>
+            <div class="app active">
+              <svg viewBox="0 0 100 100" fill="none" style="width:34px;height:34px;"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="8" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="7.5" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="app ghost"></div>
+            <div class="app ghost"></div>
+          </div>
+        </div>
+        <div class="context-label">Dock · 打开时轻微上浮，暖棕在浅色 Dock 上很稳</div>
+      </div>
+
+      <div class="context-card">
+        <div class="context-preview">
+          <div class="mock-menubar">
+            <div class="bar">
+              <svg class="mark" viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="10" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="9" stroke-linejoin="round"/></svg>
+              <span>这里的路</span>
+              <span style="margin-left:auto;">文件</span><span>编辑</span><span>窗口</span>
+            </div>
+            <div class="win"></div>
+          </div>
+        </div>
+        <div class="context-label">菜单栏 · 16px 单色线框版，与系统菜单文字同高</div>
+      </div>
+
+      <div class="context-card">
+        <div class="context-preview">
+          <div class="mock-spotlight">
+            <div class="spotlight-bar" style="flex-direction:column;">
+              <div style="display:flex;align-items:center;gap:10px;width:100%;">
+                <svg viewBox="0 0 100 100" fill="none" style="width:20px;height:20px;"><circle cx="50" cy="50" r="46" fill="none"/></svg>
+                <span class="stext" style="color:#999;">这里的路</span>
+              </div>
+              <div class="sresult">
+                <svg viewBox="0 0 100 100" fill="none" style="width:22px;height:22px;"><path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="9" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="8" stroke-linejoin="round"/></svg>
+                <span class="stext">这里的路 —— App</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="context-label">Spotlight 搜索 · 小尺寸线框在结果列表里依然易识别</div>
+      </div>
+
+      <div class="context-card">
+        <div class="context-preview">
+          <div class="mock-about">
+            <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="6.5" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="6" stroke-linejoin="round"/></svg>
+            <div class="aname">这里的路</div>
+            <div class="aver">版本 1.0 · macOS</div>
+          </div>
+        </div>
+        <div class="context-label">关于本机窗口 · 大尺寸展示时的正型线框版本</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 7. 安全留白 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">07</span>
+      <span class="section-title">安全留白</span>
+    </div>
+    <p class="section-desc">标志四周至少保留与图形自身等宽（1 个单位）的留白，不与其他文字、图标紧贴，保证在任何组合排版中都有呼吸空间。</p>
+    <div class="clearspace-box">
+      <div>
+        <div class="clearspace-diagram">
+          <div class="guide g-top"></div>
+          <div class="guide g-bottom"></div>
+          <div class="guide g-left"></div>
+          <div class="guide g-right"></div>
+          <div class="unit-mark">
+            <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="clearspace-note">留白区域 = 图形宽度 × 0.5，四边等距</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 使用禁忌 -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">08</span>
+      <span class="section-title">使用禁忌</span>
+    </div>
+    <p class="section-desc">保持标志的辨识度和气质，避免以下几种常见误用。</p>
+    <div class="dodont-grid">
+      <div class="dodont-col do">
+        <h3>✓ 建议这样用</h3>
+        <div class="dodont-item">
+          <div class="thumb"><svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg></div>
+          <p>保持原始比例缩放，任何尺寸下书页与路径都完整可见</p>
+        </div>
+        <div class="dodont-item">
+          <div class="thumb" style="background:#f0e9da;"><svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#4b4438" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#4b4438" stroke-width="6" stroke-linejoin="round"/></svg></div>
+          <p>在浅色背景使用深棕线条正型版，保持对比度充足</p>
+        </div>
+      </div>
+      <div class="dodont-col dont">
+        <h3>✗ 避免这样用</h3>
+        <div class="dodont-item">
+          <div class="thumb" style="background:linear-gradient(160deg,#4b4438,#2b271f);">
+            <svg viewBox="0 0 100 100" fill="none" style="transform:scaleX(1.5);"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+          </div>
+          <p>不要拉伸变形，书页的对称感是标志辨识度的核心</p>
+        </div>
+        <div class="dodont-item">
+          <div class="thumb" style="background:linear-gradient(160deg,#7a6a8a,#4a3a5a);">
+            <svg viewBox="0 0 100 100" fill="none"><path d="M14 70 Q 50 78 86 70" stroke="#f0e9da" stroke-width="7" stroke-linecap="round"/><path d="M18 24 L18 62 Q 50 54 50 62 Q 50 54 82 62 L82 24 Q 50 16 50 24 Q 50 16 18 24Z" fill="none" stroke="#f0e9da" stroke-width="6" stroke-linejoin="round"/></svg>
+          </div>
+          <p>不要替换成品牌色系以外的颜色（如紫色、蓝色）</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>「这里的路」品牌标志规范 · v1.0</footer>
+</div>
+</body>
+</html>
