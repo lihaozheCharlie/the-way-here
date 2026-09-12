@@ -1,0 +1,51 @@
+import YAML from 'yaml';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { prepareWorkspace, saveWorkspace } from './workspace.mjs';
+
+test('fresh installation creates a usable library and upgrades preserve records and settings', async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(),'twh-bootstrap-'));
+  try {
+    const userData = path.join(temp,'user');
+    const resources = path.join(temp,'resources');
+    await mkdir(path.join(resources,'knowledge-engine/tools'),{recursive:true});
+    await mkdir(path.join(resources,'demo/wiki'),{recursive:true});
+    await writeFile(path.join(resources,'demo/wiki/旧演示.md'),'Original Web demo');
+    await writeFile(path.join(resources,'AGENTS.md'),'Public instructions');
+    await writeFile(path.join(resources,'knowledge-engine/tools/version'),'one');
+    const root = await prepareWorkspace({userData, resources});
+    assert.match(await readFile(path.join(root,'the-way-here.config.yaml'),'utf8'),/wiki: app\/personal\/wiki/);
+    await writeFile(path.join(root,'app/personal/wiki/记忆.md'),'keep this record');
+    const configPath = path.join(root,'the-way-here.config.yaml');
+    const original = await readFile(configPath,'utf8');
+    const custom = original + '\n# keep custom settings\n';
+    await writeFile(configPath,custom);
+    assert.equal(await readFile(path.join(root,'vault/demo/wiki/旧演示.md'),'utf8'),'Original Web demo');
+    await writeFile(path.join(resources,'knowledge-engine/tools/version'),'two');
+    assert.equal(await prepareWorkspace({userData,resources}),root);
+    assert.equal(await readFile(path.join(root,'app/personal/wiki/记忆.md'),'utf8'),'keep this record');
+    assert.equal(await readFile(path.join(root,'the-way-here.config.yaml'),'utf8'),custom);
+    assert.equal(await readFile(path.join(root,'knowledge-engine/tools/version'),'utf8'),'two');
+    const oldConfig=YAML.parse(custom); delete oldConfig.knowledgeBases.demo;
+    await writeFile(configPath,YAML.stringify(oldConfig));
+    await writeFile(path.join(root,'vault/demo/wiki/旧演示.md'),'User demo edit');
+    await prepareWorkspace({userData,resources});
+    assert.equal(YAML.parse(await readFile(configPath,'utf8')).defaultKnowledgeBase,'personal');
+    assert.equal(YAML.parse(await readFile(configPath,'utf8')).knowledgeBases.demo.paths.wiki,'vault/demo/wiki');
+    assert.equal(await readFile(path.join(root,'vault/demo/wiki/旧演示.md'),'utf8'),'User demo edit');
+    await rm(path.join(root,'the-way-here.config.yaml'));
+    await assert.rejects(prepareWorkspace({userData,resources}),/暂时无法访问/);
+    const external = path.join(temp,'existing');
+    await mkdir(external); await writeFile(path.join(external,'the-way-here.config.yaml'),'existing settings');
+    await saveWorkspace(userData,external);
+    assert.equal(await prepareWorkspace({userData,resources}),external);
+    await rm(external,{recursive:true});
+    await assert.rejects(prepareWorkspace({userData,resources}),/暂时无法访问/);
+    assert.equal(JSON.parse(await readFile(path.join(userData,'workspace.json'),'utf8')).root,external);
+    await writeFile(path.join(userData,'workspace.json'),'bad json');
+    await assert.rejects(prepareWorkspace({userData,resources}),/无法读取上次/);
+  } finally { await rm(temp,{recursive:true,force:true}); }
+});

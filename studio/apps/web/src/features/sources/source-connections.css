@@ -1,0 +1,16 @@
+.source-connections-disclosure { margin-block: 12px; border: 1px solid var(--line, #dedbd4); border-radius: 10px; padding: 12px 16px; }
+.source-connections-disclosure summary { cursor: pointer; color: #3f5b4e; font-weight: 600; }
+.source-connections { padding-block: 8px; font-size: 13px; line-height: 1.65; color: #555d54; }
+.source-connections p { margin: 6px 0 10px; }
+.source-connections small { display: block; color: #757a70; }
+.source-connections label { display: flex; align-items: center; gap: 6px; }
+.source-connections input[type="checkbox"] { accent-color: #3f5b4e; }
+.source-connections button { border: 1px solid #d6d9cf; border-radius: 7px; padding: 6px 12px; color: #3f5b4e; background: #f6f7f2; cursor: pointer; }
+.source-connections button:disabled { opacity: .5; cursor: default; }
+.source-connection-add, .source-connection-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-block: 10px; }
+.source-connection-add > button { background: #3f5b4e; color: #fff; }
+.source-connections article { border-top: 1px solid #dedbd4; padding-top: 14px; margin-top: 16px; }
+.source-connections .source-connection-path { overflow-wrap: anywhere; font-size: 12px; }
+.source-connection-confirm { padding: 10px; background: #f0eee8; border-radius: 6px; }
+.source-connection-confirm button + button { margin-left: 8px; }
+.external-source-notice { padding: 10px 14px; border-left: 3px solid #809785; background: #f3f5ee; color: #4c604e; font-size: 12px; overflow-wrap: anywhere; }

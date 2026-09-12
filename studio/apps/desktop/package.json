@@ -1,0 +1,15 @@
+{
+  "name": "@the-way-here/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "dev": "electron .",
+    "test": "node --test src/*.test.mjs",
+    "typecheck": "node --check src/main.mjs && node --check src/preload.cjs"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
+  }
+}
