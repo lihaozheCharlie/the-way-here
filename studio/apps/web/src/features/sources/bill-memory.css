@@ -107,3 +107,6 @@
   .bill-clue-panel { animation: none; }
   .bill-memory-progress-track > span { transition: none; }
 }
+
+.bill-writing-progress { display: flex; align-items: center; gap: 14px; padding: 0 30px 20px; color: var(--muted); font-size: 12px; }
+.bill-writing-progress button { padding: 6px 10px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 5px; }

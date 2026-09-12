@@ -156,4 +156,3 @@
 
 .photo-story-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; }
 .photo-story-heading > div { min-width: 0; }
-.photo-memory .photo-story-assist { flex-shrink: 0; min-height: 44px; padding: 10px 20px; border-radius: 8px; }

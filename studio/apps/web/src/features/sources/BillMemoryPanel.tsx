@@ -1,4 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { isTerminalRunStatus, type VaultInfo, type WikiRun } from "@the-way-here/shared";
+import { useApi } from "../../shared/use-api";
+import { MemoryWritingAssist } from "./MemoryWritingAssist";
+import { openContextAgent } from "../collaboration/model";
+import { startMemoryWriting } from "./memory-writing";
 import type { PaymentJourneyClueState, PaymentJourneyClueStatus, PaymentJourneyCluster, SourceImportBatch } from "@the-way-here/shared";
 import { api } from "../../api";
 import { TextArea } from "../../shared/form-controls";
@@ -85,6 +90,11 @@ function BuildConfirmation({ batch, busy, onClose, onConfirm }: { batch: SourceI
 }
 
 export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: SourceBuildRecord; busy: boolean; onBuild: (batch: SourceImportBatch) => void; onDeep: (batch: SourceImportBatch, cluster: PaymentJourneyCluster, state: PaymentJourneyClueState) => void }) {
+  const { data: vault } = useApi<VaultInfo>("/api/vault");
+  const [backgrounds, setBackgrounds] = useState<Record<string, string>>({});
+  const [writing, setWriting] = useState<{ clusterId: string; run: WikiRun }>();
+  const [starting, setStarting] = useState(false);
+  const writingBusy = starting || Boolean(writing);
   const [batch, setBatch] = useState(record.batch);
   const [editing, setEditing] = useState<{ clusterId: string; mode: EditMode }>();
   const [briefs, setBriefs] = useState<Record<string, string>>({});
@@ -111,6 +121,37 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
   const journey = batch.journey!;
   const states = useMemo(() => new Map(journeyClueStates(journey).map((state) => [state.clusterId, state])), [journey]);
   const progress = journeyProgress(journey);
+
+  useEffect(() => {
+    if (!writing) return;
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      try {
+        const run = await api<WikiRun>(`/api/runs/${encodeURIComponent(writing!.run.id)}`);
+        if (disposed) return;
+        if (isTerminalRunStatus(run.status)) {
+          const text = run.result?.finalAnswer?.trim();
+          if (run.status === "completed" && text) setBriefs((current) => ({ ...current, [writing!.clusterId]: text }));
+          else setError(run.error || "没有生成内容，请重试；原文仍已保留。");
+          setWriting(undefined);
+        } else timer = setTimeout(poll, 1500);
+      } catch (reason: any) {
+        if (!disposed) { setError(reason.message); timer = setTimeout(poll, 3000); }
+      }
+    }
+    void poll();
+    return () => { disposed = true; clearTimeout(timer); };
+  }, [writing]);
+
+  async function generateBrief(cluster: PaymentJourneyCluster, draft: string) {
+    if (!vault || writingBusy || saving) return;
+    setStarting(true); setError("");
+    try {
+      const run = await startMemoryWriting({ knowledgeBaseId: vault.knowledgeBaseId, title: cluster.title, background: backgrounds[cluster.id] || "", draft, context: cluster });
+      setWriting({ clusterId: cluster.id, run });
+    } catch (reason: any) { setError(reason.message); } finally { setStarting(false); }
+  }
 
   async function save(cluster: PaymentJourneyCluster, status: PaymentJourneyClueStatus, note?: string, showUndo = true) {
     if (saving) return batch;
@@ -165,7 +206,7 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
         <div className="bill-memory-progress-track"><span style={{ transform: `scaleX(${progress.total ? (progress.total - progress.pending) / progress.total : 0})` }} /></div>
         <div className="bill-memory-legend" aria-live="polite"><span className="confirmed">已确认 {progress.confirmed}</span><span className="brief">已简答 {progress.brief}</span><span className="deep">已细聊 {progress.deep}</span><span className="skipped">已跳过 {progress.skipped}</span><span className="pending">待处理 {progress.pending}</span></div>
       </div>
-      <div className="bill-memory-build"><button ref={buildButtonRef} type="button" disabled={!progress.canBuild || busy} onClick={() => setConfirmBuild(true)}><Icon name="build" size={14} />{busy ? "正在准备…" : "构建这份记录"}</button><small>{progress.canBuild ? `将摄取 ${progress.included} 条，跳过 ${progress.skipped} 条` : progress.pending ? `还有 ${progress.pending} 条待处理，也可以逐条跳过` : "至少保留一条想收录的线索"}</small></div>
+      <div className="bill-memory-build"><button ref={buildButtonRef} type="button" disabled={!progress.canBuild || busy || writingBusy} onClick={() => setConfirmBuild(true)}><Icon name="build" size={14} />{busy ? "正在准备…" : "构建这份记录"}</button><small>{progress.canBuild ? `将摄取 ${progress.included} 条，跳过 ${progress.skipped} 条` : progress.pending ? `还有 ${progress.pending} 条待处理，也可以逐条跳过` : "至少保留一条想收录的线索"}</small></div>
     </header>
 
     <div className="bill-clue-grid">{journey.clusters.map((cluster) => {
@@ -182,25 +223,27 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
         {isEditing && editing.mode === "confirm" ? <div className="bill-clue-panel">
           <p>即将收录为：<b>「{cluster.proposedMemory || cluster.summary}」</b></p>
           <BillEvidence cluster={cluster} />
-          <footer><button type="button" disabled={Boolean(saving)} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>不对，简单说说</button><button type="button" className="primary" disabled={Boolean(saving)} onClick={() => void save(cluster, "confirmed")}>{saving === cluster.id ? "正在保存…" : "确认收录"}</button></footer>
+          <footer><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>不对，简单说说</button><button type="button" className="primary" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "confirmed")}>{saving === cluster.id ? "正在保存…" : "确认收录"}</button></footer>
         </div> : isEditing && editing.mode === "brief" ? <div className="bill-clue-panel is-brief">
           <BillEvidence cluster={cluster} />
-          <label htmlFor={`bill-brief-${cluster.id}`}>这背后有什么想补充的吗？随便说一两句就好，不写也可以。</label>
-          <TextArea id={`bill-brief-${cluster.id}`} rows={3} value={note} disabled={Boolean(saving)} onChange={(event) => setBriefs((current) => ({ ...current, [cluster.id]: event.target.value }))} placeholder="在这里写一两句，比如是怎么开始的、跟谁有关……" />
+          <MemoryWritingAssist background={backgrounds[cluster.id] || ""} onBackground={(value) => setBackgrounds((current) => ({ ...current, [cluster.id]: value }))} placeholder="补充一两句，比如是怎么开始的、跟谁有关……" disabled={Boolean(saving) || writingBusy || !vault} generating={writing?.clusterId === cluster.id || starting} onGenerate={() => void generateBrief(cluster, note)} />
+          <label htmlFor={`bill-brief-${cluster.id}`}>这条记录准备收录的说法</label>
+          <TextArea id={`bill-brief-${cluster.id}`} rows={3} value={note} disabled={Boolean(saving) || writingBusy} onChange={(event) => setBriefs((current) => ({ ...current, [cluster.id]: event.target.value }))} placeholder="在这里写一两句，比如是怎么开始的、跟谁有关……" />
           {briefNeedsDeepSuggestion(note) ? <p className="bill-clue-deep-hint"><Icon name="message" size={13} />这段内容已经很丰富，也可以展开细聊；直接提交也会完整保留。</p> : null}
-          <footer><button type="button" disabled={Boolean(saving)} onClick={() => setEditing(undefined)}>取消</button><button type="button" className="primary" disabled={Boolean(saving)} onClick={() => void save(cluster, "brief", note)}>{saving === cluster.id ? "正在保存…" : note.trim() ? "提交这句话" : "跳过补充，认这个摘要"}</button></footer>
+          <footer><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing(undefined)}>取消</button><button type="button" className="primary" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "brief", note)}>{saving === cluster.id ? "正在保存…" : note.trim() ? "提交这句话" : "跳过补充，认这个摘要"}</button></footer>
         </div> : state.status === "pending" ? <div className="bill-clue-actions">
-          <button type="button" disabled={Boolean(saving)} onClick={() => setEditing({ clusterId: cluster.id, mode: "confirm" })}>确认为事实</button><button type="button" disabled={Boolean(saving)} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>简单说说</button><button type="button" className="deep" disabled={Boolean(saving)} onClick={() => void startDeep(cluster)}>展开细聊</button><button type="button" className="skip" disabled={Boolean(saving)} onClick={() => void save(cluster, "skipped")}>暂时不收录</button>
+          <button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "confirm" })}>确认为事实</button><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>简单说说</button><button type="button" className="deep" disabled={Boolean(saving) || writingBusy} onClick={() => void startDeep(cluster)}>展开细聊</button><button type="button" className="skip" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "skipped")}>暂时不收录</button>
         </div> : <div className="bill-clue-result">
-          <button type="button" disabled={Boolean(saving)} onClick={() => state.status === "deep" ? void startDeep(cluster) : state.status === "skipped" ? void save(cluster, "pending", undefined, false) : setEditing({ clusterId: cluster.id, mode: state.status === "brief" ? "brief" : "confirm" })}>
+          <button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => state.status === "deep" ? void startDeep(cluster) : state.status === "skipped" ? void save(cluster, "pending", undefined, false) : setEditing({ clusterId: cluster.id, mode: state.status === "brief" ? "brief" : "confirm" })}>
             <span>{state.status === "skipped" ? "这条线索不会进入最终叙述。" : state.resultText || cluster.proposedMemory}</span><small>{state.status === "deep" ? "点击查看或继续完整对话" : state.status === "skipped" ? "点击重新处理" : "点击可重新核对或改用其他方式"}</small>
           </button>
         </div>}
       </article>;
     })}</div>
 
+    {writing ? <p className="bill-writing-progress" role="status">AI 正在起草，完成后会填回当前线索。<button type="button" onClick={() => openContextAgent({ runId: writing.run.id })}>查看进度</button></p> : null}
     {error ? <p className="bill-memory-error" role="alert">{error}</p> : null}
-    {undo ? <div className="bill-memory-toast" role="status" aria-live="polite"><span>已保存「{undo.title}」</span><small>{seconds} 秒后关闭</small><button type="button" disabled={Boolean(saving)} onClick={() => void undoLast()}>撤销</button></div> : null}
+    {undo ? <div className="bill-memory-toast" role="status" aria-live="polite"><span>已保存「{undo.title}」</span><small>{seconds} 秒后关闭</small><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => void undoLast()}>撤销</button></div> : null}
     {confirmBuild ? <BuildConfirmation batch={batch} busy={busy} onClose={closeBuildConfirmation} onConfirm={() => onBuild(batch)} /> : null}
   </section>;
 }

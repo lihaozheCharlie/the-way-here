@@ -44,7 +44,7 @@ export function assemblePhotoStories(memory: PhotoMemory, drafts: Record<string,
 }
 
 export function restoreGroupStory(memory: PhotoMemory, draft?: PhotoLocalDraft): string {
-  if (draft?.groupStory !== undefined && (draft.storyDirty || draft.revision >= memory.revision)) return draft.groupStory;
+  if (draft?.groupStory !== undefined && draft.storyDirty) return draft.groupStory;
   if (draft?.groupStory !== undefined) return restoreGroupStory(memory);
   if (!draft) {
     const whole = memory.draft || memory.confirmedStory;

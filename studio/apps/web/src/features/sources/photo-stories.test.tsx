@@ -42,7 +42,7 @@ it("shows all photos with one shared story input and batch drafting", () => {
   expect(empty).toContain("一篇故事"); expect(empty).toContain("AI 帮你写");
   expect(empty).not.toContain("还没写"); expect(empty).not.toContain("aria-pressed");
   const done = renderToStaticMarkup(<PhotoNarration {...props} story="我的完整回忆" />);
-  expect(done).toContain("我的完整回忆"); expect(done).not.toContain("AI 帮你写");
+  expect(done).toContain("我的完整回忆"); expect(done).toContain("AI 帮你写");
   expect(renderToStaticMarkup(<PhotoNarration {...props} locked generating />)).toContain("AI 正在把这些照片串成一个故事");
 });
 it("migrates old photo stories once and restores an intentionally cleared group draft", () => {

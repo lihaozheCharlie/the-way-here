@@ -17,6 +17,8 @@ import { PhotoProgress } from "./PhotoProgress";
 import { PhotoPersonQueue } from "./PhotoPersonQueue";
 import { PhotoNarration } from "./PhotoNarration";
 import "./photo-memory.css";
+import { photoRunToReconcile, photoWritingBackground } from "./photo-writing-recovery";
+import { startMemoryWriting } from "./memory-writing";
 
 const PHOTO_DETECTION_VERSION = 2;
 
@@ -50,6 +52,9 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
   const [faceGroups, setFaceGroups] = useState<FaceGroups>([]);
   const faceFeatures = useRef<FaceFeature[]>([]);
   const [groupingRevision, setGroupingRevision] = useState(0);
+  const [background, setBackground] = useState(initialDraft?.background ?? "");
+  const backgroundRestored = useRef(initialDraft?.background !== undefined);
+  const [pendingDraftRunId, setPendingDraftRunId] = useState(initialDraft?.pendingDraftRunId);
   const [groupStory, setGroupStory] = useState<string>();
   const [selectedPhotoId, setSelectedPhotoId] = useState("");
   const [storyDirty, setStoryDirty] = useState(false);
@@ -88,7 +93,7 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
         setPhotoDrafts(Object.fromEntries(Object.entries(initialDraft.photoDrafts ?? (initialDraft.peopleDirty ? { [initialDraft.photoId]: initialDraft.people } : {})).filter(([id]) => data.photos.some((photo) => photo.id === id))));
         setFaceGroups(initialDraft.faceGroups ?? []);
       }
-      setGroupStory(initialDraft ? restoreGroupStory(data, initialDraft) : undefined);
+      setGroupStory(initialDraft && (initialDraft.storyDirty || initialDraft.photoStories || initialDraft.answers || initialDraft.answer) ? restoreGroupStory(data, initialDraft) : undefined);
       setStoryDirty(Boolean(initialDraft?.storyDirty || initialDraft?.photoStories && Object.keys(initialDraft.photoStories).length));
       setSelectedPhotoId(data.photos[0]?.id ?? "");
       setStep(initialDraft?.step ? initialDraft.step < 3 ? 2 : 3 : data.confirmedAt || data.draft || data.photos.some((photo) => photo.story?.trim()) ? 3 : 2);
@@ -133,17 +138,17 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
   const pendingPeople = memory ? pendingPhotoPersonEdits(memory, photoDrafts).length : 0;
   const anyDirty = pendingPeople > 0;
   const unsaved = anyDirty || storyDirty;
-  const hasLocalDraft = Object.keys(photoDrafts).length > 0 || storyDirty;
+  const hasLocalDraft = Object.keys(photoDrafts).length > 0 || storyDirty || background.length > 0 || Boolean(pendingDraftRunId);
   useEffect(() => {
     if (!memory) return;
     try {
       const photo = memory.photos[0]!;
       // Save the shared story with person edits, including intentional clearing.
-      if (hasLocalDraft || faceGroups.length) localStorage.setItem(draftKey, JSON.stringify({ revision: memory.revision, photoId: photo.id, people: photoDrafts[photo.id] ?? photo.people, peopleDirty: Object.hasOwn(photoDrafts, photo.id), story, storyDirty, photoDrafts, faceGroups, step, groupStory: story, detectionVersion: PHOTO_DETECTION_VERSION }));
+      if (hasLocalDraft || faceGroups.length || backgroundRestored.current) localStorage.setItem(draftKey, JSON.stringify({ revision: memory.revision, photoId: photo.id, people: photoDrafts[photo.id] ?? photo.people, peopleDirty: Object.hasOwn(photoDrafts, photo.id), story, storyDirty, photoDrafts, faceGroups, step, groupStory: story, background, pendingDraftRunId, detectionVersion: PHOTO_DETECTION_VERSION }));
       else localStorage.removeItem(draftKey);
       setDraftSaved(hasLocalDraft);
     } catch { setDraftSaved(false); setError("本机暂时无法保存草稿。离开前请确认保存，或复制保留讲述。"); }
-  }, [draftKey, memory?.revision, hasLocalDraft, story, storyDirty, photoDrafts, faceGroups, step]);
+  }, [draftKey, memory?.revision, hasLocalDraft, story, storyDirty, photoDrafts, faceGroups, step, background, pendingDraftRunId]);
   useEffect(() => {
     if (!hasLocalDraft || draftSaved) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -151,7 +156,18 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasLocalDraft, draftSaved]);
   const related = runs.filter((run) => run.knowledgeBaseId === knowledgeBaseId && (run.outputTarget?.kind === "photo-memory" && run.outputTarget.importId === batch.id || run.sourceContext?.importId === batch.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const active = related.find((run) => !finishedRuns.includes(run.id) && !isTerminalRunStatus(run.status)) ?? (startedRun && !related.some((run) => run.id === startedRun.id) ? startedRun : undefined);
+  const active = photoRunToReconcile(related, finishedRuns, startedRun, pendingDraftRunId);
+  useEffect(() => {
+    if (backgroundRestored.current || !related.length) return;
+    const recovered = photoWritingBackground(related.find((run) => run.outputTarget?.kind === "photo-memory" && run.outputTarget.phase === "draft"));
+    if (recovered === undefined) return;
+    backgroundRestored.current = true;
+    setBackground(recovered);
+  }, [runs]);
+  function editBackground(value: string) {
+    backgroundRestored.current = true;
+    setBackground(value);
+  }
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -166,12 +182,14 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
           setMemory((current) => !current || fresh.revision >= current.revision ? fresh : current);
           setFinishedRuns((current) => [...current, run.id]);
           setStartedRun(undefined);
+          setPendingDraftRunId((current) => current === run.id ? undefined : current);
           if (run.status === "completed" && run.outputTarget?.kind === "photo-memory" && run.outputTarget.phase === "draft") { setGroupStory(undefined); setStoryDirty(false); }
           if (run.status !== "completed") setError(run.error || "这次没有完成，可以重试。");
         }
       } catch (reason: any) { if (!controller.signal.aborted) setError(reason.message); }
       finally { fetching = false; }
     };
+    void refresh();
     const timer = window.setInterval(() => void refresh(), 1500);
     return () => { controller.abort(); window.clearInterval(timer); };
   }, [active?.id]);
@@ -188,23 +206,26 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
       return saved;
     } catch (reason: any) { setError(reason.message); } finally { setBusy(""); }
   }
-  async function start(phase: "draft" | "build", current = memory) {
-    if (!current || locked) return;
-    setError(""); setBusy(phase === "draft" ? "AI 正在写…" : "正在收进理解…");
+  async function startBuild(current: PhotoMemory) {
+    if (locked) return;
+    setError(""); setBusy("正在收进理解…");
     try {
-      const isBuild = phase === "build";
       const run = await api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({
-        knowledgeBaseId, mode: isBuild ? "write" : "read", title: `${isBuild ? "构建" : "写故事"} · ${current.title}`,
-        displayPrompt: isBuild ? "收进这段照片记忆" : "把这组照片串成我的故事",
-        prompt: isBuild ? `请按 build-wiki 的导入后冷启构建入口读取「${current.reportPath}」。只摄取“用户确认的讲述”和用户明确指定的人物；保留来源不变，不猜测未命名者、关系或情绪。已选人物必须沿用页面关联；其余称呼可结合姓名、别名、上下文匹配已有档案，包括“我”和“自己”，无需二次询问。完成派生内容和质量门，并说明更新或跳过的内容。` : "请以我的第一人称视角，把这组所有照片串成一篇连贯的生活故事，填回共同的故事栏，不需要向用户提问。",
-        ...(!isBuild ? { outputTarget: { kind: "photo-memory", importId: batch.id, storedPath: current.reportPath, label: current.title, phase } } : { sourceContext: { importId: batch.id, storedPath: current.reportPath, flow: "dialogue", operation: "build" } }),
+        knowledgeBaseId, mode: "write", title: `构建 · ${current.title}`, displayPrompt: "收进这段照片记忆",
+        prompt: `请按 build-wiki 的导入后冷启构建入口读取「${current.reportPath}」。只摄取“用户确认的讲述”和用户明确指定的人物；保留来源不变，不猜测未命名者、关系或情绪。已选人物必须沿用页面关联；其余称呼可结合姓名、别名、上下文匹配已有档案，包括“我”和“自己”，无需二次询问。完成派生内容和质量门，并说明更新或跳过的内容。`,
+        sourceContext: { importId: batch.id, storedPath: current.reportPath, flow: "dialogue", operation: "build" },
       }) });
       setStartedRun(run);
     } catch (reason: any) { setError(reason.message); } finally { setBusy(""); }
   }
   async function generateStory() {
-    if (!memory || locked || story.trim()) return;
-    await start("draft", memory);
+    if (!memory || locked) return;
+    setBusy("AI 正在写…"); setError("");
+    try {
+      const run = await startMemoryWriting({ knowledgeBaseId, title: memory.title, background, draft: story, outputTarget: { kind: "photo-memory", importId: batch.id, storedPath: memory.reportPath, label: memory.title, phase: "draft" } });
+      setPendingDraftRunId(run.id);
+      setStartedRun(run);
+    } catch (reason: any) { setError(reason.message); } finally { setBusy(""); }
   }
   async function collectMemory() {
     if (!memory || locked || anyDirty || !story.trim()) return;
@@ -212,7 +233,7 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
     const saved = await save({ story });
     if (!saved) return;
     setGroupStory(undefined); setStoryDirty(false);
-    await start("build", saved);
+    await startBuild(saved);
   }
   function editPerson(photoId: string, personId: string, patch: Partial<PhotoPerson>) {
     if (!memory) return;
@@ -277,7 +298,7 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
     <PhotoProgress step={step} completed={completedSteps} disabled={locked} onStep={navigateStep} />
     <div className="photo-memory-body">
       {step === 2 ? <PhotoPersonQueue memory={memory} drafts={photoDrafts} groups={faceGroups} onDetach={(id) => void separateFace(id)} groupingError={Object.values(detection).find((status) => status.groupingError)?.groupingError} selectedId={selectedId} photoId={selectedPhotoId} people={people} locked={locked} onSelect={setSelectedId} onPhoto={(id) => { setSelectedPhotoId(id); setSelectedId(""); }} onChange={editPerson} onAdd={addPerson} onConfirm={(id, person) => void resolvePerson(id, person, false)} onCommitBox={(id, person) => void resolvePerson(id, person, false, true)} onSkip={(id, person) => void resolvePerson(id, person, true)} detecting={detectionRunning} detectionLabel={detectionProgressLabel(memory.photos, detection)} detectionError={Object.values(detection).find((status) => status.state === "failed")?.error} onRetry={() => { for (const [id, status] of Object.entries(detection)) if (status.state === "failed") completedDetections.current.delete(id); setDetectionRetry((value) => value + 1); }} /> :
-        <PhotoNarration memory={memory} story={story} locked={locked} generating={generating} onStory={editStory} onGenerate={() => void generateStory()} />}
+        <PhotoNarration background={background} onBackground={editBackground} memory={memory} story={story} locked={locked} generating={generating} onStory={editStory} onGenerate={() => void generateStory()} />}
       {active ? <p className="photo-feedback" role="status">{generating ? "生成后会自动填回这组照片的故事。" : "正在把这段记忆收进理解…"}<button type="button" onClick={() => openContextAgent({ runId: active.id })}>查看进度</button></p> : null}
       {cleanPublished ? <p className="photo-feedback" role="status">这段记忆已经收进理解。<Link to="/relationships">查看人物与世界图谱</Link></p> : null}
       <p className="photo-feedback" aria-live="polite">{busy || notice}</p>{error ? <p className="photo-error" role="alert">{error}</p> : null}

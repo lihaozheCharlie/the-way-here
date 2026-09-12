@@ -1,0 +1,21 @@
+.memory-writing-assist { margin: 24px 0 28px; padding: 18px; background: var(--canvas); border: 1px solid var(--line); border-radius: 8px; }
+.memory-writing-toolbar, .memory-writing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+.memory-writing-toolbar { justify-content: space-between; }
+.memory-writing-actions { flex: 1; justify-content: flex-end; }
+.memory-writing-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; font-size: 12px; }
+.memory-context-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 12px; color: var(--ink); background: var(--surface-tinted, #e9f1ef); border-radius: 999px; font-weight: 600; line-height: 1.6; }
+.memory-context-chip > .icon { flex: none; color: var(--accent-primary); }
+.memory-context-chip > span { min-width: 0; overflow-wrap: anywhere; }
+.memory-writing-assist button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 7px 12px; font: 600 12px/1.5 var(--font-ui); cursor: pointer; }
+.memory-writing-assist .memory-background-toggle { color: var(--muted); border: 1px dashed var(--line-strong, var(--line)); border-radius: 999px; background: transparent; }
+.memory-writing-assist .memory-background-toggle.is-filled { color: var(--ink); background: var(--surface-tinted); border-style: solid; }
+.memory-writing-assist .memory-writing-generate { flex: none; color: white; background: var(--ink); border: 1px solid var(--ink); border-radius: 5px; }
+.memory-writing-assist button:hover:not(:disabled) { border-color: var(--accent-primary); }
+.memory-writing-assist button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.memory-writing-assist button:disabled { opacity: .55; cursor: default; }
+.memory-writing-background { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.memory-writing-background label { display: block; margin-bottom: 10px; font-size: 12px; color: var(--ink); }
+.memory-writing-assist .memory-writing-background textarea { width: 100%; min-height: 100px; padding: 12px 14px; font-size: 13px; line-height: 1.8; resize: vertical; }
+.memory-writing-background p, .memory-writing-assist .memory-writing-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.bill-clue-panel.is-brief { gap: 16px; }
+.bill-clue-panel .memory-writing-assist { margin: 8px 0 10px; background: var(--paper); }

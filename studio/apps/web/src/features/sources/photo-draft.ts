@@ -19,6 +19,8 @@ export interface PhotoLocalDraft {
   skipped?: string[];
   answer?: string;
   detectionVersion?: number;
+  background?: string;
+  pendingDraftRunId?: string;
 }
 export function photoDraftKey(knowledgeBaseId: string, memoryId: string) {
   return `the-way-here:photo-draft:${encodeURIComponent(knowledgeBaseId)}:${encodeURIComponent(memoryId)}`;
@@ -44,6 +46,8 @@ export function parsePhotoDraft(raw: string | null): PhotoLocalDraft | undefined
         if (!parsePhotoDraft(JSON.stringify({ revision: value.revision, photoId, people, peopleDirty: true, story: "", storyDirty: false }))) return undefined;
       }
     }
+    if (value.background !== undefined && (typeof value.background !== "string" || value.background.length > 10000)) return undefined;
+    if (value.pendingDraftRunId !== undefined && (typeof value.pendingDraftRunId !== "string" || !/^[a-z0-9-]{1,80}$/i.test(value.pendingDraftRunId))) return undefined;
     if (value.groupStory !== undefined && (typeof value.groupStory !== "string" || value.groupStory.length > 60000)) return undefined;
     if (value.legacyStory !== undefined && (typeof value.legacyStory !== "string" || value.legacyStory.length > 60000)) return undefined;
     if (value.photoStories !== undefined && (!value.photoStories || typeof value.photoStories !== "object" || Array.isArray(value.photoStories) || Object.keys(value.photoStories).length > 10 || !Object.values(value.photoStories).every((story) => typeof story === "string" && story.length <= 10000))) return undefined;
