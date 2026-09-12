@@ -83,25 +83,45 @@
   .ai-write-block { border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); overflow: hidden; }
   .ai-write-block + .ai-write-block { margin-top: 14px; }
 
-  .ai-write-bg { padding: 16px 18px 14px; border-bottom: 1px dashed var(--line-strong); }
-  .ai-write-bg-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-  .ai-write-bg-label label { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 12.5px; font-weight: 650; }
-  .ai-write-bg-label label i { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--accent-primary); background: var(--surface-tinted); border-radius: 5px; font-style: normal; font-size: 11px; }
-  .ai-write-bg-label small { color: var(--faint); font-size: 11.5px; font-weight: 500; }
-  .ai-write-bg textarea {
-    display: block; width: 100%; min-height: 72px; padding: 11px 13px;
+  /* Compact top row: always visible, this is the whole "collapsed" footprint */
+  .ai-write-toprow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; padding: 10px 14px; }
+
+  .bg-toggle {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    min-height: 30px; padding: 0 11px 0 7px;
+    color: var(--muted); background: transparent; border: 1px dashed var(--line-strong); border-radius: 999px;
+    font: 600 12px/1 var(--font-ui); cursor: pointer;
+    transition: background-color .16s var(--ease), color .16s var(--ease), border-color .16s var(--ease);
+  }
+  .bg-toggle:hover { color: var(--ink); border-color: var(--accent-primary); }
+  .bg-toggle .toggle-icon {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    color: var(--accent-primary); background: var(--surface-tinted); font-size: 11px; line-height: 1; font-style: normal;
+  }
+  .bg-toggle.is-open { color: var(--ink); background: var(--surface-subtle); border-style: solid; border-color: var(--line-strong); }
+  .bg-toggle.is-filled:not(.is-open) { color: var(--accent-primary); background: var(--surface-tinted); border-style: solid; border-color: var(--accent-primary); }
+  .bg-toggle.is-filled:not(.is-open) .toggle-icon { color: #fff; background: var(--accent-primary); }
+
+  .ai-write-actions-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .ai-write-actions-right .context-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 7px; background: var(--surface-tinted); color: var(--ink); border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+  .ai-write-actions-right .context-chip i { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-primary); font-style: normal; font-size: 10px; }
+
+  /* Expandable panel using the grid 0fr/1fr height-animation trick, no JS height math needed */
+  .ai-write-bg-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s var(--ease); }
+  .ai-write-bg-collapse.open { grid-template-rows: 1fr; }
+  .ai-write-bg-inner { overflow: hidden; padding: 0 14px; border-top: 1px dashed var(--line-strong); }
+  .ai-write-bg-collapse.open .ai-write-bg-inner { padding: 12px 14px 14px; }
+
+  .ai-write-bg-inner textarea {
+    display: block; width: 100%; min-height: 64px; padding: 10px 12px;
     color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 8px;
     font: 13px/1.75 var(--font-ui); resize: vertical; caret-color: var(--accent-primary);
   }
-  .ai-write-bg textarea::placeholder { color: var(--faint); }
-  .ai-write-bg textarea:focus-visible { outline: 3px solid rgba(87,138,131,.18); outline-offset: 1px; border-color: var(--accent-primary); }
+  .ai-write-bg-inner textarea::placeholder { color: var(--faint); }
+  .ai-write-bg-inner textarea:focus-visible { outline: 3px solid rgba(87,138,131,.18); outline-offset: 1px; border-color: var(--accent-primary); }
   .ai-write-bg-hint { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--faint); font-size: 11.5px; line-height: 1.6; }
   .ai-write-bg-hint i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--accent-attention); }
-
-  .ai-write-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; }
-  .ai-write-actions-left { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); font-size: 12px; }
-  .ai-write-actions-left .context-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 7px; background: var(--surface-tinted); color: var(--ink); border-radius: 999px; font-size: 11.5px; font-weight: 600; }
-  .ai-write-actions-left .context-chip i { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-primary); font-style: normal; font-size: 10px; }
 
   .ai-write-btn {
     display: inline-flex; align-items: center; gap: 7px; flex: none;
@@ -116,7 +136,7 @@
   .ai-write-btn.is-polish { background: var(--accent-primary); }
   .ai-write-btn.is-polish:hover { background: #4a766f; }
 
-  .ai-write-mode-note { margin-top: 6px; padding: 0 18px 14px; color: var(--faint); font-size: 11.5px; line-height: 1.7; transition: opacity .15s var(--ease); }
+  .ai-write-mode-note { margin-top: -2px; padding: 0 14px 12px; color: var(--faint); font-size: 11.5px; line-height: 1.7; transition: opacity .15s var(--ease); }
   .ai-write-mode-note b { color: var(--muted); font-weight: 650; }
 
   /* result field, reused look from existing textarea */
@@ -194,8 +214,8 @@
 
   <section class="concept-summary">
     <div class="concept-card">
-      <b><i>1</i>背景信息可选</b>
-      <p>新增一个「背景信息」文本框，放在原有故事 / 备注框的上方。留空完全不影响原有的“AI 帮你写”能力，填了就会被一并交给 AI。</p>
+      <b><i>1</i>默认收起，按需展开</b>
+      <p>「背景信息」默认只是 AI 按钮旁的一颗小胶囊按钮，不占空间。点一下才展开输入框，写完可以收起；不点也完全不影响直接「AI 帮你写」。</p>
     </div>
     <div class="concept-card">
       <b><i>2</i>结合已选上下文</b>
@@ -233,20 +253,22 @@
 
           <!-- SHARED COMPONENT -->
           <div class="ai-write-block" id="photo-ai-block">
-            <div class="ai-write-bg">
-              <div class="ai-write-bg-label">
-                <label for="photo-bg-input"><i>◇</i>背景信息（可选）</label>
-                <small>不填也可以，AI 会自己讲</small>
-              </div>
-              <textarea id="photo-bg-input" rows="2" placeholder="补充一点这几张照片背后的线索，比如是和谁一起去的、那天发生了什么特别的事……"></textarea>
-              <p class="ai-write-bg-hint"><i></i>AI 会把这段背景信息，和已认出的人物、照片顺序结合起来一起写。</p>
-            </div>
-            <div class="ai-write-actions">
-              <div class="ai-write-actions-left">
+            <div class="ai-write-toprow">
+              <button type="button" class="bg-toggle" id="photo-bg-toggle" aria-expanded="false" aria-controls="photo-bg-collapse">
+                <span class="toggle-icon" id="photo-bg-toggle-icon">+</span>
+                <span id="photo-bg-toggle-label">补充背景信息</span>
+              </button>
+              <div class="ai-write-actions-right">
                 <span class="context-chip"><i>◈</i>已认出：小舟、阿姨</span>
                 <span class="context-chip"><i>▤</i>4 张 · 按时间排序</span>
+                <button type="button" class="ai-write-btn" id="photo-ai-btn"><span class="spark">✦</span><span id="photo-ai-btn-text">AI 帮你写</span></button>
               </div>
-              <button type="button" class="ai-write-btn" id="photo-ai-btn"><span class="spark">✦</span><span id="photo-ai-btn-text">AI 帮你写</span></button>
+            </div>
+            <div class="ai-write-bg-collapse" id="photo-bg-collapse">
+              <div class="ai-write-bg-inner">
+                <textarea id="photo-bg-input" rows="2" placeholder="补充一点这几张照片背后的线索，比如是和谁一起去的、那天发生了什么特别的事……"></textarea>
+                <p class="ai-write-bg-hint"><i></i>AI 会把这段背景信息，和已认出的人物、照片顺序结合起来一起写。</p>
+              </div>
             </div>
             <p class="ai-write-mode-note" id="photo-ai-mode-note">未填写背景信息时，AI 会仅根据照片和已认出的人物自由发挥。</p>
           </div>
@@ -259,16 +281,16 @@
 
       <aside class="annotate-notes">
         <div class="annotate-card">
-          <b><i>A</i>入口位置不变</b>
-          <p>原本「AI 帮你写」按钮的位置保留，只是上方多了一段可选的「背景信息」输入框，两者视觉上组成一个整体卡片。</p>
+          <b><i>A</i>入口收起为一颗胶囊按钮</b>
+          <p>「AI 帮你写」按钮位置不变，旁边只多了一颗很轻的「+ 补充背景信息」胶囊按钮，默认不占任何输入框空间，点一下才展开、可以再收起。</p>
         </div>
         <div class="annotate-card">
-          <b><i>B</i>按钮文案随状态切换</b>
-          <p>背景信息为空 → 按钮显示「AI 帮你写」（生成新故事）。<br>背景信息非空 → 按钮显示「结合背景写故事」（把背景信息润色成完整讲述）。</p>
+          <b><i>B</i>三种状态一目了然</b>
+          <p>未填写 → 灰色虚线胶囊「+ 补充背景信息」。<br>填写后收起 → 变成实心的「✓ 背景信息 · 已填写」，用颜色提醒“内容还在”。<br>展开中 → 「− 收起背景信息」，与输入框一起呈现。</p>
         </div>
         <div class="annotate-card">
-          <b><i>C</i>已有故事时的处理</b>
-          <p>若故事框里已经有内容，同一组件依然可用：填写背景信息后按钮变为「结合背景润色」，用于在已有草稿基础上补充和改写，而不是覆盖重写。</p>
+          <b><i>C</i>按钮文案跟着背景信息走</b>
+          <p>不管展开还是收起，只要背景信息里有内容，右侧 AI 按钮就会从「AI 帮你写」变成「结合背景写故事」，逻辑与之前一致，只是输入框本身不再常驻。</p>
         </div>
       </aside>
     </div>
@@ -276,7 +298,7 @@
     <div class="flow-strip" aria-label="照片场景流程">
       <span class="step emph"><b>1</b>导入照片、认人</span><span class="arrow">→</span>
       <span class="step">进入「讲故事」步骤</span><span class="arrow">→</span>
-      <span class="step emph"><b>2</b>（可选）填写背景信息</span><span class="arrow">→</span>
+      <span class="step emph"><b>2</b>（可选）点开「+ 补充背景信息」再填写</span><span class="arrow">→</span>
       <span class="step emph"><b>3</b>点击 AI 写 / 结合背景润色</span><span class="arrow">→</span>
       <span class="step">故事写入下方输入框，用户可再编辑</span><span class="arrow">→</span>
       <span class="step">收进理解</span>
@@ -306,23 +328,23 @@
               </ul>
             </div>
 
-            <div class="brief-field-label"><i>◇</i>背景信息（可选）——这背后有什么想补充的吗？</div>
-
             <!-- SHARED COMPONENT -->
             <div class="ai-write-block" id="bill-ai-block">
-              <div class="ai-write-bg">
-                <div class="ai-write-bg-label">
-                  <label for="bill-bg-input" class="sr-only-visually-shown" style="display:none">背景信息</label>
-                  <small style="margin-left:auto">随便说一两句就好，不写也可以</small>
-                </div>
-                <textarea id="bill-bg-input" rows="2" placeholder="在这里写一两句，比如是怎么开始的、跟谁有关……（也可以留空，直接让 AI 根据账单猜一版）"></textarea>
-                <p class="ai-write-bg-hint"><i></i>AI 会把这段话和这 6 笔打车记录一起，润色成一段完整、自然的记述。</p>
-              </div>
-              <div class="ai-write-actions">
-                <div class="ai-write-actions-left">
+              <div class="ai-write-toprow">
+                <button type="button" class="bg-toggle" id="bill-bg-toggle" aria-expanded="false" aria-controls="bill-bg-collapse">
+                  <span class="toggle-icon" id="bill-bg-toggle-icon">+</span>
+                  <span id="bill-bg-toggle-label">补充背景信息</span>
+                </button>
+                <div class="ai-write-actions-right">
                   <span class="context-chip"><i>◈</i>这条线索 · 6 笔账单</span>
+                  <button type="button" class="ai-write-btn is-polish" id="bill-ai-btn"><span class="spark">✦</span><span id="bill-ai-btn-text">结合账单，AI 帮你写</span></button>
                 </div>
-                <button type="button" class="ai-write-btn is-polish" id="bill-ai-btn"><span class="spark">✦</span><span id="bill-ai-btn-text">结合账单，AI 帮你写</span></button>
+              </div>
+              <div class="ai-write-bg-collapse" id="bill-bg-collapse">
+                <div class="ai-write-bg-inner">
+                  <textarea id="bill-bg-input" rows="2" placeholder="在这里写一两句，比如是怎么开始的、跟谁有关……（也可以留空，直接让 AI 根据账单猜一版）"></textarea>
+                  <p class="ai-write-bg-hint"><i></i>AI 会把这段话和这 6 笔打车记录一起，润色成一段完整、自然的记述。</p>
+                </div>
               </div>
               <p class="ai-write-mode-note" id="bill-ai-mode-note">未填写背景信息时，AI 会仅依据这 6 笔账单证据推测并起草一版说法，供你核对修改。</p>
             </div>
@@ -340,16 +362,16 @@
 
       <aside class="annotate-notes">
         <div class="annotate-card">
-          <b><i>A</i>原「简单说说」升级</b>
-          <p>原本这里只是一个纯文本备注框。现在同一个位置换成共享组件：备注即「背景信息」，加一个 AI 按钮，用户仍然可以完全手写、完全不用 AI。</p>
+          <b><i>A</i>不再单独占一行输入框</b>
+          <p>原来单独的「背景信息（可选）」标签 + 输入框被去掉了，改成和照片场景一样的一颗「+ 补充背景信息」胶囊按钮，和 AI 按钮并排，账单卡片高度基本不变。</p>
         </div>
         <div class="annotate-card">
           <b><i>B</i>上下文来自当前线索</b>
-          <p>上下文标签固定显示这一条聚类的账单证据条数（如“6 笔账单”），与照片场景中的“已认出人物”角色一致：都是“AI 会参考什么”的说明。</p>
+          <p>上下文标签固定显示这一条聚类的账单证据条数（如“6 笔账单”），与照片场景中的“已认出人物”角色一致：都是“AI 会参考什么”的说明，展开与否都能看到。</p>
         </div>
         <div class="annotate-card">
           <b><i>C</i>两种起点都收敛到同一结果框</b>
-          <p>无论是「直接 AI 写」还是「先写背景再润色」，产出都写进下方「准备收录的说法」框，用户核对后再提交，不改变原有的确认 / 提交流程。</p>
+          <p>无论是「直接 AI 写」还是「先展开写背景再润色」，产出都写进下方「准备收录的说法」框，用户核对后再提交，不改变原有的确认 / 提交流程。</p>
         </div>
       </aside>
     </div>
@@ -357,7 +379,7 @@
     <div class="flow-strip" aria-label="账单场景流程">
       <span class="step emph"><b>1</b>导入账单、生成线索聚类</span><span class="arrow">→</span>
       <span class="step">选择「简单说说」</span><span class="arrow">→</span>
-      <span class="step emph"><b>2</b>（可选）填写背景信息</span><span class="arrow">→</span>
+      <span class="step emph"><b>2</b>（可选）点开「+ 补充背景信息」再填写</span><span class="arrow">→</span>
       <span class="step emph"><b>3</b>点击 AI 写 / 结合账单润色</span><span class="arrow">→</span>
       <span class="step">说法写入结果框，用户可再编辑</span><span class="arrow">→</span>
       <span class="step">提交这句话</span>
@@ -376,23 +398,45 @@
     document.getElementById("panel-" + btn.dataset.target).classList.add("active");
   }));
 
-  // Shared behavior: button label + helper note react to whether background info is filled,
-  // and clicking simulates an AI generation into the result field.
-  function wireAiWriteBlock({ bgId, btnId, btnTextId, noteId, resultId, blockId, genLabel, polishLabel, genNote, polishNote, genSample, polishSample }) {
+  // Shared behavior: the background-info field is collapsed by default behind a small
+  // pill toggle. Its icon/label reflect three states (empty, filled-but-collapsed, open).
+  // The AI button label + helper note react to whether background info has content,
+  // regardless of whether the field is currently expanded, and clicking simulates an
+  // AI generation into the result field.
+  function wireAiWriteBlock({ bgId, btnId, btnTextId, noteId, resultId, blockId, toggleId, toggleIconId, toggleLabelId, collapseId, genLabel, polishLabel, genNote, polishNote, genSample, polishSample }) {
     const bg = document.getElementById(bgId);
     const btn = document.getElementById(btnId);
     const btnText = document.getElementById(btnTextId);
     const note = document.getElementById(noteId);
     const result = document.getElementById(resultId);
     const block = document.getElementById(blockId);
+    const toggle = document.getElementById(toggleId);
+    const toggleIcon = document.getElementById(toggleIconId);
+    const toggleLabel = document.getElementById(toggleLabelId);
+    const collapse = document.getElementById(collapseId);
 
     function sync() {
       const hasBg = bg.value.trim().length > 0;
+      const isOpen = collapse.classList.contains("open");
+
       btnText.textContent = hasBg ? polishLabel : genLabel;
       note.innerHTML = hasBg ? polishNote : genNote;
       btn.classList.toggle("is-polish", hasBg);
+
+      toggle.classList.toggle("is-open", isOpen);
+      toggle.classList.toggle("is-filled", hasBg && !isOpen);
+      toggle.setAttribute("aria-expanded", String(isOpen));
+      toggleIcon.textContent = isOpen ? "\u2212" : hasBg ? "\u2713" : "+";
+      toggleLabel.textContent = isOpen ? "收起背景信息" : hasBg ? "背景信息 · 已填写" : "补充背景信息";
     }
     bg.addEventListener("input", sync);
+    toggle.addEventListener("click", () => {
+      collapse.classList.toggle("open");
+      sync();
+      if (collapse.classList.contains("open")) {
+        setTimeout(() => bg.focus(), 220);
+      }
+    });
     sync();
 
     btn.addEventListener("click", () => {
@@ -416,6 +460,7 @@
   wireAiWriteBlock({
     bgId: "photo-bg-input", btnId: "photo-ai-btn", btnTextId: "photo-ai-btn-text",
     noteId: "photo-ai-mode-note", resultId: "photo-story-field", blockId: "photo-ai-block",
+    toggleId: "photo-bg-toggle", toggleIconId: "photo-bg-toggle-icon", toggleLabelId: "photo-bg-toggle-label", collapseId: "photo-bg-collapse",
     genLabel: "AI 帮你写", polishLabel: "结合背景写故事",
     genNote: "未填写背景信息时，AI 会仅根据照片和已认出的人物自由发挥。",
     polishNote: "已填写背景信息：AI 会把这段话和已认出的人物、照片顺序结合，润色成一篇连贯的故事。",
@@ -426,6 +471,7 @@
   wireAiWriteBlock({
     bgId: "bill-bg-input", btnId: "bill-ai-btn", btnTextId: "bill-ai-btn-text",
     noteId: "bill-ai-mode-note", resultId: "bill-note-field", blockId: "bill-ai-block",
+    toggleId: "bill-bg-toggle", toggleIconId: "bill-bg-toggle-icon", toggleLabelId: "bill-bg-toggle-label", collapseId: "bill-bg-collapse",
     genLabel: "结合账单，AI 帮你写", polishLabel: "结合背景润色",
     genNote: "未填写背景信息时，AI 会仅依据这 6 笔账单证据推测并起草一版说法，供你核对修改。",
     polishNote: "已填写背景信息：AI 会把这段话和这 6 笔打车记录结合，润色成一段完整、自然的记述。",
