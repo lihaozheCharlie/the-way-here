@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Way Here · 桌面端 UX 重构设计稿</title>
+<style>
+  /* ===================== 0. 设计系统 Token ===================== */
+  :root{
+    --paper:#fbfbfa; --canvas:#f2f3f1; --surface:#ffffff; --surface-tinted:#f3f6f5;
+    --ink:#263440; --ink-soft:#4a5a63; --muted:#7c8a8a; --faint:#a6b0ad;
+    --line:#e7e9e7; --line-strong:#d7dbd8;
+    --accent:#578a83; --accent-soft:#e7f0ee; --accent-ink:#33544f;
+    --attention:#b9874c; --attention-soft:#f6ecdd;
+    --danger:#b6543f; --danger-soft:#f7e8e3;
+    --radius-control:8px; --radius-panel:14px; --radius-pill:999px;
+    --shadow-panel:0 8px 24px rgba(38,52,64,.07);
+    --shadow-float:0 16px 40px rgba(38,52,64,.14);
+    --font-ui:"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif;
+    --font-display:"Songti SC","Noto Serif SC",Georgia,serif;
+    --font-mono:"SF Mono","Menlo",ui-monospace,monospace;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.6;}
+  h1,h2,h3,h4{font-family:var(--font-ui);margin:0;}
+  p{margin:0;}
+  a{color:var(--accent-ink);}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ===================== 布局：左侧文档导航 + 右侧内容 ===================== */
+  .doc-shell{display:grid;grid-template-columns:248px 1fr;min-height:100vh;}
+  .doc-nav{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--paper);border-right:1px solid var(--line);padding:28px 18px 40px;}
+  .doc-nav .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px;}
+  .doc-nav .brand span.dot{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;}
+  .doc-nav .sub{font-size:12px;color:var(--muted);margin-bottom:22px;display:block;}
+  .doc-nav .nav-group{margin-bottom:18px;}
+  .doc-nav .nav-group-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 8px 8px;display:block;}
+  .doc-nav a{display:block;padding:7px 8px;border-radius:7px;color:var(--ink-soft);text-decoration:none;font-size:13px;}
+  .doc-nav a:hover{background:var(--surface-tinted);color:var(--ink);}
+  .doc-content{padding:40px 56px 120px;max-width:1180px;}
+  section.doc-section{margin-bottom:88px;padding-top:8px;}
+  section.doc-section > .section-head{margin-bottom:22px;}
+  section.doc-section > .section-head h2{font-size:23px;letter-spacing:-.01em;}
+  section.doc-section > .section-head .tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);border-radius:var(--radius-pill);padding:3px 10px;margin-bottom:10px;}
+  section.doc-section > .section-head p{color:var(--muted);font-size:13.5px;margin-top:8px;max-width:720px;}
+  .spec-note{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-panel);padding:16px 20px;margin-top:18px;font-size:12.5px;color:var(--ink-soft);}
+  .spec-note b{color:var(--ink);}
+  .spec-table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12.5px;}
+  .spec-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);padding:8px 12px;border-bottom:1px solid var(--line-strong);}
+  .spec-table td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink-soft);vertical-align:top;}
+  .spec-table td:first-child{color:var(--ink);font-weight:600;white-space:nowrap;}
+  .spec-table code{background:var(--surface-tinted);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:11.5px;color:var(--accent-ink);}
+
+  /* mockup 容器：模拟 macOS 应用窗口 */
+  .window-mock{background:var(--surface);border-radius:12px;box-shadow:var(--shadow-panel);border:1px solid var(--line);overflow:hidden;}
+  .window-chrome{height:34px;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--paper);border-bottom:1px solid var(--line);}
+  .traffic{display:flex;gap:7px;}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ec6a5e;} .traffic i:nth-child(2){background:#f4bf50;} .traffic i:nth-child(3){background:#61c454;}
+  .window-chrome .win-title{flex:1;text-align:center;font-size:12px;color:var(--muted);font-weight:600;margin-right:38px;}
+
+  /* 标注气泡 */
+  .callout{position:relative;}
+  .mark{position:absolute;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,255,255,.85),0 4px 10px rgba(38,52,64,.25);z-index:5;}
+
+  /* 通用 tab */
+  .tabbar{display:flex;gap:4px;background:var(--surface-tinted);border-radius:var(--radius-pill);padding:4px;width:fit-content;margin-bottom:20px;}
+  .tabbar button{border:none;background:transparent;padding:7px 16px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:600;color:var(--muted);transition:background .18s var(--ease),color .18s var(--ease);}
+  .tabbar button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(38,52,64,.12);}
+  .tabbar button:hover:not(.active){color:var(--ink-soft);}
+
+  /* 按钮系统展示 */
+  .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:var(--radius-control);font-size:13px;font-weight:600;border:1px solid transparent;transition:background .15s ease,color .15s ease,border-color .15s ease,transform .12s ease,box-shadow .15s ease;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#4c7972;}
+  .btn-secondary{background:var(--surface);color:var(--ink);border-color:var(--line-strong);}
+  .btn-secondary:hover{background:var(--surface-tinted);}
+  .btn-ghost{background:transparent;color:var(--ink-soft);}
+  .btn-ghost:hover{background:var(--surface-tinted);color:var(--ink);}
+  .btn-danger{background:var(--surface);color:var(--danger);border-color:var(--danger-soft);}
+  .btn-danger:hover{background:var(--danger-soft);}
+  .btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(87,138,131,.28);}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;}
+  .btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:8px;background:transparent;color:var(--ink-soft);border:1px solid transparent;}
+  .btn-icon:hover{background:var(--surface-tinted);color:var(--ink);}
+  .btn-icon.selected{background:var(--accent-soft);color:var(--accent-ink);}
+
+  .icon{width:15px;height:15px;display:inline-block;}
+  .icon svg{width:100%;height:100%;}
+
+  .state-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:8px;}
+  .state-label{font-size:11px;color:var(--faint);width:64px;flex-shrink:0;}
+
+  .field{height:32px;border-radius:var(--radius-control);border:1px solid var(--line-strong);background:var(--surface);padding:0 12px;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px;transition:box-shadow .15s ease,border-color .15s ease;width:220px;}
+  .field.focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(87,138,131,.16);}
+  .field input{border:none;outline:none;background:transparent;font-size:13px;width:100%;color:var(--ink);}
+  .field .icon{color:var(--faint);}
+
+  .tag-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:var(--radius-pill);border:1px solid var(--line-strong);background:transparent;font-size:12px;color:var(--ink-soft);}
+  .tag-chip i{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .tag-chip.attn i{background:var(--attention);}
+
+  .switch{width:38px;height:22px;border-radius:var(--radius-pill);background:var(--line-strong);position:relative;transition:background .18s ease;display:inline-block;flex-shrink:0;}
+  .switch.on{background:var(--accent);}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .18s ease;}
+  .switch.on::after{transform:translateX(16px);}
+
+  .toast{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent-ink);background:var(--accent-soft);border-radius:var(--radius-pill);padding:5px 12px 5px 8px;}
+  .toast .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+  .compare-card{border:1px solid var(--line);border-radius:var(--radius-panel);overflow:hidden;background:var(--surface);}
+  .compare-card .cc-head{padding:10px 16px;font-size:11.5px;font-weight:700;letter-spacing:.02em;}
+  .compare-card.before .cc-head{background:var(--danger-soft);color:var(--danger);}
+  .compare-card.after .cc-head{background:var(--accent-soft);color:var(--accent-ink);}
+  .compare-card .cc-body{padding:18px;}
+
+  /* ============ 全局应用外壳 mockup ============ */
+  .app-mock{display:grid;grid-template-rows:38px 1fr;height:640px;}
+  .app-titlebar{display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--paper);border-bottom:1px solid var(--line);position:relative;}
+  .app-titlebar .win-title{position:absolute;left:0;right:0;text-align:center;font-size:12px;font-weight:600;color:var(--ink-soft);pointer-events:none;}
+  .app-body{display:grid;grid-template-columns:220px 1fr;position:relative;}
+  .app-sidebar{background:var(--paper);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px;}
+  .app-sidebar .kb-switch{display:flex;align-items:center;gap:8px;height:34px;border-radius:var(--radius-control);border:1px solid var(--line-strong);padding:0 10px;font-size:12.5px;font-weight:600;margin:6px 0 16px;background:var(--surface);}
+  .app-sidebar .kb-switch svg{margin-left:auto;}
+  .nav-row{display:flex;align-items:center;height:32px;border-radius:8px;padding:0 10px;font-size:13px;color:var(--ink-soft);gap:8px;position:relative;}
+  .nav-row.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:700;}
+  .nav-row .badge{margin-left:auto;font-size:10.5px;background:var(--attention);color:#fff;border-radius:var(--radius-pill);padding:1px 6px;}
+  .app-content{background:var(--canvas);padding:26px 30px;overflow:auto;}
+
+  /* today */
+  .today-hero{margin-bottom:22px;}
+  .today-hero h1{font-size:22px;letter-spacing:-.01em;}
+  .today-hero p{color:var(--muted);font-size:12.5px;margin-top:4px;}
+  .today-opener{background:var(--surface);border-radius:var(--radius-panel);padding:22px 24px;box-shadow:var(--shadow-panel);margin-bottom:16px;}
+  .today-opener .label{font-size:11px;color:var(--accent-ink);font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:10px;}
+  .today-opener h2{font-family:var(--font-display);font-size:18px;font-weight:500;line-height:1.55;margin-bottom:16px;}
+  .starter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .starter-row button{height:28px;padding:0 12px;border-radius:var(--radius-pill);border:1px solid var(--line-strong);background:var(--surface);font-size:12px;color:var(--ink-soft);}
+  .starter-row button:hover{border-color:var(--accent);color:var(--accent-ink);}
+  .today-input{display:flex;align-items:center;gap:10px;border:1px solid var(--line-strong);border-radius:var(--radius-panel);padding:10px 10px 10px 16px;background:var(--paper);}
+  .today-input input{flex:1;border:none;background:transparent;font-size:13.5px;outline:none;}
+  .today-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
+  .mini-card{background:var(--surface);border-radius:var(--radius-panel);padding:16px 18px;box-shadow:var(--shadow-panel);}
+  .mini-card h3{font-size:12.5px;font-weight:700;margin-bottom:10px;color:var(--ink-soft);}
+
+  /* sources 三栏 */
+  .sources-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .sources-3col{display:grid;grid-template-columns:180px 220px 1fr;gap:0;border:1px solid var(--line);border-radius:var(--radius-panel);overflow:hidden;height:420px;background:var(--surface);}
+  .col{border-right:1px solid var(--line);overflow:auto;}
+  .col:last-child{border-right:none;}
+  .col-head{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);}
+  .folder-row,.file-row{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;font-size:13px;color:var(--ink-soft);border-radius:7px;margin:2px 6px;}
+  .folder-row.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;}
+  .folder-row .count{margin-left:auto;font-size:11px;color:var(--faint);}
+  .file-row{flex-direction:column;align-items:stretch;height:auto;padding:9px 12px;gap:2px;border-left:3px solid transparent;border-radius:0 7px 7px 0;margin:0;}
+  .file-row.active{background:var(--surface-tinted);border-left-color:var(--accent);}
+  .file-row b{font-size:13px;font-weight:600;color:var(--ink);}
+  .file-row span{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .preview-col{padding:20px 22px;}
+  .preview-col h3{font-family:var(--font-display);font-size:16px;margin-bottom:8px;}
+  .preview-col p{font-size:13px;color:var(--ink-soft);line-height:1.75;}
+  .collapsed-col{width:44px !important;display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:10px;}
+
+  /* reader */
+  .reader-mock{border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface);height:480px;display:grid;grid-template-columns:1fr 44px;overflow:hidden;}
+  .reader-main{padding:24px 40px;overflow:auto;}
+  .doc-identity{margin-bottom:18px;}
+  .doc-identity .filename{font-size:19px;font-weight:700;color:var(--ink);}
+  .doc-identity .meta-row{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:12px;color:var(--muted);}
+  .doc-identity .meta-row .sep{color:var(--line-strong);}
+  .tag-summary{display:flex;align-items:center;gap:8px;margin:12px 0 18px;padding:8px 10px;border:1px dashed var(--line-strong);border-radius:10px;font-size:12px;color:var(--muted);}
+  .tag-summary button{margin-left:auto;font-size:11.5px;color:var(--accent-ink);background:none;border:none;font-weight:600;}
+  .doc-body{font-family:var(--font-display);font-size:16px;line-height:1.85;color:var(--ink);}
+  .doc-body h4{font-size:15px;font-family:var(--font-ui);font-weight:700;margin:20px 0 8px;}
+  .doc-body p{margin-bottom:12px;}
+  .outline-rail{border-left:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:12px;background:var(--paper);}
+  .save-toast{position:absolute;top:14px;right:16px;}
+
+  /* edit mode diff */
+  .edit-textarea{font-family:var(--font-display);font-size:16px;line-height:1.85;width:100%;min-height:220px;border:1px solid var(--accent);border-radius:10px;padding:16px;outline:none;box-shadow:0 0 0 3px rgba(87,138,131,.14);}
+
+  /* tag cloud comparison */
+  .tag-cloud-old{display:flex;flex-wrap:wrap;gap:8px;}
+  .tag-cloud-old span{background:#e7e9e7;border-radius:6px;padding:6px 12px;font-size:11px;color:#5b6764;}
+  .tag-cloud-new{display:flex;flex-wrap:wrap;gap:8px;}
+
+  /* search */
+  .search-hit{padding:14px 0;border-bottom:1px solid var(--line);}
+  .search-hit:last-child{border-bottom:none;}
+  .search-hit .path{font-size:11px;color:var(--faint);margin-bottom:4px;}
+  .search-hit h4{font-size:14px;font-weight:700;margin-bottom:4px;}
+  .search-hit p{font-size:12.5px;color:var(--ink-soft);}
+  .search-hit mark{background:var(--attention-soft);color:var(--attention);border-radius:3px;padding:0 2px;}
+
+  /* command palette / modal */
+  .modal-overlay{background:rgba(38,52,64,.28);border-radius:var(--radius-panel);display:flex;align-items:center;justify-content:center;padding:60px 0;}
+  .command-palette{width:480px;background:var(--surface);border-radius:var(--radius-panel);box-shadow:var(--shadow-float);overflow:hidden;}
+  .command-palette .cp-input{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);font-size:14px;}
+  .cp-item{display:flex;align-items:center;gap:10px;padding:10px 18px;font-size:13px;color:var(--ink-soft);}
+  .cp-item.active{background:var(--accent-soft);color:var(--accent-ink);}
+  .cp-item kbd{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;background:var(--surface-tinted);border-radius:4px;padding:2px 6px;color:var(--faint);}
+
+  .confirm-modal{width:360px;background:var(--surface);border-radius:var(--radius-panel);box-shadow:var(--shadow-float);padding:22px;}
+  .confirm-modal h3{font-size:15px;margin-bottom:8px;}
+  .confirm-modal p{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
+  .confirm-modal .row{display:flex;gap:10px;justify-content:flex-end;}
+
+  footer.doc-footer{border-top:1px solid var(--line);padding:32px 56px 60px;color:var(--faint);font-size:12px;}
+
+  .legend-num{display:inline-flex;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:9.5px;align-items:center;justify-content:center;font-weight:700;margin-right:6px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="doc-shell">
+
+  <!-- ============ 左侧文档导航 ============ -->
+  <nav class="doc-nav">
+    <div class="brand"><span class="dot"></span>The Way Here</div>
+    <span class="sub">桌面端 UX 重构设计稿 · v1.0</span>
+
+    <div class="nav-group">
+      <span class="nav-group-label">总览</span>
+      <a href="#principles">设计原则</a>
+      <a href="#tokens">设计系统 Token</a>
+      <a href="#components">组件与交互状态</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">全局框架</span>
+      <a href="#shell">标题栏 + 侧边栏</a>
+      <a href="#command-palette">命令面板 / 快捷键</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">核心页面</span>
+      <a href="#today">此刻 · Today</a>
+      <a href="#sources">生活记录 · 三栏浏览</a>
+      <a href="#reader">阅读 / 编辑器</a>
+      <a href="#knowledge">已有理解总览</a>
+      <a href="#search">搜索结果</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">次级页面</span>
+      <a href="#questions">值得聊聊 / 聚焦工作区</a>
+      <a href="#inspector">AI 协作面板</a>
+      <a href="#preferences">偏好设置</a>
+      <a href="#modals">弹层 / 二次确认</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">落地</span>
+      <a href="#mapping">类名映射与实施清单</a>
+    </div>
+  </nav>
+
+  <!-- ============ 右侧内容 ============ -->
+  <main class="doc-content">
+
+    <section class="doc-section" id="cover">
+      <span class="tag">DESIGN SPEC · 可直接执行落地</span>
+      <h1 style="font-size:34px;letter-spacing:-.02em;margin-bottom:10px;">桌面端全局 UX 重构设计稿</h1>
+      <p style="color:var(--muted);font-size:14px;max-width:640px;">覆盖标题栏/侧边栏/命令面板等全局框架，以及此刻、生活记录、阅读编辑器、已有理解、搜索、聚焦工作区、AI 协作面板、偏好设置等全部桌面栏目。每个页面给出「现状问题 → 新方案标注 → 像素级规格表」，并在文末提供类名映射，方便工程直接对照实现。</p>
+    </section>
+
+    <!-- ============ 设计原则 ============ -->
+    <section class="doc-section" id="principles">
+      <div class="section-head">
+        <span class="tag">01 · 原则</span>
+        <h2>设计原则</h2>
+        <p>借鉴 macOS / Apple HIG 的桌面软件质感，但不复制 Apple 皮肤，落成「The Way Here」自己的桌面语言。</p>
+      </div>
+      <div class="grid-3">
+        <div class="mini-card"><h3>① 一屏一主角</h3><p style="font-size:12.5px;color:var(--ink-soft);">任何界面只保留一个视觉焦点（正文/文件列表/关系图），其余都是默认收起的辅助面板。</p></div>
+        <div class="mini-card"><h3>② 留白与字重分层，不是颜色分层</h3><p style="font-size:12.5px;color:var(--ink-soft);">延续灰绿 + 暖金双色体系，压缩到「背景/内容/强调」三级对比。</p></div>
+        <div class="mini-card"><h3>③ 控件要够大够稳</h3><p style="font-size:12.5px;color:var(--ink-soft);">列表主文字不低于 13px，点击目标不小于 28×28px。</p></div>
+        <div class="mini-card"><h3>④ 反馈要轻但确定</h3><p style="font-size:12.5px;color:var(--ink-soft);">保存/同步用「淡入-停留-淡出」的轻提示，替代常驻小圆点文案。</p></div>
+        <div class="mini-card"><h3>⑤ 面板可收放且有动效</h3><p style="font-size:12.5px;color:var(--ink-soft);">统一 200ms 宽度/透明度过渡，禁止瞬间消失/出现。</p></div>
+        <div class="mini-card"><h3>⑥ 统一圆角/阴影/分割线</h3><p style="font-size:12.5px;color:var(--ink-soft);">全局 2 级圆角、1 套阴影 token，不再逐页覆盖。</p></div>
+      </div>
+    </section>
+
+    <!-- ============ Token ============ -->
+    <section class="doc-section" id="tokens">
+      <div class="section-head">
+        <span class="tag">02 · 设计系统</span>
+        <h2>色板 · 字体 · 间距 · 圆角 · 阴影</h2>
+        <p>在现有灰绿基调上收敛，不推翻重来；新增两级圆角与唯一阴影 token，消灭四份样式表里的重复覆盖。</p>
+      </div>
+
+      <h3 style="font-size:13px;margin:22px 0 12px;color:var(--ink-soft);">色板</h3>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--paper);border:1px solid var(--line);"></div><code style="font-size:11px;">--paper #fbfbfa</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--canvas);border:1px solid var(--line);"></div><code style="font-size:11px;">--canvas #f2f3f1</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--ink);"></div><code style="font-size:11px;">--ink #263440</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--muted);"></div><code style="font-size:11px;">--muted #7c8a8a</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--accent);"></div><code style="font-size:11px;">--accent #578a83</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line);"></div><code style="font-size:11px;">--accent-soft</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--attention);"></div><code style="font-size:11px;">--attention #b9874c</code></div>
+        <div style="width:120px;"><div style="height:64px;border-radius:10px;background:var(--danger);"></div><code style="font-size:11px;">--danger #b6543f</code></div>
+      </div>
+
+      <table class="spec-table">
+        <tr><th>用途</th><th>Token</th><th>取值</th><th>说明</th></tr>
+        <tr><td>页面底色</td><td><code>--canvas</code></td><td>#f2f3f1</td><td>窗口/画布底色，比 --paper 深约 4% 明度</td></tr>
+        <tr><td>卡片/面板底色</td><td><code>--paper / --surface</code></td><td>#fbfbfa / #fff</td><td>纸放在桌面上的层次感</td></tr>
+        <tr><td>正文主色</td><td><code>--ink</code></td><td>#263440</td><td>保留现状，对比度已足够</td></tr>
+        <tr><td>次要文字</td><td><code>--muted</code></td><td>#7c8a8a</td><td>合并原 --muted / --faint 冗余定义</td></tr>
+        <tr><td>三级文字（计数/时间戳）</td><td><code>--faint</code></td><td>#a6b0ad</td><td>仅用于最不重要的元信息</td></tr>
+        <tr><td>分割线</td><td><code>--line / --line-strong</code></td><td>#e7e9e7 / #d7dbd8</td><td>弱化描边，靠留白分区</td></tr>
+        <tr><td>品牌强调</td><td><code>--accent</code></td><td>#578a83</td><td>激活态、链接、进度</td></tr>
+        <tr><td>待处理强调</td><td><code>--attention</code></td><td>#b9874c</td><td>只用于「需要你」的场景，不作通用强调色</td></tr>
+        <tr><td>控件圆角</td><td><code>--radius-control</code></td><td>8px</td><td>按钮/输入框/chip 统一</td></tr>
+        <tr><td>面板圆角</td><td><code>--radius-panel</code></td><td>14px</td><td>卡片/浮层/弹窗统一</td></tr>
+        <tr><td>唯一阴影</td><td><code>--shadow-panel</code></td><td>0 8px 24px rgba(38,52,64,.07)</td><td>弃用逐页自定义阴影</td></tr>
+        <tr><td>浮层阴影</td><td><code>--shadow-float</code></td><td>0 16px 40px rgba(38,52,64,.14)</td><td>命令面板/确认弹层专用，更深一档</td></tr>
+      </table>
+
+      <h3 style="font-size:13px;margin:26px 0 12px;color:var(--ink-soft);">字体节律</h3>
+      <table class="spec-table">
+        <tr><th>场景</th><th>字体</th><th>字号</th><th>行高</th></tr>
+        <tr><td>阅读态正文</td><td><code>--font-display</code>（衬线）</td><td>16px</td><td>1.85</td></tr>
+        <tr><td>编辑态正文</td><td><code>--font-display</code>（与阅读态统一，不再切等宽）</td><td>16px</td><td>1.85</td></tr>
+        <tr><td>页面/面板标题</td><td><code>--font-ui</code></td><td>15–19px / 600–700</td><td>1.3</td></tr>
+        <tr><td>列表主文字</td><td><code>--font-ui</code></td><td>13px（最小值，禁止低于此）</td><td>1.5</td></tr>
+        <tr><td>次要信息（时间戳/计数）</td><td><code>--font-ui</code></td><td>12px（禁止 10/10.5px）</td><td>1.4</td></tr>
+        <tr><td>等宽/快捷键</td><td><code>--font-mono</code></td><td>11px</td><td>—</td></tr>
+      </table>
+
+      <h3 style="font-size:13px;margin:26px 0 12px;color:var(--ink-soft);">按钮 5 态</h3>
+      <div class="state-row"><span class="state-label">Primary</span>
+        <button class="btn btn-primary">默认</button>
+        <button class="btn btn-primary" style="background:#4c7972;">Hover</button>
+        <button class="btn btn-primary" style="transform:scale(.97);">Active</button>
+        <button class="btn btn-primary" style="box-shadow:0 0 0 3px rgba(87,138,131,.28);">Focus</button>
+        <button class="btn btn-primary" disabled>Disabled</button>
+      </div>
+      <div class="state-row"><span class="state-label">Secondary</span>
+        <button class="btn btn-secondary">默认</button>
+        <button class="btn btn-secondary" style="background:var(--surface-tinted);">Hover</button>
+        <button class="btn btn-secondary" disabled>Disabled</button>
+      </div>
+      <div class="state-row"><span class="state-label">Ghost</span>
+        <button class="btn btn-ghost">默认</button>
+        <button class="btn btn-ghost" style="background:var(--surface-tinted);color:var(--ink);">Hover</button>
+      </div>
+      <div class="state-row"><span class="state-label">Danger</span>
+        <button class="btn btn-danger">删除</button>
+        <button class="btn btn-danger" style="background:var(--danger-soft);">Hover</button>
+      </div>
+      <div class="state-row"><span class="state-label">Icon</span>
+        <button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+        <button class="btn-icon selected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.4 6.9H21l-5.6 4.1 2.1 7-6.5-4.6L4.5 20l2.1-7L1 8.9h6.6z"/></svg></button>
+      </div>
+
+      <h3 style="font-size:13px;margin:26px 0 12px;color:var(--ink-soft);">输入框 / 标签 / 开关 / 轻提示</h3>
+      <div class="state-row">
+        <div class="field"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="默认态"/></div>
+        <div class="field focus"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="Focus 态"/></div>
+        <span class="tag-chip"><i></i>标签 · 默认</span>
+        <span class="tag-chip attn"><i></i>标签 · 待处理</span>
+        <span class="switch on"></span>
+        <span class="switch"></span>
+        <span class="toast"><span class="dot"></span>已保存</span>
+      </div>
+      <div class="spec-note"><b>Focus 环统一规格：</b><code>box-shadow: 0 0 0 3px rgba(87,138,131,.16)</code> + <code>border-color:var(--accent)</code>，替代现状部分输入框有环、部分没有的不一致状态。</div>
+    </section>
+
+    <!-- ============ 组件状态总览 ============ -->
+    <section class="doc-section" id="components">
+      <div class="section-head">
+        <span class="tag">03 · 组件规范</span>
+        <h2>交互细节规范总表</h2>
+        <p>统一动效时长、缓动函数与反馈方式，所有页面共用，禁止逐页自定义。</p>
+      </div>
+      <table class="spec-table">
+        <tr><th>交互</th><th>现状问题</th><th>规范</th></tr>
+        <tr><td>按钮 hover</td><td>部分按钮无过渡，颜色突变</td><td><code>transition: background .15s ease, color .15s ease</code></td></tr>
+        <tr><td>按钮 active</td><td>无按下反馈</td><td><code>transform: scale(.97)</code>，120ms</td></tr>
+        <tr><td>输入框 focus</td><td>环样式不统一</td><td><code>box-shadow: 0 0 0 3px rgba(87,138,131,.16)</code></td></tr>
+        <tr><td>折叠/展开面板</td><td>无过渡，瞬间消失</td><td>200ms <code>width/opacity</code> ease-out，统一用 <code>var(--ease)</code></td></tr>
+        <tr><td>保存/同步反馈</td><td>常驻小字 + 圆点</td><td>停顿 800ms 后浮现「已保存」，200ms 淡入 · 停留 1.2s · 淡出</td></tr>
+        <tr><td>危险操作</td><td>已有二次确认，规范可保留</td><td>统一到 <code>--radius-panel</code> + <code>--shadow-float</code></td></tr>
+        <tr><td>Tab 切换</td><td>纯下划线，容易被忽略</td><td>背景块滑动（pill 高亮），200ms</td></tr>
+        <tr><td>列表命中态</td><td>每行独立 box-shadow，滚动时视觉发闷</td><td>仅 <code>background:var(--surface-tinted)</code> + 左侧 3px 强调竖线</td></tr>
+      </table>
+    </section>
+
+    <!-- ============ 全局框架 ============ -->
+    <section class="doc-section" id="shell">
+      <div class="section-head">
+        <span class="tag">04 · 全局框架</span>
+        <h2>标题栏 + 侧边栏</h2>
+        <p>标题栏与侧边栏底色统一为 <code>--canvas</code>，取消硬分割线；空间切换器、搜索框统一 32px 高、8px 圆角。</p>
+      </div>
+      <div class="window-mock callout">
+        <div class="mark" style="top:6px;left:150px;">1</div>
+        <div class="mark" style="top:52px;left:150px;">2</div>
+        <div class="mark" style="top:98px;left:150px;">3</div>
+        <div class="mark" style="top:210px;left:150px;">4</div>
+        <div class="app-mock">
+          <div class="app-titlebar">
+            <div class="traffic"><i></i><i></i><i></i></div>
+            <span class="win-title">生活记录 · 我的知识库</span>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <button class="btn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+              <button class="btn-icon selected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.4 6.9H21l-5.6 4.1 2.1 7-6.5-4.6L4.5 20l2.1-7L1 8.9h6.6z"/></svg></button>
+            </div>
+          </div>
+          <div class="app-body">
+            <div class="app-sidebar">
+              <div class="kb-switch">✦ 个人空间<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+              <div class="nav-row active">◐ 此刻</div>
+              <div class="nav-row">◑ 值得聊聊<span class="badge">3</span></div>
+              <div class="nav-row">◒ 生活记录</div>
+              <div class="nav-row">◓ 已有理解</div>
+              <div class="nav-row" style="padding-left:22px;font-size:12.5px;">— 人与世界</div>
+              <div class="nav-row" style="padding-left:22px;font-size:12.5px;">— 近况回信</div>
+              <div class="nav-row">◔ 理解自己</div>
+              <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--line);">
+                <div class="nav-row">＋ 随手记<kbd style="margin-left:auto;font-size:10px;color:var(--faint);">⌘N</kbd></div>
+                <div class="nav-row">⚙ 偏好设置<kbd style="margin-left:auto;font-size:10px;color:var(--faint);">⌘,</kbd></div>
+              </div>
+            </div>
+            <div class="app-content" style="display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:13px;">（主内容区，见下方各页面设计）</div>
+          </div>
+        </div>
+      </div>
+      <table class="spec-table" style="margin-top:24px;">
+        <tr><th>#</th><th>标注</th><th>规格</th></tr>
+        <tr><td>1</td><td>窗口标题栏</td><td>高度 38px，底色 <code>--paper</code>，标题居中显示「当前二级栏目 · 知识库名」，去除与侧边栏之间硬分割线，仅保留 1px <code>--line</code></td></tr>
+        <tr><td>2</td><td>知识库切换器</td><td>高度 34px、圆角 8px，与搜索框视觉权重一致，不再使用胶囊形状</td></tr>
+        <tr><td>3</td><td>主导航项</td><td>32px 行高，激活态 <code>--accent-soft</code> 背景 + 4px 圆角矩形（非胶囊），字重 700</td></tr>
+        <tr><td>4</td><td>底部功能区</td><td>与导航区之间用 1px 分割线 + 16px 留白隔开，快捷键统一右对齐用 <code>&lt;kbd&gt;</code> 展示</td></tr>
+      </table>
+    </section>
+
+    <!-- ============ 命令面板 ============ -->
+    <section class="doc-section" id="command-palette">
+      <div class="section-head">
+        <span class="tag">04 · 全局框架</span>
+        <h2>命令面板（⌘K）与随手记入口</h2>
+        <p>命令面板保持现状交互模型，仅统一圆角/阴影/字号；列表项高度从紧凑改为 40px，提升可点击性。</p>
+      </div>
+      <div class="modal-overlay" style="background:var(--canvas);">
+        <div class="command-palette">
+          <div class="cp-input"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--faint);"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span style="color:var(--faint);">搜索页面、标签或输入命令…</span></div>
+          <div class="cp-item active">📄 关于阳台种植的三条线索<kbd>↵</kbd></div>
+          <div class="cp-item">🏷️ 标签：家庭聚餐</div>
+          <div class="cp-item">⚙ 打开偏好设置<kbd>⌘,</kbd></div>
+          <div class="cp-item">＋ 新建随手记<kbd>⌘N</kbd></div>
+        </div>
+      </div>
+      <div class="spec-note"><b>规格：</b>面板宽 480px，圆角 <code>--radius-panel</code>，阴影 <code>--shadow-float</code>；列表项高度 40px（现状偏紧凑），命中态与列表命中态规范统一使用 <code>--accent-soft</code>。</div>
+    </section>
+
+    <!-- ============ Today ============ -->
+    <section class="doc-section" id="today">
+      <div class="section-head">
+        <span class="tag">05 · 核心页面</span>
+        <h2>此刻 · Today</h2>
+        <p>信息按「需要你现在做的事 → 近期动态 → 历史回顾」三级视觉权重重排，卡片圆角/阴影统一到 token。</p>
+      </div>
+      <div class="window-mock">
+        <div class="window-chrome"><div class="traffic"><i></i><i></i><i></i></div><span class="win-title">此刻</span></div>
+        <div style="padding:28px 34px;background:var(--canvas);">
+          <div class="today-hero"><h1>早上好，欢迎回来</h1><p>5月20日 · 星期二 · 3 条值得聊聊的话题 · 有一封近况回信等你读</p></div>
+          <div class="today-opener">
+            <div class="label">◐ 此刻的话头</div>
+            <h2>最近整理阳台花草的时候，有没有想起小时候家里种过什么？</h2>
+            <div class="starter-row">
+              <button>先说说当时的场景</button>
+              <button>其实没想那么多</button>
+              <button>让我想想再说</button>
+            </div>
+            <div class="today-input"><input placeholder="接着说，先说一句就行"/><button class="btn-icon selected" style="background:var(--accent);color:#fff;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>
+          </div>
+          <div class="today-grid">
+            <div class="mini-card"><h3>近期理解</h3><p style="font-size:12.5px;color:var(--ink-soft);">「和母亲的周末通话」· 更新于 3 天前</p></div>
+            <div class="mini-card"><h3>最近的线索</h3><div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="tag-chip"><i></i>阳台</span><span class="tag-chip"><i></i>家庭聚餐</span></div></div>
+          </div>
+        </div>
+      </div>
+      <table class="spec-table" style="margin-top:20px;">
+        <tr><th>层级</th><th>内容</th><th>视觉权重</th></tr>
+        <tr><td>第一优先</td><td>此刻的话头（唤起对话）</td><td>大卡片、衬线大字号 18px、独立阴影，页面唯一主角</td></tr>
+        <tr><td>第二优先</td><td>待处理提示（新带入的记录/回信）</td><td>条状横幅，仅在存在时出现，点击直达</td></tr>
+        <tr><td>第三优先</td><td>近期理解 / 最近线索</td><td>并列小卡片，13px 正文，不抢主视觉</td></tr>
+      </table>
+    </section>
+
+    <!-- ============ Sources ============ -->
+    <section class="doc-section" id="sources">
+      <div class="section-head">
+        <span class="tag">06 · 核心页面</span>
+        <h2>生活记录 · 三栏浏览器</h2>
+        <p>列宽收敛为固定 240 / 280 / 剩余空间三栏，去除逐条阴影，命中态改为「浅底 + 左侧竖线」，折叠时统一收到 48px 图标条并带 200ms 过渡。</p>
+      </div>
+
+      <div class="tabbar"><button class="active">展开态（默认）</button><button>折叠态（文件夹栏收起）</button></div>
+
+      <div class="sources-toolbar">
+        <div class="field" style="width:280px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="搜索生活记录"/></div>
+        <span class="tag-chip"><i></i>全部类型</span>
+        <span class="tag-chip"><i></i>日记</span>
+        <span class="tag-chip attn"><i></i>待整理 · 6</span>
+        <button class="btn btn-ghost" style="margin-left:auto;">按月回望 ▾</button>
+        <button class="btn btn-secondary">＋ 导入资料</button>
+      </div>
+
+      <div class="sources-3col callout">
+        <div class="mark" style="top:-10px;left:78px;">1</div>
+        <div class="mark" style="top:-10px;left:280px;">2</div>
+        <div class="mark" style="top:-10px;left:500px;">3</div>
+        <div class="col" style="width:180px;">
+          <div class="col-head">文件夹 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></div>
+          <div class="folder-row active">📁 全部记录<span class="count">128</span></div>
+          <div class="folder-row">📁 日记<span class="count">54</span></div>
+          <div class="folder-row">📁 照片<span class="count">31</span></div>
+          <div class="folder-row">📁 账单<span class="count">28</span></div>
+          <div class="folder-row">📁 AI 对话<span class="count">15</span></div>
+        </div>
+        <div class="col" style="width:220px;">
+          <div class="col-head">文件 · 54</div>
+          <div class="file-row active"><b>周末和母亲的通话</b><span>5月18日 · 日记 · 320字</span></div>
+          <div class="file-row"><b>阳台的第一批番茄苗</b><span>5月16日 · 日记 · 180字</span></div>
+          <div class="file-row"><b>加班后独自走回家</b><span>5月14日 · 日记 · 240字</span></div>
+          <div class="file-row"><b>朋友聚餐的碎片记忆</b><span>5月10日 · 日记 · 410字</span></div>
+        </div>
+        <div class="preview-col">
+          <h3>周末和母亲的通话</h3>
+          <p>周六下午，妈妈打电话来问阳台的花草长得怎么样了。聊了大概二十分钟，从番茄苗聊到她自己年轻时候在老家院子里种的那些菜…</p>
+          <div style="margin-top:16px;display:flex;gap:8px;"><button class="btn btn-secondary">在编辑器中打开</button><button class="btn btn-ghost">与 AI 聊聊这条记录</button></div>
+        </div>
+      </div>
+
+      <table class="spec-table" style="margin-top:20px;">
+        <tr><th>#</th><th>标注</th><th>规格</th></tr>
+        <tr><td>1</td><td>文件夹栏</td><td>固定宽 240px（当前示意图缩放展示），行高 34px，字号 13px，激活态 <code>--accent-soft</code> 圆角矩形，折叠后收至 48px 图标条，200ms width 过渡</td></tr>
+        <tr><td>2</td><td>文件列表栏</td><td>固定宽 280px，条目标题 14px/600，摘要 12px/<code>--muted</code>，取消逐条 box-shadow，命中态用 <code>--surface-tinted</code> + 左侧 3px <code>--accent</code> 竖线</td></tr>
+        <tr><td>3</td><td>预览/详情栏</td><td>剩余空间自适应，正文 <code>--font-display</code> 16px/1.8，底部并排两个操作按钮，不再用浮动图标按钮组</td></tr>
+      </table>
+
+      <h3 style="font-size:13px;margin:28px 0 12px;color:var(--ink-soft);">折叠态对比</h3>
+      <div class="grid-2">
+        <div class="compare-card before"><div class="cc-head">现状 · 列宽跳变</div><div class="cc-body"><div class="sources-3col" style="height:180px;"><div class="col" style="width:54px;"></div><div class="col" style="width:220px;"><div class="col-head">文件</div><div class="file-row"><b>示例文件</b><span>元信息</span></div></div><div class="preview-col" style="font-size:12px;color:var(--faint);">瞬间跳变，无过渡</div></div></div></div>
+        <div class="compare-card after"><div class="cc-head">新方案 · 200ms 平滑收放</div><div class="cc-body"><div class="sources-3col" style="height:180px;"><div class="col collapsed-col"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--faint);"><path d="M3 6h18M3 12h18M3 18h18"/></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--accent);"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/></svg></div><div class="col" style="width:220px;"><div class="col-head">文件 · 54</div><div class="file-row active"><b>周末和母亲的通话</b><span>5月18日</span></div></div><div class="preview-col" style="font-size:12px;color:var(--faint);">宽度 + 透明度渐变收起</div></div></div></div>
+      </div>
+    </section>
+
+    <!-- ============ Reader / 编辑器 ============ -->
+    <section class="doc-section" id="reader">
+      <div class="section-head">
+        <span class="tag">07 · 核心页面</span>
+        <h2>阅读 / Markdown 编辑器</h2>
+        <p>身份条拆两行、标签折叠为徽标条、右侧目录默认收起为图标条、编辑态字体与阅读态统一、保存反馈改为轻提示。</p>
+      </div>
+
+      <div class="tabbar"><button class="active">阅读态</button><button>编辑态（双击进入）</button></div>
+
+      <div class="reader-mock callout">
+        <div class="mark" style="top:8px;left:38px;">1</div>
+        <div class="mark" style="top:56px;left:38px;">2</div>
+        <div class="mark" style="top:112px;left:38px;">3</div>
+        <div class="mark" style="top:44px;right:60px;">4</div>
+        <div class="reader-main">
+          <div class="save-toast"><span class="toast"><span class="dot"></span>已保存</span></div>
+          <div class="doc-identity">
+            <div class="filename">周末和母亲的通话</div>
+            <div class="meta-row">生活记录 / 日记 <span class="sep">·</span> 5月18日更新 <span class="sep">·</span> <button class="btn btn-ghost" style="height:22px;padding:0 8px;font-size:11.5px;">在原文件中显示</button></div>
+          </div>
+          <div class="tag-summary">类型 · 日记 &nbsp;·&nbsp; 3 个标签 &nbsp;·&nbsp; 2024-05 <button>展开全部属性 ▾</button></div>
+          <div class="doc-body">
+            <h4>通话内容</h4>
+            <p>周六下午，妈妈打电话来问阳台的花草长得怎么样了。聊了大概二十分钟，从番茄苗聊到她自己年轻时候在老家院子里种的那些菜。她说起来的时候语气比平时轻快很多。</p>
+            <h4>后来想到的</h4>
+            <p>挂了电话之后，我在阳台又站了一会儿，突然意识到我记不清她当年具体种过什么了，只记得那种忙碌又满足的样子。</p>
+          </div>
+        </div>
+        <div class="outline-rail">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--muted);"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+        </div>
+      </div>
+
+      <table class="spec-table" style="margin-top:20px;">
+        <tr><th>#</th><th>标注</th><th>规格</th></tr>
+        <tr><td>1</td><td>文件名（唯一标题）</td><td>18–19px / 700，非编辑态纯文本展示，去掉输入框描边；双击或聚焦才切换为带描边可编辑态</td></tr>
+        <tr><td>2</td><td>次要元信息行</td><td>12px / <code>--muted</code>，路径 + 更新时间 + 「在原文件中显示」文字按钮，一行展示，不再和文件名抢权重</td></tr>
+        <tr><td>3</td><td>标签徽标条</td><td>默认折叠为一行摘要（类型 · 标签数 · 日期），点击「展开全部属性」才铺开完整 frontmatter 网格；chip 改为描边风格，弱化背景色</td></tr>
+        <tr><td>4</td><td>右侧目录</td><td>默认收起为 44px 图标条，点击展开为 240px 目录列表，200ms width 过渡；文档目录 ≥3 级或超长时可建议自动展开一次</td></tr>
+        <tr><td>保存反馈</td><td colspan="2">输入停顿 800ms 后，右上角浮现「已保存」轻提示：200ms 淡入 → 停留 1.2s → 淡出；不再常驻小圆点文案</td></tr>
+      </table>
+
+      <h3 style="font-size:13px;margin:28px 0 12px;color:var(--ink-soft);">编辑态：字体与阅读态统一</h3>
+      <div class="grid-2">
+        <div class="compare-card before"><div class="cc-head">现状 · 等宽代码框感</div><div class="cc-body"><textarea class="edit-textarea" style="font-family:var(--font-mono);font-size:13px;border-color:var(--line-strong);box-shadow:none;" readonly>## 通话内容
+周六下午，妈妈打电话来问阳台的花草长得怎么样了…</textarea></div></div>
+        <div class="compare-card after"><div class="cc-head">新方案 · 就地编辑，视觉不跳变</div><div class="cc-body"><textarea class="edit-textarea" readonly>通话内容
+周六下午，妈妈打电话来问阳台的花草长得怎么样了…</textarea></div></div>
+      </div>
+
+      <h3 style="font-size:13px;margin:28px 0 12px;color:var(--ink-soft);">标签属性区：折叠前后对比</h3>
+      <div class="grid-2">
+        <div class="compare-card before"><div class="cc-head">现状 · 铺满整块网格</div><div class="cc-body"><div class="tag-cloud-old"><span>类型：日记</span><span>标签：家庭</span><span>标签：阳台</span><span>标签：回忆</span><span>日期：2024-05-18</span><span>别名：（空）</span></div></div></div>
+        <div class="compare-card after"><div class="cc-head">新方案 · 一行摘要 + 可展开</div><div class="cc-body"><div class="tag-summary" style="margin:0;">类型 · 日记 &nbsp;·&nbsp; 3 个标签 &nbsp;·&nbsp; 2024-05 <button>展开 ▾</button></div></div></div>
+      </div>
+    </section>
+
+    <!-- ============ 已有理解 ============ -->
+    <section class="doc-section" id="knowledge">
+      <div class="section-head">
+        <span class="tag">08 · 核心页面</span>
+        <h2>已有理解总览</h2>
+        <p>与 Reader 共用同一套折叠式标签规范；卡片密度对齐 Sources 文件列表的字号规格（14px 标题 / 12px 摘要）。</p>
+      </div>
+      <div class="grid-3">
+        <div class="mini-card"><h3>人物线</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「和母亲的关系」· 更新于 3 天前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>亲密关系</span></div></div>
+        <div class="mini-card"><h3>生活周期</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「周末与工作日的节律」· 更新于 1 周前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip"><i></i>作息</span><span class="tag-chip"><i></i>节律</span></div></div>
+        <div class="mini-card"><h3>系统与习惯</h3><p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;">「阳台种植记录」· 更新于 2 天前</p><div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag-chip attn"><i></i>待续写</span></div></div>
+      </div>
+      <div class="spec-note"><b>规格：</b>卡片圆角 <code>--radius-panel</code>，阴影 <code>--shadow-panel</code>，标题 13px/700，摘要 12.5px/<code>--muted</code>，标签行最多展示 3 个 + 「+N」省略，不再无限换行铺满卡片。</div>
+    </section>
+
+    <!-- ============ 搜索 ============ -->
+    <section class="doc-section" id="search">
+      <div class="section-head">
+        <span class="tag">09 · 核心页面</span>
+        <h2>搜索结果</h2>
+        <p>结果列表字号提升到与 Sources 一致的 14/12.5px 规格，命中关键词高亮改用 <code>--attention-soft</code> 底色，避免与强调色混淆。</p>
+      </div>
+      <div class="window-mock">
+        <div class="window-chrome"><div class="traffic"><i></i><i></i><i></i></div><span class="win-title">搜索 · “阳台”</span></div>
+        <div style="padding:20px 26px;">
+          <div class="field" style="width:100%;margin-bottom:16px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input value="阳台" readonly/></div>
+          <div class="search-hit"><div class="path">生活记录 / 日记 / 2024-05</div><h4>周末和母亲的通话</h4><p>聊了大概二十分钟，从<mark>阳台</mark>的番茄苗聊到她自己年轻时候在老家院子里种的那些菜…</p></div>
+          <div class="search-hit"><div class="path">已有理解 / 系统与习惯</div><h4><mark>阳台</mark>种植记录</h4><p>过去两个月里，关于番茄苗、薄荷和光照的持续记录与反思…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 值得聊聊 / 聚焦工作区 ============ -->
+    <section class="doc-section" id="questions">
+      <div class="section-head">
+        <span class="tag">10 · 次级页面</span>
+        <h2>值得聊聊 · 聚焦工作区</h2>
+        <p>对话与证据面板密度高，与 Reader 右侧面板同款问题；改为左右两栏固定比例 6:4，证据面板复用「折叠式徽标条」组件。</p>
+      </div>
+      <div class="grid-2">
+        <div class="mini-card" style="min-height:160px;"><h3>对话</h3><p style="font-size:12.5px;color:var(--ink-soft);">AI：从阳台种植这条线索来看，你提到「忙碌又满足」，能具体说说是哪个瞬间吗？</p></div>
+        <div class="mini-card" style="min-height:160px;"><h3>相关证据 · 3 条<button class="btn btn-ghost" style="height:22px;padding:0 6px;font-size:11px;float:right;">展开</button></h3><div class="file-row" style="margin:0 0 6px;padding:6px 0;"><b>周末和母亲的通话</b><span>5月18日</span></div><div class="file-row" style="margin:0;padding:6px 0;"><b>阳台的第一批番茄苗</b><span>5月16日</span></div></div>
+      </div>
+      <div class="spec-note"><b>规格：</b>左右分栏固定 6:4，证据面板默认只展开前 2 条，标题「相关证据 · N 条」旁放一个 ghost 按钮控制展开/收起，与 Reader 目录折叠交互统一手势。</div>
+    </section>
+
+    <!-- ============ AI 协作面板 ============ -->
+    <section class="doc-section" id="inspector">
+      <div class="section-head">
+        <span class="tag">10 · 次级页面</span>
+        <h2>AI 协作面板（Inspector）</h2>
+        <p>拆分为「当前任务」「历史记录」两个可切换选项卡，替代纵向无限堆叠；面板本身遵循全局 AuxPanel 折叠规范（默认展开，可收起为 48px 图标条）。</p>
+      </div>
+      <div class="window-mock" style="max-width:340px;">
+        <div class="window-chrome"><span class="win-title" style="margin-right:0;">AI 协作</span><button class="btn-icon" style="margin-left:auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+        <div style="padding:14px 16px;">
+          <div class="tabbar" style="margin-bottom:14px;"><button class="active">当前任务</button><button>历史记录</button></div>
+          <div class="mini-card" style="margin-bottom:10px;"><h3 style="margin-bottom:4px;">正在整理「阳台种植」的时间线</h3><p style="font-size:12px;color:var(--muted);">已读取 6 份相关记录，等待你确认下一步</p></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary" style="flex:1;">确认继续</button><button class="btn btn-secondary">暂停</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 偏好设置 ============ -->
+    <section class="doc-section" id="preferences">
+      <div class="section-head">
+        <span class="tag">11 · 次级页面</span>
+        <h2>偏好设置</h2>
+        <p>套用统一控件规范（32px 高度输入/开关、8px 圆角），与其它页面视觉语言对齐，分区用 24px 留白替代描边分隔。</p>
+      </div>
+      <div class="window-mock" style="max-width:520px;">
+        <div class="window-chrome"><div class="traffic"><i></i><i></i><i></i></div><span class="win-title">偏好设置</span></div>
+        <div style="padding:22px 26px;">
+          <h3 style="font-size:13px;color:var(--ink-soft);margin-bottom:12px;">AI 助手</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);"><span style="font-size:13px;">启用对话式整理提示</span><span class="switch on"></span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;"><span style="font-size:13px;">每日一条「此刻的话头」</span><span class="switch on"></span></div>
+          <h3 style="font-size:13px;color:var(--ink-soft);margin:20px 0 12px;">危险操作</h3>
+          <button class="btn btn-danger">删除当前知识库</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 弹层 ============ -->
+    <section class="doc-section" id="modals">
+      <div class="section-head">
+        <span class="tag">12 · 弹层</span>
+        <h2>二次确认 / 删除弹层</h2>
+        <p>维持现状「危险操作二次确认」的交互模型，仅统一到新的圆角/阴影 token。</p>
+      </div>
+      <div class="modal-overlay" style="background:var(--canvas);">
+        <div class="confirm-modal">
+          <h3>删除知识库「个人空间」？</h3>
+          <p>删除后，其中的生活记录与已有理解将无法恢复。此操作不影响其他知识库。</p>
+          <div class="row"><button class="btn btn-secondary">取消</button><button class="btn btn-danger">确认删除</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 落地映射 ============ -->
+    <section class="doc-section" id="mapping">
+      <div class="section-head">
+        <span class="tag">13 · 落地</span>
+        <h2>类名映射与实施清单</h2>
+        <p>对照现有代码结构，标出每项改动对应的文件与选择器，方便工程直接定位。</p>
+      </div>
+      <table class="spec-table">
+        <tr><th>设计改动</th><th>对应文件</th><th>关键选择器</th></tr>
+        <tr><td>色板/圆角/阴影 token 统一</td><td><code>styles/archive-theme.css</code></td><td><code>:root</code> 变量定义，删除 base.css / refinements.css / desktop.css 中的重复覆盖</td></tr>
+        <tr><td>身份条拆两行 + 文件名纯文本态</td><td><code>shared/markdown.tsx</code></td><td><code>.editable-document-identity</code></td></tr>
+        <tr><td>标签折叠为徽标条</td><td><code>shared/markdown.tsx</code></td><td><code>.note-properties</code> / <code>.note-property-token</code></td></tr>
+        <tr><td>右侧目录默认收起</td><td><code>shared/markdown.tsx</code></td><td><code>.document-outline</code></td></tr>
+        <tr><td>保存反馈轻提示</td><td><code>shared/markdown.tsx</code></td><td><code>.document-save-state</code></td></tr>
+        <tr><td>三栏列宽 / 命中态 / 折叠动效</td><td><code>features/sources/Sources.tsx</code>, <code>styles/sources-redesign.css</code></td><td><code>.source-folder-pane</code> / <code>.source-file-row</code> / <code>.source-file-select</code></td></tr>
+        <tr><td>顶部工具区合并</td><td><code>features/sources/Sources.tsx</code></td><td>筛选 chip 行 + 搜索框合并容器</td></tr>
+        <tr><td>标题栏/侧边栏统一底色与控件高度</td><td><code>app/AppShell.tsx</code>, <code>styles/desktop.css</code></td><td><code>.desktop-titlebar</code> / <code>.desktop-sidebar</code></td></tr>
+        <tr><td>AuxPanel 通用折叠组件</td><td>新建 <code>shared/AuxPanel.tsx</code></td><td>供 Reader / QuestionsHub / Inspector 共用</td></tr>
+      </table>
+      <div class="spec-note" style="margin-top:20px;"><b>实施顺序：</b>Token 统一 → Reader/Markdown → Sources 三栏 → 全局框架/AuxPanel 组件化 → 剩余页面逐一套用新组件（与 <code>DESKTOP_UX_REDESIGN.md</code> 中的分阶段建议一致）。</div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="doc-footer">The Way Here · 桌面端 UX 重构设计稿 v1.0 · 与 <code>studio/docs/DESKTOP_UX_REDESIGN.md</code> 配套阅读</footer>
+
+<script>
+  // 简单的 tab 切换演示（纯视觉，非真实路由）
+  document.querySelectorAll(".tabbar").forEach((bar) => {
+    bar.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        bar.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+  });
+</script>
+</body>
+</html>
