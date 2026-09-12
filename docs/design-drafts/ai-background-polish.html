@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>设计稿 · AI 写作前补充背景信息（照片 / 账单 通用组件）</title>
+<style>
+  :root {
+    --paper: #fbfcfc;
+    --canvas: #f4f7f6;
+    --ink: #263440;
+    --muted: #5f706f;
+    --faint: #687775;
+    --line: #d9e1df;
+    --line-strong: #c7d1cf;
+    --surface-subtle: #eef3f2;
+    --surface-tinted: #e9f1ef;
+    --accent-primary: #578a83;
+    --accent-attention: #b9874c;
+    --accent-attention-soft: #f7efe4;
+    --good: #4f7f68;
+    --watch: #9f633d;
+    --shadow: 0 18px 46px rgba(39, 62, 61, .08);
+    --ease: cubic-bezier(.28, .11, .32, 1);
+    --font-display: Georgia, "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC", serif;
+    --font-ui: "Noto Sans SC Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    color: var(--ink);
+    background: var(--canvas);
+    font: 14px/1.7 var(--font-ui);
+  }
+  h1, h2, h3, h4, p { margin: 0; }
+
+  /* ---------- Page scaffold ---------- */
+  .draft-page { max-width: 1160px; margin: 0 auto; padding: 40px 32px 96px; }
+  .draft-head { margin-bottom: 30px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .draft-head .kicker { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; padding: 4px 10px; color: var(--accent-primary); background: var(--surface-tinted); border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+  .draft-head h1 { font: 500 30px/1.35 var(--font-display); letter-spacing: -.02em; }
+  .draft-head p { margin-top: 10px; max-width: 74ch; color: var(--muted); font-size: 14px; line-height: 1.8; }
+
+  /* ---------- Concept summary ---------- */
+  .concept-summary { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-bottom: 40px; }
+  .concept-card { padding: 18px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+  .concept-card b { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; }
+  .concept-card b i { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: none; color: var(--accent-primary); background: var(--surface-tinted); border-radius: 6px; font-style: normal; font-size: 12px; }
+  .concept-card p { margin-top: 8px; color: var(--muted); font-size: 12.5px; line-height: 1.75; }
+
+  /* ---------- Scenario switcher ---------- */
+  .scenario-tabs { display: inline-flex; gap: 4px; margin-bottom: 22px; padding: 4px; background: var(--surface-subtle); border-radius: 10px; }
+  .scenario-tabs button { min-height: 38px; padding: 0 18px; color: var(--muted); background: transparent; border: 0; border-radius: 8px; font: 600 13px/1 var(--font-ui); cursor: pointer; transition: background-color .16s var(--ease), color .16s var(--ease); }
+  .scenario-tabs button.active { color: var(--ink); background: var(--paper); box-shadow: 0 1px 2px rgba(39,62,61,.08); }
+  .scenario-tabs button:not(.active):hover { color: var(--ink); }
+
+  .scenario-panel { display: none; }
+  .scenario-panel.active { display: block; }
+
+  /* ---------- Mock "dialog window" chrome ---------- */
+  .mock-window { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+  .mock-window-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--surface-subtle); border-bottom: 1px solid var(--line); }
+  .mock-window-bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+  .mock-window-bar span { margin-left: 6px; color: var(--faint); font-size: 12px; }
+
+  /* Photo memory header, reused visual language from photo-memory-redesign */
+  .pm-head { display: flex; align-items: center; gap: 14px; padding: 20px 26px; border-bottom: 1px solid var(--line); }
+  .pm-cover { width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--line); object-fit: cover; flex: none; background: linear-gradient(135deg,#dfe9e6,#c9d8d3); }
+  .pm-head h2 { font: 500 17px/1.3 var(--font-display); }
+  .pm-head p { margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+  .pm-body { padding: 22px 26px 26px; }
+
+  .photo-story-gallery { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+  .photo-story-gallery span { display: block; width: 140px; height: 112px; border-radius: 6px; background: linear-gradient(135deg,#e7efed,#cfe0da); }
+
+  .photo-story-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px 24px; margin-bottom: 18px; }
+  .photo-story-heading h3 { font: 500 20px/1.4 var(--font-display); }
+  .photo-story-heading h3 .counter { margin-left: 8px; color: var(--muted); font: 600 13px/1.5 var(--font-ui); }
+  .photo-story-heading p { margin-top: 6px; max-width: 60ch; color: var(--muted); font-size: 13px; line-height: 1.8; }
+
+  /* ---------- SHARED COMPONENT: background-assisted AI write ---------- */
+  .ai-write-block { border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); overflow: hidden; }
+  .ai-write-block + .ai-write-block { margin-top: 14px; }
+
+  .ai-write-bg { padding: 16px 18px 14px; border-bottom: 1px dashed var(--line-strong); }
+  .ai-write-bg-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .ai-write-bg-label label { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 12.5px; font-weight: 650; }
+  .ai-write-bg-label label i { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--accent-primary); background: var(--surface-tinted); border-radius: 5px; font-style: normal; font-size: 11px; }
+  .ai-write-bg-label small { color: var(--faint); font-size: 11.5px; font-weight: 500; }
+  .ai-write-bg textarea {
+    display: block; width: 100%; min-height: 72px; padding: 11px 13px;
+    color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 8px;
+    font: 13px/1.75 var(--font-ui); resize: vertical; caret-color: var(--accent-primary);
+  }
+  .ai-write-bg textarea::placeholder { color: var(--faint); }
+  .ai-write-bg textarea:focus-visible { outline: 3px solid rgba(87,138,131,.18); outline-offset: 1px; border-color: var(--accent-primary); }
+  .ai-write-bg-hint { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--faint); font-size: 11.5px; line-height: 1.6; }
+  .ai-write-bg-hint i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--accent-attention); }
+
+  .ai-write-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; }
+  .ai-write-actions-left { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); font-size: 12px; }
+  .ai-write-actions-left .context-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 7px; background: var(--surface-tinted); color: var(--ink); border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+  .ai-write-actions-left .context-chip i { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-primary); font-style: normal; font-size: 10px; }
+
+  .ai-write-btn {
+    display: inline-flex; align-items: center; gap: 7px; flex: none;
+    min-height: 40px; padding: 0 18px;
+    color: #fff; background: var(--ink); border: 0; border-radius: 8px;
+    font: 600 13px/1 var(--font-ui); cursor: pointer;
+    transition: background-color .16s var(--ease), transform .12s var(--ease);
+  }
+  .ai-write-btn:hover { background: #344651; }
+  .ai-write-btn:active { transform: scale(.98); }
+  .ai-write-btn .spark { font-size: 14px; }
+  .ai-write-btn.is-polish { background: var(--accent-primary); }
+  .ai-write-btn.is-polish:hover { background: #4a766f; }
+
+  .ai-write-mode-note { margin-top: 6px; padding: 0 18px 14px; color: var(--faint); font-size: 11.5px; line-height: 1.7; transition: opacity .15s var(--ease); }
+  .ai-write-mode-note b { color: var(--muted); font-weight: 650; }
+
+  /* result field, reused look from existing textarea */
+  .result-label { display: block; margin: 18px 0 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .result-field { display: block; width: 100%; min-height: 150px; padding: 14px 16px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; font: 14px/1.9 var(--font-ui); resize: vertical; }
+  .result-field::placeholder { color: var(--muted); }
+  .result-help { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+
+  /* generating shimmer state */
+  .is-generating .result-field { color: var(--muted); background: repeating-linear-gradient(100deg, var(--canvas) 0%, var(--canvas) 40%, #eaf0ee 50%, var(--canvas) 60%, var(--canvas) 100%); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+  /* ---------- Bill scenario specifics ---------- */
+  .bm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 26px; border-bottom: 1px solid var(--line); }
+  .bm-head h2 { font: 500 18px/1.3 var(--font-display); }
+  .bm-head p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+  .bm-body { padding: 22px 26px 26px; }
+  .bill-clue-card { padding: 18px 20px; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px; }
+  .bill-clue-card > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .bill-clue-card h3 { font: 600 15px/1.4 var(--font-ui); }
+  .bill-clue-count { color: var(--muted); font-size: 12px; }
+  .bill-clue-summary { margin-top: 6px; color: var(--muted); font-size: 12.5px; line-height: 1.75; }
+  .bill-clue-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 3px 9px; color: var(--watch); background: var(--accent-attention-soft); border-radius: 999px; font-size: 11px; font-weight: 650; }
+  .bill-clue-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-attention); }
+
+  .bill-evidence { margin-top: 14px; padding: 11px 13px; background: var(--surface-subtle); border-radius: 8px; }
+  .bill-evidence span { display: block; margin-bottom: 6px; color: var(--faint); font-size: 11px; font-weight: 650; }
+  .bill-evidence ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+  .bill-evidence li { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
+  .bill-evidence li b { color: var(--ink); font-weight: 500; }
+
+  .brief-field-label { display: flex; align-items: center; gap: 7px; margin: 16px 0 8px; color: var(--ink); font-size: 12.5px; font-weight: 650; }
+  .brief-field-label i { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--accent-primary); background: var(--surface-tinted); border-radius: 5px; font-style: normal; font-size: 11px; }
+
+  .bill-panel-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+  .ghost-btn { min-height: 38px; padding: 0 16px; color: var(--muted); background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; font: 600 13px/1 var(--font-ui); cursor: pointer; }
+  .ghost-btn:hover { color: var(--ink); background: var(--surface-subtle); }
+  .primary-btn { min-height: 38px; padding: 0 18px; color: #fff; background: var(--ink); border: 0; border-radius: 8px; font: 600 13px/1 var(--font-ui); cursor: pointer; }
+  .primary-btn:hover { background: #344651; }
+
+  /* ---------- Annotation callouts ---------- */
+  .annotate-row { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 26px; align-items: start; }
+  .annotate-notes { display: grid; gap: 12px; align-content: start; position: sticky; top: 24px; }
+  .annotate-card { padding: 16px 17px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+  .annotate-card b { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 12.5px; font-weight: 700; }
+  .annotate-card b i { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex: none; color: #fff; background: var(--accent-primary); border-radius: 50%; font-style: normal; font-size: 11px; }
+  .annotate-card p { margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.75; }
+
+  .flow-strip { display: flex; align-items: center; gap: 8px; margin: 30px 0 22px; padding: 14px 16px; background: var(--surface-subtle); border-radius: 10px; overflow-x: auto; }
+  .flow-strip .step { flex: none; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .flow-strip .step.emph { color: var(--ink); font-weight: 650; }
+  .flow-strip .step b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: #fff; background: var(--accent-primary); border-radius: 50%; font-size: 11px; }
+  .flow-strip .arrow { flex: none; color: var(--line-strong); font-size: 14px; }
+
+  @media (max-width: 980px) {
+    .concept-summary { grid-template-columns: 1fr; }
+    .annotate-row { grid-template-columns: 1fr; }
+    .annotate-notes { position: static; }
+  }
+</style>
+</head>
+<body>
+<main class="draft-page">
+
+  <header class="draft-head">
+    <span class="kicker">UX 设计稿 · 非最终代码</span>
+    <h1>“先说背景，AI 再润色” — 照片故事 &amp; 账单补充 的统一写作组件</h1>
+    <p>
+      同一套交互和视觉，分别用在两个场景：导入照片后填写「这些照片里的故事」，以及导入账单后为一条线索「简单说说」。
+      用户可以先在“背景信息”里补充一点线索，再点击 AI 写；也可以什么都不填，直接让 AI 结合已选中的照片人物 / 账单证据来写。
+      两处的输入框、按钮文案与状态提示保持一致，只替换具体的上下文内容。
+    </p>
+  </header>
+
+  <section class="concept-summary">
+    <div class="concept-card">
+      <b><i>1</i>背景信息可选</b>
+      <p>新增一个「背景信息」文本框，放在原有故事 / 备注框的上方。留空完全不影响原有的“AI 帮你写”能力，填了就会被一并交给 AI。</p>
+    </div>
+    <div class="concept-card">
+      <b><i>2</i>结合已选上下文</b>
+      <p>按钮旁的标签会显示当前会用到的上下文，例如“3 张照片 · 已认出 2 人”或“这条账单线索 · 4 笔消费”，让用户知道 AI 参考了什么。</p>
+    </div>
+    <div class="concept-card">
+      <b><i>3</i>一个按钮，两种结果</b>
+      <p>按钮文案随是否填写背景信息变化：没填是“AI 帮你写”（生成），填了是“结合背景润色”（改写）；结果统一写回原来的故事 / 备注框，用户仍可再编辑。</p>
+    </div>
+  </section>
+
+  <div class="scenario-tabs" role="tablist" aria-label="选择场景">
+    <button type="button" class="active" data-target="photo" role="tab" aria-selected="true">场景一 · 照片故事</button>
+    <button type="button" data-target="bill" role="tab" aria-selected="false">场景二 · 账单简单说说</button>
+  </div>
+
+  <!-- ============ SCENARIO 1: PHOTO ============ -->
+  <section class="scenario-panel active" id="panel-photo">
+    <div class="annotate-row">
+      <div class="mock-window">
+        <div class="mock-window-bar"><i></i><i></i><i></i><span>照片记忆 · 讲故事</span></div>
+        <header class="pm-head">
+          <span class="pm-cover" aria-hidden="true"></span>
+          <div><h2>周末的海边</h2><p>4 张照片 · 原图保留在本地</p></div>
+        </header>
+        <div class="pm-body">
+          <div class="photo-story-gallery" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+
+          <div class="photo-story-heading">
+            <div>
+              <h3>这些照片里的故事 <span class="counter">4 张照片 · 一篇故事</span></h3>
+              <p id="photo-status-text">把这些照片里的经历，一起写成一个故事。</p>
+            </div>
+          </div>
+
+          <!-- SHARED COMPONENT -->
+          <div class="ai-write-block" id="photo-ai-block">
+            <div class="ai-write-bg">
+              <div class="ai-write-bg-label">
+                <label for="photo-bg-input"><i>◇</i>背景信息（可选）</label>
+                <small>不填也可以，AI 会自己讲</small>
+              </div>
+              <textarea id="photo-bg-input" rows="2" placeholder="补充一点这几张照片背后的线索，比如是和谁一起去的、那天发生了什么特别的事……"></textarea>
+              <p class="ai-write-bg-hint"><i></i>AI 会把这段背景信息，和已认出的人物、照片顺序结合起来一起写。</p>
+            </div>
+            <div class="ai-write-actions">
+              <div class="ai-write-actions-left">
+                <span class="context-chip"><i>◈</i>已认出：小舟、阿姨</span>
+                <span class="context-chip"><i>▤</i>4 张 · 按时间排序</span>
+              </div>
+              <button type="button" class="ai-write-btn" id="photo-ai-btn"><span class="spark">✦</span><span id="photo-ai-btn-text">AI 帮你写</span></button>
+            </div>
+            <p class="ai-write-mode-note" id="photo-ai-mode-note">未填写背景信息时，AI 会仅根据照片和已认出的人物自由发挥。</p>
+          </div>
+
+          <label class="result-label" for="photo-story-field">故事</label>
+          <textarea class="result-field" id="photo-story-field" placeholder="这些照片串起了我的哪段经历？当时和谁在一起，发生了什么？"></textarea>
+          <p class="result-help">收进理解前请核对并修改，尤其是 AI 起草的内容。</p>
+        </div>
+      </div>
+
+      <aside class="annotate-notes">
+        <div class="annotate-card">
+          <b><i>A</i>入口位置不变</b>
+          <p>原本「AI 帮你写」按钮的位置保留，只是上方多了一段可选的「背景信息」输入框，两者视觉上组成一个整体卡片。</p>
+        </div>
+        <div class="annotate-card">
+          <b><i>B</i>按钮文案随状态切换</b>
+          <p>背景信息为空 → 按钮显示「AI 帮你写」（生成新故事）。<br>背景信息非空 → 按钮显示「结合背景写故事」（把背景信息润色成完整讲述）。</p>
+        </div>
+        <div class="annotate-card">
+          <b><i>C</i>已有故事时的处理</b>
+          <p>若故事框里已经有内容，同一组件依然可用：填写背景信息后按钮变为「结合背景润色」，用于在已有草稿基础上补充和改写，而不是覆盖重写。</p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="flow-strip" aria-label="照片场景流程">
+      <span class="step emph"><b>1</b>导入照片、认人</span><span class="arrow">→</span>
+      <span class="step">进入「讲故事」步骤</span><span class="arrow">→</span>
+      <span class="step emph"><b>2</b>（可选）填写背景信息</span><span class="arrow">→</span>
+      <span class="step emph"><b>3</b>点击 AI 写 / 结合背景润色</span><span class="arrow">→</span>
+      <span class="step">故事写入下方输入框，用户可再编辑</span><span class="arrow">→</span>
+      <span class="step">收进理解</span>
+    </div>
+  </section>
+
+  <!-- ============ SCENARIO 2: BILL ============ -->
+  <section class="scenario-panel" id="panel-bill">
+    <div class="annotate-row">
+      <div class="mock-window">
+        <div class="mock-window-bar"><i></i><i></i><i></i><span>账单记忆 · 简单说说</span></div>
+        <header class="bm-head">
+          <div><h2>消费旅程 · 账单记忆</h2><p>7 条候选线索 · 账单只提供参考证据，不代表已经确认的经历</p></div>
+        </header>
+        <div class="bm-body">
+          <article class="bill-clue-card">
+            <header><h3>连续三周的深夜打车</h3><span class="bill-clue-count">6 笔 · 高置信</span></header>
+            <p class="bill-clue-summary">11 月起，工作日 23:00 后多次从同一写字楼打车回同一地址。</p>
+            <span class="bill-clue-status"><i></i>待处理</span>
+
+            <div class="bill-evidence">
+              <span>账单明细</span>
+              <ul>
+                <li><span>11-04 23:42</span><b>滴滴出行 · ¥38</b></li>
+                <li><span>11-11 23:55</span><b>滴滴出行 · ¥42</b></li>
+                <li><span>11-18 23:31</span><b>滴滴出行 · ¥35</b></li>
+              </ul>
+            </div>
+
+            <div class="brief-field-label"><i>◇</i>背景信息（可选）——这背后有什么想补充的吗？</div>
+
+            <!-- SHARED COMPONENT -->
+            <div class="ai-write-block" id="bill-ai-block">
+              <div class="ai-write-bg">
+                <div class="ai-write-bg-label">
+                  <label for="bill-bg-input" class="sr-only-visually-shown" style="display:none">背景信息</label>
+                  <small style="margin-left:auto">随便说一两句就好，不写也可以</small>
+                </div>
+                <textarea id="bill-bg-input" rows="2" placeholder="在这里写一两句，比如是怎么开始的、跟谁有关……（也可以留空，直接让 AI 根据账单猜一版）"></textarea>
+                <p class="ai-write-bg-hint"><i></i>AI 会把这段话和这 6 笔打车记录一起，润色成一段完整、自然的记述。</p>
+              </div>
+              <div class="ai-write-actions">
+                <div class="ai-write-actions-left">
+                  <span class="context-chip"><i>◈</i>这条线索 · 6 笔账单</span>
+                </div>
+                <button type="button" class="ai-write-btn is-polish" id="bill-ai-btn"><span class="spark">✦</span><span id="bill-ai-btn-text">结合账单，AI 帮你写</span></button>
+              </div>
+              <p class="ai-write-mode-note" id="bill-ai-mode-note">未填写背景信息时，AI 会仅依据这 6 笔账单证据推测并起草一版说法，供你核对修改。</p>
+            </div>
+
+            <label class="result-label" for="bill-note-field">这条记录准备收录的说法</label>
+            <textarea class="result-field" id="bill-note-field" style="min-height:90px" placeholder="确认或修改这段记述……"></textarea>
+
+            <div class="bill-panel-footer">
+              <button type="button" class="ghost-btn">取消</button>
+              <button type="button" class="primary-btn">提交这句话</button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <aside class="annotate-notes">
+        <div class="annotate-card">
+          <b><i>A</i>原「简单说说」升级</b>
+          <p>原本这里只是一个纯文本备注框。现在同一个位置换成共享组件：备注即「背景信息」，加一个 AI 按钮，用户仍然可以完全手写、完全不用 AI。</p>
+        </div>
+        <div class="annotate-card">
+          <b><i>B</i>上下文来自当前线索</b>
+          <p>上下文标签固定显示这一条聚类的账单证据条数（如“6 笔账单”），与照片场景中的“已认出人物”角色一致：都是“AI 会参考什么”的说明。</p>
+        </div>
+        <div class="annotate-card">
+          <b><i>C</i>两种起点都收敛到同一结果框</b>
+          <p>无论是「直接 AI 写」还是「先写背景再润色」，产出都写进下方「准备收录的说法」框，用户核对后再提交，不改变原有的确认 / 提交流程。</p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="flow-strip" aria-label="账单场景流程">
+      <span class="step emph"><b>1</b>导入账单、生成线索聚类</span><span class="arrow">→</span>
+      <span class="step">选择「简单说说」</span><span class="arrow">→</span>
+      <span class="step emph"><b>2</b>（可选）填写背景信息</span><span class="arrow">→</span>
+      <span class="step emph"><b>3</b>点击 AI 写 / 结合账单润色</span><span class="arrow">→</span>
+      <span class="step">说法写入结果框，用户可再编辑</span><span class="arrow">→</span>
+      <span class="step">提交这句话</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Scenario tab switching
+  const tabs = document.querySelectorAll(".scenario-tabs button");
+  tabs.forEach((btn) => btn.addEventListener("click", () => {
+    tabs.forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
+    btn.classList.add("active"); btn.setAttribute("aria-selected", "true");
+    document.querySelectorAll(".scenario-panel").forEach((p) => p.classList.remove("active"));
+    document.getElementById("panel-" + btn.dataset.target).classList.add("active");
+  }));
+
+  // Shared behavior: button label + helper note react to whether background info is filled,
+  // and clicking simulates an AI generation into the result field.
+  function wireAiWriteBlock({ bgId, btnId, btnTextId, noteId, resultId, blockId, genLabel, polishLabel, genNote, polishNote, genSample, polishSample }) {
+    const bg = document.getElementById(bgId);
+    const btn = document.getElementById(btnId);
+    const btnText = document.getElementById(btnTextId);
+    const note = document.getElementById(noteId);
+    const result = document.getElementById(resultId);
+    const block = document.getElementById(blockId);
+
+    function sync() {
+      const hasBg = bg.value.trim().length > 0;
+      btnText.textContent = hasBg ? polishLabel : genLabel;
+      note.innerHTML = hasBg ? polishNote : genNote;
+      btn.classList.toggle("is-polish", hasBg);
+    }
+    bg.addEventListener("input", sync);
+    sync();
+
+    btn.addEventListener("click", () => {
+      const hasBg = bg.value.trim().length > 0;
+      block.classList.add("is-generating");
+      result.classList.add("is-generating");
+      btn.disabled = true;
+      const originalLabel = btnText.textContent;
+      btnText.textContent = hasBg ? "正在结合背景润色…" : "正在写…";
+      result.value = "";
+      setTimeout(() => {
+        result.value = hasBg ? polishSample(bg.value.trim()) : genSample;
+        block.classList.remove("is-generating");
+        result.classList.remove("is-generating");
+        btn.disabled = false;
+        btnText.textContent = originalLabel;
+      }, 900);
+    });
+  }
+
+  wireAiWriteBlock({
+    bgId: "photo-bg-input", btnId: "photo-ai-btn", btnTextId: "photo-ai-btn-text",
+    noteId: "photo-ai-mode-note", resultId: "photo-story-field", blockId: "photo-ai-block",
+    genLabel: "AI 帮你写", polishLabel: "结合背景写故事",
+    genNote: "未填写背景信息时，AI 会仅根据照片和已认出的人物自由发挥。",
+    polishNote: "已填写背景信息：AI 会把这段话和已认出的人物、照片顺序结合，润色成一篇连贯的故事。",
+    genSample: "周末难得放晴，我们四个人一起去了海边。风很大，浪花打过来的时候大家都笑着往后跑。傍晚的时候光线特别好，就多拍了几张。",
+    polishSample: (bg) => `那天其实是照着「${bg}」这个念头去的——风很大，浪花打过来的时候大家都笑着往后跑，傍晚的光线特别好，就多拍了几张，留下了这组照片。`,
+  });
+
+  wireAiWriteBlock({
+    bgId: "bill-bg-input", btnId: "bill-ai-btn", btnTextId: "bill-ai-btn-text",
+    noteId: "bill-ai-mode-note", resultId: "bill-note-field", blockId: "bill-ai-block",
+    genLabel: "结合账单，AI 帮你写", polishLabel: "结合背景润色",
+    genNote: "未填写背景信息时，AI 会仅依据这 6 笔账单证据推测并起草一版说法，供你核对修改。",
+    polishNote: "已填写背景信息：AI 会把这段话和这 6 笔打车记录结合，润色成一段完整、自然的记述。",
+    genSample: "11 月起有一段时间经常加班到很晚，一连几周工作日深夜都要打车回家，可能是当时项目比较赶。",
+    polishSample: (bg) => `那段时间是「${bg}」——一连三周，工作日深夜都要从公司打车回家，账单里留下的正是这几笔深夜的车费。`,
+  });
+</script>
+</body>
+</html>
