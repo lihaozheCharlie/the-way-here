@@ -1,4 +1,4 @@
-/* One focus owner per field. An inset stroke never adds a halo or shifts layout. */
+/* One focus owner per field; the shared desktop ring never shifts layout. */
 .text-control {
   caret-color: var(--accent-primary);
 }
@@ -7,7 +7,7 @@
 .text-field-shell:has(> .text-control:focus) {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: inset 0 0 0 1px var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(87,138,131,.16);
 }
 
 .text-field-shell > .text-control:focus {

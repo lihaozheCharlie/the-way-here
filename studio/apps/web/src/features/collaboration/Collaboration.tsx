@@ -1,3 +1,5 @@
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
+import { useDesktopPreference } from "../desktop/preferences-store";
 import { isTerminalRunStatus } from "@the-way-here/shared";
 import { TextArea } from "../../shared/form-controls";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -26,7 +28,8 @@ function submitAgentFormOnEnter(event: React.KeyboardEvent<HTMLTextAreaElement>)
   event.currentTarget.form?.requestSubmit();
 }
 
-export function AgentDock({ revision, context, initialRunId = "" }: { revision: number; context: AgentContext; initialRunId?: string }) {
+export function AgentDock({ revision, context, initialRunId = "", embedded = false }: { revision: number; context: AgentContext; initialRunId?: string; embedded?: boolean }) {
+  const [hintsEnabled] = useDesktopPreference("desktop.ai-hints");
   const { data: vault, loading: vaultLoading } = useApi<VaultInfo>("/api/vault", revision);
   const [runListRevision, setRunListRevision] = useState(0);
   const { data: runList, loading: runsLoading, error: runsError } = useApi<WikiRun[]>("/api/runs", revision + runListRevision);
@@ -128,7 +131,7 @@ export function AgentDock({ revision, context, initialRunId = "" }: { revision: 
       setHistoryReturnRunId("");
       return;
     }
-    startNewQuestion();
+    setView("compose");
   }
 
   async function deleteConversation(thread: AgentThread): Promise<void> {
@@ -191,7 +194,7 @@ export function AgentDock({ revision, context, initialRunId = "" }: { revision: 
 
   const selectedRun = runList?.find((candidate) => candidate.id === runId);
   const panelTitle = runId ? selectedRun?.title || `处理：${context.title}` : view === "history" ? "聊过的事" : "一起往下想";
-  const closeDock = () => new URLSearchParams(window.location.search).has("detached") ? window.close() : window.dispatchEvent(new Event("hide-inspector"));
+  const closeDock = () => embedded ? startNewQuestion() : new URLSearchParams(window.location.search).has("detached") ? window.close() : window.dispatchEvent(new Event("hide-inspector"));
   const submitDisabled = submitting || (mode !== "validate" && !draft.trim()) || vaultLoading || (mode !== "validate" && agent.loading) || !vault?.agentAvailable;
 
   return <>
@@ -205,9 +208,10 @@ export function AgentDock({ revision, context, initialRunId = "" }: { revision: 
           <div className="context-agent-header-actions">
             {!runId && view === "compose" && <button type="button" className="context-agent-icon-button" aria-label={`聊过的事，${threads.length} 个话题`} title="聊过的事" onClick={() => showHistory()}><Icon name="history" size={17} /></button>}
             {!runId && view === "history" && <button type="button" className="context-agent-icon-button" aria-label="开始新话题" title="开始新话题" onClick={startNewQuestion}><Icon name="plus" size={18} /></button>}
-            <button type="button" className="context-agent-icon-button" aria-label="关闭对话窗口" onClick={closeDock}><Icon name="close" size={17} /></button>
+            {!embedded && <button type="button" className="context-agent-icon-button" aria-label="关闭对话窗口" onClick={closeDock}><Icon name="close" size={17} /></button>}
           </div>
         </header>
+        <SegmentedTabs className="inspector-tabs" label="AI 协作" value={runId || view === "compose" ? "compose" : "history"} options={[{value:"compose",label:"当前任务"},{value:"history",label:"历史记录"}]} onChange={value => { if(value === "history") showHistory(runId); else if(!runId) leaveHistory(); }} />
         {!runId && view === "compose" && <div className="context-agent-context-chip"><span>{mode === "validate" ? "检查" : collaborationModes[mode].short}</span><b>{attachedContext ? attachedContext.title : context.title}</b><i aria-hidden="true" /><small>{vault?.name || context.scope}</small></div>}
         {runId ? <ContextualRunPanel runId={runId} revision={revision} runList={runList || []} onRunId={setRunId} onNew={startNewQuestion} onClose={closeDock} /> : view === "history" ? <AgentHistory threads={threads} loading={runsLoading} error={runsError} knowledgeBaseName={vault?.name} onOpen={setRunId} onNew={startNewQuestion} onDelete={deleteConversation} /> : <form className="context-agent-compose" onSubmit={submit}>
           <div className={`context-agent-compose-body${draft ? " has-draft" : ""}`}>
@@ -215,7 +219,7 @@ export function AgentDock({ revision, context, initialRunId = "" }: { revision: 
             {(outputTarget?.kind === "journey-report" || outputTarget?.kind === "photo-memory") && <div className="context-output-target is-journey"><Icon name="receipt" size={15} /><div><b>只更新「{outputTarget.label}」</b><span>会查阅已有 Wiki 帮你理解线索，但这段对话不会构建或修改 Wiki。</span></div></div>}
             {mode === "validate" ? <div className="context-validate-summary"><span className="context-agent-empty-glyph"><Icon name="check" size={20} /></span><b>检查当前知识库</b><p>运行既有标签、链接与结构检查，不生成新的知识内容。</p></div> : <>
               <div className="context-agent-empty-state"><span className="context-agent-empty-glyph"><Icon name="spark" size={19} /></span><b>从这页真正想说的事开始</b><p>我已经带上了这页的上下文。说说你想聊、补充或整理什么，我会判断接下来怎么做。</p></div>
-              {!attachedContext && context.suggestions.length > 0 && <div className="context-suggestions" aria-label="建议问题">{context.suggestions.slice(0, 3).map((suggestion) => <button key={suggestion} type="button" onClick={() => { setDraft(suggestion); setMode(resolveComposerMode(context.defaultMode, context.defaultOutputTarget)); setOutputTarget(context.defaultOutputTarget); setSourceContext(context.defaultSourceContext); window.setTimeout(() => textareaRef.current?.focus(), 0); }}>{suggestion}</button>)}</div>}
+              {hintsEnabled && !attachedContext && context.suggestions.length > 0 && <div className="context-suggestions" aria-label="建议问题">{context.suggestions.slice(0, 3).map((suggestion) => <button key={suggestion} type="button" onClick={() => { setDraft(suggestion); setMode(resolveComposerMode(context.defaultMode, context.defaultOutputTarget)); setOutputTarget(context.defaultOutputTarget); setSourceContext(context.defaultSourceContext); window.setTimeout(() => textareaRef.current?.focus(), 0); }}>{suggestion}</button>)}</div>}
             </>}
           </div>
           <div className="context-agent-composer">

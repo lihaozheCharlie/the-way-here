@@ -8,15 +8,17 @@ export function TextInput({ className = "", ...props }: ComponentProps<"input">)
   return <input {...props} className={`text-control ${className}`.trim()} />;
 }
 
-export function TextArea({ className = "", ...props }: ComponentProps<"textarea">) {
+export function TextArea({ className = "", voice = true, ...props }: ComponentProps<"textarea"> & { voice?: boolean }) {
   const control = useRef<HTMLTextAreaElement | null>(null);
-  return <><textarea {...props} ref={(node) => { control.current = node; if (typeof props.ref === "function") props.ref(node); else if (props.ref) props.ref.current = node; }} className={`text-control ${className}`.trim()} />{props.onChange && !props.readOnly && !props.disabled ? <VoiceInputSlot onConfirm={(text) => {
+  return <><textarea {...props} ref={(node) => { control.current = node; if (typeof props.ref === "function") props.ref(node); else if (props.ref) props.ref.current = node; }} className={`text-control ${className}`.trim()} />{voice && props.onChange && !props.readOnly && !props.disabled ? <VoiceInputSlot onConfirm={(text) => {
     const node = control.current;
     if (!node) return;
-    const next = `${node.value}${node.value ? "\n" : ""}${text}`;
+    const start = node.selectionStart, end = node.selectionEnd;
+    const next = `${node.value.slice(0, start)}${text}${node.value.slice(end)}`;
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(node, next);
     node.dispatchEvent(new Event("input", { bubbles: true }));
     node.focus();
+    requestAnimationFrame(() => node.setSelectionRange(start + text.length, start + text.length));
   }} /> : null}</>;
 }
 

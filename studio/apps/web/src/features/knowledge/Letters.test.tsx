@@ -87,12 +87,15 @@ describe("letter reader", () => {
     expect(html).toContain('class="editable-document editable-document--preview knowledge-document has-outline"');
     expect(html.indexOf('class="editable-document-toolbar')).toBeLessThan(html.indexOf('class="editable-document-properties'));
     expect(html.indexOf('class="editable-document-properties')).toBeLessThan(html.indexOf('class="editable-document-body'));
-    expect(html).toContain("双击正文开始修改 · 自动保存");
+    expect(html).toContain("正文，双击后编辑");
+    expect(html).toContain("展开全部属性");
+    expect(html).toContain('role="status"></span>');
   });
 
   it("renders the exact same editor as other knowledge pages, including its outline", () => {
     const standard = renderToStaticMarkup(<MemoryRouter><EditableDocument page={document} variant="preview" showOutline showIdentity={false} /></MemoryRouter>);
-    expect(render()).toContain(standard);
+    const normalizeIds = (html: string) => html.replace(/_R_[a-zA-Z0-9]+_/g, "REACT_ID");
+    expect(normalizeIds(render())).toContain(normalizeIds(standard));
   });
 
   it("uses the shared document layout and outline for immutable generated versions", () => {

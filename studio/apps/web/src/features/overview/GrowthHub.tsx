@@ -1,3 +1,4 @@
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import type { SectionedPageView, StructuredCard } from "@the-way-here/shared";
@@ -79,7 +80,7 @@ export function GrowthHub({ revision }: { revision: number }) {
 
     {focus ? <section className="insights-spotlight" aria-labelledby="insights-spotlight-title">
       <div className="insights-spotlight-glyph" aria-hidden="true"><svg viewBox="0 0 168 168" fill="none"><circle cx="84" cy="84" r="78" stroke="currentColor" strokeDasharray="3 6" /><circle cx="84" cy="84" r="56" stroke="currentColor" /><circle cx="84" cy="84" r="32" /><path d="M84 84V51M84 84l28 12" /><circle cx="84" cy="84" r="4" /><circle cx="84" cy="51" r="4" /><circle cx="112" cy="96" r="4" /></svg></div>
-      <div className="insights-spotlight-copy"><span>最近变化 · {focus.route.title}</span><h2 id="insights-spotlight-title">{focus.title}</h2><p>{insightExcerpt(insightCardDetail(focus, ["核心判断", "系统目标", "循环定义", "模型说明"]), 150)}</p><div>{focus.sections.slice(0, 3).map((section) => <span key={section.heading}>{section.heading}</span>)}{!focus.sections.length ? <span>可继续核对证据</span> : null}</div></div>
+      <div className="insights-spotlight-copy"><h2 id="insights-spotlight-title">{focus.title}</h2><p>{insightExcerpt(insightCardDetail(focus, ["核心判断", "系统目标", "循环定义", "模型说明"]), 150)}</p><div>{focus.sections.slice(0, 3).map((section) => <span key={section.heading}>{section.heading}</span>)}{!focus.sections.length ? <span>可继续核对证据</span> : null}</div></div>
       <NavLink className="insights-spotlight-action" to={focusHref} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>查看完整推理 <Icon name="arrow" size={15} /></NavLink>
     </section> : null}
 
@@ -114,7 +115,7 @@ export function GrowthHub({ revision }: { revision: number }) {
             <div><InsightSectionMark kind="cycle" /><h3>{item.title}</h3></div><p>{insightExcerpt(insightCardDetail(item, ["循环定义"]), 130)}</p>
             <div className="insights-loop-tags">{trigger ? <span>触发 · {insightExcerpt(trigger, 22)}</span> : null}{cost ? <span>代价 · {insightExcerpt(cost, 22)}</span> : null}</div>
             <button type="button" onClick={() => toggleInSet(setExpandedCycles, item.id)} aria-expanded={open} aria-controls={detailId}>{open ? "收起详情" : "展开详情"}</button>
-            <div className="insights-card-detail" id={detailId}>{insightExcerpt(insightCardDetail(item, ["中断点", "有效部分", "新证据"]), 250)} <NavLink to={insightItemHref(cycleRoute, item)} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>查看完整循环</NavLink></div>
+            <div className="insights-card-detail" id={detailId} hidden={!open}><div className="cycle-stages">{[{label:"触发", keys:["常见触发", "触发"]}, {label:"惯性反应", keys:["惯性反应", "自动反应"]}, {label:"代价", keys:["代价"]}, {label:"有效中断", keys:["中断点", "有效部分"]}].map(stage => <section key={stage.label}><b>{stage.label}</b><p>{stage.keys.map(key => insightSectionText(item, key)).find(Boolean) || "还需要补充证据"}</p></section>)}</div> <NavLink to={insightItemHref(cycleRoute, item)} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>查看完整循环</NavLink></div>
           </article>;
         })}
       </div> : <Empty>还没有形成反复循环。</Empty>}
@@ -139,7 +140,7 @@ export function GrowthHub({ revision }: { revision: number }) {
           const view = modelViews[id] || "summary";
           const panels = mentalModelPanels(section.body);
           return <article className="insights-model-card" key={section.heading}><div><InsightSectionMark kind="model" /><h3><NavLink to="/mental-models" state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>{section.heading.replace(/^[一二三四五六七]、/, "")}</NavLink></h3></div><p>{insightExcerpt(panels.summary, 145)}</p>
-            <div className="insights-model-toggles" role="group" aria-label={`${section.heading}的查看方式`}><button type="button" className={view === "summary" ? "is-active" : ""} aria-pressed={view === "summary"} onClick={() => setModelViews((current) => ({ ...current, [id]: "summary" }))}>核心要点</button><button type="button" className={view === "calibration" ? "is-active" : ""} aria-pressed={view === "calibration"} onClick={() => setModelViews((current) => ({ ...current, [id]: "calibration" }))}>边界与反例</button></div>
+            <SegmentedTabs<"summary" | "calibration"> className="insights-model-toggles" label={`${section.heading}的查看方式`} value={view} options={[{value:"summary",label:"摘要"},{value:"calibration",label:"校准"}]} onChange={next => setModelViews(current => ({...current,[id]:next}))} />
             <div className="insights-model-panel" aria-live="polite">{insightExcerpt(view === "summary" ? panels.summary : panels.calibration, 240)}</div>
           </article>;
         })}

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import YAML from "yaml";
 import { afterEach, describe, expect, it } from "vitest";
-import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase } from "./knowledge-base-manager.js";
+import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase, renamePersonalKnowledgeBase } from "./knowledge-base-manager.js";
 
 const temporaryRoots: string[] = [];
 
@@ -133,5 +133,20 @@ knowledgeBases:
 `, "utf8");
 
     await expect(deletePersonalKnowledgeBase(root, "personal")).rejects.toThrow("使用了自定义目录");
+  });
+});
+
+
+describe("knowledge base renaming", () => {
+  it("changes only the selected name and rejects invalid or missing targets", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "twh-rename-")); temporaryRoots.push(root);
+    const configPath = path.join(root, "the-way-here.config.yaml");
+    const original = {version:3, defaultKnowledgeBase:"demo", knowledgeBases:{demo:{name:"Anonymous", paths:{wiki:"vault/demo/wiki",sources:"vault/demo/sources"}}, personal:{name:"Mine",paths:{wiki:"app/personal/wiki",sources:"app/personal/sources"}}}};
+    await writeFile(configPath,YAML.stringify(original));
+    await expect(renamePersonalKnowledgeBase(root,"personal","  New name  ")).resolves.toEqual({id:"personal",name:"New name"});
+    expect(YAML.parse(await readFile(configPath,"utf8"))).toEqual({...original,knowledgeBases:{...original.knowledgeBases,personal:{...original.knowledgeBases.personal,name:"New name"}}});
+    const saved = await readFile(configPath,"utf8");
+    for(const [id,name] of [["personal"," "],["../demo","Unsafe"],["missing","Absent"],["personal","x".repeat(41)]]) await expect(renamePersonalKnowledgeBase(root,id,name)).rejects.toThrow();
+    expect(await readFile(configPath,"utf8")).toBe(saved);
   });
 });

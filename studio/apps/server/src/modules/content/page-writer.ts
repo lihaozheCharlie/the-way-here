@@ -134,15 +134,16 @@ export class PageWriter {
     return { ok: true, modifiedAt: updated?.modifiedAt, sha256: createHash("sha256").update(markdown).digest("hex") };
   }
 
-  async openInEditor(pageId: string | undefined): Promise<{ ok: true }> {
+  async openInEditor(pageId: string | undefined, reveal = false): Promise<{ ok: true }> {
     const page = pageId ? this.knowledge.index.get(pageId) : undefined;
     if (!page) throw new ContentRequestError(404, "页面不存在");
     const absolutePath = page.externalSource?.status === "available" ? page.externalSource.originalPath : path.resolve(this.knowledge.vaultRoot, page.relativePath);
-    const configuredEditor = process.env.THE_WAY_HERE_EDITOR?.trim();
+    if (page.externalSource?.status === "unavailable") throw new ContentRequestError(404, "原始来源不可用，请检查目录连接");
+    const configuredEditor = reveal ? undefined : process.env.THE_WAY_HERE_EDITOR?.trim();
     const editor = configuredEditor || (process.platform === "darwin" ? "/usr/bin/open" : process.platform === "win32" ? "cmd" : "xdg-open");
     const args = configuredEditor
       ? (["code", "cursor"].includes(configuredEditor) ? ["--goto", absolutePath] : [absolutePath])
-      : process.platform === "win32" ? ["/c", "start", "", absolutePath] : [absolutePath];
+      : process.platform === "win32" ? ["/c", "start", "", absolutePath] : reveal && process.platform === "darwin" ? ["-R", absolutePath] : [absolutePath];
     const child = spawn(editor, args, { detached: true, stdio: "ignore" });
     const launched = await new Promise<boolean>((resolve) => {
       child.once("spawn", () => resolve(true));

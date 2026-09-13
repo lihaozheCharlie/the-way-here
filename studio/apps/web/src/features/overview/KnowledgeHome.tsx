@@ -1,3 +1,4 @@
+import { UnderstandingDigest } from "../knowledge/UnderstandingDigest";
 import { NavLink } from "react-router-dom";
 import type { VaultInfo } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
@@ -26,6 +27,7 @@ export function KnowledgeHome({ revision }: { revision: number }) {
       <p>这里汇总系统从你的生活记录中持续读出的理解：关于你自己的判断、人生轨迹、近况回信，以及关于身边人与关系的记录。</p>
       <span>{vault.pageCount} 条理解 · 来自 {vault.sourceCount} 份生活记录</span>
     </header>
+    <UnderstandingDigest revision={revision} />
     <section className="understanding-entry-grid" aria-label="已有理解分类">
       {groups.map((group) => <NavLink className={`understanding-entry understanding-entry--${group.tone}`} to={group.to} key={group.to}>
         <UnderstandingGlyph tone={group.tone} size="small" />

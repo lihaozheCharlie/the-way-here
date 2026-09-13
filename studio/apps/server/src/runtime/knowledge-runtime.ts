@@ -1,7 +1,7 @@
 import chokidar, { type FSWatcher } from "chokidar";
 import { WikiIndex } from "@the-way-here/wiki-core";
 import type { AgentRuntimeDescriptor } from "@the-way-here/shared";
-import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase, type DeletedKnowledgeBase } from "../modules/knowledge-bases/knowledge-base-manager.js";
+import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase, renamePersonalKnowledgeBase, type DeletedKnowledgeBase } from "../modules/knowledge-bases/knowledge-base-manager.js";
 import { StudioEvents } from "./studio-events.js";
 
 export class KnowledgeRuntime {
@@ -60,6 +60,15 @@ export class KnowledgeRuntime {
       const created = await createPersonalKnowledgeBase(this.vaultRoot, name);
       await this.activate(created.id);
       return created;
+    });
+  }
+
+  renameKnowledgeBase(knowledgeBaseId: unknown, name: unknown): Promise<{ id: string; name: string }> {
+    return this.serializeMutation(async () => {
+      const renamed = await renamePersonalKnowledgeBase(this.vaultRoot, knowledgeBaseId, name);
+      await this.activeIndex.rebuild();
+      this.events.broadcast("index", { knowledgeBaseId:this.activeIndex.config.knowledgeBaseId, at:this.activeIndex.lastIndexedAt });
+      return renamed;
     });
   }
 

@@ -1,7 +1,7 @@
 import { waitForService } from './service-process.mjs';
 import { prepareWorkspace, saveWorkspace } from './workspace.mjs';
 import { speechSession } from "./speech.mjs";
-import { app, BrowserWindow, Menu, Tray, nativeImage, ipcMain, shell, dialog, Notification, utilityProcess, session, systemPreferences, net } from 'electron';
+import { app, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, shell, dialog, Notification, utilityProcess, session, systemPreferences, net } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { access, realpath } from 'node:fs/promises';
@@ -25,7 +25,7 @@ function openWindow(route, kind = 'reader') {
   route = localRoute(route);
   if (['settings', 'capture'].includes(kind)) { const existing = [...windows].find((win) => win.kind === kind); if (existing) { existing.show(); existing.focus(); return; } }
   const compact = kind === 'capture';
-  const win = new BrowserWindow({ title: 'The Way Here', width: compact ? 560 : kind === 'settings' ? 800 : 1380, height: compact ? 580 : 900, minWidth: compact ? 500 : kind === 'settings' ? 700 : 900, minHeight:480, show:false, titleBarStyle:'hiddenInset', trafficLightPosition:{x:14,y:16}, backgroundColor:'#FBFAF8', webPreferences:{ preload:path.join(here,'preload.cjs'), sandbox:true, contextIsolation:true, nodeIntegration:false, spellcheck:true } });
+  const win = new BrowserWindow({ title: 'The Way Here', width: compact ? 420 : kind === 'settings' ? 800 : 1380, height: compact ? 580 : 900, minWidth: compact ? 380 : kind === 'settings' ? 700 : 900, minHeight:480, alwaysOnTop:compact, skipTaskbar:compact, show:false, titleBarStyle:'hiddenInset', trafficLightPosition:{x:14,y:12}, backgroundColor:'#F2F3F1', webPreferences:{ preload:path.join(here,'preload.cjs'), sandbox:true, contextIsolation:true, nodeIntegration:false, spellcheck:true } });
   win.kind = kind; windows.add(win);
   win.webContents.setWindowOpenHandler(({url}) => { if (trustedSender(url, origin)) openWindow(new URL(url).pathname + new URL(url).search); else if (allowedExternal(url)) void shell.openExternal(url); return {action:'deny'}; });
   win.webContents.on('will-navigate', (event,url) => { if (!trustedSender(url,origin)) { event.preventDefault(); if (allowedExternal(url)) void shell.openExternal(url); } });
@@ -116,3 +116,6 @@ app.whenReady().then(async () => {
 app.on('activate',showMain);
 app.on('before-quit', () => { quitting = true; speech?.cancel(); worker?.kill(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+
+app.whenReady().then(() => { globalShortcut.register('CommandOrControl+Shift+N', () => { if (origin) openWindow('/capture', 'capture'); }); });
+app.on('will-quit', () => globalShortcut.unregisterAll());

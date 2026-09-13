@@ -25,6 +25,10 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
       throw error;
     }
   });
+  app.patch<{ Params: { knowledgeBaseId: string }; Body: { name?: unknown } }>("/api/vault/:knowledgeBaseId", async (request, reply) => {
+    try { return await knowledge.renameKnowledgeBase(request.params.knowledgeBaseId, request.body?.name); }
+    catch (error) { if (error instanceof KnowledgeBaseRequestError) return reply.code(error.statusCode).send({ error:error.message }); throw error; }
+  });
   app.delete<{ Params: { knowledgeBaseId: string } }>("/api/vault/:knowledgeBaseId", async (request, reply) => {
     try {
       if (await hasActiveKnowledgeBaseRun(request.params.knowledgeBaseId)) return reply.code(409).send({ error: "这个知识库还有 Agent 任务正在运行，请结束任务后再删除" });
@@ -74,6 +78,7 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
   }, 201));
   app.delete<{ Body: { pageId?: string; expectedModifiedAt?: string } }>("/api/sources/file", async (request, reply) => handleContent(reply, () => writer().deleteSource(request.body?.pageId, request.body?.expectedModifiedAt)));
   app.delete<{ Body: { folder?: string; expectedFileCount?: number } }>("/api/sources/folder", async (request, reply) => handleContent(reply, () => writer().deleteSourceFolder(request.body?.folder, request.body?.expectedFileCount)));
+  app.post<{ Body: { pageId?: string } }>("/api/files/reveal", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId, true)));
   app.post<{ Body: { pageId?: string } }>("/api/files/open-in-editor", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId)));
   app.post<{ Body: { pageId?: string; fileName?: string; expectedModifiedAt?: string } }>("/api/pages/rename", async (request, reply) => handleContent(reply, () => writer().rename(request.body?.pageId, request.body?.fileName, request.body?.expectedModifiedAt)));
   app.put<{ Params: { "*": string }; Body: { markdown?: string; expectedModifiedAt?: string } }>("/api/pages/*", async (request, reply) => handleContent(reply, () => writer().save(decodeURIComponent(request.params["*"]), request.body?.markdown, request.body?.expectedModifiedAt)));

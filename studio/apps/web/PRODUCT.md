@@ -4,7 +4,7 @@
 
 ## Platform
 
-web
+macOS desktop (Electron); a React renderer backed by a local service.
 
 ## Best-fit user
 
@@ -26,22 +26,22 @@ The friend framing is an experience promise, not a claim of consciousness, emoti
 
 ## Operating Context
 
-- The user runs the service locally and returns when something happens that they want to say out loud, during a difficult decision, when a familiar pattern repeats, or when they simply do not want to start the story from the beginning again.
+- The user opens the native desktop client, which starts its local service, and returns when something happens that they want to say out loud, during a difficult decision, when a familiar pattern repeats, or when they simply do not want to start the story from the beginning again.
 - The product reads an existing Vault with separate Knowledge Sources and My Knowledge layers.
 - The import path accepts local Markdown, TXT, folders, and supported payment statements; future connectors must never appear as working actions before they exist.
 - Reading, searching, following knowledge links, inspecting sources, and asking Codex are core recurring workflows.
-- Editing constructed knowledge may happen in the web UI or an external IDE. Original source notes remain read-only after import.
+- Internal Markdown records and constructed knowledge can be edited in the main client or an external editor. External directory connections and detached reading windows remain read-only. Editing preserves original metadata and protected source relations.
 
 ## Capabilities and Constraints
 
 - Preserve all current constructed pages, original notes, build Skills, links, and Codex workflows; the GUI adapts to them instead of renaming private files or hard-coding this Vault.
 - Local-first service bound to `127.0.0.1`; no account system and no public-network assumptions.
 - React web client with a Fastify server and Markdown as the durable data format.
-- Current delivery scope is desktop web. Mobile and tablet adaptation, touch-specific interaction, narrow-screen navigation, and mobile visual QA are out of scope until separately prioritized; feature work must not add them incidentally.
+- Current delivery scope is macOS desktop, including the main window, detached reading/conversation windows, Preferences, and a floating Quick Capture window. Mobile and tablet adaptation, touch-specific interaction, narrow-screen navigation, and mobile visual QA are out of scope until separately prioritized; feature work must not add them incidentally.
 - Full reading must always remain available. Summaries are navigation aids, never replacements for source or synthesis pages.
 - A completed person-perspective reread of a letter remains in the current knowledge base's Agent conversation history and is also retained as a durable letter version. The original letter is never overwritten; the reading surface defaults to the latest completed version and offers a provenance-labelled history switcher only when at least two versions exist.
 - Agent actions must keep query, scoped knowledge updates, and health checks distinct, while exposing progress, actual changes, and any high-impact confirmation states.
-- All Agent interactions use one bottom-right contextual drawer. It carries the current page context and keeps new questions, current-knowledge-base conversation history, and full thread detail in the same surface; closing it returns focus to the control that opened it.
+- All Agent interactions share one conversation implementation. Most pages use a persistent right Inspector with current/history tabs and a 48px folded rail; Questions uses the same conversation beside evidence at 6:4. There is only one active conversation surface per window. Independent conversation windows retain the same knowledge-base context.
 - The standalone Workbench / co-creation page is no longer part of the product. Legacy `/workbench` URLs redirect to home instead of opening a parallel Agent surface.
 
 ## Brand Commitments
@@ -53,11 +53,11 @@ The friend framing is an experience promise, not a claim of consciousness, emoti
 
 ## Product Layers
 
-1. **At This Moment / 此刻** — the conversational home. It states the relationship promise, then directly asks one traceable question the user may care about or want to clarify. A compact Life Records entry for diaries, conversations, and bills provides the other starting path, followed only by a one-line index into Existing Understanding. Current-stage summaries, recent materials, quotes, and knowledge previews belong to their secondary pages rather than the home.
+1. **At This Moment / 此刻** — the conversational home. It states the relationship promise, then directly asks one traceable question the user may care about or want to clarify. A compact Life Records entry for diaries, conversations, and bills provides the other starting path, followed by compact recent-understanding and keyword previews, with pending-record and unread-letter notices only when applicable. Full collections remain on their secondary pages.
 2. **Worth Talking About / 值得聊聊** — one selected question at a time, grown from what is understood and what is still missing. The full rotating pool stays behind a quiet disclosure instead of becoming a task list, dashboard, diagnosis, or wall of choices.
 3. **Life Records / 生活记录** — the user's original words and evidence. Local files, folders, and supported statements remain readable in full and never become disposable input after processing.
 4. **Existing Understanding / 已有理解** — current themes, stages, patterns, relationships, letters, quotes, and their evidence paths. Every item can be revisited, supplemented, or corrected.
-5. **Contextual Companion** — one Agent drawer across the product. The Agent listens first, then decides whether the conversation only needs an answer or contains durable, well-supported understanding worth retaining; validation mode checks system health. Conversation history stays within the selected personal space.
+5. **Contextual Companion** — one shared Agent conversation across the product, hosted in the right Inspector or the question workspace. The Agent listens first, then decides whether the conversation only needs an answer or contains durable, well-supported understanding worth retaining; validation mode checks system health. Conversation history stays within the selected personal space.
 ## Evidence on Hand
 
 - Anonymous end-to-end evidence: `../../../vault/demo/sources/` and `../../../vault/demo/wiki/`.
@@ -84,9 +84,13 @@ The friend framing is an experience promise, not a claim of consciousness, emoti
 
 ## 2026-09 桌面迁移
 
-主交付平台为 macOS Electron 桌面应用。沿用用户提供的暖纸色、森林绿三栏设计：左侧空间与栏目、中间工作内容、右侧常驻 AI Inspector。新增原生菜单、独立阅读/深聊、随手记、偏好设置与语音确认。原有知识、来源、照片/账单、任务及多知识库能力必须保留。浏览器入口继续供开发与兼容使用。
+主交付平台为 macOS Electron 桌面应用。按用户提供的纸灰底、灰绿强调三栏设计重构：左侧空间与栏目、中间工作内容、右侧常驻 AI Inspector。新增原生菜单、独立阅读/深聊、随手记、偏好设置与语音确认。原有知识、来源、照片/账单、任务及多知识库能力必须保留。浏览器入口继续供开发与兼容使用。
 
 
 ### 原目录连接
 
 生活记录优先连接用户已有目录，原文留在原处并随外部编辑刷新；生成 Wiki、来源引用和允许的缓存属于应用目录。外部来源只读，自动 Wiki 更新可关闭，失败和待更新状态可见。旧式复制导入作为明确的一次性操作保留，照片与账单缓存流程保持不变。
+
+### Desktop redesign authority
+
+The supplied desktop UX design establishes a paper-gray and gray-green interface with restrained panel shadows, serif reading/editing text, and native window controls. The implementation and current DESIGN.md replace the earlier forest palette and floating drawer descriptions. Source folders and file lists open at 240/280px and fold to 48px; at narrower desktop widths auxiliary panes fold first to keep the primary reading area usable. Quick Capture is a separate floating window with persistent drafts, explicit save and optional native dictation. Preferences owns AI settings, persistent conversation hints/daily opener controls, and personal-space naming.

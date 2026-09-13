@@ -149,3 +149,23 @@ export async function deletePersonalKnowledgeBase(vaultRoot: string, requestedId
   await Promise.all(staged.map((entry) => rm(entry.temporary, { recursive: true, force: true })));
   return { id, name: typeof target.name === "string" && target.name.trim() ? target.name : id, fallbackId };
 }
+
+export async function renamePersonalKnowledgeBase(vaultRoot: string, requestedId: unknown, requestedName: unknown): Promise<{ id: string; name: string }> {
+  const id = typeof requestedId === "string" ? requestedId.trim() : "";
+  const name = typeof requestedName === "string" ? requestedName.trim() : "";
+  if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) throw new KnowledgeBaseRequestError(400, "知识库 ID 无效");
+  if (!name || [...name].length > 40) throw new KnowledgeBaseRequestError(400, "请输入 1–40 个字符的空间名称");
+  const configPath = path.join(vaultRoot, "the-way-here.config.yaml");
+  const source = await readFile(configPath, "utf8");
+  const document = YAML.parseDocument(source);
+  if (document.errors.length) throw new KnowledgeBaseRequestError(409, "知识库配置无法读取");
+  if (!document.hasIn(["knowledgeBases", id])) throw new KnowledgeBaseRequestError(404, "知识库不存在");
+  document.setIn(["knowledgeBases", id, "name"], name);
+  const temporary = path.join(vaultRoot, `.the-way-here.config.${process.pid}.${Date.now()}.tmp`);
+  try {
+    await writeFile(temporary, document.toString(), { encoding:"utf8", flag:"wx" });
+    if (await readFile(configPath, "utf8") !== source) throw new KnowledgeBaseRequestError(409, "配置已在别处更新，请刷新后重试");
+    await rename(temporary, configPath);
+  } finally { await rm(temporary, { force:true }); }
+  return { id, name };
+}

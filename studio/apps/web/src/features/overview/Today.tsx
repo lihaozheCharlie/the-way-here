@@ -1,3 +1,4 @@
+import { useDesktopPreference } from "../desktop/preferences-store";
 import { SourceConnectionsPanel } from "../sources/SourceConnectionsPanel";
 import { openDesktopWindow } from "../desktop/bridge";
 import { PageLink } from "../../shared/routing";
@@ -16,6 +17,7 @@ import { dailyPromptSeed, groundedConversationReplyPrompt, stablePromptOrder } f
 import { todayOpeners, todayStarterPhrases } from "./talking-questions";
 
 export function Today({ revision }: { revision: number }) {
+  const [dailyOpener] = useDesktopPreference("desktop.daily-opener");
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
   const [importedJourney, setImportedJourney] = useState<PaymentJourneySummary>();
@@ -32,7 +34,7 @@ export function Today({ revision }: { revision: number }) {
   const pendingBuilds = pendingSourceBuildRecords(importBatches || []);
   const pendingDialogueCount = pendingBuilds.filter(({ file }) => file.buildKind === "dialogue").length;
   const openers = stablePromptOrder([...todayOpeners], dailyPromptSeed());
-  const featuredQuestion = openers[questionOffset % openers.length]!;
+  const featuredQuestion = dailyOpener ? openers[questionOffset % openers.length]! : { question:"想从哪件事开始说起？", agentPrompt:"请倾听我的经历，先理解，再沿证据追问。" };
   const importFolders = [...new Set((sourcePages || []).map((page) => cleanSourcePath(page.relativePath).split("/").slice(0, -1).join("/")).filter(Boolean))].sort((left, right) => left.localeCompare(right, "zh-CN"));
   const journeyPrompt = recentJourney
     ? `最近的账单记录里出现了 ${recentJourney.clusters.length} 段可能的生活旅程。交易只能说明时间、地点和发生过什么，不能说明人物、动机和感受。请从最有画面的一条线索开始，一次问我一个问题，先陪我把这段经历说出来。`
@@ -99,11 +101,12 @@ export function Today({ revision }: { revision: number }) {
             <button type="submit" aria-label="发送" disabled={!conversationDraft.trim()}><Icon name="up" size={19} /></button>
           </div>
           <div className="home-opener-foot">
-            <button type="button" className="home-opener-cycle" onClick={cycleOpener}><Icon name="refresh" size={16} />换一个随口话头</button>
+            <button type="button" className="home-opener-cycle" disabled={!dailyOpener} onClick={cycleOpener}><Icon name="refresh" size={16} />换一个随口话头</button>
             <span>我会先看看你的来路</span>
           </div>
         </form>
       </section>
+      {data.latestLetter ? <NavLink to="/letters" className="home-pending-build"><Icon name="message" size={16} /><span>有一封近况回信等你读：{data.latestLetter.title}</span><Icon name="arrow" size={15} /></NavLink> : null}
       <section className="desktop-today-reminder"><Icon name="spark" size={18} /><div><h2>今日提醒</h2><p>{data.conversationPrompts.find(item => item.status === "active")?.question || data.guidingQuestion || "最近发生的事，都可以从一句话开始说。"}</p></div><NavLink to="/questions">看看话题 <Icon name="arrow" size={14} /></NavLink></section>
       <div className="desktop-today-grid"><section><h2>最近的线索</h2><div className="desktop-keywords">{[...new Set(data.recentPages.flatMap(page => page.tags.filter(tag => !tag.includes("/"))))].slice(0,5).map(tag => <NavLink to={`/search?q=${encodeURIComponent(tag)}`} key={tag}>{tag}</NavLink>)}{!data.recentPages.some(page => page.tags.length) ? <p>留下生活记录，线索会慢慢浮现。</p> : null}</div></section><section><h2>近期理解</h2>{data.recentPages.filter(page => !page.isSource && page.category !== "maintenance").slice(0,2).map(page => <PageLink key={page.id} page={page} />)}{!data.recentPages.length ? <p>你的理解会从真实记录里生长。</p> : null}</section></div>
       <section className="desktop-today-capture"><h2>随手记一笔</h2><p>日记、照片、AI 对话和账单，都可以成为下一次理解的来路。</p><div><button type="button" onClick={() => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture")}><Icon name="journal" size={15} />写一段或说一段</button><RecordImportTrigger onClick={() => setImportOpen(true)} /></div></section>
