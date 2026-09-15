@@ -1,3 +1,4 @@
+import { Predictions } from "../features/predictions/Predictions";
 import { SearchField } from "../shared/form-controls";
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router-dom";
@@ -208,6 +209,7 @@ export function AppShell({ revision }: { revision: number }) {
           /> : null}
           <Routes>
             <Route path="/" element={<Today revision={revision} />} />
+            <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} revision={revision} knowledgeBaseId={vault.knowledgeBaseId} /> : null} />
             <Route path="/questions" element={<QuestionsHub revision={revision} />} />
             <Route path="/sources" element={<OrganizedSources revision={revision} />} />
             <Route path="/sources/materials" element={<OrganizedSources revision={revision} />} />

@@ -94,5 +94,11 @@
     "expected": ["consume-query"],
     "must_not": ["build-companion-reflection"],
     "mode": "read-only"
+  },
+  {
+    "prompt": "根据最新 Wiki 重新预测自己，看看五年后的我有哪些可能路径",
+    "expected": ["consume-predict-self"],
+    "must_not": ["build-wiki"],
+    "mode": "read-only"
   }
 ]

@@ -1,0 +1,84 @@
+{
+  "version": 4,
+  "threshold": 60,
+  "minimumBodyLength": 100,
+  "recentWindowDays": 90,
+  "decisionCategories": [
+    "events",
+    "cycles"
+  ],
+  "excludedCategories": [
+    "home",
+    "maintenance",
+    "sources",
+    "other"
+  ],
+  "facets": [
+    {
+      "id": "coverage",
+      "label": "生活维度覆盖",
+      "max": 30,
+      "target": 6,
+      "metric": "categories"
+    },
+    {
+      "id": "evidence",
+      "label": "可追溯的理解",
+      "max": 25,
+      "target": 10,
+      "metric": "groundedPages"
+    },
+    {
+      "id": "time",
+      "label": "跨时间的观察",
+      "max": 20,
+      "target": 180,
+      "metric": "spanDays"
+    },
+    {
+      "id": "decisions",
+      "label": "选择与行为记录",
+      "max": 15,
+      "target": 5,
+      "metric": "decisions"
+    },
+    {
+      "id": "freshness",
+      "label": "近期处境",
+      "max": 10,
+      "target": 3,
+      "metric": "recentSources"
+    }
+  ],
+  "assessment": {
+    "version": 2,
+    "threshold": 60,
+    "facets": [
+      {
+        "id": "health",
+        "label": "健康",
+        "max": 20
+      },
+      {
+        "id": "work",
+        "label": "工作",
+        "max": 20
+      },
+      {
+        "id": "play",
+        "label": "玩乐",
+        "max": 20
+      },
+      {
+        "id": "relationships",
+        "label": "关系",
+        "max": 20
+      },
+      {
+        "id": "finance",
+        "label": "财务",
+        "max": 20
+      }
+    ]
+  }
+}

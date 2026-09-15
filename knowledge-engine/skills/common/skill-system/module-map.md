@@ -40,6 +40,8 @@ source:
 |---|---|---|
 | `knowledge-engine/skills/consume/query/SKILL.md` | 严格只读、wiki 优先的查询与综合 | 查询流程 |
 
+| `knowledge-engine/skills/consume/predict-self/SKILL.md` | 冻结证据下的未来情景与校正，Studio 独立保存，不写回 Wiki | 了解程度评分配置、五领域分析链与 JSON 输出契约 |
+
 ## 设计说明
 
 - 根 `AGENTS.md` 先区分产品与 Wiki；Wiki 请求再按注册表区分读写模式并选择规范 Skill。

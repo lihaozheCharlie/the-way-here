@@ -8,7 +8,7 @@ export function useLiveRevision(): number {
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     const events = new EventSource("/api/events");
-    for (const event of ["index", "run", "approval", "file", "agent-settings"]) events.addEventListener(event, () => setRevision((value) => value + 1));
+    for (const event of ["index", "run", "approval", "file", "agent-settings", "prediction"]) events.addEventListener(event, () => setRevision((value) => value + 1));
     return () => events.close();
   }, []);
   return revision;
