@@ -132,44 +132,90 @@
   }
   .viewing-line b { color: var(--ink); }
 
-  /* ---- dimension dashboard ---- */
-  .dash-label { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 18px; }
-  .dash-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 20px; }
-  .dim-card {
-    border: 1px solid var(--line); border-radius: 12px; background: var(--card);
-    padding: 20px;
+  /* ---- dimension tree ---- */
+  .dash-label { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+
+  .fam-tree, .fam-tree ul { list-style: none; margin: 0; padding: 0; }
+  .fam-tree { display: flex; justify-content: center; padding-top: 4px; }
+  .fam-tree > li { padding-top: 0; }
+  .fam-tree ul { display: flex; padding-top: 28px; position: relative; }
+  .fam-tree li {
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
+    text-align: center; position: relative; padding: 28px 14px 0;
   }
-  .dim-card.is-focused { border-color: var(--line-strong); background: var(--card-alt); }
-  .dim-name { font-size: 16px; font-weight: 700; display: block; margin-bottom: 12px; }
-
-  .future-line { font-size: 14px; margin: 0 0 12px; }
-
-  .tag-block { border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
-  .tag-block .tag-label { font-size: 11px; font-weight: 700; display: block; margin-bottom: 3px; }
-  .tag-block p { margin: 0; font-size: 12.5px; }
-  .tag-block.gain { background: var(--gain-bg); }
-  .tag-block.gain .tag-label { color: var(--gain); }
-  .tag-block.cost { background: var(--cost-bg); }
-  .tag-block.cost .tag-label { color: var(--cost); }
-
-  .action-block {
-    margin-top: 14px; padding: 12px 12px; border-radius: 8px; background: var(--action-bg);
-    border-left: 3px solid var(--action);
+  .fam-tree ul > li::before, .fam-tree ul > li::after {
+    content: ""; position: absolute; top: 0; right: 50%;
+    border-top: 1px solid var(--line-strong); width: 50%; height: 28px;
   }
-  .action-block .tag-label { font-size: 11px; font-weight: 700; color: var(--action); display: block; margin-bottom: 4px; }
-  .action-block p { margin: 0 0 4px; font-size: 12.5px; }
-  .action-block .review { font-size: 11px; color: var(--muted); }
+  .fam-tree ul > li::after { right: auto; left: 50%; border-left: 1px solid var(--line-strong); }
+  .fam-tree ul > li:only-child::before, .fam-tree ul > li:only-child::after { display: none; }
+  .fam-tree ul > li:only-child { padding-top: 0; }
+  .fam-tree ul > li:first-child::before, .fam-tree ul > li:last-child::after { border: 0 none; }
+  .fam-tree ul > li:last-child::before { border-right: 1px solid var(--line-strong); border-radius: 0 6px 0 0; }
+  .fam-tree ul > li:first-child::after { border-radius: 6px 0 0 0; }
 
-  .unfocused-body p { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+  .tree-node {
+    border: 1px solid var(--line-strong); border-radius: 10px; background: var(--card);
+    padding: 14px 16px; width: 100%;
+  }
+  .root-node {
+    background: var(--dark); border-color: var(--dark); color: #f6f4ee;
+    font-size: 14px; font-weight: 600; min-width: 220px; width: auto;
+  }
+  .root-node .path-pct { font-size: 15px; margin-right: 6px; }
 
-  details.dim-more { margin-top: 14px; }
+  .dim-branch { width: 100%; max-width: 216px; display: flex; flex-direction: column; align-items: stretch; }
+  .chain-connector { width: 1px; height: 16px; background: var(--line-strong); margin: 0 auto; }
+
+  .dim-node { background: var(--card-alt); text-align: left; }
+  .dim-node .dim-name { font-size: 15px; font-weight: 700; display: block; margin-bottom: 6px; }
+  .dim-node .future-line { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+  details.dim-more { margin-top: 10px; text-align: left; }
   details.dim-more summary {
-    cursor: pointer; font-size: 12px; color: var(--muted); list-style: none;
+    cursor: pointer; font-size: 11.5px; color: var(--muted); list-style: none;
   }
   details.dim-more summary::before { content: "展开详情 ▾ "; }
   details.dim-more[open] summary::before { content: "收起详情 ▴ "; }
-  details.dim-more .more-body { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  details.dim-more .more-body { font-size: 12px; color: var(--muted); margin-top: 8px; }
   details.dim-more .more-body p { margin: 0 0 8px; }
+
+  .leaf-node { text-align: left; }
+  .leaf-node .tag-label { font-size: 11px; font-weight: 700; display: block; margin-bottom: 8px; }
+  .leaf-node.gain { background: var(--gain-bg); border-color: #cfe0c9; }
+  .leaf-node.gain .tag-label { color: var(--gain); }
+  .leaf-node.cost { background: var(--cost-bg); border-color: #e7cfae; }
+  .leaf-node.cost .tag-label { color: var(--cost); }
+  .leaf-list { list-style: none; margin: 0; padding: 0; }
+  .leaf-list li {
+    font-size: 12.5px; line-height: 1.55; padding-left: 12px; position: relative;
+    margin-bottom: 7px;
+  }
+  .leaf-list li:last-child { margin-bottom: 0; }
+  .leaf-list li::before {
+    content: ""; position: absolute; left: 0; top: 7px;
+    width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .55;
+  }
+  .leaf-node.gain .leaf-list li { color: #34523f; }
+  .leaf-node.cost .leaf-list li { color: #6e4726; }
+
+  /* ---- now-do actions ---- */
+  .actions-head {
+    text-align: center; font-size: 13px; color: var(--muted); margin: 48px 0 16px;
+    padding-top: 32px; border-top: 1px solid var(--line);
+  }
+  .actions-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+  .action-card {
+    border-radius: 10px; background: var(--action-bg); border-left: 3px solid var(--action);
+    padding: 14px 16px;
+  }
+  .action-card .dim-chip {
+    display: inline-block; font-size: 10.5px; font-weight: 700; color: var(--action);
+    background: #fff; border: 1px solid #c9d6e0; border-radius: 999px;
+    padding: 2px 9px; margin-bottom: 8px;
+  }
+  .action-card p { margin: 0 0 8px; font-size: 12.5px; }
+  .action-card .review { font-size: 11px; color: var(--muted); }
 
   section.footer-notes { margin-top: 56px; }
   section.footer-notes details {
@@ -185,15 +231,20 @@
 
   @media (max-width: 1080px) {
     .picker-row { grid-template-columns: repeat(3, minmax(0,1fr)); }
-    .dash-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .actions-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
   }
   @media (max-width: 640px) {
     main { padding: 24px 18px 60px; }
     .picker-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
-    .dash-grid { grid-template-columns: 1fr; }
+    .actions-row { grid-template-columns: 1fr; }
     header.top { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
     .search { min-width: 0; flex: 1; }
     nav.tabs { gap: 18px; overflow-x: auto; padding: 14px 16px; justify-content: flex-start; }
+  }
+  .tree-scroll { overflow-x: auto; padding-bottom: 12px; }
+  @media (max-width: 900px) {
+    .fam-tree { min-width: 680px; }
+    .fam-tree > li > ul { flex-wrap: nowrap; }
   }
 </style>
 </head>
@@ -287,83 +338,166 @@
 
   <p class="viewing-line sans">正在查看：<b>留杭受雇，晚间与周末留给生活（60%）</b></p>
 
-  <p class="dash-label sans">健康、工作、玩乐、爱——四个维度像仪表盘，选中的路径会同时给出会发生什么、和要怎么做</p>
+  <p class="dash-label sans">健康、工作、玩乐、爱——从选中的路径出发，先看它在每个维度上会带来什么，再往下看具体获得和代价有哪些</p>
 
-  <div class="dash-grid">
-    <div class="dim-card is-focused">
-      <span class="dim-name">健康</span>
-      <p class="future-line">睡眠回到规律节奏，悬而未决的焦虑感明显减少。</p>
-      <div class="tag-block gain"><span class="tag-label">获得</span><p>晚间不再被工作占用，入睡时间提前，体检异常项有机会被跟进。</p></div>
-      <div class="tag-block cost"><span class="tag-label">代价</span><p>收入增长有限，医疗与保险等长期保障需要另外规划。</p></div>
-      <div class="action-block">
-        <span class="tag-label">要做到这一点</span>
-        <p>接下来4周固定晚上11点前离开电脑，记录入睡时间与晨起状态。</p>
-        <span class="review">4周后回看</span>
-      </div>
-      <details class="dim-more">
-        <summary></summary>
-        <div class="more-body">
-          <p>7月曾连续凌晨一点多入睡；9月自述对悬而未决之事的焦虑减少，睡眠恢复尚未知。4月记录双薪、现金约200万元及南京房贷13万元，不能视为9月余额。</p>
-          <p>体检异常与复查结果、当前运动和睡眠频率未知。</p>
-        </div>
-      </details>
+  <div class="tree-scroll">
+  <ul class="fam-tree sans">
+    <li>
+      <div class="tree-node root-node"><span class="path-pct">60%</span>留杭受雇，晚间与周末留给生活</div>
+      <ul>
+        <li>
+          <div class="dim-branch">
+            <div class="tree-node dim-node">
+              <span class="dim-name">健康</span>
+              <p class="future-line">睡眠回到规律节奏，悬而未决的焦虑感明显减少。</p>
+              <details class="dim-more">
+                <summary></summary>
+                <div class="more-body">
+                  <p>7月曾连续凌晨一点多入睡；9月自述对悬而未决之事的焦虑减少，睡眠恢复尚未知。4月记录双薪、现金约200万元及南京房贷13万元，不能视为9月余额。</p>
+                  <p>体检异常与复查结果、当前运动和睡眠频率未知。</p>
+                </div>
+              </details>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node gain">
+              <span class="tag-label">获得</span>
+              <ul class="leaf-list">
+                <li>晚间不再被工作占用，入睡时间提前</li>
+                <li>体检异常项有机会被跟进</li>
+              </ul>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node cost">
+              <span class="tag-label">代价</span>
+              <ul class="leaf-list">
+                <li>收入增长有限</li>
+                <li>医疗与保险等长期保障需要另外规划</li>
+              </ul>
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div class="dim-branch">
+            <div class="tree-node dim-node">
+              <span class="dim-name">工作</span>
+              <p class="future-line">留在受雇岗位，用稳定换取时间边界，成长速度放缓。</p>
+              <details class="dim-more">
+                <summary></summary>
+                <div class="more-body">
+                  <p>仍在工作并寻找下一站。8月优先外部跳槽，其次内部流动；9月尚无合适结果，个人产品已连续一周多自用打磨，外部使用及收入尚未验证。</p>
+                  <p>岗位薪酬、强度、地点之间不可交换的底线未知；现岗位限期、交接与求职后续结果未知。</p>
+                </div>
+              </details>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node gain">
+              <span class="tag-label">获得</span>
+              <ul class="leaf-list">
+                <li>岗位与收入相对确定</li>
+                <li>不需要同时验证产品与找工作两条线</li>
+              </ul>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node cost">
+              <span class="tag-label">代价</span>
+              <ul class="leaf-list">
+                <li>薪酬涨幅可能落后于市场</li>
+                <li>个人产品和第二收入来源的进度会被压缩</li>
+              </ul>
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div class="dim-branch">
+            <div class="tree-node dim-node">
+              <span class="dim-name">玩乐</span>
+              <p class="future-line">乡村散步与游戏探索继续，长途环游被暂时收窄为分段计划。</p>
+              <details class="dim-more">
+                <summary></summary>
+                <div class="more-body">
+                  <p>有乡村散步听蛙声、游戏探索、听音乐及原创漫画尝试。自然与游戏已有具体乐趣；漫画包含流量动机，不能全部视为纯休闲。</p>
+                  <p>长途旅行与育儿、工作时间存在冲突；娱乐实际时长和是否挤占睡眠尚未更新。</p>
+                </div>
+              </details>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node gain">
+              <span class="tag-label">获得</span>
+              <ul class="leaf-list">
+                <li>周末时间被保护下来</li>
+                <li>能延续听蛙声、听音乐这类低成本的日常乐趣</li>
+              </ul>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node cost">
+              <span class="tag-label">代价</span>
+              <ul class="leaf-list">
+                <li>连续多日的长途旅行难以安排</li>
+                <li>环游愿望需要拆成更小的片段</li>
+              </ul>
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div class="dim-branch">
+            <div class="tree-node dim-node">
+              <span class="dim-name">爱</span>
+              <p class="future-line">育儿共同分担的模式延续，与长辈、朋友的联结靠固定时间维系。</p>
+              <details class="dim-more">
+                <summary></summary>
+                <div class="more-body">
+                  <p>与伴侣共同育儿，有轮流照顾发烧女儿的记录；曾返乡陪伴失能长辈，8月与杭州老友实际聚餐。长期分工、关系质量和可求助程度仍不完整。</p>
+                  <p>伴侣对收入变化、迁居与自身职业的当前诉求未知；长辈近况与本人实际承担的照护份额未知。</p>
+                </div>
+              </details>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node gain">
+              <span class="tag-label">获得</span>
+              <ul class="leaf-list">
+                <li>晚间和周末的稳定时间让轮流照顾更容易排进日程</li>
+                <li>朋友聚会更容易被安排</li>
+              </ul>
+            </div>
+            <div class="chain-connector"></div>
+            <div class="tree-node leaf-node cost">
+              <span class="tag-label">代价</span>
+              <ul class="leaf-list">
+                <li>长期分工是否公平仍需持续对话</li>
+                <li>伴侣当前诉求是否被满足不会自动改善</li>
+              </ul>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </li>
+  </ul>
+  </div>
+
+  <p class="actions-head sans">现在可以做的事——每个实验对应一个维度，用几周时间验证再回看</p>
+  <div class="actions-row sans">
+    <div class="action-card">
+      <span class="dim-chip">健康</span>
+      <p>接下来4周固定晚上11点前离开电脑，记录入睡时间与晨起状态。</p>
+      <span class="review">4周后回看</span>
     </div>
-
-    <div class="dim-card is-focused">
-      <span class="dim-name">工作</span>
-      <p class="future-line">留在受雇岗位，用稳定换取时间边界，成长速度放缓。</p>
-      <div class="tag-block gain"><span class="tag-label">获得</span><p>岗位与收入相对确定，不需要同时验证产品与找工作两条线。</p></div>
-      <div class="tag-block cost"><span class="tag-label">代价</span><p>薪酬涨幅可能落后于市场，个人产品和第二收入来源的进度会被压缩。</p></div>
-      <div class="action-block">
-        <span class="tag-label">要做到这一点</span>
-        <p>与直属主管确认下季度职责边界与加班预期，作为是否续留的判断依据。</p>
-        <span class="review">6周后回看</span>
-      </div>
-      <details class="dim-more">
-        <summary></summary>
-        <div class="more-body">
-          <p>仍在工作并寻找下一站。8月优先外部跳槽，其次内部流动；9月尚无合适结果，个人产品已连续一周多自用打磨，外部使用及收入尚未验证。</p>
-          <p>岗位薪酬、强度、地点之间不可交换的底线未知；现岗位限期、交接与求职后续结果未知。</p>
-        </div>
-      </details>
+    <div class="action-card">
+      <span class="dim-chip">工作</span>
+      <p>与直属主管确认下季度职责边界与加班预期，作为是否续留的判断依据。</p>
+      <span class="review">6周后回看</span>
     </div>
-
-    <div class="dim-card is-focused">
-      <span class="dim-name">玩乐</span>
-      <p class="future-line">乡村散步与游戏探索继续，长途环游被暂时收窄为分段计划。</p>
-      <div class="tag-block gain"><span class="tag-label">获得</span><p>周末时间被保护下来，能延续听蛙声、听音乐这类低成本的日常乐趣。</p></div>
-      <div class="tag-block cost"><span class="tag-label">代价</span><p>连续多日的长途旅行难以安排，环游愿望需要拆成更小的片段。</p></div>
-      <div class="action-block">
-        <span class="tag-label">要做到这一点</span>
-        <p>本季度先安排一次3天的短途出行，检验分段旅行是否真的能替代整段环游。</p>
-        <span class="review">8周后回看</span>
-      </div>
-      <details class="dim-more">
-        <summary></summary>
-        <div class="more-body">
-          <p>有乡村散步听蛙声、游戏探索、听音乐及原创漫画尝试。自然与游戏已有具体乐趣；漫画包含流量动机，不能全部视为纯休闲。</p>
-          <p>长途旅行与育儿、工作时间存在冲突；娱乐实际时长和是否挤占睡眠尚未更新。</p>
-        </div>
-      </details>
+    <div class="action-card">
+      <span class="dim-chip">玩乐</span>
+      <p>本季度先安排一次3天的短途出行，检验分段旅行是否真的能替代整段环游。</p>
+      <span class="review">8周后回看</span>
     </div>
-
-    <div class="dim-card is-focused">
-      <span class="dim-name">爱</span>
-      <p class="future-line">育儿共同分担的模式延续，与长辈、朋友的联结靠固定时间维系。</p>
-      <div class="tag-block gain"><span class="tag-label">获得</span><p>晚间和周末的稳定时间让轮流照顾、朋友聚会更容易被排进日程。</p></div>
-      <div class="tag-block cost"><span class="tag-label">代价</span><p>长期分工是否公平、伴侣当前诉求是否被满足仍需持续对话，不会自动改善。</p></div>
-      <div class="action-block">
-        <span class="tag-label">要做到这一点</span>
-        <p>每两周和伴侣各自说一次"这段时间感觉轻松/吃力的地方"，不预设结论。</p>
-        <span class="review">6周后回看</span>
-      </div>
-      <details class="dim-more">
-        <summary></summary>
-        <div class="more-body">
-          <p>与伴侣共同育儿，有轮流照顾发烧女儿的记录；曾返乡陪伴失能长辈，8月与杭州老友实际聚餐。长期分工、关系质量和可求助程度仍不完整。</p>
-          <p>伴侣对收入变化、迁居与自身职业的当前诉求未知；长辈近况与本人实际承担的照护份额未知。</p>
-        </div>
-      </details>
+    <div class="action-card">
+      <span class="dim-chip">爱</span>
+      <p>每两周和伴侣各自说一次"这段时间感觉轻松/吃力的地方"，不预设结论。</p>
+      <span class="review">6周后回看</span>
     </div>
   </div>
 
