@@ -23,4 +23,14 @@ describe("whole life scenarios",()=>{
     expect(withScenario).toContain(scenario.dimensions[0].future);
     expect(withScenario).not.toContain(report.dimensions[0].current);
   });
+  it("shows the tagged action under the matching dimension card once a scenario is focused",()=>{
+    const scenario=report.scenarios[0];
+    const html=renderToStaticMarkup(<DimensionDashboard report={report} scenario={scenario}/>);
+    expect(html).toContain(scenario.actions[0].action);
+    expect(html).toContain("要做到这一点");
+  });
+  it("previews each scenario's per-dimension gain directly on the picker card, before it is selected",()=>{
+    const html=renderToStaticMarkup(<MemoryRouter><LifeScenarios report={report}/></MemoryRouter>);
+    for(const dim of report.scenarios[0].dimensions) expect(html).toContain(dim.gain);
+  });
 });

@@ -26,7 +26,7 @@ describe("whole-life report boundary",()=>{
     r.scenarios[1].probability=40;
     expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios).toHaveLength(2);
   });
-  it.each(["quote","missing-dimension","duplicate-evidence","missing-stage","invalid-probability","missing-ref"])("rejects %s",kind=>{
+  it.each(["quote","missing-dimension","duplicate-evidence","missing-stage","invalid-probability","missing-ref","invalid-action-dimension"])("rejects %s",kind=>{
     const r=structuredClone(sample);
     if(kind==="quote") r.evidence[0].quote="没有出现在资料中的事实";
     if(kind==="missing-dimension") r.scenarios[0].dimensions.pop();
@@ -34,6 +34,16 @@ describe("whole-life report boundary",()=>{
     if(kind==="missing-stage") r.scenarios[0].stages.pop();
     if(kind==="invalid-probability") r.scenarios[0].probability=43;
     if(kind==="missing-ref") r.scenarios[0].evidenceIds=["invented"];
+    if(kind==="invalid-action-dimension") r.scenarios[0].actions[0].dimensions=["finance"];
     expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
+  });
+  it("keeps an action's tagged dimensions so the path's 'how to get there' is traceable",()=>{
+    const r=parseLifePredictionReport(JSON.stringify(sample),pages);
+    expect(r.scenarios[0].actions[0].dimensions).toEqual(["love"]);
+  });
+  it("accepts actions without a dimensions tag for backward compatibility",()=>{
+    const r=structuredClone(sample);
+    delete r.scenarios[0].actions[0].dimensions;
+    expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).not.toThrow();
   });
 });

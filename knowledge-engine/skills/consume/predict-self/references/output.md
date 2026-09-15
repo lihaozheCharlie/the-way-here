@@ -27,7 +27,7 @@
     ],
     "factors":[{"label":"<30字内因素>","direction":"support","strength":1,"mechanism":"<140字内怎样影响>"}],
     "counterEvidence":["<具体反例或检索局限>"],"unknowns":["<尚未知>"],
-    "actions":[{"action":"<140字内一步实验>","observation":"<140字内看什么反馈>","reviewAfter":"<30字内回看时间>"}],
+    "actions":[{"action":"<140字内一步实验>","observation":"<140字内看什么反馈>","reviewAfter":"<30字内回看时间>","dimensions":["health"]}],
     "forks":[{"condition":"<140字内真实分岔条件>","then":"<条件成立时>","otherwise":"<不成立时>"}]
   }],
   "gaps":["<覆盖缺口>"],"tensions":["<跨情景的资源或价值矛盾>"],"changes":["<哪条新证据或假设影响了哪个判断；首次可空>"]
@@ -38,4 +38,4 @@
 
 情景最多5条，不足3条说明 gaps；0条时 gaps 必须非空。情景ID和标题唯一。probability 为 null 或0—100且是5的倍数。exclusive 模式每条必须有数值且总和100，independent 不要求和为100。
 
-current/desired、probabilityReason、scope、其余普通字符串最多180字符；id最多40字符；stage.change/condition、fork各字段最多140字符。constraints最多5条；assumptions为1—8条；counterEvidence最多5条；unknowns最多8条；actions为1—3条；forks为0—2条；factors为1—5条，direction仅support/risk、strength仅1/2/3。每个非空文本必须具体、必要，未知可以明确写“资料不足，尚不清楚”。证据kind仅fact/wish/plan/action/outcome/hypothesis，dimensions为四维中1—4个唯一ID。confidence仅low/medium/high。
+current/desired、probabilityReason、scope、其余普通字符串最多180字符；id最多40字符；stage.change/condition、fork各字段最多140字符。constraints最多5条；assumptions为1—8条；counterEvidence最多5条；unknowns最多8条；actions为1—3条；forks为0—2条；factors为1—5条，direction仅support/risk、strength仅1/2/3。每个非空文本必须具体、必要，未知可以明确写“资料不足，尚不清楚”。证据kind仅fact/wish/plan/action/outcome/hypothesis，dimensions为四维中1—4个唯一ID。confidence仅low/medium/high。actions[].dimensions可省略，若给出则为四维中1—4个唯一ID，标注该实验主要验证或推动哪些维度。

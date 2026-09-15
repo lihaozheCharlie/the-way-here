@@ -13,12 +13,14 @@ export function DimensionDashboard({report,scenario}:{report:LifePredictionRepor
       {dimensionOrder.map(id=>{
         const dim = report.dimensions.find(d=>d.id===id)!;
         const focus = scenario?.dimensions.find(d=>d.id===id);
+        const moves = scenario?.actions.filter(a=>a.dimensions?.includes(id)) ?? [];
         return <div key={id} className={`life-dashboard-card${focus?" is-focused":""}`}>
           <span className="life-dashboard-label">{labels[id]}</span>
           {focus ? <>
             <p className="life-dashboard-main">{focus.future}</p>
-            <p className="life-dashboard-sub">获得：{focus.gain}</p>
-            <p className="life-dashboard-sub">代价：{focus.cost}</p>
+            <p className="life-dashboard-sub life-dashboard-gain">获得：{focus.gain}</p>
+            <p className="life-dashboard-sub life-dashboard-cost">代价：{focus.cost}</p>
+            {moves.map((a,i)=><p key={i} className="life-dashboard-move"><b>要做到这一点：</b>{a.action}<span>（{a.reviewAfter}回看）</span></p>)}
           </> : <>
             <p className="life-dashboard-main">{dim.current}</p>
             <p className="life-dashboard-sub">想要：{dim.desired}</p>
@@ -44,7 +46,7 @@ export function LifeScenarios({report}:{report:LifePredictionReport}) {
     <DimensionDashboard report={report} scenario={scenario}/>
     {report.scenarios.length>0 && <div className="prediction-tree life-scenario-tree">
       <svg className="prediction-top-lines" viewBox="0 0 700 90" preserveAspectRatio="none" aria-hidden="true">{report.scenarios.map((s,i)=><path key={s.id} className={selected===s.id?"selected":""} style={{strokeWidth:2+(s.probability??0)*.05}} d={`M350 0 C350 45 ${(i+.5)*700/report.scenarios.length} 45 ${(i+.5)*700/report.scenarios.length} 90`}/>)}</svg>
-      <div className="prediction-branches" style={{gridTemplateColumns:`repeat(${report.scenarios.length},minmax(0,1fr))`}}>{report.scenarios.map(s=><button key={s.id} type="button" aria-pressed={selected===s.id} onClick={()=>{setSelected(selected===s.id?undefined:s.id);setStep(0);}}><span className={s.probability===null?"life-probability-unknown":"prediction-pct"}>{probability(s)}</span><b>{s.title}</b></button>)}</div>
+      <div className="prediction-branches" style={{gridTemplateColumns:`repeat(${report.scenarios.length},minmax(0,1fr))`}}>{report.scenarios.map(s=><button key={s.id} type="button" aria-pressed={selected===s.id} onClick={()=>{setSelected(selected===s.id?undefined:s.id);setStep(0);}}><span className={s.probability===null?"life-probability-unknown":"prediction-pct"}>{probability(s)}</span><b>{s.title}</b><ul className="life-branch-highlights">{dimensionOrder.map(id=>{const d=s.dimensions.find(x=>x.id===id)!;return <li key={id}><span className="life-branch-highlight-label">{labels[id]}</span><span className="life-branch-highlight-text">{d.gain}</span></li>;})}</ul></button>)}</div>
     </div>}
     {scenario && <article className="prediction-detail life-scenario-detail" aria-label="所选生活情景">
       <header className="prediction-detail-head"><h2 ref={heading} tabIndex={-1}>{scenario.title}</h2><span>{step+1} / 3</span></header>
@@ -60,7 +62,7 @@ export function LifeScenarios({report}:{report:LifePredictionReport}) {
         <ol className="prediction-clues">{scenario.evidenceIds.map(id=>{const e=report.evidence.find(item=>item.id===id)!;return <li key={id}><h3>{e.cue}</h3><span className="life-evidence-kind">{kinds[e.kind]}</span><p>{e.interpretation}</p><details className="prediction-source"><summary>查看原话 · {e.pageId==="prediction-input/current"?"本次补充":e.pageId.split("/").pop()}</summary><blockquote>{e.quote}</blockquote>{e.pageId!=="prediction-input/current" && <Link to={pageHref(e.pageId)} state={{returnTo:"/predict-self",returnLabel:"返回预测自己"}}>打开完整记录 →</Link>}</details></li>;})}</ol>
         <details className="prediction-caveats"><summary>哪些条件与反例会改变判断</summary>{[...scenario.assumptions,...scenario.counterEvidence,...scenario.unknowns].map((t,i)=><p key={i}>{t}</p>)}{scenario.factors.map((f,i)=><div key={i} className={`prediction-factor ${f.direction}`}><svg className="prediction-factor-icon" viewBox="0 0 12 12" role="img" aria-label={f.direction==="support"?"助力":"阻力"}><path d={f.direction==="support"?"M6 2 11 10H1Z":"M1 2H11L6 10Z"}/></svg><span>{f.label}：{f.mechanism}</span><span className="prediction-factor-track" role="meter" aria-label={`${f.label}的相对影响`} aria-valuemin={0} aria-valuemax={3} aria-valuenow={f.strength}><i style={{width:`${f.strength/3*100}%`}}/></span></div>)}</details>
       </section>}
-      {step===2 && <section aria-label="怎样走到这里"><ol className="life-stages">{scenario.stages.map((s,i)=><li key={s.period}><h3>{["第1年 · 探索积累","第2—3年 · 关键转折","第4—5年 · 生活状态"][i]}</h3><p>{s.change}</p><p className="prediction-day">成立条件：{s.condition}</p></li>)}</ol><h3>现在先验证什么</h3><ol className="prediction-actions">{scenario.actions.map((a,i)=><li key={i}><h3>{a.action}</h3><p>留意：{a.observation}</p><span>{a.reviewAfter}回看</span></li>)}</ol>{scenario.forks.length>0 && <details className="prediction-cross"><summary>可能改变方向的分岔</summary>{scenario.forks.map((f,i)=><div key={i}><h3>{f.condition}</h3><p>成立时：{f.then}</p><p>不成立时：{f.otherwise}</p></div>)}</details>}</section>}
+      {step===2 && <section aria-label="怎样走到这里"><ol className="life-stages">{scenario.stages.map((s,i)=><li key={s.period}><h3>{["第1年 · 探索积累","第2—3年 · 关键转折","第4—5年 · 生活状态"][i]}</h3><p>{s.change}</p><p className="prediction-day">成立条件：{s.condition}</p></li>)}</ol><h3>现在先验证什么</h3><ol className="prediction-actions">{scenario.actions.map((a,i)=><li key={i}><h3>{a.action}</h3>{a.dimensions && a.dimensions.length>0 && <p className="life-action-dims">对应：{a.dimensions.map(d=>labels[d]).join("、")}</p>}<p>留意：{a.observation}</p><span>{a.reviewAfter}回看</span></li>)}</ol>{scenario.forks.length>0 && <details className="prediction-cross"><summary>可能改变方向的分岔</summary>{scenario.forks.map((f,i)=><div key={i}><h3>{f.condition}</h3><p>成立时：{f.then}</p><p>不成立时：{f.otherwise}</p></div>)}</details>}</section>}
       <footer className="prediction-stage-controls">{step>0?<button className="prediction-next" type="button" onClick={()=>move(step-1)}>← 上一步</button>:<span/>}{step<2 && <button className="prediction-next" type="button" onClick={()=>move(step+1)}>{step===0?"看看经历依据 →":"看看路径与行动 →"}</button>}</footer>
     </article>}
     {report.gaps.length>0 && <details className="prediction-cross" open={!scenario}><summary>还缺少哪些了解</summary>{report.gaps.map((g,i)=><p key={i}>{g}</p>)}</details>}

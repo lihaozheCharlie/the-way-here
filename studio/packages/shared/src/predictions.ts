@@ -77,7 +77,7 @@ export interface LifeScenario {
   factors: PredictionOutcome["factors"];
   counterEvidence: string[];
   unknowns: string[];
-  actions: PredictionOutcome["actions"];
+  actions: Array<{ action: string; observation: string; reviewAfter: string; dimensions?: LifeDimension[] }>;
   forks: Array<{ condition: string; then: string; otherwise: string }>;
 }
 export interface LifePredictionReport {

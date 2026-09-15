@@ -30,7 +30,7 @@ export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id
     for (const d of s.dimensions) if (!str(d.future,140) || !str(d.gain,90) || !str(d.cost,90)) fail();
     const periods = ["year1","years2_3","years4_5"];
     s.stages.forEach((stage: any, i: number)=>{if(stage?.period !== periods[i] || !str(stage.change,140) || !str(stage.condition,140)) fail();});
-    for (const a of s.actions) if (!str(a?.action,140) || !str(a.observation,140) || !str(a.reviewAfter,30)) fail();
+    for (const a of s.actions) if (!str(a?.action,140) || !str(a.observation,140) || !str(a.reviewAfter,30) || (a.dimensions !== undefined && (!list(a.dimensions,1,4) || new Set(a.dimensions).size !== a.dimensions.length || !a.dimensions.every((d: any)=>dimensions.includes(d))))) fail();
     for (const f of s.forks) if (!str(f?.condition,140) || !str(f.then,140) || !str(f.otherwise,140)) fail();
     for (const f of s.factors) if (!str(f?.label,30) || !str(f.mechanism,140) || !["support","risk"].includes(f.direction) || ![1,2,3].includes(f.strength)) fail();
   }

@@ -128,7 +128,8 @@
         {
           "action": "与家人讨论一次短住。",
           "observation": "期待和实际相处有何差别。",
-          "reviewAfter": "两周后"
+          "reviewAfter": "两周后",
+          "dimensions": ["love"]
         }
       ],
       "forks": []
