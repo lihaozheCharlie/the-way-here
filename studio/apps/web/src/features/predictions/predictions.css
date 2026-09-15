@@ -165,31 +165,144 @@
 .life-stages { padding-left: 20px; }
 .life-stages li { padding: 4px 0 16px 8px; }
 .life-stages h3 { font-size: 15px; }
-.life-dashboard-hint { margin: 18px 0 10px; color: var(--muted); font-size: 11px; text-align: center; }
-.life-dashboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2.5%; margin-bottom: 28px; }
-.life-dashboard-card { padding: 16px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); transition: border-color .18s ease, background .18s ease; }
-.life-dashboard-card.is-focused { border-color: var(--accent-primary); background: var(--surface-tinted, #e9f1ef); }
-.life-dashboard-label { display: block; font-size: 12px; font-weight: 650; color: var(--ink); margin-bottom: 8px; }
-.life-dashboard-main { margin: 0 0 8px; font-size: 12.5px; line-height: 1.65; color: var(--ink) !important; }
-.life-dashboard-sub { margin: 0 0 5px; font-size: 11px; line-height: 1.6; color: var(--muted); }
-.life-dashboard-gain { color: #4f7f68; }
-.life-dashboard-cost { color: #9f633d; }
-.life-dashboard-move { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11px; line-height: 1.6; color: var(--ink) !important; }
-.life-dashboard-move b { font-weight: 650; }
-.life-dashboard-move span { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
-.life-scenario-tree .prediction-branches button { width: min(220px, 100%); min-height: auto; padding: 14px 16px; text-align: left; }
-.life-scenario-tree .prediction-branches b { text-align: left; }
-.life-branch-highlights { list-style: none; margin: 10px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); text-align: left; }
-.life-branch-highlights li { display: flex; gap: 6px; align-items: baseline; margin: 3px 0; font-size: 10.5px; line-height: 1.55; }
-.life-branch-highlight-label { flex: none; font-weight: 650; color: #4f7f68; }
-.life-branch-highlight-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-.life-action-dims { font-size: 11px !important; color: var(--accent-primary) !important; margin: 2px 0 6px !important; }
 .prediction-thoughts select { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; }
 .prediction-thoughts select:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .life-dashboard-card { transition: none; } }
-@media (max-width: 640px) {
-  .life-scenario-tree { overflow-x: auto; padding-bottom: 12px; }
-  .life-scenario-tree > svg, .life-scenario-tree > .prediction-branches { min-width: 860px; }
-  .life-dashboard-wrap { overflow-x: auto; padding-bottom: 4px; }
-  .life-dashboard { min-width: 580px; }
-}
+
+/* Single progressive dimension section, matching the supplied interaction reference. */
+  .life-dimensions .dim-section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
+  .life-dimensions .dim-section-head h2 { font-size: 15px; font-weight: 650; font-family: var(--font-body); }
+  .life-dimensions .dim-section-head span { font-size: 11px; color: var(--muted); }
+
+  /* ============================================================ */
+  /* ONE merged dimension accordion — replaces the old duplicated  */
+  /* "quick-read strip" + "detail accordion" pair.                 */
+  /* Level 1 (closed): icon + name + verdict + mini bar + ONE      */
+  /*   compact comparison line  → 脉络, 2 lines total.              */
+  /* Level 2 (open): 现在→未来一行 + 收益/代价短语标签 + 注意点清单 */
+  /*   （仅标题）。                                                  */
+  /* Level 3 (open a note): 该条注意点的完整一句话解释。            */
+  /* ============================================================ */
+  .life-dimensions .dim-row { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; background: var(--paper); }
+  .life-dimensions .dim-row[open] { border-color: #cfc8b3; }
+
+  .life-dimensions .dim-row-summary { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; list-style: none; }
+  .life-dimensions .dim-row-summary::-webkit-details-marker { display: none; }
+  .life-dimensions .dim-row-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .life-dimensions .dim-row-icon svg { width: 15px; height: 15px; }
+
+  .life-dimensions .dim-row-main { flex: 1; min-width: 0; }
+  .life-dimensions .dim-row-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .life-dimensions .dim-row-top b { font-size: 13.5px; font-weight: 650; }
+  .life-dimensions .dim-row-verdict { padding: 1.5px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+  .life-dimensions .dim-row-verdict.up { background: var(--surface-tinted); color: #2f5c46; }
+  .life-dimensions .dim-row-verdict.mixed { background: var(--surface-warm); color: #7a4a2c; }
+  .life-dimensions .dim-row-verdict.down { background: #f3e2dd; color: #92402a; }
+  .life-dimensions .dim-row-line { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .life-dimensions .dim-row-line .up-word { color: #2f5c46; font-weight: 600; }
+  .life-dimensions .dim-row-line .down-word { color: #92402a; font-weight: 600; }
+
+  .life-dimensions .dim-row-bar { flex: none; width: 46px; height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; display: flex; }
+  .life-dimensions .dim-row-bar i { display: block; height: 100%; }
+  .life-dimensions .dim-row-bar i.gain { background: var(--accent-primary); }
+  .life-dimensions .dim-row-bar i.cost { background: var(--accent-attention); }
+
+  .life-dimensions .dim-row-chev { flex: none; color: var(--faint); font-size: 11px; transition: transform .15s ease; }
+  .life-dimensions .dim-row[open] .dim-row-chev { transform: rotate(180deg); }
+
+  .life-dimensions .dim-row-body { padding: 2px 16px 16px; border-top: 1px solid var(--line); }
+
+  .life-dimensions .dim-transition { font-size: 12px; color: var(--muted); padding: 10px 0 12px; line-height: 1.6; }
+  .life-dimensions .dim-transition b { color: var(--ink); font-weight: 600; }
+
+  /* 收益/代价：短语标签而不是段落 */
+  .life-dimensions .dim-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .life-dimensions .dim-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 550; }
+  .life-dimensions .dim-tag svg { width: 9px; height: 9px; flex: none; }
+  .life-dimensions .dim-tag.gain { background: var(--surface-tinted); color: #2f5c46; }
+  .life-dimensions .dim-tag.cost { background: var(--surface-warm); color: #7a4a2c; }
+
+  /* 注意点：默认只显示标题，点开某条才看完整解释 */
+  .life-dimensions .dim-notes-head { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 650; color: var(--ink); margin: 2px 0 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .life-dimensions .dim-notes-head svg { width: 12px; height: 12px; color: var(--accent-primary); flex: none; }
+  .life-dimensions .dim-notes-head span { color: var(--faint); font-weight: 500; }
+
+  .life-dimensions .note-item { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; background: var(--bg); overflow: hidden; }
+  .life-dimensions .note-item:last-child { margin-bottom: 0; }
+  .life-dimensions .note-summary { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; list-style: none; }
+  .life-dimensions .note-summary::-webkit-details-marker { display: none; }
+  .life-dimensions .note-tag { flex: none; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .life-dimensions .note-tag.action { background: var(--surface-tinted); color: #2f5c46; }
+  .life-dimensions .note-tag.condition { background: #eef0e6; color: #5b6b53; }
+  .life-dimensions .note-tag.risk { background: var(--surface-warm); color: #7a4a2c; }
+  .life-dimensions .note-title { flex: 1; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+  .life-dimensions .note-chev { flex: none; color: var(--faint); font-size: 10px; }
+  .life-dimensions .note-item[open] .note-chev { transform: rotate(180deg); }
+  .life-dimensions .note-detail { padding: 0 10px 10px 27px; font-size: 11.5px; color: var(--muted); line-height: 1.65; }
+
+  .life-dimensions .dim-legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 12px 2px 0; font-size: 10.5px; color: var(--muted); }
+  .life-dimensions .dim-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .life-dimensions .dim-legend i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+  .life-dimensions .dim-legend i.gain { background: var(--accent-primary); }
+  .life-dimensions .dim-legend i.cost { background: var(--accent-attention); }
+
+
+.life-scenario-tree { max-width: none; margin-bottom: 30px; }
+.life-scenario-tree .prediction-root { display: block; border: 1px solid var(--ink); cursor: pointer; font: inherit; }
+.life-scenario-tree .prediction-root[aria-pressed=true] { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.life-scenario-tree .prediction-top-lines { height: 64px; }
+.life-scenario-tree .prediction-top-lines path { stroke-width: 2; }
+.life-scenario-tree .prediction-top-lines path.selected { stroke-width: 3; }
+.life-scenario-tree .prediction-branches { gap: 0; }
+.life-scenario-tree .prediction-branches button { width: calc(100% - 14px); min-height: 88px; padding: 14px 12px; }
+.life-scenario-tree .prediction-branches b { font-size: 12.5px; text-align: center; }
+.life-scenario-tree .prediction-branches button[aria-pressed=true] { box-shadow: inset 0 0 0 1px var(--accent-primary); }
+.life-scenario-tree .prediction-branches button:hover { transform: none; border-color: var(--accent-primary); }
+.life-scenario-detail { padding: 24px 28px; margin: 0 0 22px; }
+.life-scenario-detail .prediction-detail-summary { font-size: 16.5px; font-style: italic; line-height: 1.75; margin: 0 0 14px; }
+.life-scenario-detail .prediction-day { font-size: 13.5px; line-height: 1.85; color: var(--muted) !important; margin: 0 0 16px; }
+.life-scenario-detail .prediction-detail-head h2 { margin: 0 0 16px; }
+.life-scenario-detail .prediction-steps { gap: 22px; margin-bottom: 20px; }
+.life-scenario-detail .life-stages { list-style: none; position: relative; padding-left: 20px; }
+.life-stages::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 1px; background: var(--line); }
+.life-stages li { position: relative; padding: 0 0 16px; }
+.life-stages li::before { content: ""; position: absolute; left: -18px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-primary); }
+.life-stages h3 { margin: 0 0 4px; font-size: 12.5px; }
+.life-stages p { margin: 0 0 4px; font-size: 12.5px; line-height: 1.65; }
+.life-dimensions { margin: 22px 0; }
+.life-dimensions .dim-row-icon.health, .life-dimensions .dim-row-icon.finance { background: var(--surface-warm, #f3e9df); color: #9f633d; }
+.life-dimensions .dim-row-icon.love, .life-dimensions .dim-row-icon.play { background: var(--surface-tinted); color: #2f5c46; }
+.life-dimensions .dim-row-line { display: block; white-space: normal; overflow-wrap: anywhere; }
+.life-dimensions .dim-row-top { flex-wrap: wrap; }
+.life-dimensions .dim-transition { margin: 0; }
+.life-dimensions .dim-tag { white-space: normal; }
+.life-dimensions .note-detail { margin: 0; }
+.life-dimensions .dim-section-head { gap: 16px; }
+.life-dimensions .dim-section-head > span { flex: none; }
+.life-dimensions .dim-row-summary:focus-visible, .life-dimensions .note-summary:focus-visible, .life-scenario-tree button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) { .life-dimensions .dim-row-chev { transition: none; } }
+
+/* The way of reaching a future belongs to its connecting edge. */
+.life-scenario-map { overflow-x: auto; padding: 4px 4px 12px; scrollbar-color: var(--line) transparent; }
+.life-scenario-map .life-scenario-tree { max-width: none; min-width: 100%; margin-bottom: 0; }
+.life-scenario-tree .prediction-root { display: block; border: 1px solid var(--ink); }
+.life-connections { position: relative; height: 130px; }
+.life-connections .prediction-top-lines { height: 130px; }
+.life-connections .prediction-top-lines path { stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.life-edge-labels { position: absolute; inset: 62px 0 auto; display: grid; align-items: center; }
+.life-edge-labels > span { justify-self: center; max-width: calc(100% - 20px); padding: 3px 8px; background: var(--canvas); color: var(--muted); font-size: 11px; text-align: center; overflow-wrap: anywhere; }
+.life-edge-labels > span.selected { color: var(--accent-primary); font-weight: 650; }
+.life-scenario-tree .prediction-branches { gap: 0; }
+.life-scenario-tree .prediction-branches button { margin: 0 7px; }
+.life-scenario-tree .prediction-branches button:hover { transform: none; }
+.life-map-hint { margin: 0 0 20px; text-align: center; color: var(--muted); font-size: 11px; }
+.prediction-feedback { margin: 26px 0; padding: 24px 28px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+.prediction-feedback h2 { margin: 0 0 8px; font-size: 19px; }
+.prediction-feedback > p { color: var(--muted); font-size: 12px; margin: 0 0 18px; }
+.prediction-feedback textarea { width: 100%; min-height: 120px; resize: vertical; font: inherit; line-height: 1.8; }
+.prediction-feedback-options { margin-top: 12px; font-size: 12px; }
+.prediction-feedback-options label { margin-right: 12px; }
+.prediction-feedback .prediction-thoughts-footer { align-items: center; margin-top: 14px; }
+.prediction-feedback .prediction-thoughts-footer p { margin: 0; }
+.prediction-feedback-jump { position: fixed; right: 28px; bottom: 88px; z-index: 20; padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 12px; }
+
+.prediction-notice.prediction-error { padding: 16px 20px; border: 1px solid #d4ab38; background: #fff4ce; color: #694b0c; font-weight: 550; }

@@ -14,7 +14,7 @@ import type { AgentRuntimeEnvelope, AgentRuntimeProvider } from "./agent-runtime
 import { PredictionService } from "./prediction-service.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
-const fullReport = JSON.parse(readFileSync(new URL("../../../../test/fixtures/life-prediction.json",import.meta.url),"utf8"));
+const fullReport = JSON.parse(readFileSync(new URL("../../../../test/fixtures/life-prediction-presentation.json",import.meta.url),"utf8"));
 const report = JSON.stringify({...fullReport,evidence:[],scenarios:[]});
 async function fixture() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-predict-")));
@@ -75,6 +75,16 @@ describe("prediction lifecycle", () => {
     const saved = (await service.view("demo")).report;
     expect(saved?.version === 5 && saved.evidence[0]?.quote).toBe(quote);
     expect((await service.view("other")).report).toBeUndefined();
+    expect(saved?.version === 5 && saved.scenarios[0]?.pathway).toBe("willed");
+    await service.request("demo");
+    delete result.scenarios[0].dimensions[0].gainShare;
+    finish(2, JSON.stringify(result));
+    await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("failed"));
+    expect((await service.view("demo")).error).toContain("占比");
+    expect((await service.view("demo")).report).toEqual(saved);
+    const contractFile = path.join(root,"knowledge-engine/skills/consume/predict-self/references/output.md");
+    await writeFile(contractFile, (await readFile(contractFile,"utf8")) + "\n更新展示要求。\n");
+    expect((await service.view("demo")).stale).toBe(true);
   });
   it("requires a scan rather than thoughts and runs scans without prediction", async () => {
     const {app,service,start,finish}=await fixture();

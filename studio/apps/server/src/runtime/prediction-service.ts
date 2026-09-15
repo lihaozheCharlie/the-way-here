@@ -70,7 +70,8 @@ export class PredictionService {
     await index.rebuild();
     const pages = index.list().map(page => index.get(page.id)!).filter(Boolean);
     const policy = JSON.parse(await readFile(path.join(this.knowledge.vaultRoot, skillPath, "references/scoring.json"), "utf8")) as UnderstandingPolicy;
-    const hash = createHash("sha256").update(JSON.stringify([index.config.paths, policy.version, pages.map(page => [page.id, page.markdown, page.start, page.end])])).digest("hex");
+    const predictionContract = await Promise.all(["SKILL.md", "references/output.md"].map(file => readFile(path.join(this.knowledge.vaultRoot, skillPath, file), "utf8")));
+    const hash = createHash("sha256").update(JSON.stringify([index.config.paths, policy.version, predictionContract, pages.map(page => [page.id, page.markdown, page.start, page.end])])).digest("hex");
     return { pages, config: index.config, hash, policy };
   }
   async hasActive(id: string): Promise<boolean> { return this.queues.has(id) || (await this.load(id)).status === "running"; }
@@ -197,7 +198,7 @@ export class PredictionService {
           state.status = state.report ? "ready" : "idle";
         } else {
         const answer = event.finalAnswer || state.answer || "";
-        const report = parseLifePredictionReport(answer, state.pages || []);
+        const report = parseLifePredictionReport(answer, state.pages || [], { requirePresentation: true });
         if (state.thoughtKind === "hypothesis" && report.evidence.some(e => e.pageId === "prediction-input/current" && e.kind !== "hypothesis")) throw new Error("假设被误当成事实，请重新预测");
         if (latest.hash === state.inputHash) {
           state.previousReport = state.report;

@@ -12,7 +12,7 @@
       "evidenceIds": []
     },
     {
-      "id": "work",
+      "id": "finance",
       "current": "资料不足，尚不清楚",
       "desired": "资料不足，尚不清楚",
       "constraints": [],
@@ -51,7 +51,7 @@
   "scenarios": [
     {
       "id": "near-family",
-      "pathway": "按意愿改变 · 先短住再迁居",
+      "pathway": "willed",
       "title": "在父母附近工作生活",
       "probability": null,
       "probabilityReason": "只有愿望，现实条件尚未知，暂不能估计。",
@@ -68,25 +68,73 @@
           "id": "health",
           "future": "这方面的未来安排仍需确认，也包括收入与缓冲是否够用。",
           "gain": "资料不足，尚不能判断。",
-          "cost": "需要进一步核对。"
+          "cost": "需要进一步核对。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
         },
         {
-          "id": "work",
+          "id": "finance",
           "future": "这方面的未来安排仍需确认。",
           "gain": "资料不足，尚不能判断。",
-          "cost": "需要进一步核对。"
+          "cost": "需要进一步核对。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
         },
         {
           "id": "play",
           "future": "这方面的未来安排仍需确认。",
           "gain": "资料不足，尚不能判断。",
-          "cost": "需要进一步核对。"
+          "cost": "需要进一步核对。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
         },
         {
           "id": "love",
           "future": "这方面的未来安排仍需确认。",
           "gain": "资料不足，尚不能判断。",
-          "cost": "需要进一步核对。"
+          "cost": "需要进一步核对。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
         }
       ],
       "evidenceIds": [
@@ -98,19 +146,24 @@
       ],
       "stages": [
         {
-          "period": "year1",
-          "change": "短住体验并了解当地工作。",
-          "condition": "家人愿意共同讨论。"
+          "period": "months0_3",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
         },
         {
-          "period": "years2_3",
-          "change": "验证收入后决定是否迁居。",
-          "condition": "收入与照料安排可持续。"
+          "period": "months3_12",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
         },
         {
-          "period": "years4_5",
-          "change": "形成稳定相处与工作的日常。",
-          "condition": "保留彼此空间。"
+          "period": "years1_3",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
+        },
+        {
+          "period": "years3_5",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
         }
       ],
       "factors": [
@@ -130,7 +183,9 @@
           "action": "与家人讨论一次短住。",
           "observation": "期待和实际相处有何差别。",
           "reviewAfter": "两周后",
-          "dimensions": ["love"]
+          "dimensions": [
+            "love"
+          ]
         }
       ],
       "forks": []
@@ -142,5 +197,6 @@
   "tensions": [
     "相处时间与工作机会之间的取舍。"
   ],
-  "changes": []
+  "changes": [],
+  "presentationVersion": 1
 }

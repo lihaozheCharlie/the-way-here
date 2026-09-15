@@ -27,7 +27,7 @@ describe("prediction page states", () => {
     const ready = {...view, understanding:{...view.understanding,score:76,unlocked:true}};
     expect(render({...ready,status:"running"})).toContain('disabled=""');
     const html=render({...ready,status:"failed",error:"模型不可用"});
-    expect(html).toContain('role="alert"');
+    expect(html).toContain('class="prediction-notice prediction-error" role="alert"');
     expect(html).toContain('模型不可用');
     expect(html).toContain('预测自己');
   });

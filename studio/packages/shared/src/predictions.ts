@@ -53,14 +53,18 @@ export interface PredictionView {
   report?: PredictionArchive;
 }
 
-export type LifeDimension = "health" | "work" | "play" | "love";
+export type LifeDimension = "health" | "work" | "play" | "love" | "finance";
 export type PredictionThoughtKind = "update" | "hypothesis";
 export interface LifeEvidence extends PredictionEvidence {
   id: string;
   kind: "fact" | "wish" | "plan" | "action" | "outcome" | "hypothesis";
   dimensions: LifeDimension[];
 }
+export type PredictionPathway = "inertia" | "willed" | "wildcard";
+export const predictionPathwayLabels: Record<PredictionPathway, string> = { inertia: "按惯性走", willed: "按意愿改变", wildcard: "小概率事件" };
 export interface LifeScenario {
+  /** How the current self reaches this future; absent in older reports. */
+  pathway?: string;
   id: string;
   title: string;
   probability: number | null;
@@ -70,10 +74,16 @@ export interface LifeScenario {
   lenses: { work: string; life: string };
   environment: string;
   choice: string;
-  dimensions: Array<{ id: LifeDimension; future: string; gain: string; cost: string }>;
+  dimensions: Array<{ id: LifeDimension; future: string; gain: string; cost: string;
+    verdict?: { label: string; tone: "up" | "mixed" | "down" };
+    gainShare?: number | null;
+    gains?: string[];
+    costs?: string[];
+    notes?: Array<{ kind: "action" | "condition" | "risk"; title: string; detail: string }>;
+  }>;
   evidenceIds: string[];
   assumptions: string[];
-  stages: Array<{ period: "year1" | "years2_3" | "years4_5"; change: string; condition: string }>;
+  stages: Array<{ period: "year1" | "years2_3" | "years4_5" | "months0_3" | "months3_12" | "years1_3" | "years3_5"; change: string; condition: string }>;
   factors: PredictionOutcome["factors"];
   counterEvidence: string[];
   unknowns: string[];
@@ -81,6 +91,7 @@ export interface LifeScenario {
   forks: Array<{ condition: string; then: string; otherwise: string }>;
 }
 export interface LifePredictionReport {
+  presentationVersion?: 1;
   version: 5;
   summary: string;
   horizon: string;
