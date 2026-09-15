@@ -8,7 +8,13 @@ describe("whole-life report boundary",()=>{
     const r=parseLifePredictionReport(JSON.stringify(sample),pages);
     expect(r.scenarios[0].probability).toBeNull();
     expect(r.scenarios[0].forks).toHaveLength(0);
-    expect(r.dimensions).toHaveLength(5);
+    expect(r.dimensions).toHaveLength(4);
+    expect(r.dimensions.map((d)=>d.id).sort()).toEqual(["health","love","play","work"]);
+  });
+  it("keeps finance-related context inside the health dimension", () => {
+    const r = parseLifePredictionReport(JSON.stringify(sample), pages);
+    const health = r.dimensions.find((d) => d.id === "health");
+    expect(health?.current).toContain("收入");
   });
   it("does not force coexisting scenarios to sum to 100",()=>{
     const r=structuredClone(sample);

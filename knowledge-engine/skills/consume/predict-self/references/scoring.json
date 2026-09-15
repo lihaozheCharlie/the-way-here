@@ -57,27 +57,22 @@
       {
         "id": "health",
         "label": "健康",
-        "max": 20
+        "max": 30
       },
       {
         "id": "work",
         "label": "工作",
-        "max": 20
+        "max": 24
       },
       {
         "id": "play",
         "label": "玩乐",
-        "max": 20
+        "max": 22
       },
       {
-        "id": "relationships",
-        "label": "关系",
-        "max": 20
-      },
-      {
-        "id": "finance",
-        "label": "财务",
-        "max": 20
+        "id": "love",
+        "label": "爱",
+        "max": 24
       }
     ]
   }

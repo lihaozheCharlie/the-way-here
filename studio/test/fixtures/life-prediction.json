@@ -6,8 +6,8 @@
   "dimensions": [
     {
       "id": "health",
-      "current": "资料不足，尚不清楚",
-      "desired": "资料不足，尚不清楚",
+      "current": "身体作息与收入安排的资料都不足，尚不清楚。",
+      "desired": "资料不足，尚不清楚。",
       "constraints": [],
       "evidenceIds": []
     },
@@ -26,14 +26,7 @@
       "evidenceIds": []
     },
     {
-      "id": "relationships",
-      "current": "资料不足，尚不清楚",
-      "desired": "资料不足，尚不清楚",
-      "constraints": [],
-      "evidenceIds": []
-    },
-    {
-      "id": "finance",
+      "id": "love",
       "current": "资料不足，尚不清楚",
       "desired": "资料不足，尚不清楚",
       "constraints": [],
@@ -45,7 +38,7 @@
       "id": "e1",
       "kind": "wish",
       "dimensions": [
-        "relationships"
+        "love"
       ],
       "pageId": "s",
       "cue": "想与父母住得更近",
@@ -72,7 +65,7 @@
       "dimensions": [
         {
           "id": "health",
-          "future": "这方面的未来安排仍需确认。",
+          "future": "这方面的未来安排仍需确认，也包括收入与缓冲是否够用。",
           "gain": "资料不足，尚不能判断。",
           "cost": "需要进一步核对。"
         },
@@ -89,13 +82,7 @@
           "cost": "需要进一步核对。"
         },
         {
-          "id": "relationships",
-          "future": "这方面的未来安排仍需确认。",
-          "gain": "资料不足，尚不能判断。",
-          "cost": "需要进一步核对。"
-        },
-        {
-          "id": "finance",
+          "id": "love",
           "future": "这方面的未来安排仍需确认。",
           "gain": "资料不足，尚不能判断。",
           "cost": "需要进一步核对。"

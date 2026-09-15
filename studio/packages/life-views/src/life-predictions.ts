@@ -1,5 +1,5 @@
 import type { LifePredictionReport, WikiPage } from "@the-way-here/shared";
-const dimensions = ["health", "work", "play", "relationships", "finance"];
+const dimensions = ["health", "work", "play", "love"];
 /** Validate the readable explanation, not private reasoning or imagined future facts. */
 export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id"|"markdown">[]): LifePredictionReport {
   const r = JSON.parse(text.trim().replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
@@ -7,13 +7,13 @@ export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id
   const str = (v: any, max = 180) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
   const list = (v: any, min=0, max=10) => Array.isArray(v) && v.length >= min && v.length <= max;
   const strings = (v: any, min=0, max=10) => list(v,min,max) && v.every((s: any)=>str(s));
-  const five = (v: any) => list(v,5,5) && new Set(v.map((d: any)=>d?.id)).size === 5 && v.every((d: any)=>dimensions.includes(d?.id));
-  if (r?.version !== 5 || !str(r.summary,100) || !str(r.horizon,50) || !str(r.current,24) || !five(r.dimensions) || !list(r.evidence,0,40) || !list(r.scenarios,0,5) || !strings(r.gaps) || !strings(r.tensions) || !strings(r.changes) || !["independent","exclusive"].includes(r.probabilityMode) || !str(r.probabilityScope)) fail();
+  const four = (v: any) => list(v,4,4) && new Set(v.map((d: any)=>d?.id)).size === 4 && v.every((d: any)=>dimensions.includes(d?.id));
+  if (r?.version !== 5 || !str(r.summary,100) || !str(r.horizon,50) || !str(r.current,24) || !four(r.dimensions) || !list(r.evidence,0,40) || !list(r.scenarios,0,5) || !strings(r.gaps) || !strings(r.tensions) || !strings(r.changes) || !["independent","exclusive"].includes(r.probabilityMode) || !str(r.probabilityScope)) fail();
   const sources = new Map(pages.map(p=>[p.id,p.markdown]));
   const evidenceIds = new Set<string>();
   const quotes = new Set<string>();
   for (const e of r.evidence) {
-    if (!str(e?.id,40) || evidenceIds.has(e.id) || !str(e.pageId,1000) || !str(e.cue,40) || !str(e.quote,240) || e.quote.trim().length < 8 || !str(e.interpretation,100) || !sources.get(e.pageId)?.includes(e.quote) || !["fact","wish","plan","action","outcome","hypothesis"].includes(e.kind) || !list(e.dimensions,1,5) || new Set(e.dimensions).size !== e.dimensions.length || !e.dimensions.every((d: any)=>dimensions.includes(d))) fail();
+    if (!str(e?.id,40) || evidenceIds.has(e.id) || !str(e.pageId,1000) || !str(e.cue,40) || !str(e.quote,240) || e.quote.trim().length < 8 || !str(e.interpretation,100) || !sources.get(e.pageId)?.includes(e.quote) || !["fact","wish","plan","action","outcome","hypothesis"].includes(e.kind) || !list(e.dimensions,1,4) || new Set(e.dimensions).size !== e.dimensions.length || !e.dimensions.every((d: any)=>dimensions.includes(d))) fail();
     const quoteKey = JSON.stringify([e.pageId,e.quote]);
     if (quotes.has(quoteKey)) fail();
     quotes.add(quoteKey);
@@ -24,7 +24,7 @@ export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id
   if (!r.scenarios.length && !r.gaps.length) fail();
   const ids = new Set(), titles = new Set();
   for (const s of r.scenarios) {
-    if (!str(s?.id,40) || ids.has(s.id) || !str(s.title,20) || titles.has(s.title) || !(s.probability === null || Number.isInteger(s.probability) && s.probability >= 0 && s.probability <= 100 && s.probability % 5 === 0) || !str(s.probabilityReason) || !["low","medium","high"].includes(s.confidence) || !str(s.week,240) || !str(s.lenses?.work,140) || !str(s.lenses?.life,140) || !str(s.environment,140) || !str(s.choice,90) || !five(s.dimensions) || !refs(s.evidenceIds,1) || !strings(s.assumptions,1,8) || !strings(s.counterEvidence,0,5) || !strings(s.unknowns,0,8) || !list(s.actions,1,3) || !list(s.forks,0,2) || !list(s.factors,1,5) || !list(s.stages,3,3)) fail();
+    if (!str(s?.id,40) || ids.has(s.id) || !str(s.title,20) || titles.has(s.title) || !(s.probability === null || Number.isInteger(s.probability) && s.probability >= 0 && s.probability <= 100 && s.probability % 5 === 0) || !str(s.probabilityReason) || !["low","medium","high"].includes(s.confidence) || !str(s.week,240) || !str(s.lenses?.work,140) || !str(s.lenses?.life,140) || !str(s.environment,140) || !str(s.choice,90) || !four(s.dimensions) || !refs(s.evidenceIds,1) || !strings(s.assumptions,1,8) || !strings(s.counterEvidence,0,5) || !strings(s.unknowns,0,8) || !list(s.actions,1,3) || !list(s.forks,0,2) || !list(s.factors,1,5) || !list(s.stages,3,3)) fail();
     if (s.confidence !== "low" && s.evidenceIds.every((id:string)=>["wish","plan","hypothesis"].includes(r.evidence.find((e:any)=>e.id===id)?.kind))) fail();
     ids.add(s.id); titles.add(s.title);
     for (const d of s.dimensions) if (!str(d.future,140) || !str(d.gain,90) || !str(d.cost,90)) fail();

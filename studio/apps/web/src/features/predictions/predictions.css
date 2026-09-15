@@ -162,18 +162,22 @@
 .life-scenario-detail { margin-top: 28px; }
 .life-probability-unknown { font-size: 11px; color: var(--muted); }
 .life-evidence-kind { font-size: 12px; color: var(--muted); }
-.life-dimensions { margin: 12px 0; }
-.life-dimensions > div { display: grid; grid-template-columns: 64px 1fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
-.life-dimensions dt { font-weight: 600; }
-.life-dimensions dd { margin: 0; }
-.life-dimensions p { margin: 0 0 8px; }
 .life-stages { padding-left: 20px; }
 .life-stages li { padding: 4px 0 16px 8px; }
 .life-stages h3 { font-size: 15px; }
+.life-dashboard-hint { margin: 18px 0 10px; color: var(--muted); font-size: 11px; text-align: center; }
+.life-dashboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2.5%; margin-bottom: 28px; }
+.life-dashboard-card { padding: 16px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); transition: border-color .18s ease, background .18s ease; }
+.life-dashboard-card.is-focused { border-color: var(--accent-primary); background: var(--surface-tinted, #e9f1ef); }
+.life-dashboard-label { display: block; font-size: 12px; font-weight: 650; color: var(--ink); margin-bottom: 8px; }
+.life-dashboard-main { margin: 0 0 8px; font-size: 12.5px; line-height: 1.65; color: var(--ink) !important; }
+.life-dashboard-sub { margin: 0 0 5px; font-size: 11px; line-height: 1.6; color: var(--muted); }
 .prediction-thoughts select { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; }
 .prediction-thoughts select:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .life-dashboard-card { transition: none; } }
 @media (max-width: 640px) {
   .life-scenario-tree { overflow-x: auto; padding-bottom: 12px; }
   .life-scenario-tree > svg, .life-scenario-tree > .prediction-branches { min-width: 580px; }
-  .life-dimensions > div { grid-template-columns: 48px 1fr; gap: 12px; }
+  .life-dashboard-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .life-dashboard { min-width: 580px; }
 }

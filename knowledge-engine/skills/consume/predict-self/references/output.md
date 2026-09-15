@@ -8,7 +8,7 @@
   "summary":"<100字内供后续讨论使用，页面不展示空泛引言>",
   "horizon":"未来五年",
   "current":"<24字内当前处境>",
-  "dimensions":[{"id":"health","current":"<当前事实或未知>","desired":"<明确愿望或未知>","constraints":["<限制或不愿牺牲的东西>"],"evidenceIds":["e1"]}],
+  "dimensions":[{"id":"health","current":"<当前事实或未知，health维度也涵盖收入安排、负债、缓冲与安全感>","desired":"<明确愿望或未知>","constraints":["<限制或不愿牺牲的东西>"],"evidenceIds":["e1"]}],
   "evidence":[{"id":"e1","kind":"wish","dimensions":["health"],"pageId":"<冻结页面ID>","cue":"<40字内线索>","quote":"<8—240字符连续原文>","interpretation":"<100字内与推演的联系及边界>"}],
   "probabilityMode":"independent",
   "probabilityScope":"<180字内说明范围与是否依赖用户假设；可并存的情景不相加>",
@@ -34,8 +34,8 @@
 }
 ```
 
-顶层 dimensions 与每条 scenarios.dimensions 都必须恰好包含 health/work/play/relationships/finance 五个唯一ID，示例仅展示一个字段形状。每个情景三阶段必须按例子顺序完整提供。所有引用ID需对应顶层 evidence，不能重复堆同一事件；顶层最多40条证据，各引用列表最多12个唯一ID，每条情景至少一个。
+顶层 dimensions 与每条 scenarios.dimensions 都必须恰好包含 health/work/play/love 四个唯一ID，示例仅展示一个字段形状。每个情景三阶段必须按例子顺序完整提供。所有引用ID需对应顶层 evidence，不能重复堆同一事件；顶层最多40条证据，各引用列表最多12个唯一ID，每条情景至少一个。
 
 情景最多5条，不足3条说明 gaps；0条时 gaps 必须非空。情景ID和标题唯一。probability 为 null 或0—100且是5的倍数。exclusive 模式每条必须有数值且总和100，independent 不要求和为100。
 
-current/desired、probabilityReason、scope、其余普通字符串最多180字符；id最多40字符；stage.change/condition、fork各字段最多140字符。constraints最多5条；assumptions为1—8条；counterEvidence最多5条；unknowns最多8条；actions为1—3条；forks为0—2条；factors为1—5条，direction仅support/risk、strength仅1/2/3。每个非空文本必须具体、必要，未知可以明确写“资料不足，尚不清楚”。证据kind仅fact/wish/plan/action/outcome/hypothesis，dimensions为五维中1—5个唯一ID。confidence仅low/medium/high。
+current/desired、probabilityReason、scope、其余普通字符串最多180字符；id最多40字符；stage.change/condition、fork各字段最多140字符。constraints最多5条；assumptions为1—8条；counterEvidence最多5条；unknowns最多8条；actions为1—3条；forks为0—2条；factors为1—5条，direction仅support/risk、strength仅1/2/3。每个非空文本必须具体、必要，未知可以明确写“资料不足，尚不清楚”。证据kind仅fact/wish/plan/action/outcome/hypothesis，dimensions为四维中1—4个唯一ID。confidence仅low/medium/high。

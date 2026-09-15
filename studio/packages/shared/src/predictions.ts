@@ -53,7 +53,7 @@ export interface PredictionView {
   report?: PredictionArchive;
 }
 
-export type LifeDimension = "health" | "work" | "play" | "relationships" | "finance";
+export type LifeDimension = "health" | "work" | "play" | "love";
 export type PredictionThoughtKind = "update" | "hypothesis";
 export interface LifeEvidence extends PredictionEvidence {
   id: string;

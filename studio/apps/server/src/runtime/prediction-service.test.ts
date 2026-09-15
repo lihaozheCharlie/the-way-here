@@ -83,7 +83,7 @@ describe("prediction lifecycle", () => {
     expect((await app.inject({method:"POST",url:"/api/predictions/scan",payload:{knowledgeBaseId:"other"}})).statusCode).toBe(202);
     await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(1));
     expect((await service.view("other")).understanding.scanStatus).toBe("running");
-    const zero={version:2,facets:["health","work","play","relationships","finance"].map(id=>({id,level:0,reason:"Wiki 中没有这一维度的信息",gaps:["补充具体经历"],evidence:[]}))};
+    const zero={version:2,facets:["health","work","play","love"].map(id=>({id,level:0,reason:"Wiki 中没有这一维度的信息",gaps:["补充具体经历"],evidence:[]}))};
     finish(1,JSON.stringify(zero));
     await vi.waitFor(async()=>expect((await service.view("other")).understanding.scanStatus).toBe("ready"));
     expect((await service.view("other")).understanding).toMatchObject({score:0,unlocked:false});

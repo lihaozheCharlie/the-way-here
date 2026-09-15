@@ -30,7 +30,7 @@ describe("understanding evidence score", () => {
   it("validates semantic scan levels against real Wiki evidence", () => {
     const p=page("wiki");
     const output={version:2,facets:policy.assessment!.facets.map(f=>({id:f.id,level:3,reason:"有具体经历，仍缺部分处境",gaps:["缺少近况"],evidence:[{pageId:p.id,quote:"具体的行动与后果。"}]}))};
-    expect(parseUnderstandingScan(JSON.stringify(output),[p],policy)).toMatchObject({score:75,unlocked:true});
+    expect(parseUnderstandingScan(JSON.stringify(output),[p],policy)).toMatchObject({score:74,unlocked:true});
     output.facets.forEach(f=>f.level=2);
     expect(parseUnderstandingScan(JSON.stringify(output),[p],policy)).toMatchObject({score:50,unlocked:false});
     expect(()=>parseUnderstandingScan(JSON.stringify(output),[{...p,isSource:true}],policy)).toThrow();
