@@ -29,7 +29,7 @@ describe("prediction page states", () => {
     const html=render({...ready,status:"failed",error:"模型不可用"});
     expect(html).toContain('class="prediction-notice prediction-error" role="alert"');
     expect(html).toContain('模型不可用');
-    expect(html).toContain('预测自己');
+    expect(html).toContain('看见未来');
   });
 });
 
@@ -56,4 +56,11 @@ describe("concrete work and life paths", () => {
     expect(root).toContain('正在寻找下一份工作');
     expect(root).not.toContain('更完整的背景');
   });
+});
+
+it("shows the failure instead of a second stale reminder",()=>{
+ const html=render({...view,status:"failed",stale:true,error:"当前维度引用了假设证据",understanding:{...view.understanding,unlocked:true}});
+ expect(html).toContain("当前维度引用了假设证据");
+ expect(html).not.toContain("有更新，可以重新预测了");
+ expect(html).toContain("<h1>看见未来</h1>");
 });

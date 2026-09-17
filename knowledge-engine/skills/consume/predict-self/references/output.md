@@ -15,11 +15,11 @@
   "probabilityScope":"<180字内说明范围与是否依赖用户假设；可并存的情景不相加>",
   "scenarios":[{
     "pathway":"willed",
-    "id":"s1","title":"<20字内具体生活安排>","probability":null,"probabilityReason":"<180字内估计依据或无法估计的原因>","confidence":"low",
-    "week":"<240字内第4—5年的普通一周>",
-    "lenses":{"work":"<140字内工作视角>","life":"<140字内生活视角>"},
-    "environment":"<140字内居住及环境条件，缺资料写未知>",
-    "choice":"<90字内取舍>",
+    "id":"s1","title":"<6—14字直白的主要生活选择，最多20字>","probability":null,"probabilityReason":"<180字内估计依据或无法估计的原因>","confidence":"low",
+    "week":"<约80—120字，第4—5年的普通一周>",
+    "lenses":{"work":"<约40—60字工作安排>","life":"<约40—60字生活概述>"},
+    "environment":"<约40—60字居住及环境条件>",
+    "choice":"<约30—50字主要获得与代价>",
     "dimensions":[{"id":"health","future":"<140字内未来状态或未知>","gain":"<90字内得到什么或未知>","cost":"<90字内代价或未知>","verdict":{"label":"<20字内结论>","tone":"mixed"},"gainShare":null,"gains":["<收益短语或未知>"],"costs":["<代价短语或未知>"],"notes":[{"kind":"condition","title":"<80字内前提>","detail":"<240字内具体解释>"}]}],
     "evidenceIds":["e1"],"assumptions":["<成立条件>"],
     "stages":[
@@ -33,7 +33,7 @@
     "actions":[{"action":"<140字内一步实验>","observation":"<140字内看什么反馈>","reviewAfter":"<30字内回看时间>","dimensions":["health"]}],
     "forks":[{"condition":"<140字内真实分岔条件>","then":"<条件成立时>","otherwise":"<不成立时>"}]
   }],
-  "gaps":["<覆盖缺口>"],"tensions":["<跨情景的资源或价值矛盾>"],"changes":["<哪条新证据或假设影响了哪个判断；首次可空>"]
+  "gaps":["<覆盖缺口>"],"tensions":["<跨情景的资源或价值矛盾>"]
 }
 ```
 
@@ -51,3 +51,14 @@ current/desired、probabilityReason、scope、其余普通字符串最多180字�
 每个情景的四个维度均须显式包含 verdict、gainShare、gains、costs、notes，同时保留 future/gain/cost。verdict.label 为1—20字符，tone仅up/mixed/down。gainShare 为0—100整数或null：收益相对代价比重，代价由100减去收益得出，不是发生概率。null 时 gain/cost 写明缺少什么信息，不能省略字段或为了图表编造比例。gains/costs 各1—5条非空短语，每条不超过180字符；notes 为0—8条，kind仅action/condition/risk，title不超过80字符、detail不超过240字符。行动 notes 与 actions 应保持一致，不重复堆叠。
 
 旧存档缺少展示字段、使用work维度或三阶段仅用于兼容读取；本次生成不得沿用旧结构。
+
+当前状态与条件推演的引用必须分开：顶层 dimensions[].evidenceIds 不得引用 kind=hypothesis 的证据（即使该维度同时包含 desired）；假设只能被 scenarios[].evidenceIds 引用，并在 assumptions 中写明成立条件。不能为通过校验把假设改成 fact 或 wish。交付前逐个检查顶层维度的引用类型，缺少实际依据时保持未知并用空引用数组。
+
+
+## 精简生成
+
+不再生成 pathwayAssessment 或 changes，不做上版报告对比。每条情景仍须填写 pathway、probability、probabilityReason 和证据。概率直接依据行为、约束及改变条件判断，不依赖三类走法总权重；某条未知不强制其他情景未知。标题遵循Skill命名规则，用常用词直说主要选择，不能堆叠多项日常活动。
+
+五年生活文风与篇幅遵循Skill的“表达”段：life约40—60字，week约80—120字，choice约30—50字，work/environment各约40—60字。简短、具体、亲和，各字段不重复。
+
+模板中的null仅演示未知值的类型，不是默认答案；必须逐条依据资料填写概率与四维占比，不能照抄模板为空。

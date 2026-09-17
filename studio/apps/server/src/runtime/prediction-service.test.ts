@@ -15,7 +15,7 @@ import { PredictionService } from "./prediction-service.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
 const fullReport = JSON.parse(readFileSync(new URL("../../../../test/fixtures/life-prediction-presentation.json",import.meta.url),"utf8"));
-const report = JSON.stringify({...fullReport,evidence:[],scenarios:[]});
+const report = JSON.stringify({...fullReport,evidence:[],scenarios:[],pathwayAssessment:undefined,changes:undefined});
 async function fixture() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-predict-")));
   await writeFile(path.join(root, "the-way-here.config.yaml"), "version: 3\ndefaultKnowledgeBase: demo\nknowledgeBases:\n  demo:\n    paths:\n      wiki: demo/wiki\n      sources: demo/sources\n  other:\n    paths:\n      wiki: other/wiki\n      sources: other/sources\nvalidation:\n  commands: []\n");
@@ -76,6 +76,7 @@ describe("prediction lifecycle", () => {
     expect(saved?.version === 5 && saved.evidence[0]?.quote).toBe(quote);
     expect((await service.view("other")).report).toBeUndefined();
     expect(saved?.version === 5 && saved.scenarios[0]?.pathway).toBe("willed");
+    for (let i=0;i<3;i++) expect((await service.view("demo")).stale).toBe(false);
     await service.request("demo");
     delete result.scenarios[0].dimensions[0].gainShare;
     finish(2, JSON.stringify(result));

@@ -169,8 +169,8 @@
 .prediction-thoughts select:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 
 /* Single progressive dimension section, matching the supplied interaction reference. */
-  .life-dimensions .dim-section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
-  .life-dimensions .dim-section-head h2 { font-size: 15px; font-weight: 650; font-family: var(--font-body); }
+  .prediction-page .dim-section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
+  .prediction-page .dim-section-head h2 { font-size: 15px; font-weight: 650; font-family: var(--font-body); }
   .life-dimensions .dim-section-head span { font-size: 11px; color: var(--muted); }
 
   /* ============================================================ */
@@ -276,7 +276,7 @@
 .life-dimensions .dim-transition { margin: 0; }
 .life-dimensions .dim-tag { white-space: normal; }
 .life-dimensions .note-detail { margin: 0; }
-.life-dimensions .dim-section-head { gap: 16px; }
+.prediction-page .dim-section-head { gap: 16px; }
 .life-dimensions .dim-section-head > span { flex: none; }
 .life-dimensions .dim-row-summary:focus-visible, .life-dimensions .note-summary:focus-visible, .life-scenario-tree button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -3px; }
 @media (prefers-reduced-motion: reduce) { .life-dimensions .dim-row-chev { transition: none; } }
@@ -299,8 +299,6 @@
 .prediction-feedback h2 { margin: 0 0 8px; font-size: 19px; }
 .prediction-feedback > p { color: var(--muted); font-size: 12px; margin: 0 0 18px; }
 .prediction-feedback textarea { width: 100%; min-height: 120px; resize: vertical; font: inherit; line-height: 1.8; }
-.prediction-feedback-options { margin-top: 12px; font-size: 12px; }
-.prediction-feedback-options label { margin-right: 12px; }
 .prediction-feedback .prediction-thoughts-footer { align-items: center; margin-top: 14px; }
 .prediction-feedback .prediction-thoughts-footer p { margin: 0; }
 .prediction-feedback-jump { position: fixed; right: 28px; bottom: 88px; z-index: 20; padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 12px; }

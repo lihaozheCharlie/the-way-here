@@ -107,3 +107,43 @@ describe("required current presentation",()=>{
     expect(()=>parseLifePredictionReport(JSON.stringify(sample),pages,{requirePresentation:true})).toThrow("presentationVersion");
   });
 });
+
+it("keeps hypothetical evidence out of current dimensions while allowing future scenarios",()=>{
+ const r=structuredClone(sample);r.evidence[0].kind="hypothesis";
+ r.dimensions.find((d:any)=>d.id === "love").evidenceIds=[r.evidence[0].id];
+ expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow("当前love维度引用了假设证据");
+ r.dimensions.find((d:any)=>d.id === "love").evidenceIds=[];
+ expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].evidenceIds).toContain(r.evidence[0].id);
+});
+
+describe("pathway likelihoods",()=>{
+ const current=()=>JSON.parse(readFileSync(new URL("../../../test/fixtures/life-prediction-presentation.json",import.meta.url),"utf8"));
+ it("accepts new reports without removed presentation content",()=>{
+  const r=current();delete r.pathwayAssessment;delete r.changes;
+  expect(parseLifePredictionReport(JSON.stringify(r),pages,{requirePresentation:true}).scenarios).toHaveLength(r.scenarios.length);
+ });
+ it("keeps scenario likelihood within its dominant pathway",()=>{
+  const r=current();r.pathwayAssessment.forEach((a:any,i:number)=>{a.probability=[60,30,10][i];a.evidenceIds=['e1'];});
+  r.scenarios[0].probability=25;
+  expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].probability).toBe(25);
+  r.scenarios[0].probability=35;
+  expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow("不能超过");
+ });
+ it.each(["sum","partial-overflow","duplicate","missing-ref"])("rejects inconsistent assessment %s",kind=>{
+  const r=current();r.pathwayAssessment.forEach((a:any,i:number)=>{a.probability=[60,30,10][i];a.evidenceIds=['e1'];});
+  if(kind==='sum')r.pathwayAssessment[0].probability=70;
+  if(kind==='partial-overflow'){r.pathwayAssessment[0].probability=80;r.pathwayAssessment[2].probability=null;}
+  if(kind==='duplicate')r.pathwayAssessment[0].pathway='willed';
+  if(kind==='missing-ref')r.pathwayAssessment[0].evidenceIds=['unknown'];
+  expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
+ });
+ it("keeps known probabilities when wildcard is unknown",()=>{
+  const r=current();r.pathwayAssessment.forEach((a:any,i:number)=>{a.probability=[60,30,null][i];a.evidenceIds=['e1'];});
+  r.scenarios[0].probability=25;
+  expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].probability).toBe(25);
+ });
+ it("allows a grounded scenario estimate when its broader pathway is unknown",()=>{
+  const r=current();r.scenarios[0].probability=20;
+  expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].probability).toBe(20);
+ });
+});

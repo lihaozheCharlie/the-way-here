@@ -65,11 +65,19 @@ it("preserves actions when optional notes are empty and omits the removed legacy
    const old = structuredClone(report);
    delete old.scenarios[0].pathway;
    const html = renderToStaticMarkup(<MemoryRouter><LifeScenarios report={old}/></MemoryRouter>);
-   expect(html).toContain("走法 · 尚未说明");
+   expect(html).toContain("走法 · 旧版未记录");
  });
 
 it.each([["inertia","按惯性走"],["willed","按意愿改变"],["wildcard","小概率事件"]])("renders %s as a readable edge label",(pathway,label)=>{
   const r=structuredClone(report);r.scenarios[0].pathway=pathway;
   const html=renderToStaticMarkup(<MemoryRouter><LifeScenarios report={r}/></MemoryRouter>);
   expect(html).toContain(`走法 · ${label}`);
+});
+
+it("omits the redundant pathway assessment disclosure",()=>{
+ const r=structuredClone(report);
+ r.pathwayAssessment=[{pathway:"inertia",probability:60,reason:"过去在压力下倾向维持现有安排。",evidenceIds:[r.evidence[0].id],counterEvidence:["近期开始尝试新的安排。"]}];
+ const html=renderToStaticMarkup(<MemoryRouter><LifeScenarios report={r}/></MemoryRouter>);
+ expect(html).not.toContain("为什么更可能这样走");
+ expect(html).not.toContain(r.pathwayAssessment[0].reason);
 });

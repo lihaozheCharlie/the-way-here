@@ -9,5 +9,5 @@ export const navigation = [
     { to: "/letters", label: "近况回信", active: ["/letters"] },
     { to: "/relationships", label: "人与世界", active: ["/relationships"] },
   ] },
-  { to: "/predict-self", label: "预测自己", icon: "spark", active: ["/predict-self"], children: [] },
+  { to: "/predict-self", label: "看见未来", icon: "spark", active: ["/predict-self"], children: [] },
 ] as const;

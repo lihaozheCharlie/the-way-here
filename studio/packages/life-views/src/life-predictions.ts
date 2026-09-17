@@ -8,7 +8,7 @@ export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id
   const list = (v: any, min=0, max=10) => Array.isArray(v) && v.length >= min && v.length <= max;
   const strings = (v: any, min=0, max=10) => list(v,min,max) && v.every((s: any)=>str(s));
   const four = (v: any) => list(v,4,4) && new Set(v.map((d: any)=>d?.id)).size === 4 && ["health","love","play"].every(id=>v.some((d:any)=>d?.id===id)) && v.every((d: any)=>dimensions.includes(d?.id));
-  if (r?.version !== 5 || !str(r.summary,100) || !str(r.horizon,50) || !str(r.current,24) || !four(r.dimensions) || !list(r.evidence,0,40) || !list(r.scenarios,0,5) || !strings(r.gaps) || !strings(r.tensions) || !strings(r.changes) || !["independent","exclusive"].includes(r.probabilityMode) || !str(r.probabilityScope)) fail();
+  if (r?.version !== 5 || !str(r.summary,100) || !str(r.horizon,50) || !str(r.current,24) || !four(r.dimensions) || !list(r.evidence,0,40) || !list(r.scenarios,0,5) || !strings(r.gaps) || !strings(r.tensions) || (r.changes !== undefined && !strings(r.changes)) || !["independent","exclusive"].includes(r.probabilityMode) || !str(r.probabilityScope)) fail();
   const modern = options.requirePresentation || r.presentationVersion !== undefined;
   const fieldError = (field: string): never => { throw new Error(`预测结果的 ${field} 字段缺失或格式不正确，请重新预测`); };
   if (modern && r.presentationVersion !== 1) fieldError("presentationVersion");
@@ -24,7 +24,23 @@ export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id
     evidenceIds.add(e.id);
   }
   const refs = (ids: any, min=0) => strings(ids,min,12) && new Set(ids).size===ids.length && ids.every((id: string)=>evidenceIds.has(id));
-  for (const d of r.dimensions) if (!str(d.current) || !str(d.desired) || !strings(d.constraints,0,5) || !refs(d.evidenceIds) || d.evidenceIds.some((id:string)=>r.evidence.find((e:any)=>e.id===id)?.kind==="hypothesis")) fail();
+  if (r.pathwayAssessment !== undefined) {
+    const assessments = r.pathwayAssessment;
+    const percent = (v:any) => Number.isInteger(v) && v >= 0 && v <= 100 && v % 5 === 0;
+    if (!list(assessments,3,3) || new Set(assessments.map((a:any)=>a?.pathway)).size !== 3 || assessments.some((a:any)=>!["inertia","willed","wildcard"].includes(a?.pathway) || !(a.probability === null || percent(a.probability)) || !str(a.reason) || !refs(a.evidenceIds,a.probability === null ? 0 : 1) || !strings(a.counterEvidence,0,5))) fieldError("pathwayAssessment（走法评估）");
+    const known = assessments.filter((a:any)=>a.probability !== null);
+    if (known.reduce((sum:number,a:any)=>sum+a.probability,0) > 100 || (known.length === 3 && known.reduce((sum:number,a:any)=>sum+a.probability,0) !== 100)) fieldError("pathwayAssessment.probability（已知走法合计不超过100，全部已知时合计100）");
+    for (const scenario of r.scenarios) {
+      const assessment = assessments.find((a:any)=>a.pathway === scenario?.pathway);
+      if (!assessment || (scenario.probability !== null && (assessment.probability !== null && scenario.probability > assessment.probability))) fieldError("scenario.probability（不能超过对应走法权重）");
+    }
+  }
+  for (const d of r.dimensions) {
+    if (!str(d.current) || !str(d.desired) || !strings(d.constraints,0,5) || !refs(d.evidenceIds)) fieldError(`dimensions.${d.id}`);
+    if (d.evidenceIds.some((id:string)=>r.evidence.find((e:any)=>e.id===id)?.kind === "hypothesis")) {
+      throw new Error(`当前${d.id}维度引用了假设证据；假设只能用于未来情景，不能作为当前状态依据`);
+    }
+  }
   if (!r.scenarios.length && !r.gaps.length) fail();
   const ids = new Set(), titles = new Set();
   for (const s of r.scenarios) {

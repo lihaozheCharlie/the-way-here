@@ -92,6 +92,7 @@ export interface LifeScenario {
 }
 export interface LifePredictionReport {
   presentationVersion?: 1;
+  pathwayAssessment?: Array<{ pathway: PredictionPathway; probability: number | null; reason: string; evidenceIds: string[]; counterEvidence: string[] }>;
   version: 5;
   summary: string;
   horizon: string;
@@ -103,6 +104,7 @@ export interface LifePredictionReport {
   scenarios: LifeScenario[];
   gaps: string[];
   tensions: string[];
-  changes: string[];
+  /** Legacy reports only; no longer generated. */
+  changes?: string[];
 }
 export type PredictionArchive = PredictionReport | LifePredictionReport;

@@ -241,3 +241,7 @@ v5以一组scenarios替代两组独立职业/生活树。四维health/work/play/
 预测页连接关系：v5 的 `LifeScenario.pathway?: string` 是从当前状态到该未来情景的边属性（非空、最多40字，服务端验证）。新生成报告明确输出走法，旧报告缺失时显示“尚未说明”，不从标题推断。前端展示全部返回情景，超过三条可横向浏览；沿用0至5条的报告校验上限，数量不固定。每条边的走法通过可访问描述关联到对应未来按钮，选择节点联动叙事与四维分析。
 
 新生成的 v5 报告要求 presentationVersion=1；服务端保存前启用 requirePresentation 校验，要求 health/love/play/finance、四阶段、pathway 枚举 inertia/willed/wildcard 及所有维度的 verdict/gainShare/gains/costs/notes、行动维度标签。旧 v5 存档仍可读取。gainShare 为相对收益比重，代价为100减去它，未知必须显式null。共享预测 Skill 与 output.md 是生成契约唯一来源，移除服务端追加的冲突指令；Skill 与契约文本参与输入哈希，规则变化会让旧结果标为待更新。结构错误中新增字段缺失会给出字段名，页面失败提示使用黄色边框与浅黄底。匿名新结构样例为 life-prediction-presentation.json。
+
+“看见未来”沿用 /predict-self 路由。预测输入按稳定页面ID排序后计算哈希，避免展示排序造成无效更新。失败时保留上次成功报告，页面明确标为旧版并优先显示失败原因，隐藏重复的普通更新提醒；旧报告缺走法显示“旧版未记录”。当前四维引用假设时返回具体维度的错误，Skill 输出契约明确假设仅可支持未来情景。
+
+看见未来按真实行为、改变条件和偶发暴露推演各情景，直接生成pathway、probability、probabilityReason及证据。新生成不再要求或输出pathwayAssessment、changes，也不向模型传入上版报告做对比；旧存档的可选字段仍兼容读取与校验。情景详情上方以与四维标题相同的样式显示“为什么可能这样走”，不再显示走法评估或变化对比区。五年生活保留概述、一周和取舍，工作与居住细节折叠。想法统一使用文本框，Skill按语义区分事实与假设；旧hypothesis输入未改时保留类型，编辑后按update处理。

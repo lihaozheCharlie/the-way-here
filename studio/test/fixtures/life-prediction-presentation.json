@@ -198,5 +198,36 @@
     "相处时间与工作机会之间的取舍。"
   ],
   "changes": [],
-  "presentationVersion": 1
+  "presentationVersion": 1,
+  "pathwayAssessment": [
+    {
+      "pathway": "inertia",
+      "probability": null,
+      "reason": "只有迁居愿望，实际行为和外部条件仍需了解。",
+      "evidenceIds": [],
+      "counterEvidence": [
+        "尚缺过往选择与持续行动的资料。"
+      ]
+    },
+    {
+      "pathway": "willed",
+      "probability": null,
+      "reason": "只有迁居愿望，实际行为和外部条件仍需了解。",
+      "evidenceIds": [
+        "e1"
+      ],
+      "counterEvidence": [
+        "尚缺过往选择与持续行动的资料。"
+      ]
+    },
+    {
+      "pathway": "wildcard",
+      "probability": null,
+      "reason": "只有迁居愿望，实际行为和外部条件仍需了解。",
+      "evidenceIds": [],
+      "counterEvidence": [
+        "尚缺过往选择与持续行动的资料。"
+      ]
+    }
+  ]
 }
