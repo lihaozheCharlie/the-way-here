@@ -65,4 +65,9 @@ skills:
     path: knowledge-engine/skills/consume/predict-self/SKILL.md
     modes: [read]
     responsibility: "预测自己页面主动触发独立的未来情景、证据链与可验证行动；由 Studio 保存派生档案"
-    triggers: ["预测自己", "重新预测", "五年后的我", "个人未来情景", "扫描 Wiki 了解度", "重新扫描了解度"]
+    triggers: ["预测自己", "重新预测", "五年后的我", "个人未来情景"]
+  - id: consume-scan-understanding
+    path: knowledge-engine/skills/consume/scan-understanding/SKILL.md
+    modes: [read]
+    responsibility: "只读评估 Wiki 对用户的了解程度与证据缺口；由 Studio 计算评分和预测门槛"
+    triggers: ["扫描 Wiki 了解度", "重新扫描了解度", "评估了解程度"]

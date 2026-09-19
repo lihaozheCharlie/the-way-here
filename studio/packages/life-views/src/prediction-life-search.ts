@@ -15,7 +15,7 @@ export function parseLifeSearchPolicy(value: unknown): LifeSearchPolicy {
 }
 
 /** Exhaustive literal recall only. The shared skill decides whose intent a hit expresses. */
-export function searchPredictionLifeEvidence(pages: Array<Pick<WikiPage, "id" | "markdown" | "isSource">>, policy: LifeSearchPolicy) {
+export function searchPredictionLifeEvidence(pages: Array<Pick<WikiPage, "id" | "markdown" | "isSource" | "start" | "end">>, policy: LifeSearchPolicy) {
   const hits = pages.flatMap(page => {
     const lines = page.markdown.split(/\r?\n/).map(line => line.toLowerCase());
     const matches = policy.groups.flatMap(group => group.terms.flatMap(term => {
@@ -25,7 +25,16 @@ export function searchPredictionLifeEvidence(pages: Array<Pick<WikiPage, "id" | 
     }));
     return matches.length ? [{ pageId: page.id, isSource: page.isSource, matches }] : [];
   });
+  const dates=new Map(pages.map(p=>[p.id,p.end||p.start||""]));
+  const candidates = policy.groups.map(group=>{
+    const ranked=hits.filter(h=>h.matches.some(m=>m.groupId===group.id)).sort((a,b)=>(dates.get(b.pageId)||"").localeCompare(dates.get(a.pageId)||"") || b.matches.filter(m=>m.groupId===group.id).length-a.matches.filter(m=>m.groupId===group.id).length || a.pageId.localeCompare(b.pageId));
+    const selected=[...ranked.filter(h=>h.isSource).slice(0,3),...ranked.filter(h=>!h.isSource).slice(0,3)];
+    const ids=new Set(selected.map(h=>h.pageId));
+    for(const hit of ranked){if(ids.size===6)break;ids.add(hit.pageId);}
+    return {groupId:group.id,pageIds:[...ids]};
+  });
   return {
+    candidates,
     policyVersion: policy.version,
     scanned: { sources: pages.filter(p => p.isSource).length, wiki: pages.filter(p => !p.isSource).length },
     groups: policy.groups.map(group => {

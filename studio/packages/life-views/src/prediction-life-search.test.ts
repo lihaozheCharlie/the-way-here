@@ -32,3 +32,10 @@ describe("life evidence recall", () => {
     }
   });
 });
+
+it("bounds the reading shortlist while retaining both source kinds and all full hits",()=>{
+ const pages=Array.from({length:20},(_,i)=>({id:`p${i}`,markdown:"搬家",isSource:i<10,start:i===0?"2026-01-01":"2020-01-01"}));
+ const result=searchPredictionLifeEvidence(pages,policy);
+ const ids=result.candidates.find(g=>g.groupId==="home")!.pageIds;
+ expect(ids).toHaveLength(6);expect(ids).toContain("p0");expect(ids.filter(id=>pages.find(p=>p.id===id)!.isSource)).toHaveLength(3);expect(result.hits).toHaveLength(20);
+});

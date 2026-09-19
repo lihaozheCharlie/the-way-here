@@ -1,64 +1,56 @@
-# v5 输出契约
+# 预测输出结构
 
-仅返回 JSON，不带前言或 Markdown 围栏。字段如下，尖括号为说明，不能原样输出。
+仅返回JSON对象，不加围栏。所有下列字段必填，未列出的字段禁止输出。只接受下述结构。顶层不再生成version/gaps/summary/horizon/presentationVersion/pathwayAssessment/changes/tensions/probabilityMode/probabilityScope；情景不再生成lenses/environment/factors/forks；维度不再生成gain/cost。
+
+## 结构
+
+- 根：`current`（40字内），`dimensions`（四维现状），`evidence`，`scenarios`。
+- 现状项：`id`，`current`，`desired`，`constraints`（0—3条），`evidenceIds`（0—8个）。current/desired/constraint各120字内。
+- evidence项：`id`（40字内），`pageId`（1000字符内），`quote`（8—200字符连续原文），`cue`（40字内），`interpretation`（100字内），`kind`（fact/wish/plan/action/outcome/hypothesis），`dimensions`（1—4个维度ID）。最多20条，ID及同来源同引文不重复。
+- 情景项字段如下（尖括号说明不能原样输出）：
 
 ```json
 {
-  "version":5,
-  "presentationVersion":1,
-  "summary":"<100字内供后续讨论使用，页面不展示空泛引言>",
-  "horizon":"未来五年",
-  "current":"<24字内当前处境>",
-  "dimensions":[{"id":"health","current":"<当前事实或未知>","desired":"<明确愿望或未知>","constraints":["<限制或不愿牺牲的东西>"],"evidenceIds":["e1"]}],
-  "evidence":[{"id":"e1","kind":"wish","dimensions":["health"],"pageId":"<冻结页面ID>","cue":"<40字内线索>","quote":"<8—240字符连续原文>","interpretation":"<100字内与推演的联系及边界>"}],
-  "probabilityMode":"independent",
-  "probabilityScope":"<180字内说明范围与是否依赖用户假设；可并存的情景不相加>",
-  "scenarios":[{
-    "pathway":"willed",
-    "id":"s1","title":"<6—14字直白的主要生活选择，最多20字>","probability":null,"probabilityReason":"<180字内估计依据或无法估计的原因>","confidence":"low",
-    "week":"<约80—120字，第4—5年的普通一周>",
-    "lenses":{"work":"<约40—60字工作安排>","life":"<约40—60字生活概述>"},
-    "environment":"<约40—60字居住及环境条件>",
-    "choice":"<约30—50字主要获得与代价>",
-    "dimensions":[{"id":"health","future":"<140字内未来状态或未知>","gain":"<90字内得到什么或未知>","cost":"<90字内代价或未知>","verdict":{"label":"<20字内结论>","tone":"mixed"},"gainShare":null,"gains":["<收益短语或未知>"],"costs":["<代价短语或未知>"],"notes":[{"kind":"condition","title":"<80字内前提>","detail":"<240字内具体解释>"}]}],
-    "evidenceIds":["e1"],"assumptions":["<成立条件>"],
-    "stages":[
-      {"period":"months0_3","change":"<近期探索>","condition":"<继续条件>"},
-      {"period":"months3_12","change":"<验证安排>","condition":"<继续条件>"},
-      {"period":"years1_3","change":"<调整与积累>","condition":"<继续条件>"},
-      {"period":"years3_5","change":"<具体生活状态>","condition":"<维持条件>"}
-    ],
-    "factors":[{"label":"<30字内因素>","direction":"support","strength":1,"mechanism":"<140字内怎样影响>"}],
-    "counterEvidence":["<具体反例或检索局限>"],"unknowns":["<尚未知>"],
-    "actions":[{"action":"<140字内一步实验>","observation":"<140字内看什么反馈>","reviewAfter":"<30字内回看时间>","dimensions":["health"]}],
-    "forks":[{"condition":"<140字内真实分岔条件>","then":"<条件成立时>","otherwise":"<不成立时>"}]
+  "id":"s1",
+  "title":"<20字内具体生活去向>",
+  "pathway":"inertia",
+  "probability":null,
+  "probabilityBasis":"overall",
+  "probabilityCondition":null,
+  "probabilityReason":"<180字内判断依据或具体缺口>",
+  "confidence":"low",
+  "overview":"<80字内生活概述>",
+  "week":"<140字内普通一周>",
+  "choice":"<70字内主要取舍>",
+  "dimensions":[{
+    "id":"health",
+    "future":"<100字内未来状态>",
+    "verdict":{"label":"<20字内结论>","tone":"mixed"},
+    "gainShare":null,
+    "gains":["<60字内收益或缺口>"],
+    "costs":["<60字内代价或缺口>"],
+    "notes":[{"kind":"condition","title":"<40字内前提>","detail":"<100字内说明>"}]
   }],
-  "gaps":["<覆盖缺口>"],"tensions":["<跨情景的资源或价值矛盾>"]
+  "evidenceIds":["e1"],
+  "assumptions":["<120字内条件>"],
+  "counterEvidence":[],
+  "unknowns":[],
+  "stages":[
+    {"period":"months0_3","change":"<80字内变化>","condition":"<80字内条件>"},
+    {"period":"months3_12","change":"<80字内变化>","condition":"<80字内条件>"},
+    {"period":"years1_3","change":"<80字内变化>","condition":"<80字内条件>"},
+    {"period":"years3_5","change":"<80字内变化>","condition":"<80字内条件>"}
+  ],
+  "actions":[{"action":"<80字内可逆试验>","observation":"<80字内反馈>","reviewAfter":"<30字内回看时间>","dimensions":["health"]}]
 }
 ```
 
-顶层 dimensions 与每条 scenarios.dimensions 都必须恰好包含 health/love/play/finance 四个唯一ID，示例仅展示一个字段形状。每个情景四阶段必须按例子顺序完整提供。所有引用ID需对应顶层 evidence，不能重复堆同一事件；顶层最多40条证据，各引用列表最多12个唯一ID，每条情景至少一个。
+## 校验边界
 
-情景最多5条，不足3条说明 gaps；0条时 gaps 必须非空。情景ID和标题唯一。probability 为 null 或0—100且是5的倍数。exclusive 模式每条必须有数值且总和100，independent 不要求和为100。
-
-current/desired、probabilityReason、scope、其余普通字符串最多180字符；id最多40字符；stage.change/condition、fork各字段最多140字符。constraints最多5条；assumptions为1—8条；counterEvidence最多5条；unknowns最多8条；actions为1—3条；forks为0—2条；factors为1—5条，direction仅support/risk、strength仅1/2/3。每个非空文本必须具体、必要，未知可以明确写“资料不足，尚不清楚”。证据kind仅fact/wish/plan/action/outcome/hypothesis，dimensions为四维中1—4个唯一ID。confidence仅low/medium/high。actions[].dimensions必须给出，为四维中1—4个唯一ID，标注该实验主要验证或推动哪些维度。
-
-
-## 页面展示字段（新生成报告必填）
-
-`presentationVersion` 固定为1。`pathway` 仅允许 `inertia`（按惯性走）、`willed`（按意愿改变）、`wildcard`（小概率事件），不可输出中文或自定义走法；具体行动和偶发条件放入 assumptions、stages、notes。每条未来各自标注，不要求三类齐全，不限制为三个未来。
-
-每个情景的四个维度均须显式包含 verdict、gainShare、gains、costs、notes，同时保留 future/gain/cost。verdict.label 为1—20字符，tone仅up/mixed/down。gainShare 为0—100整数或null：收益相对代价比重，代价由100减去收益得出，不是发生概率。null 时 gain/cost 写明缺少什么信息，不能省略字段或为了图表编造比例。gains/costs 各1—5条非空短语，每条不超过180字符；notes 为0—8条，kind仅action/condition/risk，title不超过80字符、detail不超过240字符。行动 notes 与 actions 应保持一致，不重复堆叠。
-
-旧存档缺少展示字段、使用work维度或三阶段仅用于兼容读取；本次生成不得沿用旧结构。
-
-当前状态与条件推演的引用必须分开：顶层 dimensions[].evidenceIds 不得引用 kind=hypothesis 的证据（即使该维度同时包含 desired）；假设只能被 scenarios[].evidenceIds 引用，并在 assumptions 中写明成立条件。不能为通过校验把假设改成 fact 或 wish。交付前逐个检查顶层维度的引用类型，缺少实际依据时保持未知并用空引用数组。
-
-
-## 精简生成
-
-不再生成 pathwayAssessment 或 changes，不做上版报告对比。每条情景仍须填写 pathway、probability、probabilityReason 和证据。概率直接依据行为、约束及改变条件判断，不依赖三类走法总权重；某条未知不强制其他情景未知。标题遵循Skill命名规则，用常用词直说主要选择，不能堆叠多项日常活动。
-
-五年生活文风与篇幅遵循Skill的“表达”段：life约40—60字，week约80—120字，choice约30—50字，work/environment各约40—60字。简短、具体、亲和，各字段不重复。
-
-模板中的null仅演示未知值的类型，不是默认答案；必须逐条依据资料填写概率与四维占比，不能照抄模板为空。
+1. 顶层和每条情景的dimensions都必须恰好包含health/work/play/love，ID不重复；证据和行动也只能用这四个ID。财务归health。上面维度示例仅展示一个，实际必须补齐四个。
+2. scenarios为0—5条，ID和标题唯一；有情景时至少一条wildcard；没有可引用个人处境时允许空数组。每条引用1—8个存在的证据ID；当前状态引用不得指向hypothesis。
+3. pathway仅inertia/willed/wildcard。probability为0—100的5的倍数或null。probabilityBasis仅overall/conditional：overall的probabilityCondition必须null；conditional必须填写1—120字条件。各情景不强制合计100。null不是默认答案。
+4. confidence仅low/medium/high；只有愿望、计划或假设的情景必须low，其他情况按证据充分度判断。
+5. gainShare只允许20/35/50/65/80/null，含义见Skill。gains/costs各1—2条；verdict.tone仅up/mixed/down；notes为0—2条，仅condition/risk，不能包含action。
+6. assumptions为1—3条；counterEvidence和unknowns各0—3条，每条120字内。actions为1—3条；四阶段顺序固定。各引用和维度标签不得重复。
+7. 列表可按上述范围为空，文本字段不能用空字符串代替未知；具体缺口写在对应字段，避免反复“资料不足”。

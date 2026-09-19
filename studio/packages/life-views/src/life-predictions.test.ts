@@ -1,149 +1,20 @@
-import { readFileSync } from "node:fs";
-import { describe,it,expect } from "vitest";
-import {parseLifePredictionReport} from "./life-predictions.js";
+import {readFileSync} from "node:fs";
+import {describe,it,expect} from "vitest";
+import {parseLifePredictionReport,PredictionValidationError,applyPredictionRepairs} from "./life-predictions.js";
 const sample=JSON.parse(readFileSync(new URL("../../../test/fixtures/life-prediction.json",import.meta.url),"utf8"));
-const pages=[{id:"s",markdown:sample.evidence[0].quote}];
-describe("whole-life report boundary",()=>{
-  it("supports one shared scenario, honest unknowns and no forced forks",()=>{
-    const r=parseLifePredictionReport(JSON.stringify(sample),pages);
-    expect(r.scenarios[0].probability).toBeNull();
-    expect(r.scenarios[0].forks).toHaveLength(0);
-    expect(r.dimensions).toHaveLength(4);
-    expect(r.dimensions.map((d)=>d.id).sort()).toEqual(["health","love","play","work"]);
-  });
-  it("keeps finance-related context inside the health dimension", () => {
-    const r = parseLifePredictionReport(JSON.stringify(sample), pages);
-    const health = r.dimensions.find((d) => d.id === "health");
-    expect(health?.current).toContain("收入");
-  });
-  it("does not force coexisting scenarios to sum to 100",()=>{
-    const r=structuredClone(sample);
-    r.scenarios[0].probability=60;
-    r.scenarios.push({...r.scenarios[0],id:"second",title:"另一种生活安排",probability:70});
-    expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios).toHaveLength(2);
-    r.probabilityMode="exclusive";
-    expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
-    r.scenarios[1].probability=40;
-    expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios).toHaveLength(2);
-  });
-  it.each(["quote","missing-dimension","duplicate-evidence","missing-stage","invalid-probability","missing-ref","invalid-action-dimension"])("rejects %s",kind=>{
-    const r=structuredClone(sample);
-    if(kind==="quote") r.evidence[0].quote="没有出现在资料中的事实";
-    if(kind==="missing-dimension") r.scenarios[0].dimensions.pop();
-    if(kind==="duplicate-evidence") r.evidence.push(r.evidence[0]);
-    if(kind==="missing-stage") r.scenarios[0].stages.pop();
-    if(kind==="invalid-probability") r.scenarios[0].probability=43;
-    if(kind==="missing-ref") r.scenarios[0].evidenceIds=["invented"];
-    if(kind==="invalid-action-dimension") r.scenarios[0].actions[0].dimensions=["invalid"];
-    expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
-  });
-  it("keeps an action's tagged dimensions so the path's 'how to get there' is traceable",()=>{
-    const r=parseLifePredictionReport(JSON.stringify(sample),pages);
-    expect(r.scenarios[0].actions[0].dimensions).toEqual(["love"]);
-  });
-  it("accepts actions without a dimensions tag for backward compatibility",()=>{
-    const r=structuredClone(sample);
-    delete r.scenarios[0].actions[0].dimensions;
-    expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).not.toThrow();
-  });
-});
-
-
-describe("progressive dimension contract", () => {
-  const modern = () => {
-    const r = structuredClone(sample);
-    r.dimensions.find((d:any)=>d.id === "work").id = "finance";
-    const dim = r.scenarios[0].dimensions.find((d:any)=>d.id === "work");
-    Object.assign(dim, {id:"finance", verdict:{label:"有得有失",tone:"mixed"}, gainShare:40, gains:["时间自主"], costs:["收入波动"], notes:[{kind:"condition",title:"先确认储备",detail:"确认生活成本是否够用。"}]});
-    r.scenarios[0].stages = ["months0_3","months3_12","years1_3","years3_5"].map(period=>({period,change:"验证生活安排",condition:"条件仍成立"}));
-    return r;
-  };
-  it("accepts independent finance with nested notes and honest proportions", () => {
-    const r = parseLifePredictionReport(JSON.stringify(modern()), pages);
-    expect(r.scenarios[0].dimensions.find(d=>d.id === "finance")?.notes?.[0].kind).toBe("condition");
-  });
-  it.each(["share", "tone", "note", "mismatch"])("rejects invalid presentation field %s", kind => {
-    const r = modern(); const dim = r.scenarios[0].dimensions.find((d:any)=>d.id === "finance");
-    if (kind === "share") dim.gainShare = 101;
-    if (kind === "tone") dim.verdict.tone = "certain";
-    if (kind === "note") dim.notes[0].kind = "unknown";
-    if (kind === "mismatch") dim.id = "work";
-    expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
-  });
-});
-
- describe("scenario pathway compatibility",()=>{
-   it("preserves the edge attribute and accepts older reports without it",()=>{
-     expect(parseLifePredictionReport(JSON.stringify(sample),pages).scenarios[0].pathway).toBe(sample.scenarios[0].pathway);
-     const old=structuredClone(sample); delete old.scenarios[0].pathway;
-     expect(parseLifePredictionReport(JSON.stringify(old),pages).scenarios[0].pathway).toBeUndefined();
-   });
-   it.each(["", " ", 42, null, "路".repeat(41)])("rejects invalid pathway %s",pathway=>{
-     const r=structuredClone(sample); r.scenarios[0].pathway=pathway;
-     expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
-   });
- });
-
-describe("required current presentation",()=>{
-  const modern = () => JSON.parse(readFileSync(new URL("../../../test/fixtures/life-prediction-presentation.json",import.meta.url),"utf8"));
-  it.each(["inertia","willed","wildcard"])("accepts pathway %s and explicit unknown shares",pathway=>{
-    const r=modern();r.scenarios[0].pathway=pathway;
-    expect(parseLifePredictionReport(JSON.stringify(r),pages,{requirePresentation:true}).scenarios[0].dimensions[0].gainShare).toBeNull();
-  });
-  it.each([0,35,100])("preserves known share %s",gainShare=>{
-    const r=modern();r.scenarios[0].dimensions[0].gainShare=gainShare;
-    expect(parseLifePredictionReport(JSON.stringify(r),pages,{requirePresentation:true}).scenarios[0].dimensions[0].gainShare).toBe(gainShare);
-  });
-  it.each(["pathway","verdict","gainShare","gains","costs","notes","stages","revision"])("rejects incomplete %s from new generations",field=>{
-    const r=modern();const s=r.scenarios[0];
-    if(field==="pathway")s.pathway="随便走";
-    else if(field==="stages")s.stages.pop();
-    else if(field==="revision")delete r.presentationVersion;
-    else delete s.dimensions[0][field];
-    expect(()=>parseLifePredictionReport(JSON.stringify(r),pages,{requirePresentation:true})).toThrow();
-  });
-  it("accepts old archives only through compatibility parsing",()=>{
-    expect(()=>parseLifePredictionReport(JSON.stringify(sample),pages)).not.toThrow();
-    expect(()=>parseLifePredictionReport(JSON.stringify(sample),pages,{requirePresentation:true})).toThrow("presentationVersion");
-  });
-});
-
-it("keeps hypothetical evidence out of current dimensions while allowing future scenarios",()=>{
- const r=structuredClone(sample);r.evidence[0].kind="hypothesis";
- r.dimensions.find((d:any)=>d.id === "love").evidenceIds=[r.evidence[0].id];
- expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow("当前love维度引用了假设证据");
- r.dimensions.find((d:any)=>d.id === "love").evidenceIds=[];
- expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].evidenceIds).toContain(r.evidence[0].id);
-});
-
-describe("pathway likelihoods",()=>{
- const current=()=>JSON.parse(readFileSync(new URL("../../../test/fixtures/life-prediction-presentation.json",import.meta.url),"utf8"));
- it("accepts new reports without removed presentation content",()=>{
-  const r=current();delete r.pathwayAssessment;delete r.changes;
-  expect(parseLifePredictionReport(JSON.stringify(r),pages,{requirePresentation:true}).scenarios).toHaveLength(r.scenarios.length);
- });
- it("keeps scenario likelihood within its dominant pathway",()=>{
-  const r=current();r.pathwayAssessment.forEach((a:any,i:number)=>{a.probability=[60,30,10][i];a.evidenceIds=['e1'];});
-  r.scenarios[0].probability=25;
-  expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].probability).toBe(25);
-  r.scenarios[0].probability=35;
-  expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow("不能超过");
- });
- it.each(["sum","partial-overflow","duplicate","missing-ref"])("rejects inconsistent assessment %s",kind=>{
-  const r=current();r.pathwayAssessment.forEach((a:any,i:number)=>{a.probability=[60,30,10][i];a.evidenceIds=['e1'];});
-  if(kind==='sum')r.pathwayAssessment[0].probability=70;
-  if(kind==='partial-overflow'){r.pathwayAssessment[0].probability=80;r.pathwayAssessment[2].probability=null;}
-  if(kind==='duplicate')r.pathwayAssessment[0].pathway='willed';
-  if(kind==='missing-ref')r.pathwayAssessment[0].evidenceIds=['unknown'];
-  expect(()=>parseLifePredictionReport(JSON.stringify(r),pages)).toThrow();
- });
- it("keeps known probabilities when wildcard is unknown",()=>{
-  const r=current();r.pathwayAssessment.forEach((a:any,i:number)=>{a.probability=[60,30,null][i];a.evidenceIds=['e1'];});
-  r.scenarios[0].probability=25;
-  expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].probability).toBe(25);
- });
- it("allows a grounded scenario estimate when its broader pathway is unknown",()=>{
-  const r=current();r.scenarios[0].probability=20;
-  expect(parseLifePredictionReport(JSON.stringify(r),pages).scenarios[0].probability).toBe(20);
- });
+const pages=sample.evidence.map((e:any)=>({id:e.pageId,markdown:e.quote}));
+const parse=(r:any)=>parseLifePredictionReport(JSON.stringify(r),pages);
+describe("current prediction contract",()=>{
+ it("accepts four dimensions, exact quotes and explicit unknowns",()=>{expect(parse(sample)).toEqual(sample);});
+ it.each(["presentationVersion","pathwayAssessment","changes","tensions","summary","domains"])("rejects removed field %s",field=>{expect(()=>parse({...sample,[field]:[]})).toThrow(field);});
+ it.each([undefined,1,6,7,999,"unknown"])("ignores obsolete version metadata %s",version=>{expect(parse({...sample,version,gaps:["旧缺口"]})).toEqual(sample);});
+ it.each(["gain","cost"])("rejects obsolete dimension field %s",field=>{const r=structuredClone(sample);r.scenarios[0].dimensions[0][field]="旧数据";expect(()=>parse(r)).toThrow(field);});
+ it.each(["finance","other"])("rejects non-HWPL dimension %s",id=>{const r=structuredClone(sample);r.dimensions[0].id=id;expect(()=>parse(r)).toThrow("dimensions");});
+ it("keeps overall and conditional probabilities distinct without forcing a sum",()=>{const r=structuredClone(sample);r.scenarios[0].probability=65;const s={...structuredClone(r.scenarios[0]),id:"s2",title:"不同生活",probability:80,probabilityBasis:"conditional",probabilityCondition:"每周能腾出两天"};r.scenarios.push(s);expect(parse(r).scenarios).toHaveLength(3);s.probabilityCondition=null as any;expect(()=>parse(r)).toThrow("probabilityCondition");});
+ it.each([20,35,50,65,80,null])("accepts subjective tradeoff band %s",gainShare=>{const r=structuredClone(sample);r.scenarios[0].dimensions[0].gainShare=gainShare;expect(parse(r).scenarios[0].dimensions[0].gainShare).toBe(gainShare);});
+ it("rejects fake precision and duplicated action notes",()=>{const r=structuredClone(sample);r.scenarios[0].dimensions[0].gainShare=61;expect(()=>parse(r)).toThrow("gainShare");r.scenarios[0].dimensions[0].gainShare=null;r.scenarios[0].dimensions[0].notes=[{kind:"action",title:"做事",detail:"试一试"}];expect(()=>parse(r)).toThrow("kind");});
+ it("rejects hallucinated sources, nonexistent references and hypothetical current facts",()=>{const r=structuredClone(sample);r.evidence[0].pageId="missing";expect(()=>parse(r)).toThrow("quote");r.evidence[0].pageId=sample.evidence[0].pageId;r.scenarios[0].evidenceIds=["missing"];expect(()=>parse(r)).toThrow("evidenceIds");r.scenarios[0].evidenceIds=[r.evidence[0].id];r.evidence[0].kind="hypothesis";r.dimensions[0].evidenceIds=[r.evidence[0].id];expect(()=>parse(r)).toThrow("当前状态不得引用假设");});
+ it("reports multiple exact paths and repairs only identified text leaves",()=>{const r=structuredClone(sample);r.scenarios[0].title="长".repeat(25);r.scenarios[0].week="长".repeat(150);let issues:any[]=[];try{parse(r);}catch(e){expect(e).toBeInstanceOf(PredictionValidationError);issues=(e as PredictionValidationError).issues;}expect(issues.map(i=>i.path)).toEqual(["$.scenarios[0].title","$.scenarios[0].week"]);const fixed=applyPredictionRepairs(JSON.stringify(r),JSON.stringify({repairs:[{path:issues[0].path,value:"回到本地工作"},{path:issues[1].path,value:"平日工作，周末陪家人。"}]}),issues);expect(parseLifePredictionReport(fixed,pages).scenarios[0].probability).toBe(r.scenarios[0].probability);expect(()=>applyPredictionRepairs(JSON.stringify(r),JSON.stringify({repairs:[{path:"$.scenarios[0].probability",value:"100"}]}),issues)).toThrow();});
+ it("requires a random branch but permits an empty report",()=>{const r=structuredClone(sample);r.scenarios=r.scenarios.filter((s:any)=>s.pathway!=="wildcard");expect(()=>parse(r)).toThrow("随机事件");r.scenarios=[];expect(parse(r).scenarios).toEqual([]);});
+ it.each([null,[],{}, {version:6,evidence:[null]}, {version:6,scenarios:[null]}])("fails malformed output with actionable validation errors",r=>{expect(()=>parse(r)).toThrow(PredictionValidationError);});
 });

@@ -7,15 +7,15 @@
 .prediction-page button:disabled { opacity: .6; cursor: wait; }
 .prediction-page button:focus-visible, .prediction-page a:focus-visible, .prediction-page summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 4px; }
 .prediction-page button:hover:not(:disabled) { border-color: var(--accent-primary); }
-.prediction-lock { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; padding: 52px 40px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+.prediction-lock { display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; padding: 60px 40px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
 .prediction-lock h2 { font-size: 23px; margin: 0; }
 .prediction-lock p { max-width: 40ch; margin: 0; color: var(--muted); }
-.prediction-ring { position: relative; width: 148px; height: 148px; }
+.prediction-ring { position: relative; width: 180px; height: 180px; }
 .prediction-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .prediction-ring circle { fill: none; stroke: var(--line); stroke-width: 10; }
 .prediction-ring circle + circle { stroke: var(--accent-primary); stroke-linecap: round; }
 .prediction-ring > div { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.prediction-ring b { font-size: 30px; font-variant-numeric: tabular-nums; }
+.prediction-ring b { font-size: 38px; font-variant-numeric: tabular-nums; }
 .prediction-ring small, .prediction-ring span { color: var(--muted); font-size: 11px; font-weight: 400; }
 .prediction-cta { display: inline-flex; padding: 10px 20px; border: 1px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--paper); font-size: 13px; text-decoration: none; }
 .prediction-score { margin: 32px 0 0; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 12px; }
@@ -269,7 +269,7 @@
 .life-stages h3 { margin: 0 0 4px; font-size: 12.5px; }
 .life-stages p { margin: 0 0 4px; font-size: 12.5px; line-height: 1.65; }
 .life-dimensions { margin: 22px 0; }
-.life-dimensions .dim-row-icon.health, .life-dimensions .dim-row-icon.finance { background: var(--surface-warm, #f3e9df); color: #9f633d; }
+.life-dimensions .dim-row-icon.health, .life-dimensions .dim-row-icon.work { background: var(--surface-warm, #f3e9df); color: #9f633d; }
 .life-dimensions .dim-row-icon.love, .life-dimensions .dim-row-icon.play { background: var(--surface-tinted); color: #2f5c46; }
 .life-dimensions .dim-row-line { display: block; white-space: normal; overflow-wrap: anywhere; }
 .life-dimensions .dim-row-top { flex-wrap: wrap; }
@@ -304,3 +304,22 @@
 .prediction-feedback-jump { position: fixed; right: 28px; bottom: 88px; z-index: 20; padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 12px; }
 
 .prediction-notice.prediction-error { padding: 16px 20px; border: 1px solid #d4ab38; background: #fff4ce; color: #694b0c; font-weight: 550; }
+
+.prediction-wildcard-note { margin: 20px 0 28px; padding: 22px 26px; border: 1px solid var(--accent-attention); background: var(--accent-attention-soft); border-radius: 8px; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1.85; }
+
+.prediction-lock-icon { width: 56px; height: 56px; color: var(--muted); margin: 10px 0; }
+.prediction-lock .prediction-ring { margin-bottom: 12px; }
+.prediction-lock h2 { font-size: 28px; }
+.prediction-lock > p { max-width: 42ch; font-size: 14px; }
+.prediction-lock-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+.prediction-lock-actions > a, .prediction-lock-actions > button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+
+.prediction-ready { padding: 64px 40px 28px; text-align: center; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+.prediction-ready h2 { margin: 0 0 16px; font-size: 28px; }
+.prediction-ready > p { margin: 0 auto 28px; max-width: 42ch; color: var(--muted); }
+.prediction-ready > .prediction-cta { min-height: 48px; padding: 12px 36px; font-size: 16px; margin-bottom: 24px; }
+.prediction-ready-thoughts { max-width: 520px; margin: 8px auto 0; text-align: left; }
+.prediction-ready-thoughts > summary { width: fit-content; margin: auto; color: var(--muted); font-size: 13px; }
+.prediction-ready-thoughts label { display: block; margin: 20px 0 10px; }
+.prediction-ready-thoughts textarea { width: 100%; resize: vertical; font: inherit; }
+.prediction-ready-thoughts p { color: var(--muted); font-size: 12px; }

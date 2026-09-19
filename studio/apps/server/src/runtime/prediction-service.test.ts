@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -14,12 +13,13 @@ import type { AgentRuntimeEnvelope, AgentRuntimeProvider } from "./agent-runtime
 import { PredictionService } from "./prediction-service.js";
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
-const fullReport = JSON.parse(readFileSync(new URL("../../../../test/fixtures/life-prediction-presentation.json",import.meta.url),"utf8"));
-const report = JSON.stringify({...fullReport,evidence:[],scenarios:[],pathwayAssessment:undefined,changes:undefined});
+const fullReport = JSON.parse(readFileSync(new URL("../../../../test/fixtures/life-prediction.json",import.meta.url),"utf8"));
+const report = JSON.stringify({...fullReport,evidence:[],scenarios:[]});
 async function fixture() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-predict-")));
   await writeFile(path.join(root, "the-way-here.config.yaml"), "version: 3\ndefaultKnowledgeBase: demo\nknowledgeBases:\n  demo:\n    paths:\n      wiki: demo/wiki\n      sources: demo/sources\n  other:\n    paths:\n      wiki: other/wiki\n      sources: other/sources\nvalidation:\n  commands: []\n");
   await cp(fileURLToPath(new URL("../../../../../knowledge-engine/skills/consume/predict-self", import.meta.url)), path.join(root, "knowledge-engine/skills/consume/predict-self"), { recursive: true });
+  await cp(fileURLToPath(new URL("../../../../../knowledge-engine/skills/consume/scan-understanding", import.meta.url)), path.join(root, "knowledge-engine/skills/consume/scan-understanding"), { recursive: true });
   await mkdir(path.join(root, "demo/sources"), {recursive:true});
   const folders = ["01 个人主线", "02 人生阶段", "03 关键事件与决策", "04 反复循环", "06 现实系统", "11 状态追踪"];
   for (let i = 0; i < 12; i++) {
@@ -28,7 +28,7 @@ async function fixture() {
     await mkdir(path.join(root, folder), {recursive:true});
     await writeFile(path.join(root, folder, `p${i}.md`), `# 理解 ${i}\n${"一次具体选择与复盘结论。".repeat(15)}\n[[demo/sources/s${i}]]`);
   }
-  const stateFile = path.join(stateRootForVault(root), "predictions", createHash("sha256").update("demo").digest("hex"), "state.json");
+  const stateFile = path.join(root, "demo/predictions/state.json");
   await mkdir(path.dirname(stateFile),{recursive:true});
   await writeFile(stateFile,JSON.stringify({knowledgeBaseId:"demo",status:"idle",assessment:{version:2,score:75,threshold:60,unlocked:true,facets:[]},assessedAt:"2026-09-01T00:00:00Z"}));
   const knowledge = await KnowledgeRuntime.create(root, "demo");
@@ -45,6 +45,49 @@ async function fixture() {
   return { root, knowledge, provider, app, service, start, finish, runtime };
 }
 describe("prediction lifecycle", () => {
+  it("opens the shipped anonymous demo without local runtime or model calls", async () => {
+    const {root,service,start}=await fixture();
+    await cp(fileURLToPath(new URL("../../../../../vault/demo/predictions/state.json", import.meta.url)),path.join(root,"demo/predictions/state.json"));
+    const view=await service.view("demo");
+    expect(view.status).toBe("ready");
+    expect(view.report?.scenarios).toHaveLength(5);
+    expect(view.report?.scenarios.reduce((sum,s)=>sum+(s.probability||0),0)).toBe(100);
+    expect(view.report?.scenarios.find(s=>s.title.includes("新加坡"))?.pathway).toBe("wildcard");
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("routes independent skills and invalidates only the changed assessment rules", async () => {
+    const {root,service,start,finish}=await fixture();
+    const scanSkill=path.join(root,"knowledge-engine/skills/consume/scan-understanding/SKILL.md");
+    const predictionSkill=path.join(root,"knowledge-engine/skills/consume/predict-self/SKILL.md");
+    await writeFile(scanSkill,(await readFile(scanSkill,"utf8"))+"\nSCAN_ONLY_SENTINEL");
+    await writeFile(predictionSkill,(await readFile(predictionSkill,"utf8"))+"\nPREDICTION_ONLY_SENTINEL");
+    await service.scan("demo");
+    const scanPrompt=(start.mock.calls as unknown as Array<[{prompt:string}]>)[0]![0].prompt;
+    expect(scanPrompt).toContain("SCAN_ONLY_SENTINEL");
+    expect(scanPrompt).not.toContain("PREDICTION_ONLY_SENTINEL");
+    const file=path.join(root, "demo/predictions/.runtime/evidence.json");
+    const frozen=JSON.parse(await readFile(file,"utf8"));
+    expect(frozen.lifeSearch).toBeUndefined();
+    const wiki=frozen.catalogue.find((p:any)=>!p.isSource);
+    const scan={version:2,facets:["health","work","play","love"].map(id=>({id,level:3,reason:"具体经历与背景充分",gaps:[],evidence:[{pageId:wiki.pageId,quote:"一次具体选择与复盘结论。"}]}))};
+    finish(1,JSON.stringify(scan));
+    await vi.waitFor(async()=>expect((await service.view("demo")).understanding.scanStatus).toBe("ready"));
+    expect((await service.view("demo")).understanding).toMatchObject({unlocked:true,stale:false});
+    await writeFile(predictionSkill,(await readFile(predictionSkill,"utf8"))+"\n预测规则更新");
+    expect((await service.view("demo")).understanding.stale).toBe(false);
+    await service.request("demo");
+    const predictionPrompt=(start.mock.calls as unknown as Array<[{prompt:string}]>)[1]![0].prompt;
+    expect(predictionPrompt).toContain("PREDICTION_ONLY_SENTINEL");
+    expect(predictionPrompt).not.toContain("SCAN_ONLY_SENTINEL");
+    finish(2);
+    await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
+    await writeFile(scanSkill,(await readFile(scanSkill,"utf8"))+"\n扫描规则更新");
+    const after=await service.view("demo");
+    expect(after.understanding.stale).toBe(true);
+    expect(after.stale).toBe(false);
+  });
+
   it("makes evidence beyond the preview readable and validates its full frozen quote", async () => {
     const {root, service, start, finish, knowledge} = await fixture();
     const quote = "我想将来回到小城与父母常常见面，这是我自己的愿望。";
@@ -54,7 +97,7 @@ describe("prediction lifecycle", () => {
     await service.request("demo");
     const input = (start.mock.calls as unknown as Array<[{prompt:string}]>)[0]![0];
     expect(input.prompt).not.toContain(quote);
-    const file = path.join(stateRootForVault(root), "predictions", createHash("sha256").update("demo").digest("hex"), "evidence.json");
+    const file = path.join(root, "demo/predictions/.runtime/evidence.json");
     expect(input.prompt).toContain(JSON.stringify(file));
     const frozen = JSON.parse(await readFile(file, "utf8"));
     expect(frozen.knowledgeBaseId).toBe("demo");
@@ -73,15 +116,15 @@ describe("prediction lifecycle", () => {
     finish(1, JSON.stringify(result));
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
     const saved = (await service.view("demo")).report;
-    expect(saved?.version === 5 && saved.evidence[0]?.quote).toBe(quote);
+    expect(saved?.evidence[0]?.quote).toBe(quote);
     expect((await service.view("other")).report).toBeUndefined();
-    expect(saved?.version === 5 && saved.scenarios[0]?.pathway).toBe("willed");
+    expect(saved?.scenarios[0]?.pathway).toBe("willed");
     for (let i=0;i<3;i++) expect((await service.view("demo")).stale).toBe(false);
     await service.request("demo");
     delete result.scenarios[0].dimensions[0].gainShare;
     finish(2, JSON.stringify(result));
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("failed"));
-    expect((await service.view("demo")).error).toContain("占比");
+    expect((await service.view("demo")).error).toContain("gainShare");
     expect((await service.view("demo")).report).toEqual(saved);
     const contractFile = path.join(root,"knowledge-engine/skills/consume/predict-self/references/output.md");
     await writeFile(contractFile, (await readFile(contractFile,"utf8")) + "\n更新展示要求。\n");
@@ -118,7 +161,7 @@ describe("prediction lifecycle", () => {
     await service.request("demo","","update");
     const input=(start.mock.calls as unknown as Array<[{prompt:string}]>)[1]![0];
     expect(input.prompt).not.toContain(thoughts);
-    const file=path.join(stateRootForVault(root),"predictions",createHash("sha256").update("demo").digest("hex"),"evidence.json");
+    const file=path.join(root, "demo/predictions/.runtime/evidence.json");
     expect(await readFile(file,"utf8")).not.toContain(thoughts);
     finish(2);
     await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
@@ -142,20 +185,34 @@ describe("prediction lifecycle", () => {
     expect((await service.view("other")).report).toBeUndefined();
     service.close();
     const restarted = new PredictionService(knowledge,provider,app.log);
-    expect((await restarted.view("demo")).report?.summary).toBe("匿名情景");
+    expect((await restarted.view("demo")).report?.current).toBe(fullReport.current);
     restarted.close();
   });
-  it("keeps a v1 report on disk but never exposes its five-tab presentation", async () => {
+  it("rejects incompatible saved structure regardless of version", async () => {
     const {root,service,finish} = await fixture();
     await service.request("demo"); finish();
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
-    const file = path.join(stateRootForVault(root), "predictions", createHash("sha256").update("demo").digest("hex"), "state.json");
-    const state = JSON.parse(await readFile(file, "utf8")); state.report.version = 1;
+    const file = path.join(root, "demo/predictions/state.json");
+    const state = JSON.parse(await readFile(file, "utf8")); state.report = {version:1,current:"旧结构",domains:[]};
     await writeFile(file, JSON.stringify(state));
     const old = await service.view("demo");
-    expect(old).toMatchObject({status:"idle", stale:true});
+    expect(old).toMatchObject({status:"idle", stale:false});
     expect(old.report).toBeUndefined();
     expect(JSON.parse(await readFile(file, "utf8")).report.version).toBe(1);
+  });
+  it("loads structurally valid saved reports with or without obsolete metadata", async () => {
+    const {root,service,finish} = await fixture();
+    await service.request("demo"); finish();
+    await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
+    const file = path.join(root, "demo/predictions/state.json");
+    const state = JSON.parse(await readFile(file,"utf8"));
+    expect(state.report).not.toHaveProperty("version");
+    const expected = structuredClone(state.report);
+    state.report.version = 999; state.report.gaps = ["obsolete"];
+    await writeFile(file,JSON.stringify(state));
+    const view = await service.view("demo");
+    expect(view.status).toBe("ready"); expect(view.report).toEqual(expected);
+    expect(view.report).not.toHaveProperty("version"); expect(view.report).not.toHaveProperty("gaps");
   });
   it("does not rerun when Wiki changes during prediction; waits for another manual request", async () => {
     const {root,service,start,finish,app} = await fixture();
@@ -166,8 +223,8 @@ describe("prediction lifecycle", () => {
     finish(2);
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("failed"));
     expect(start).toHaveBeenCalledTimes(2);
-    expect(await service.view("demo")).toMatchObject({stale:true,report:{summary:"匿名情景"}});
-    expect((await service.view("demo")).error).toContain("Wiki 已更新");
+    expect(await service.view("demo")).toMatchObject({stale:true,report:{current:fullReport.current}});
+    expect((await service.view("demo")).error).toContain("资料或规则已更新");
     const response = await app.inject({method:"POST",url:"/api/predictions/refresh",payload:{knowledgeBaseId:"demo"}});
     expect(response.statusCode).toBe(202);
     await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(3));
@@ -176,7 +233,7 @@ describe("prediction lifecycle", () => {
   });
   it("ignores legacy automatic pending jobs on restart", async () => {
     const {root,service,provider,knowledge,app,start} = await fixture();
-    const file = path.join(stateRootForVault(root), "predictions", createHash("sha256").update("demo").digest("hex"), "state.json");
+    const file = path.join(root, "demo/predictions/state.json");
     await mkdir(path.dirname(file), {recursive:true});
     await writeFile(file, JSON.stringify({knowledgeBaseId:"demo",status:"idle",pending:true}));
     service.close();
@@ -192,7 +249,7 @@ describe("prediction lifecycle", () => {
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
     await service.request("demo");finish(2,"{broken}");
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("failed"));
-    expect((await service.view("demo")).report?.summary).toBe("匿名情景");
+    expect((await service.view("demo")).report?.current).toBe(fullReport.current);
   });
   it("captures a completion emitted before start returns its session reference", async () => {
     const {service,start,finish} = await fixture();
@@ -241,4 +298,33 @@ describe("prediction lifecycle", () => {
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
     coordinator.close();
   });
+});
+
+describe("bounded prediction repair and rule dependencies",()=>{
+ it("repairs only an overlong text leaf once with frozen input",async()=>{
+  const {service,start,finish}=await fixture();
+  await service.request("demo");const candidate=JSON.parse(report);candidate.current="长".repeat(45);finish(1,JSON.stringify(candidate));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2));
+  const call=(start.mock.calls as unknown as Array<[{prompt:string}]>)[1]![0];expect(call.prompt).toContain("局部修复");
+  finish(2,JSON.stringify({repairs:[{path:"$.current",value:"保持现有工作与生活安排"}]}));
+  await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
+  expect((await service.view("demo")).report?.current).toBe("保持现有工作与生活安排");
+ });
+ it("never lets repair replace probability or retries it again",async()=>{
+  const {service,start,finish}=await fixture();await service.request("demo");const candidate=JSON.parse(report);candidate.current="长".repeat(45);finish(1,JSON.stringify(candidate));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2));finish(2,JSON.stringify({repairs:[{path:"$.scenarios[0].probability",value:"100"}]}));
+  await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("failed"));expect(start).toHaveBeenCalledTimes(2);
+ });
+ it("rejects changed frozen rules rather than repairing stale output",async()=>{
+  const {service,start,finish,root}=await fixture();await service.request("demo");
+  const f=path.join(root,"knowledge-engine/skills/consume/predict-self/references/life-search.json");await writeFile(f,(await readFile(f,"utf8"))+"\n");
+  const candidate=JSON.parse(report);candidate.current="长".repeat(45);finish(1,JSON.stringify(candidate));
+  await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("failed"));expect(start).toHaveBeenCalledTimes(1);
+ });
+ it("tracks scan instructions separately from prediction rules and detects thoughts changes",async()=>{
+  const {service,finish,root}=await fixture();await service.request("demo");finish();await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
+  const before=await service.view("demo");const f=path.join(root,"knowledge-engine/skills/consume/scan-understanding/references/understanding.md");await writeFile(f,(await readFile(f,"utf8"))+"\n额外扫描规则。\n");
+  const after=await service.view("demo");expect(after.changeToken).toBe(before.changeToken);expect(after.stale).toBe(false);
+  await service.request("demo","一个新的想法");finish(2,"bad JSON");await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("failed"));expect((await service.view("demo")).stale).toBe(true);
+ });
 });

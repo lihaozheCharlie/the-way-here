@@ -1,76 +1,69 @@
 import type { LifePredictionReport, WikiPage } from "@the-way-here/shared";
-const dimensions = ["health", "work", "play", "love", "finance"];
-/** Validate the readable explanation, not private reasoning or imagined future facts. */
-export function parseLifePredictionReport(text: string, pages: Pick<WikiPage,"id"|"markdown">[], options: { requirePresentation?: boolean } = {}): LifePredictionReport {
-  const r = JSON.parse(text.trim().replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
-  const fail = (): never => {throw new Error("完整生活情景的结构或依据不完整，请重新预测");};
-  const str = (v: any, max = 180) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
-  const list = (v: any, min=0, max=10) => Array.isArray(v) && v.length >= min && v.length <= max;
-  const strings = (v: any, min=0, max=10) => list(v,min,max) && v.every((s: any)=>str(s));
-  const four = (v: any) => list(v,4,4) && new Set(v.map((d: any)=>d?.id)).size === 4 && ["health","love","play"].every(id=>v.some((d:any)=>d?.id===id)) && v.every((d: any)=>dimensions.includes(d?.id));
-  if (r?.version !== 5 || !str(r.summary,100) || !str(r.horizon,50) || !str(r.current,24) || !four(r.dimensions) || !list(r.evidence,0,40) || !list(r.scenarios,0,5) || !strings(r.gaps) || !strings(r.tensions) || (r.changes !== undefined && !strings(r.changes)) || !["independent","exclusive"].includes(r.probabilityMode) || !str(r.probabilityScope)) fail();
-  const modern = options.requirePresentation || r.presentationVersion !== undefined;
-  const fieldError = (field: string): never => { throw new Error(`预测结果的 ${field} 字段缺失或格式不正确，请重新预测`); };
-  if (modern && r.presentationVersion !== 1) fieldError("presentationVersion");
-  if (modern && r.dimensions.some((d:any)=>d.id === "work")) fieldError("dimensions（需包含独立财务维度）");
-  const sources = new Map(pages.map(p=>[p.id,p.markdown]));
-  const evidenceIds = new Set<string>();
-  const quotes = new Set<string>();
-  for (const e of r.evidence) {
-    if (!str(e?.id,40) || evidenceIds.has(e.id) || !str(e.pageId,1000) || !str(e.cue,40) || !str(e.quote,240) || e.quote.trim().length < 8 || !str(e.interpretation,100) || !sources.get(e.pageId)?.includes(e.quote) || !["fact","wish","plan","action","outcome","hypothesis"].includes(e.kind) || !list(e.dimensions,1,4) || new Set(e.dimensions).size !== e.dimensions.length || !e.dimensions.every((d: any)=>dimensions.includes(d) && (!modern || d !== "work"))) fail();
-    const quoteKey = JSON.stringify([e.pageId,e.quote]);
-    if (quotes.has(quoteKey)) fail();
-    quotes.add(quoteKey);
-    evidenceIds.add(e.id);
-  }
-  const refs = (ids: any, min=0) => strings(ids,min,12) && new Set(ids).size===ids.length && ids.every((id: string)=>evidenceIds.has(id));
-  if (r.pathwayAssessment !== undefined) {
-    const assessments = r.pathwayAssessment;
-    const percent = (v:any) => Number.isInteger(v) && v >= 0 && v <= 100 && v % 5 === 0;
-    if (!list(assessments,3,3) || new Set(assessments.map((a:any)=>a?.pathway)).size !== 3 || assessments.some((a:any)=>!["inertia","willed","wildcard"].includes(a?.pathway) || !(a.probability === null || percent(a.probability)) || !str(a.reason) || !refs(a.evidenceIds,a.probability === null ? 0 : 1) || !strings(a.counterEvidence,0,5))) fieldError("pathwayAssessment（走法评估）");
-    const known = assessments.filter((a:any)=>a.probability !== null);
-    if (known.reduce((sum:number,a:any)=>sum+a.probability,0) > 100 || (known.length === 3 && known.reduce((sum:number,a:any)=>sum+a.probability,0) !== 100)) fieldError("pathwayAssessment.probability（已知走法合计不超过100，全部已知时合计100）");
-    for (const scenario of r.scenarios) {
-      const assessment = assessments.find((a:any)=>a.pathway === scenario?.pathway);
-      if (!assessment || (scenario.probability !== null && (assessment.probability !== null && scenario.probability > assessment.probability))) fieldError("scenario.probability（不能超过对应走法权重）");
-    }
-  }
-  for (const d of r.dimensions) {
-    if (!str(d.current) || !str(d.desired) || !strings(d.constraints,0,5) || !refs(d.evidenceIds)) fieldError(`dimensions.${d.id}`);
-    if (d.evidenceIds.some((id:string)=>r.evidence.find((e:any)=>e.id===id)?.kind === "hypothesis")) {
-      throw new Error(`当前${d.id}维度引用了假设证据；假设只能用于未来情景，不能作为当前状态依据`);
-    }
-  }
-  if (!r.scenarios.length && !r.gaps.length) fail();
-  const ids = new Set(), titles = new Set();
-  for (const s of r.scenarios) {
-    if (modern) {
-      if (!["inertia","willed","wildcard"].includes(s?.pathway)) fieldError("pathway（走法）");
-      if (!Array.isArray(s.dimensions) || s.dimensions.some((d:any)=>d?.id === "work")) fieldError("scenario.dimensions");
-      if (!Array.isArray(s.stages) || s.stages.length !== 4) fieldError("stages（四阶段）");
-      for (const d of s.dimensions) {
-        if (!d || !d.verdict || !Object.hasOwn(d,"gainShare") || !Array.isArray(d.gains) || !Array.isArray(d.costs) || !Array.isArray(d.notes)) fieldError(`dimensions.${d?.id ?? "unknown"}（结论、占比、收益、代价与注意点）`);
-      }
-      if (!Array.isArray(s.actions) || s.actions.some((a:any)=>!Array.isArray(a?.dimensions))) fieldError("actions.dimensions");
-    }
-    if (s?.pathway !== undefined && !str(s.pathway,40)) fail();
-    if (!str(s?.id,40) || ids.has(s.id) || !str(s.title,20) || titles.has(s.title) || !(s.probability === null || Number.isInteger(s.probability) && s.probability >= 0 && s.probability <= 100 && s.probability % 5 === 0) || !str(s.probabilityReason) || !["low","medium","high"].includes(s.confidence) || !str(s.week,240) || !str(s.lenses?.work,140) || !str(s.lenses?.life,140) || !str(s.environment,140) || !str(s.choice,90) || !four(s.dimensions) || s.dimensions.some((d:any)=>!r.dimensions.some((current:any)=>current.id===d.id)) || !refs(s.evidenceIds,1) || !strings(s.assumptions,1,8) || !strings(s.counterEvidence,0,5) || !strings(s.unknowns,0,8) || !list(s.actions,1,3) || !list(s.forks,0,2) || !list(s.factors,1,5) || !list(s.stages,3,4)) fail();
-    if (s.confidence !== "low" && s.evidenceIds.every((id:string)=>["wish","plan","hypothesis"].includes(r.evidence.find((e:any)=>e.id===id)?.kind))) fail();
-    ids.add(s.id); titles.add(s.title);
-    for (const d of s.dimensions) if (!str(d.future,140) || !str(d.gain,90) || !str(d.cost,90)) fail();
-    for (const d of s.dimensions) {
-      if (d.verdict !== undefined && (!str(d.verdict?.label,20) || !["up","mixed","down"].includes(d.verdict?.tone))) fail();
-      if (d.gainShare != null && (!Number.isInteger(d.gainShare) || d.gainShare < 0 || d.gainShare > 100)) fail();
-      if (d.gains !== undefined && !strings(d.gains,1,5)) fail();
-      if (d.costs !== undefined && !strings(d.costs,1,5)) fail();
-      if (d.notes !== undefined && (!list(d.notes,0,8) || d.notes.some((n:any)=>!["action","condition","risk"].includes(n?.kind) || !str(n.title,80) || !str(n.detail,240)))) fail();
-    }
-    const periods = s.stages.length === 4 ? ["months0_3","months3_12","years1_3","years3_5"] : ["year1","years2_3","years4_5"];
-    s.stages.forEach((stage: any, i: number)=>{if(stage?.period !== periods[i] || !str(stage.change,140) || !str(stage.condition,140)) fail();});
-    for (const a of s.actions) if (!str(a?.action,140) || !str(a.observation,140) || !str(a.reviewAfter,30) || (a.dimensions !== undefined && (!list(a.dimensions,1,4) || new Set(a.dimensions).size !== a.dimensions.length || !a.dimensions.every((d: any)=>dimensions.includes(d) && (!modern || d !== "work"))))) fail();
-    for (const f of s.forks) if (!str(f?.condition,140) || !str(f.then,140) || !str(f.otherwise,140)) fail();
-    for (const f of s.factors) if (!str(f?.label,30) || !str(f.mechanism,140) || !["support","risk"].includes(f.direction) || ![1,2,3].includes(f.strength)) fail();
-  }
-  if (r.probabilityMode === "exclusive" && r.scenarios.length && (r.scenarios.some((s: any)=>s.probability===null) || r.scenarios.reduce((sum:number,s:any)=>sum+s.probability,0)!==100)) fail();
-  return r;
+export interface PredictionIssue { path: string; message: string; repairable: boolean }
+export class PredictionValidationError extends Error {
+  constructor(public issues: PredictionIssue[]) { super(issues.map(i=>`${i.path}：${i.message}`).join("；")); this.name="PredictionValidationError"; }
+}
+const dimensionIds=["health","work","play","love"];
+/** Fresh output always checks quotes against the frozen corpus. */
+export function parseLifePredictionReport(text:string,pages:Pick<WikiPage,"id"|"markdown">[]):LifePredictionReport {
+ return validateReport(text,pages);
+}
+/** Saved reports were source-checked at creation; validate structure without live-source drift. */
+export function parseStoredLifePredictionReport(text:string):LifePredictionReport {
+ return validateReport(text);
+}
+function validateReport(text:string,pages?:Pick<WikiPage,"id"|"markdown">[]):LifePredictionReport {
+ const issues:PredictionIssue[]=[];
+ const issue=(path:string,message:string,repairable=false)=>{issues.push({path,message,repairable});};
+ let r:any;try{r=JSON.parse(text);}catch{throw new PredictionValidationError([{path:"$",message:"需要纯JSON对象",repairable:false}]);}
+ const obj=(v:any,path:string,keys:string[])=>{if(!v||typeof v!=="object"||Array.isArray(v)){issue(path,"需要对象");return false;}for(const key of Object.keys(v))if(!keys.includes(key))issue(`${path}.${key}`,"不支持的字段");for(const key of keys)if(!Object.hasOwn(v,key))issue(`${path}.${key}`,"缺少字段");return true;};
+ const str=(v:any,path:string,max=120,min=1)=>{if(typeof v!=="string"||v.trim().length<min)issue(path,`需要至少${min}字符的文本`);else if(v.length>max)issue(path,`最多${max}字符`,true);};
+ const arr=(v:any,path:string,min=0,max=4):any[]=>{if(!Array.isArray(v)){issue(path,"需要数组");return [];}if(v.length<min||v.length>max)issue(path,`需要${min}—${max}项`);return v;};
+ const strings=(v:any,path:string,min=0,max=3,len=120)=>arr(v,path,min,max).forEach((x,i)=>str(x,`${path}[${i}]`,len));
+ const en=(v:any,path:string,values:unknown[])=>{if(!values.includes(v))issue(path,`仅允许${values.join("/")}`);};
+ const unique=(v:any[],path:string)=>{if(new Set(v).size!==v.length)issue(path,"不允许重复");};
+ const dims=(v:any,path:string,full=false)=>{const a=arr(v,path,full?4:1,4);unique(a,path);a.forEach((x,i)=>en(x,`${path}[${i}]`,dimensionIds));};
+ // Obsolete metadata carries no meaning and must never gate otherwise valid content.
+ if(r&&typeof r==="object"&&!Array.isArray(r)){delete r.version;delete r.gaps;}
+ if(!obj(r,"$",["current","dimensions","evidence","scenarios"]))throw new PredictionValidationError(issues);
+ str(r.current,"$.current",40);
+ const evidence=arr(r.evidence,"$.evidence",0,20), sources=pages ? new Map(pages.map(p=>[p.id,p.markdown])) : undefined;
+ unique(evidence.map(e=>e?.id),"$.evidence.id");unique(evidence.map(e=>JSON.stringify([e?.pageId,e?.quote])),"$.evidence.quote");
+ evidence.forEach((e,i)=>{const p=`$.evidence[${i}]`;if(!obj(e,p,["id","pageId","quote","cue","interpretation","kind","dimensions"]))return;
+ str(e.id,p+".id",40);str(e.pageId,p+".pageId",1000);str(e.quote,p+".quote",200,8);str(e.cue,p+".cue",40);str(e.interpretation,p+".interpretation",100);en(e.kind,p+".kind",["fact","wish","plan","action","outcome","hypothesis"]);dims(e.dimensions,p+".dimensions");
+ if(sources&&typeof e.quote==="string"&&!sources.get(e.pageId)?.includes(e.quote))issue(p+".quote","引文必须是该冻结来源中的连续原文",sources.has(e.pageId));
+ });
+ const refs=(v:any,path:string,min=0,current=false)=>{const a=arr(v,path,min,8);unique(a,path);a.forEach((id,i)=>{const e=evidence.find(e=>e?.id===id);if(!e)issue(`${path}[${i}]`,"引用不存在");else if(current&&e.kind==="hypothesis")issue(`${path}[${i}]`,"当前状态不得引用假设");});};
+ const current=arr(r.dimensions,"$.dimensions",4,4);dims(current.map(d=>d?.id),"$.dimensions.id",true);
+ current.forEach((d,i)=>{const p=`$.dimensions[${i}]`;if(!obj(d,p,["id","current","desired","constraints","evidenceIds"]))return;str(d.current,p+".current");str(d.desired,p+".desired");strings(d.constraints,p+".constraints");refs(d.evidenceIds,p+".evidenceIds",0,true);});
+ const scenarios=arr(r.scenarios,"$.scenarios",0,5);unique(scenarios.map(s=>s?.id),"$.scenarios.id");unique(scenarios.map(s=>s?.title),"$.scenarios.title");
+ if(scenarios.length>0&&!scenarios.some(s=>s?.pathway==="wildcard"))issue("$.scenarios","须包含一条随机事件情景");
+ scenarios.forEach((s,i)=>{const p=`$.scenarios[${i}]`;if(!obj(s,p,["id","title","pathway","probability","probabilityBasis","probabilityCondition","probabilityReason","confidence","overview","week","choice","dimensions","evidenceIds","assumptions","counterEvidence","unknowns","stages","actions"]))return;
+ str(s.id,p+".id",40);str(s.title,p+".title",20);en(s.pathway,p+".pathway",["inertia","willed","wildcard"]);
+ if(s.probability!==null&&(!Number.isInteger(s.probability)||s.probability<0||s.probability>100||s.probability%5))issue(p+".probability","需要0—100的5的倍数或null");
+ en(s.probabilityBasis,p+".probabilityBasis",["overall","conditional"]);
+ if(s.probabilityBasis==="conditional")str(s.probabilityCondition,p+".probabilityCondition");else if(s.probabilityCondition!==null)issue(p+".probabilityCondition","整体估计的条件字段须为null");
+ str(s.probabilityReason,p+".probabilityReason",180);en(s.confidence,p+".confidence",["low","medium","high"]);
+ str(s.overview,p+".overview",80);str(s.week,p+".week",140);str(s.choice,p+".choice",70);refs(s.evidenceIds,p+".evidenceIds",1);
+ if(s.confidence!=="low"&&Array.isArray(s.evidenceIds)&&s.evidenceIds.every((id:string)=>["wish","plan","hypothesis"].includes(evidence.find(e=>e?.id===id)?.kind)))issue(p+".confidence","只有愿望、计划或假设时必须为low");
+ strings(s.assumptions,p+".assumptions",1);strings(s.counterEvidence,p+".counterEvidence");strings(s.unknowns,p+".unknowns");
+ const ds=arr(s.dimensions,p+".dimensions",4,4);dims(ds.map(d=>d?.id),p+".dimensions.id",true);
+ ds.forEach((d,j)=>{const q=`${p}.dimensions[${j}]`;if(!obj(d,q,["id","future","verdict","gainShare","gains","costs","notes"]))return;
+ str(d.future,q+".future",100);if(obj(d.verdict,q+".verdict",["label","tone"])){str(d.verdict.label,q+".verdict.label",20);en(d.verdict.tone,q+".verdict.tone",["up","mixed","down"]);}en(d.gainShare,q+".gainShare",[20,35,50,65,80,null]);strings(d.gains,q+".gains",1,2,60);strings(d.costs,q+".costs",1,2,60);
+ arr(d.notes,q+".notes",0,2).forEach((n,k)=>{const z=`${q}.notes[${k}]`;if(obj(n,z,["kind","title","detail"])){en(n.kind,z+".kind",["condition","risk"]);str(n.title,z+".title",40);str(n.detail,z+".detail",100);}});
+ });
+ const stages=arr(s.stages,p+".stages",4,4);stages.forEach((t,j)=>{const q=`${p}.stages[${j}]`;if(obj(t,q,["period","change","condition"])){en(t.period,q+".period",[["months0_3","months3_12","years1_3","years3_5"][j]]);str(t.change,q+".change",80);str(t.condition,q+".condition",80);}});
+ arr(s.actions,p+".actions",1,3).forEach((a,j)=>{const q=`${p}.actions[${j}]`;if(obj(a,q,["action","observation","reviewAfter","dimensions"])){str(a.action,q+".action",80);str(a.observation,q+".observation",80);str(a.reviewAfter,q+".reviewAfter",30);dims(a.dimensions,q+".dimensions");}});
+ });
+ if(issues.length)throw new PredictionValidationError(issues);return r;
+}
+/** Repair only the exact text leaves reported by validation. Never replace probabilities or whole reports. */
+export function applyPredictionRepairs(candidate:string,answer:string,issues:PredictionIssue[]):string {
+ if(!issues.length||issues.some(i=>!i.repairable))throw new Error("该错误不能局部修复");
+ const data=JSON.parse(candidate),patch=JSON.parse(answer), allowed=new Set(issues.map(i=>i.path));
+ if(!patch||Object.keys(patch).join()!=="repairs"||!Array.isArray(patch.repairs)||patch.repairs.length!==allowed.size)throw new Error("修复必须覆盖且仅覆盖指定字段");
+ for(const item of patch.repairs){if(!item||Object.keys(item).sort().join()!=="path,value"||!allowed.delete(item.path)||typeof item.value!=="string")throw new Error("修复越过字段边界");
+ const parts=item.path.replace(/^\$\./,"").replace(/\[(\d+)\]/g,".$1").split(".");if(parts.some((k:string)=>["__proto__","prototype","constructor"].includes(k)))throw new Error("非法修复路径");let node=data;for(const k of parts.slice(0,-1))node=node[k];node[parts.at(-1)!]=item.value;
+ }
+ return JSON.stringify(data);
 }

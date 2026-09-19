@@ -1,17 +1,17 @@
 import { useState } from "react";
 import type { LifeDimension, LifePredictionReport, LifeScenario } from "@the-way-here/shared";
 
-const dimensions = ["health", "love", "play", "finance"] as const;
-const labels = { health: "健康", love: "爱 / 关系", play: "玩乐", finance: "财务" };
+const dimensions = ["health", "work", "play", "love"] as const;
+const labels = { health: "健康", love: "爱", play: "娱乐", work: "工作" };
 const noteLabels = { action: "行动", condition: "前提", risk: "警示" };
 
-/** Keep the four marks from the supplied interaction reference, including the two different hearts. */
+/** Health, work, play and love use distinct marks beside their visible labels. */
 function DimensionIcon({ id }: { id: typeof dimensions[number] }) {
   return <span className={`dim-row-icon ${id}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
     {id === "health" && <path d="M12 21s-7.5-4.8-9.6-9.4C.9 8.1 2.6 4.5 6 4.1c2-.2 3.6.9 6 3.4 2.4-2.5 4-3.6 6-3.4 3.4.4 5.1 4 3.6 7.5C19.5 16.2 12 21 12 21Z"/>}
     {id === "love" && <path d="M12 20s-7-4.35-9-8.5C1.5 8 3 5 6.5 5c2 0 3.5 1.3 5.5 3.6C14 5.3 15.5 4 17.5 4 21 4 22.5 8 21 11.5 19 15.65 12 20 12 20Z"/>}
     {id === "play" && <><circle cx="12" cy="12" r="9"/><path d="M9 9h.01M15 9h.01M8 14c1 1.5 2.5 2 4 2s3-.5 4-2"/></>}
-    {id === "finance" && <><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h.01"/></>}
+    {id === "work" && <><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8 6V4h8v2M3 11a22 22 0 0 0 18 0M10 12h4"/></>}
   </svg></span>;
 }
 
@@ -22,23 +22,23 @@ export function DimensionDashboard({ report, scenario }: { report: LifePredictio
     {dimensions.map(id => {
       const current = report.dimensions.find(d => d.id === id);
       const future = scenario?.dimensions.find(d => d.id === id);
-      const notes = (future?.notes ?? []).map(note => ({...note}));
+      const notes: Array<{kind:"condition"|"risk"|"action";title:string;detail:string}> = (future?.notes ?? []).map(note => ({...note}));
       for (const action of scenario?.actions.filter(a => a.dimensions?.includes(id)) ?? []) {
         const detail = `${action.observation} · ${action.reviewAfter}回看`;
         const existing = notes.find(note => note.kind === "action" && note.title === action.action);
         if (existing) existing.detail = `${existing.detail} ${detail}`;
         else notes.push({kind:"action",title:action.action,detail});
       }
-      const gain = future?.gains ?? (future ? [future.gain] : []);
-      const cost = future?.costs ?? (future ? [future.cost] : []);
+      const gain = future?.gains ?? [];
+      const cost = future?.costs ?? [];
       const share = future?.gainShare;
       return <details className="dim-row" key={id} open={expanded === id}>
         <summary className="dim-row-summary" onClick={event => { event.preventDefault(); setExpanded(expanded === id ? null : id); }}>
           <DimensionIcon id={id}/>
           <span className="dim-row-main"><span className="dim-row-top"><b>{labels[id]}</b><span className={`dim-row-verdict ${future?.verdict?.tone ?? "mixed"}`}>{future?.verdict?.label ?? (future ? "收益与代价" : current ? "当前状态" : "待补充")}</span></span>
-            <span className="dim-row-line">{future ? <><span className="up-word">{gain.join("、")}</span> ／ <span className="down-word">{cost.join("、")}</span></> : current?.current ?? "尚无独立财务分析，重新预测后补充"}</span>
+            <span className="dim-row-line">{future ? <><span className="up-word">{gain.join("、")}</span> ／ <span className="down-word">{cost.join("、")}</span></> : current?.current ?? (id === "work" && scenario ? scenario.overview : "重新预测后补充此维度")}</span>
           </span>
-          <span className="dim-row-bar" role="img" aria-label={share == null ? "暂无收益与代价比重" : `收益比重 ${share}%，代价比重 ${100-share}%`}>
+          <span className="dim-row-bar" role="img" aria-label={share == null ? "暂无收益与代价权衡" : `收益权衡 ${share}%，代价权衡 ${100-share}%`}>
             {share != null && <><i className="gain" style={{width:`${share}%`}}/><i className="cost" style={{width:`${100-share}%`}}/></>}
           </span><span className="dim-row-chev" aria-hidden="true">▾</span>
         </summary>
@@ -51,6 +51,6 @@ export function DimensionDashboard({ report, scenario }: { report: LifePredictio
         </div>
       </details>;
     })}
-    <div className="dim-legend"><span><i className="gain"/>绿色 = 收益比重</span><span><i className="cost"/>棕色 = 代价／风险比重</span></div>
+    <div className="dim-legend"><span><i className="gain"/>绿色 = 收益权衡</span><span><i className="cost"/>棕色 = 代价／风险权衡</span></div><p className="dim-transition">五档主观权衡，不是健康或幸福评分；依据不足时留空。</p>
   </section>;
 }

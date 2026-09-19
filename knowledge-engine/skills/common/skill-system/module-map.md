@@ -40,7 +40,9 @@ source:
 |---|---|---|
 | `knowledge-engine/skills/consume/query/SKILL.md` | 严格只读、wiki 优先的查询与综合 | 查询流程 |
 
-| `knowledge-engine/skills/consume/predict-self/SKILL.md` | 冻结证据下的未来情景与校正，Studio 独立保存，不写回 Wiki | 了解程度评分配置、五领域分析链与 JSON 输出契约 |
+| `knowledge-engine/skills/consume/predict-self/SKILL.md` | 冻结证据下的未来情景与校正，Studio 独立保存，不写回 Wiki | 四维生活情景、证据与 JSON 输出契约 |
+
+| `knowledge-engine/skills/consume/scan-understanding/SKILL.md` | 冻结 Wiki 下的了解程度评估，Studio 保存评分与解锁结果 | 四维评估流程、评分配置与 assessment v2 JSON 契约 |
 
 ## 设计说明
 
