@@ -9,7 +9,7 @@ export class StudioEvents {
     }
   }
 
-  connect(request: FastifyRequest, reply: FastifyReply): void {
+  connect(_request: FastifyRequest, reply: FastifyReply): void {
     reply.hijack();
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -20,7 +20,8 @@ export class StudioEvents {
     reply.raw.write("retry: 2000\n\n");
     this.clients.add(reply);
     const keepAlive = setInterval(() => reply.raw.write(": keep-alive\n\n"), 20_000);
-    request.raw.on("close", () => {
+    // The request can finish while this streaming response is still open.
+    reply.raw.on("close", () => {
       clearInterval(keepAlive);
       this.clients.delete(reply);
     });

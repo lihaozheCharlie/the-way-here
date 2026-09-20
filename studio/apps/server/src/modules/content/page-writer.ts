@@ -14,7 +14,10 @@ export class ContentRequestError extends Error {
 }
 
 export class PageWriter {
-  constructor(private readonly knowledge: ContentWorkspace) {}
+  constructor(
+    private readonly knowledge: ContentWorkspace,
+    private readonly onSourceRenamed?: (previousPath: string, storedPath: string) => Promise<void>,
+  ) {}
 
   async createSource(titleValue: string | undefined, folderValue: string | undefined): Promise<WikiPage | undefined> {
     if (!titleValue?.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");
@@ -62,6 +65,12 @@ export class PageWriter {
       if (error?.code !== "ENOENT") throw error;
     }
     await rename(absolutePath, target);
+    try {
+      if (page.isSource) await this.onSourceRenamed?.(page.relativePath, path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"));
+    } catch (error) {
+      await rename(target, absolutePath);
+      throw error;
+    }
     await this.knowledge.index.rebuild();
     const id = pageIdForPath(path.relative(this.knowledge.vaultRoot, target), this.knowledge.index.config);
     const updated = this.knowledge.index.get(id);

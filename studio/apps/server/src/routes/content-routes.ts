@@ -12,7 +12,7 @@ import { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
 import { PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
 
 export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, imports: ImportStore, runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
-  const writer = new PageWriter(knowledge);
+  const writer = new PageWriter(knowledge, (previousPath, storedPath) => imports.renameSource(previousPath, storedPath));
   app.get("/api/health", async () => ({ ok: true, vaultRoot: knowledge.vaultRoot, indexedAt: knowledge.index.lastIndexedAt }));
   app.get("/api/vault", async () => knowledge.vaultInfo(await runtimeCatalog()));
   app.post<{ Body: { name?: string } }>("/api/vault", async (request, reply) => {
