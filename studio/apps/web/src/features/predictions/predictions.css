@@ -170,83 +170,75 @@
 .prediction-thoughts select { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; }
 .prediction-thoughts select:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
 
-/* Single progressive dimension section, matching the supplied interaction reference. */
-  .prediction-page .dim-section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 12px; }
-  .prediction-page .dim-section-head h2 { font-size: 15px; font-weight: 650; font-family: var(--font-body); }
-  .life-dimensions .dim-section-head span { font-size: 11px; color: var(--muted); }
-
-  /* ============================================================ */
-  /* ONE merged dimension accordion — replaces the old duplicated  */
-  /* "quick-read strip" + "detail accordion" pair.                 */
-  /* Level 1 (closed): icon + name + verdict + mini bar + ONE      */
-  /*   compact comparison line  → 脉络, 2 lines total.              */
-  /* Level 2 (open): 现在→未来一行 + 收益/代价短语标签 + 注意点清单 */
-  /*   （仅标题）。                                                  */
-  /* Level 3 (open a note): 该条注意点的完整一句话解释。            */
-  /* ============================================================ */
-  .life-dimensions .dim-row { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; background: var(--paper); }
-  .life-dimensions .dim-row[open] { border-color: #cfc8b3; }
-
-  .life-dimensions .dim-row-summary { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; list-style: none; }
-  .life-dimensions .dim-row-summary::-webkit-details-marker { display: none; }
-  .life-dimensions .dim-row-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: none; }
-  .life-dimensions .dim-row-icon svg { width: 15px; height: 15px; }
-
-  .life-dimensions .dim-row-main { flex: 1; min-width: 0; }
-  .life-dimensions .dim-row-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-  .life-dimensions .dim-row-top b { font-size: 13.5px; font-weight: 650; }
-  .life-dimensions .dim-row-verdict { padding: 1.5px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; }
-  .life-dimensions .dim-row-verdict.up { background: var(--surface-tinted); color: #2f5c46; }
-  .life-dimensions .dim-row-verdict.mixed { background: var(--surface-warm); color: #7a4a2c; }
-  .life-dimensions .dim-row-verdict.down { background: #f3e2dd; color: #92402a; }
-  .life-dimensions .dim-row-line { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .life-dimensions .dim-row-line .up-word { color: #2f5c46; font-weight: 600; }
-  .life-dimensions .dim-row-line .down-word { color: #92402a; font-weight: 600; }
-
-  .life-dimensions .dim-row-bar { flex: none; width: 46px; height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; display: flex; }
-  .life-dimensions .dim-row-bar i { display: block; height: 100%; }
-  .life-dimensions .dim-row-bar i.gain { background: var(--accent-primary); }
-  .life-dimensions .dim-row-bar i.cost { background: var(--accent-attention); }
-
-  .life-dimensions .dim-row-chev { flex: none; color: var(--faint); font-size: 11px; transition: transform .15s ease; }
-  .life-dimensions .dim-row[open] .dim-row-chev { transform: rotate(180deg); }
-
-  .life-dimensions .dim-row-body { padding: 2px 16px 16px; border-top: 1px solid var(--line); }
-
-  .life-dimensions .dim-transition { font-size: 12px; color: var(--muted); padding: 10px 0 12px; line-height: 1.6; }
-  .life-dimensions .dim-transition b { color: var(--ink); font-weight: 600; }
-
-  /* 收益/代价：短语标签而不是段落 */
-  .life-dimensions .dim-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .life-dimensions .dim-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 550; }
-  .life-dimensions .dim-tag svg { width: 9px; height: 9px; flex: none; }
-  .life-dimensions .dim-tag.gain { background: var(--surface-tinted); color: #2f5c46; }
-  .life-dimensions .dim-tag.cost { background: var(--surface-warm); color: #7a4a2c; }
-
-  /* 注意点：默认只显示标题，点开某条才看完整解释 */
-  .life-dimensions .dim-notes-head { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 650; color: var(--ink); margin: 2px 0 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
-  .life-dimensions .dim-notes-head svg { width: 12px; height: 12px; color: var(--accent-primary); flex: none; }
-  .life-dimensions .dim-notes-head span { color: var(--faint); font-weight: 500; }
-
-  .life-dimensions .note-item { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; background: var(--bg); overflow: hidden; }
-  .life-dimensions .note-item:last-child { margin-bottom: 0; }
-  .life-dimensions .note-summary { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; list-style: none; }
-  .life-dimensions .note-summary::-webkit-details-marker { display: none; }
-  .life-dimensions .note-tag { flex: none; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-  .life-dimensions .note-tag.action { background: var(--surface-tinted); color: #2f5c46; }
-  .life-dimensions .note-tag.condition { background: #eef0e6; color: #5b6b53; }
-  .life-dimensions .note-tag.risk { background: var(--surface-warm); color: #7a4a2c; }
-  .life-dimensions .note-title { flex: 1; font-size: 11.5px; font-weight: 600; color: var(--ink); }
-  .life-dimensions .note-chev { flex: none; color: var(--faint); font-size: 10px; }
-  .life-dimensions .note-item[open] .note-chev { transform: rotate(180deg); }
-  .life-dimensions .note-detail { padding: 0 10px 10px 27px; font-size: 11.5px; color: var(--muted); line-height: 1.65; }
-
-  .life-dimensions .dim-legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 12px 2px 0; font-size: 10.5px; color: var(--muted); }
-  .life-dimensions .dim-legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .life-dimensions .dim-legend i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
-  .life-dimensions .dim-legend i.gain { background: var(--accent-primary); }
-  .life-dimensions .dim-legend i.cost { background: var(--accent-attention); }
-
+/* Dimension cards follow the supplied timeline, factors and action-step reference. */
+.life-dimensions { --dim-good-ink: #145a48; --dim-risk-ink: #7a4515; margin: 24px 0; }
+.prediction-page .dim-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.prediction-page .dim-section-head h2 { margin: 0; font-size: 18px; }
+.life-dimensions .dim-section-head > span { font-size: 12px; color: var(--muted); }
+.life-dimensions .dim-row { border: 1px solid var(--line); border-radius: 18px; margin-bottom: 16px; overflow: hidden; background: var(--paper); }
+.life-dimensions .dim-row-summary { display: flex; align-items: center; gap: 16px; padding: 22px 26px; cursor: pointer; list-style: none; }
+.life-dimensions summary::-webkit-details-marker { display: none; }
+.life-dimensions .dim-row-summary:hover { background: var(--surface-subtle); }
+.life-dimensions .dim-row-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none; background: var(--surface-tinted); color: var(--dim-good-ink); }
+.life-dimensions .dim-row-icon svg { width: 22px; height: 22px; }
+.life-dimensions .dim-row-main { flex: 1; min-width: 0; }
+.life-dimensions .dim-row-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.life-dimensions .dim-row-top > b { font-size: 20px; font-family: var(--font-display); }
+.life-dimensions .dim-row-verdict { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.life-dimensions .dim-row-verdict i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
+.life-dimensions .dim-row-verdict.up { background: var(--surface-tinted); color: var(--dim-good-ink); }
+.life-dimensions .dim-row-verdict.mixed, .life-dimensions .dim-row-verdict.down { background: var(--accent-attention-soft); color: var(--dim-risk-ink); }
+.life-dimensions .dim-row-line { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13px; line-height: 1.65; color: var(--muted); }
+.life-dimensions .dim-row-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.life-dimensions .dim-row-bar { width: 140px; height: 6px; border-radius: 999px; overflow: hidden; display: flex; background: var(--line); }
+.life-dimensions .gain { --factor-color: var(--dim-good-ink); --factor-bg: var(--surface-tinted); }
+.life-dimensions .risk { --factor-color: var(--dim-risk-ink); --factor-bg: var(--accent-attention-soft); }
+.life-dimensions i.gain { background: var(--accent-primary); }
+.life-dimensions i.cost { background: var(--accent-attention); }
+.life-dimensions .dim-balance-labels { display: flex; gap: 12px; }
+.life-dimensions .dim-balance-labels > span { display: inline-flex; align-items: center; gap: 4px; }
+.life-dimensions .dim-balance-labels i { width: 7px; height: 7px; border-radius: 2px; }
+.life-dimensions .dim-balance-labels, .life-dimensions .dim-balance-empty { font-size: 11px; color: var(--muted); }
+.life-dimensions .dim-mark { width: 16px; height: 16px; flex: none; }
+.life-dimensions .dim-row-chev, .life-dimensions .dim-step-chevron { display: flex; flex: none; color: var(--muted); transition: transform .15s ease; }
+.life-dimensions .dim-row[open] > summary .dim-row-chev, .life-dimensions .dim-step[open] .dim-step-chevron { transform: rotate(180deg); }
+.life-dimensions .dim-row-body { border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.life-dimensions .dim-timeline { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; padding: 22px 26px; background: var(--surface-subtle); border-bottom: 1px solid var(--line); }
+.life-dimensions .dim-time-block { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.life-dimensions .dim-time-tag { display: inline-block; padding: 2px 9px; margin-bottom: 8px; border-radius: 6px; background: var(--surface-subtle); color: var(--muted); font-size: 12px; font-weight: 700; }
+.life-dimensions .future .dim-time-tag { background: var(--surface-tinted); color: var(--dim-good-ink); }
+.life-dimensions .dim-time-block p { margin: 0; font-size: 14px; line-height: 1.7; }
+.life-dimensions .dim-time-arrow { display: flex; align-items: center; color: var(--muted); }
+.life-dimensions .dim-factors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+.life-dimensions .dim-factor { padding: 16px 16px 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--factor-bg); }
+.life-dimensions .dim-factor h3 { display: flex; align-items: center; gap: 8px; color: var(--factor-color); margin: 0 0 12px; font: 700 13px var(--font-ui); }
+.life-dimensions .dim-factor ul { list-style: none; margin: 0; padding: 0; }
+.life-dimensions .dim-factor li { display: flex; align-items: flex-start; gap: 9px; padding-bottom: 12px; font-size: 14px; line-height: 1.65; }
+.life-dimensions .dim-factor li > svg { margin-top: 3px; color: var(--factor-color); }
+.life-dimensions .dim-factor-detail { display: block; margin-top: 4px; font-size: 13px; }
+.life-dimensions .dim-factor > p { font-size: 13px; color: var(--factor-color); margin: 0 0 12px; }
+.life-dimensions .dim-actions { padding: 22px 26px 26px; }
+.life-dimensions .dim-actions-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.life-dimensions .dim-actions h3 { margin: 0; font: 700 15px var(--font-ui); }
+.life-dimensions .dim-actions-head span { font-size: 12px; color: var(--muted); font-weight: 400; }
+.life-dimensions .dim-premise { padding: 12px 14px; background: var(--surface-subtle); border: 1px dashed var(--line); border-radius: 10px; font-size: 13px; line-height: 1.7; margin-bottom: 14px; }
+.life-dimensions .dim-premise p { margin: 4px 0 0; color: var(--muted); }
+.life-dimensions .dim-step-list { display: flex; flex-direction: column; gap: 10px; }
+.life-dimensions .dim-step { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.life-dimensions .dim-step.current { border-color: var(--dim-good-ink); }
+.life-dimensions .dim-step-summary { list-style: none; display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; cursor: pointer; }
+.life-dimensions .dim-step-summary:hover { background: var(--surface-subtle); }
+.life-dimensions .dim-step-num { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; flex: none; border-radius: 50%; background: var(--surface-subtle); border: 1px solid var(--line); font-size: 12px; font-weight: 700; }
+.life-dimensions .current .dim-step-num { background: var(--accent-primary); border-color: var(--dim-good-ink); color: var(--paper); }
+.life-dimensions .dim-step-body { flex: 1; min-width: 0; }
+.life-dimensions .dim-step-time { display: inline-block; padding: 2px 7px; margin-bottom: 5px; border-radius: 5px; font-size: 12px; font-weight: 600; color: var(--dim-good-ink); background: var(--surface-tinted); }
+.life-dimensions .dim-step-text { display: block; font-size: 14px; line-height: 1.65; }
+.life-dimensions .dim-step-chevron { margin-top: 5px; }
+.life-dimensions .dim-step-detail { border-top: 1px dashed var(--line); margin: 0; padding: 12px 16px 16px 54px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.life-dimensions .dim-step-detail b { color: var(--ink); }
+.life-dimensions .dim-empty, .life-dimensions .dim-balance-note { font-size: 13px; color: var(--muted); line-height: 1.7; margin: 12px 0 0; }
+.life-dimensions summary:focus-visible, .life-scenario-tree button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) { .life-dimensions .dim-row-chev, .life-dimensions .dim-step-chevron { transition: none; } }
 
 .life-scenario-tree { max-width: none; margin-bottom: 30px; }
 .life-scenario-tree .prediction-root { display: block; border: 1px solid var(--ink); cursor: pointer; font: inherit; }
@@ -270,19 +262,6 @@
 .life-stages li::before { content: ""; position: absolute; left: -18px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-primary); }
 .life-stages h3 { margin: 0 0 4px; font-size: 12.5px; }
 .life-stages p { margin: 0 0 4px; font-size: 12.5px; line-height: 1.65; }
-.life-dimensions { margin: 22px 0; }
-.life-dimensions .dim-row-icon.health, .life-dimensions .dim-row-icon.work { background: var(--surface-warm, #f3e9df); color: #9f633d; }
-.life-dimensions .dim-row-icon.love, .life-dimensions .dim-row-icon.play { background: var(--surface-tinted); color: #2f5c46; }
-.life-dimensions .dim-row-line { display: block; white-space: normal; overflow-wrap: anywhere; }
-.life-dimensions .dim-row-top { flex-wrap: wrap; }
-.life-dimensions .dim-transition { margin: 0; }
-.life-dimensions .dim-tag { white-space: normal; }
-.life-dimensions .note-detail { margin: 0; }
-.prediction-page .dim-section-head { gap: 16px; }
-.life-dimensions .dim-section-head > span { flex: none; }
-.life-dimensions .dim-row-summary:focus-visible, .life-dimensions .note-summary:focus-visible, .life-scenario-tree button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -3px; }
-@media (prefers-reduced-motion: reduce) { .life-dimensions .dim-row-chev { transition: none; } }
-
 /* The way of reaching a future belongs to its connecting edge. */
 .life-scenario-map { overflow-x: auto; padding: 4px 4px 12px; scrollbar-color: var(--line) transparent; }
 .life-scenario-map .life-scenario-tree { max-width: none; min-width: 100%; margin-bottom: 0; }

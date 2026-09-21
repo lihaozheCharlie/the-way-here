@@ -122,6 +122,7 @@ agents:
 - `GET /api/agent-settings`、`PUT /api/agent-settings`：读取或更新工作区级全局 Agent 设置；密钥字段只写不读。
 - `GET /api/pages`、`GET /api/pages/*`：页面列表与正文。
 - `GET /api/sources/folders`：读取当前知识库来源根目录中的可选文件夹；返回相对路径并包含空文件夹，供新建记录、导入等入口复用。
+- `POST /api/sources/folders`：在来源目录或已有子目录内创建空文件夹；校验输入、隐藏目录和真实父路径，重复名称返回冲突，拒绝跨来源目录的符号链接路径。生活记录页创建后刷新目录列表。
 - `DELETE /api/sources/file`、`DELETE /api/sources/folder`：删除当前知识库内的一份生活记录或一个非根文件夹；文件删除带并发检测，文件夹删除受来源根目录边界保护。
 - `GET /api/search`、`GET /api/views/*`：搜索与个人成长派生视图。
 - `PUT /api/pages/*`：编辑当前知识库内的 Wiki 或来源，带并发检测。
@@ -245,3 +246,14 @@ LifePredictionReport 不含版本号，按实际结构校验。读取时忽略�
 各阶段复用同一知识库、冻结输入hash、模型与推理设置，且共享原始20分钟截止时间。私有运行态保存 pipeline 的当前阶段、已验证 outline 和已完成情景；`.runtime/outline.json`、`scenario-1.json` 等带库ID与输入hash保存可审阅阶段产物，旧hash产物不会被下一次任务当作输入。重启可恢复进行中的阶段或两阶段之间的待启动状态；无 pipeline 的旧运行记录仍走原单次报告解析。每阶段至多一次指定文本叶子的修复，修复不能重算概率或替换整份输出。阶段协议 stages.md 纳入预测hash，不影响扫描hash。
 
 PredictionView.progress 返回阅读友好的阶段进度。界面“经历依据”首先展示 probabilityReason：2—3句串联少量关键个人经历、具体去向、阻力与概率；条件概率和未知概率保持明确。原始引文集中在下方一个“查看原文”折叠区，保留完整记录链接；逐条审计式 interpretation 仍留在报告中供核查，不再占据页面主要阅读位置。旧报告直接使用原有 probabilityReason，不伪造或自动重算总结。
+
+
+### Pi 写回与话题会话恢复
+
+Pi 的 `read_file` 在模型可见文本中返回包含 `path`、`content`、`sha256` 的 JSON，替换已有文件必须将读取到的 `sha256` 传入 `write_file.expectedSha256`；并发变更仍拒绝覆盖。Pi 不提供 shell，运行时提示明确由 Studio 在回合结束后按 Run 绑定的知识库执行质量门，模型只能报告已写入、待验证，不能提前报告验证成功。
+
+话题卡片使用稳定的话题 ID 保存为 Run 的 `contextTopicId`，续聊沿用同一运行时会话并继承话题 ID，服务端拒绝在同一会话中切换话题或知识库。再次点击卡片时先读取当前聊天记录，按知识库和话题定位最新会话，再展示完整历史；读取失败时显示错误，不直接降级为新会话。旧记录仅在没有话题绑定且生成的标题、话题背景标记均精确匹配时恢复。删除会话后重新进入可开始新对话。
+
+新对话与续聊输入框统一使用 `AgentComposerSettings`，共享同一份全局设置控制器。续聊发送下一轮前保存并提交所选模型和思考深度，保留原运行时会话及知识库；正在运行的补充仍走 steer，不修改本轮模型。已有会话设置明确提示下一轮生效，并限制切换运行方式，避免将 Codex 与 Pi 会话互相误用。
+
+Agent 对话与模型设置使用独立的 `agent-conversation.css` 表面样式，沿用统一抽屉和全局设置控制器。设置入口打开原生 modal dialog，提供返回、焦点约束、滚动表单和底部应用栏；不移除聊天记录或重新创建会话。任务详情与 `AgentAnswer` 的 Wiki 更新卡片默认折叠。Wiki 附加内容仅从显式 Markdown Wiki 更新/处理标题提取，普通提及和代码块不被隐藏，同级后续正文保持可见；文件变化也可单独生成卡片。卡片写入状态取自 Run 的实际 changes、validation 和 status，而非模型自述。所有提取内容及文件差异在展开后完整可读，不将 UX 示例内容写入真实知识库。

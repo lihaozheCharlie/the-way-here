@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -55,6 +55,17 @@ async function fixture() {
 }
 
 describe("PageWriter source files", () => {
+  it("creates empty source folders and rejects duplicates, invalid input and escaped parents", async () => {
+    const { root, writer } = await fixture();
+    await expect(writer.createSourceFolder("日记/旅行")).resolves.toEqual({ path: "日记/旅行" });
+    expect((await stat(path.join(root, "sources/日记/旅行"))).isDirectory()).toBe(true);
+    await expect(writer.createSourceFolder("日记/旅行")).rejects.toMatchObject({ statusCode: 409 });
+    for (const value of [null, 42, "", "../outside", ".imports/private"]) await expect(writer.createSourceFolder(value)).rejects.toBeInstanceOf(ContentRequestError);
+    await mkdir(path.join(root, "outside"));
+    await symlink(path.join(root, "outside"), path.join(root, "sources/shortcut"));
+    await expect(writer.createSourceFolder("shortcut/escape")).rejects.toMatchObject({ statusCode: 403 });
+  });
+
   it("creates a life-record file without duplicating its filename as a Markdown heading", async () => {
     const { root, writer } = await fixture();
 

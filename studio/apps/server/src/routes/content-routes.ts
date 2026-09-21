@@ -55,6 +55,7 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
   app.get<{ Querystring: { q?: string } }>("/api/search", async (request) => knowledge.index.search(request.query.q || ""));
 
   app.get("/api/sources/folders", async () => listSourceFolders(knowledge));
+  app.post<{ Body: { folder?: unknown } }>("/api/sources/folders", async (request, reply) => handleContent(reply, () => writer.createSourceFolder(request.body?.folder), 201));
   app.post<{ Body: { title?: string; folder?: string } }>("/api/sources", async (request, reply) => handleContent(reply, async () => {
     const page = await writer.createSource(request.body?.title, request.body?.folder);
     if (page) await imports.trackCreatedSource(page);

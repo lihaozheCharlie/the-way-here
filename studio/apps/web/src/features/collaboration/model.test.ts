@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WikiRun } from "@the-way-here/shared";
-import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, contextPrompt, continuationModelSelection, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
 
 describe("collaboration model", () => {
   it("hides photo payloads, including a partial streaming block", () => {
@@ -137,4 +137,35 @@ describe("collaboration model", () => {
     expect(agentContextIdentity(after)).toBe(agentContextIdentity(before));
     expect(agentContextIdentity({ ...before, defaultOutputTarget: { ...target, storedPath: "sources/消费账单/另一段旅程.md" } })).not.toBe(agentContextIdentity(before));
   });
+});
+
+
+describe("topic conversation restoration", () => {
+  const topic = { topicId: "wiki:demo-question", title: "匿名话题", currentUnderstanding: "已有线索", reason: "继续理解" };
+  const first = { id: "first", knowledgeBaseId: "demo", contextTopicId: topic.topicId, runtimeSessionId: "session", createdAt: "2026-09-01", title: "旧标题", prompt: "第一轮" } as WikiRun;
+  const next = { ...first, id: "next", createdAt: "2026-09-02", prompt: "继续聊" };
+  it("reopens the latest turn and retains the full thread even after the topic wording changes", () => {
+    const thread = boundAgentThreadForTopic([next, first], topic, "demo");
+    expect(thread?.latest.id).toBe("next");
+    expect(thread?.runs.map((run) => run.id)).toEqual(["first", "next"]);
+    expect(thread?.id).toBe("session");
+  });
+  it("does not mix libraries, other topics or deleted conversations", () => {
+    expect(boundAgentThreadForTopic([first], topic, "other")).toBeUndefined();
+    expect(boundAgentThreadForTopic([first], { ...topic, topicId: "different" }, "demo")).toBeUndefined();
+    expect(boundAgentThreadForTopic([], topic, "demo")).toBeUndefined();
+  });
+  it("restores legacy generated topic context, but never guesses from title alone", () => {
+    const legacy = { ...first, contextTopicId: undefined, title: `处理：${topic.title}`, prompt: attachedContextPrompt(topic, "匿名经历") };
+    expect(boundAgentThreadForTopic([legacy], topic, "demo")?.latest.id).toBe("first");
+    expect(boundAgentThreadForTopic([{ ...legacy, prompt: "同标题的其他任务" }], topic, "demo")).toBeUndefined();
+    expect(boundAgentThreadForTopic([{ ...legacy, contextTopicId: "different" }], topic, "demo")).toBeUndefined();
+  });
+});
+
+it("uses newly selected models for continuation and preserves the runtime boundary", () => {
+  const run = { runtimeId: "pi", model: "old-model", effort: "low" } as WikiRun;
+  const selected = { runtimeId: "pi" as const, model: "new-model", effort: "high" as const };
+  expect(continuationModelSelection(run, selected)).toEqual(selected);
+  expect(() => continuationModelSelection(run, { ...selected, runtimeId: "codex" })).toThrow("开始新对话");
 });

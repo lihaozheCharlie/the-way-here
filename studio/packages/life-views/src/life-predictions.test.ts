@@ -18,3 +18,12 @@ describe("current prediction contract",()=>{
  it("requires a random branch but permits an empty report",()=>{const r=structuredClone(sample);r.scenarios=r.scenarios.filter((s:any)=>s.pathway!=="wildcard");expect(()=>parse(r)).toThrow("随机事件");r.scenarios=[];expect(parse(r).scenarios).toEqual([]);});
  it.each([null,[],{}, {version:6,evidence:[null]}, {version:6,scenarios:[null]}])("fails malformed output with actionable validation errors",r=>{expect(()=>parse(r)).toThrow(PredictionValidationError);});
 });
+
+it("can repair a wrapped candidate with a wrapped patch while retaining the field allowlist",()=>{
+ const wrap=(value:unknown)=>"说明\n```json\n"+JSON.stringify(value)+"\n```\n结束";
+ const candidate={...structuredClone(sample),current:"长".repeat(181)};
+ const issues=[{path:"$.current",message:"过长",repairable:true}];
+ const fixed=applyPredictionRepairs(wrap(candidate),wrap({repairs:[{path:"$.current",value:sample.current}]}),issues);
+ expect(parseLifePredictionReport(fixed,pages)).toEqual(sample);
+ expect(()=>applyPredictionRepairs(wrap(candidate),wrap({repairs:[{path:"$.scenarios[0].probability",value:"100"}]}),issues)).toThrow("修复越过字段边界");
+});

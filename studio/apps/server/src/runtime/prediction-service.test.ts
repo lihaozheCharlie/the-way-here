@@ -400,3 +400,19 @@ it("repairs only one detail fragment and continues with the next scenario",async
   await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
   expect((await service.view("demo")).report).toEqual(full);
 });
+
+it("completes staged prediction with wrapped JSON and preserves bounded detail repair",async()=>{
+  const {service,start,finish,full}=await stagedFixture();
+  const wrap=(value:unknown)=>`已完成检索。\n\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\`\n以上为当前阶段结果。`;
+  await service.request("demo");finish(1,wrap(outlineOf(full)));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2));
+  finish(2,wrap({...detailOf(full.scenarios[0]),week:"长".repeat(145)}));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(3));
+  finish(3,wrap({repairs:[{path:"$.week",value:full.scenarios[0].week}]}));
+  for(let i=1;i<full.scenarios.length;i++) {
+    await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(i+3));
+    finish(i+3,wrap(detailOf(full.scenarios[i])));
+  }
+  await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
+  expect((await service.view("demo")).report).toEqual(full);
+});

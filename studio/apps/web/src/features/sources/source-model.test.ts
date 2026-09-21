@@ -32,6 +32,7 @@ describe("life record presentation model", () => {
   it("prefers the record date embedded in the source over the file modification time", () => {
     expect(sourceRecordMonth(page({ title: "2024-06-30 离开熟悉轨道" }))).toBe("2024-06");
     expect(sourceRecordMonth(page({ title: "2017，11,20 苟日新" }))).toBe("2017-11");
+    expect(sourceRecordMonth(page({ title: "2026.9.3 一次散步" }))).toBe("2026-09");
   });
 
   it("orders populated months newest first and keeps their counts", () => {

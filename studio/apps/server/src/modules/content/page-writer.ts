@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pageIdForPath } from "@the-way-here/wiki-core";
 import type { WikiPage } from "@the-way-here/shared";
@@ -18,6 +18,28 @@ export class PageWriter {
     private readonly knowledge: ContentWorkspace,
     private readonly onSourceRenamed?: (previousPath: string, storedPath: string) => Promise<void>,
   ) {}
+
+  async createSourceFolder(folderValue: unknown): Promise<{ path: string }> {
+    if (typeof folderValue !== "string" || !folderValue.trim()) throw new ContentRequestError(400, "请输入文件夹名称");
+    let folder: string;
+    try { folder = normalizeSourceFolder(folderValue); }
+    catch { throw new ContentRequestError(400, "文件夹名称无效"); }
+    if (!folder || folder.split(/[\\/]/).some((part) => part.startsWith(".") || part.endsWith(".assert"))) throw new ContentRequestError(400, "请使用普通文件夹名称");
+    const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
+    const target = path.resolve(sourceRoot, folder);
+    if (!isPathInside(sourceRoot, target)) throw new ContentRequestError(403, "文件夹超出生活记录目录");
+    try {
+      const [root, parent] = await Promise.all([realpath(sourceRoot), realpath(path.dirname(target))]);
+      if (parent !== root && !isPathInside(root, parent)) throw new ContentRequestError(403, "文件夹超出生活记录目录");
+      await mkdir(target);
+    } catch (error: any) {
+      if (error?.code === "EEXIST") throw new ContentRequestError(409, "同名文件夹已经存在");
+      if (error?.code === "ENOENT") throw new ContentRequestError(404, "上级文件夹不存在，请刷新后重试");
+      throw error;
+    }
+    this.knowledge.events.broadcast("index", { at: new Date().toISOString(), folder });
+    return { path: folder.split(path.sep).join("/") };
+  }
 
   async createSource(titleValue: string | undefined, folderValue: string | undefined): Promise<WikiPage | undefined> {
     if (!titleValue?.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");

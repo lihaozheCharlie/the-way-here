@@ -4,9 +4,23 @@ export class PredictionValidationError extends Error {
   constructor(public issues: PredictionIssue[]) { super(issues.map(i=>`${i.path}：${i.message}`).join("；")); this.name="PredictionValidationError"; }
 }
 const dimensionIds=["health","work","play","love"];
+/** Accept one unambiguous Markdown wrapper, never guess among multiple payloads. */
+function predictionJsonText(text:string):string {
+ try { JSON.parse(text); return text; } catch { /* Check only the supported wrapper. */ }
+ const fences=[...text.matchAll(/^ {0,3}(`{3,})([^\r\n]*)\r?$/gm)];
+ if(fences.length===2) {
+  const [start,end]=fences;
+  if(start && end && /^(?:json)?\s*$/i.test(start[2]!) && !end[2]!.trim() && start[1]===end[1]) {
+   const body=text.slice(start.index!+start[0].length,end.index).trim();
+   try { JSON.parse(body); return body; } catch { /* Preserve the validation error below. */ }
+  }
+ }
+ throw new PredictionValidationError([{path:"$",message:"需要纯JSON对象",repairable:false}]);
+}
+
 /** Fresh output always checks quotes against the frozen corpus. */
 export function parseLifePredictionReport(text:string,pages:Pick<WikiPage,"id"|"markdown">[]):LifePredictionReport {
- return validateReport(text,pages);
+ return validateReport(predictionJsonText(text),pages);
 }
 /** Saved reports were source-checked at creation; validate structure without live-source drift. */
 export function parseStoredLifePredictionReport(text:string):LifePredictionReport {
@@ -15,10 +29,10 @@ export function parseStoredLifePredictionReport(text:string):LifePredictionRepor
 export type PredictionOutline = Omit<LifePredictionReport,"scenarios"> & {scenarios:Array<Omit<LifeScenario,"week"|"choice"|"dimensions"|"stages"|"actions">>};
 export type PredictionDetail = Pick<LifeScenario,"id"|"week"|"choice"|"dimensions"|"stages"|"actions">;
 export function parsePredictionOutline(text:string,pages:Pick<WikiPage,"id"|"markdown">[]):PredictionOutline {
- return validateReport(text,pages,{outline:true}) as unknown as PredictionOutline;
+ return validateReport(predictionJsonText(text),pages,{outline:true}) as unknown as PredictionOutline;
 }
 export function parsePredictionDetail(text:string,outline:PredictionOutline,index:number,pages:Pick<WikiPage,"id"|"markdown">[]):LifeScenario {
- let detail:any;try{detail=JSON.parse(text);}catch{throw new PredictionValidationError([{path:"$",message:"需要纯JSON对象",repairable:false}]);}
+ let detail:any;try{detail=JSON.parse(predictionJsonText(text));}catch{throw new PredictionValidationError([{path:"$",message:"需要纯JSON对象",repairable:false}]);}
  const fields=["id","week","choice","dimensions","stages","actions"];
  if(!detail||typeof detail!=="object"||Array.isArray(detail)||Object.keys(detail).some(k=>!fields.includes(k))||fields.some(k=>!Object.hasOwn(detail,k)))throw new PredictionValidationError([{path:"$",message:"只允许本情景的id/week/choice/dimensions/stages/actions且均必填",repairable:false}]);
  const planned=outline.scenarios[index];
@@ -76,7 +90,7 @@ function validateReport(text:string,pages?:Pick<WikiPage,"id"|"markdown">[],opti
 /** Repair only the exact text leaves reported by validation. Never replace probabilities or whole reports. */
 export function applyPredictionRepairs(candidate:string,answer:string,issues:PredictionIssue[]):string {
  if(!issues.length||issues.some(i=>!i.repairable))throw new Error("该错误不能局部修复");
- const data=JSON.parse(candidate),patch=JSON.parse(answer), allowed=new Set(issues.map(i=>i.path));
+ const data=JSON.parse(predictionJsonText(candidate)),patch=JSON.parse(predictionJsonText(answer)), allowed=new Set(issues.map(i=>i.path));
  if(!patch||Object.keys(patch).join()!=="repairs"||!Array.isArray(patch.repairs)||patch.repairs.length!==allowed.size)throw new Error("修复必须覆盖且仅覆盖指定字段");
  for(const item of patch.repairs){if(!item||Object.keys(item).sort().join()!=="path,value"||!allowed.delete(item.path)||typeof item.value!=="string")throw new Error("修复越过字段边界");
  const parts=item.path.replace(/^\$\./,"").replace(/\[(\d+)\]/g,".$1").split(".");if(parts.some((k:string)=>["__proto__","prototype","constructor"].includes(k)))throw new Error("非法修复路径");let node=data;for(const k of parts.slice(0,-1))node=node[k];node[parts.at(-1)!]=item.value;

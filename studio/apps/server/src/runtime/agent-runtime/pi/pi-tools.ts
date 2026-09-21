@@ -75,7 +75,7 @@ export function createPiTools(options: {
       execute: async (_callId, params) => {
         const { path: requestedPath } = params as { path: string };
         const result = await access.read(String(requestedPath));
-        return textResult(result.content, { path: result.path, sha256: result.sha256 });
+        return textResult(JSON.stringify(result), { path: result.path, sha256: result.sha256 });
       },
     },
   ];
@@ -83,7 +83,7 @@ export function createPiTools(options: {
     tools.push({
       name: "write_file",
       label: "写入知识文件",
-      description: "创建或完整替换 Wiki/来源目录中的一个文本文件。已有文件必须提供最近 read_file 返回的 expectedSha256。不能修改 AGENTS.md、Skills、Tools 或产品代码。",
+      description: "创建或完整替换 Wiki/来源目录中的一个文本文件。已有文件必须提供最近 read_file 返回的 sha256，填入 expectedSha256 参数。不能修改 AGENTS.md、Skills、Tools 或产品代码。",
       parameters: Type.Object({
         path: Type.String({ minLength: 1 }),
         content: Type.String(),
