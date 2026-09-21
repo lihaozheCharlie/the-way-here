@@ -1,3 +1,4 @@
+import { CaptureRecordStore } from "../modules/content/capture-record-store.js";
 import type { AgentOutputTarget, AgentRunResult, RunFileChange, VaultConfig, WikiRun } from "@the-way-here/shared";
 import type { WikiIndex } from "@the-way-here/wiki-core";
 import { JourneyReportStore, JourneyReportTargetError } from "../modules/imports/journey-report-store.js";
@@ -7,10 +8,12 @@ import { RunRequestError, type StartRunInput } from "./run-request.js";
 
 /** Feature-specific preparation and persistence; never owns task state or runtime selection. */
 export class RunOutputs {
+  private readonly captures: CaptureRecordStore;
   private readonly journeyReports: JourneyReportStore;
   private readonly photoMemories: PhotoMemoryStore;
 
   constructor(vaultRoot: string) {
+    this.captures = new CaptureRecordStore(vaultRoot);
     this.journeyReports = new JourneyReportStore(vaultRoot);
     this.photoMemories = new PhotoMemoryStore(vaultRoot);
   }
@@ -34,6 +37,7 @@ export class RunOutputs {
 
   async prepare(config: VaultConfig, index: WikiIndex, mode: WikiRun["mode"], request: StartRunInput, hasActiveRun: () => Promise<boolean>) {
     const input = { ...request };
+    if (input.outputTarget?.kind === "life-record" && (mode !== "read" || input.sessionId || input.sourceContext)) throw new RunRequestError(400, "快速记录必须使用独立的只读整理任务");
     let photoInput: { images?: Array<{ path: string; mimeType: "image/jpeg" }>; prompt: string } | undefined;
     try {
       if (input.outputTarget?.kind === "photo-memory") {
@@ -75,12 +79,16 @@ export class RunOutputs {
         throw error;
       }
     }
-    return { outputTarget: input.outputTarget, sourceContext: input.sourceContext, ...photoInput, strictReadOnly: input.outputTarget?.kind === "photo-memory" };
+    return { outputTarget: input.outputTarget, sourceContext: input.sourceContext, ...photoInput, strictReadOnly: input.outputTarget?.kind === "photo-memory" || input.outputTarget?.kind === "life-record" };
   }
 
   async materialize(run: WikiRun): Promise<{ result: AgentRunResult; rebuild: boolean }> {
     const target = run.outputTarget;
     const answer = run.result?.finalAnswer || "";
+    if (target?.kind === "life-record") {
+      const saved = await this.captures.materialize(run);
+      return { result: { ...run.result, outputPageId: saved.pageId, outputSavedAt: saved.savedAt, completedAt: saved.savedAt }, rebuild: true };
+    }
     const saved = target?.kind === "photo-memory"
       ? await this.photoMemories.materialize(run.configSnapshot, target, answer)
       : target?.kind === "journey-report"

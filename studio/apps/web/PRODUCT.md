@@ -53,7 +53,7 @@ The friend framing is an experience promise, not a claim of consciousness, emoti
 
 ## Product Layers
 
-1. **At This Moment / 此刻** — the conversational home. It states the relationship promise, then directly asks one traceable question the user may care about or want to clarify. A compact Life Records entry for diaries, conversations, and bills provides the other starting path, followed by compact recent-understanding and keyword previews, with pending-record and unread-letter notices only when applicable. Full collections remain on their secondary pages.
+1. **At This Moment / 此刻** — two simple sections: the product relationship card and a text/voice capture entry. Sending asks the configured model to organize the supplied words, then saves a new Markdown life record with the original words retained. Drafts and running tasks stay bound to the selected knowledge base; failures preserve the draft. Full topics, records, and understanding remain in the sidebar destinations.
 2. **Worth Talking About / 值得聊聊** — a filterable topic grid grown from what is understood and what is still missing, initially showing four topics. Selecting a topic highlights it and opens or restores its conversation in the shared right Inspector. Evidence remains available from each topic.
 3. **Life Records / 生活记录** — the user's original words and evidence. Local files, folders, and supported statements remain readable in full and never become disposable input after processing.
 4. **Existing Understanding / 已有理解** — current themes, stages, patterns, relationships, letters, quotes, and their evidence paths. Every item can be revisited, supplemented, or corrected.

@@ -47,6 +47,7 @@
 .desktop-shell .source-toolbar-right { margin-left:0; flex:1; gap:8px; }
 .desktop-shell .source-toolbar-right .source-global-search { width:170px; min-width:130px; flex:1; }
 .source-toolbar-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.source-toolbar-actions > .desktop-primary { appearance:none; border:0; }
 .source-connections-popover,.source-extra-filters { position:relative; }
 .source-connections-popover > summary { display:grid; place-items:center; width:30px; height:30px; border:1px solid var(--line-strong); border-radius:8px; background:var(--surface); cursor:pointer; }
 .source-connections-popover > summary::-webkit-details-marker { display:none; }

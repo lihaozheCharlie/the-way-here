@@ -150,6 +150,10 @@ export class RunCoordinator {
     });
     this.knowledge.events.broadcast("run", run);
 
+    const earlyEvents: AgentRuntimeEnvelope[] = [];
+    const buffersEarlyEvents = normalizedInput.outputTarget?.kind === "life-record";
+    const stopBuffering = buffersEarlyEvents
+      ? this.runtimes.subscribe(envelope => { if (!this.runByExecution.has(executionKey(envelope.ref))) earlyEvents.push(envelope); }) : () => {};
     try {
       if (mode === "write" || mode === "auto") await this.runs.snapshot(run.id, taskConfig);
       const ref = await selection.runtime.start({
@@ -163,16 +167,22 @@ export class RunCoordinator {
         config: taskConfig,
         sessionId: previous?.runtimeSessionId,
       });
-      this.runByExecution.set(executionKey(ref), run.id);
+      if (!buffersEarlyEvents) this.runByExecution.set(executionKey(ref), run.id);
       const active = await this.runs.update(run.id, {
         runtimeSessionId: ref.sessionId,
         runtimeTurnId: ref.turnId,
         status: "running",
       });
+      if (buffersEarlyEvents) this.runByExecution.set(executionKey(ref), run.id);
       await this.runs.addEvent(run.id, { kind: "agent", method: "turn.started", message: `${runtimeName(selection.runtimeId)} 已开始处理`, payload: { type: "turn.started", sessionId: ref.sessionId, turnId: ref.turnId } });
       this.knowledge.events.broadcast("run", await this.runs.get(run.id));
-      return active;
+      stopBuffering();
+      for (const envelope of earlyEvents) {
+        if (executionKey(envelope.ref) === executionKey(ref)) await this.recordRuntimeEvent(envelope);
+      }
+      return earlyEvents.length ? (await this.runs.get(run.id))! : active;
     } catch (error: any) {
+      stopBuffering();
       const failed = await this.runs.setStatus(run.id, "failed", error.message);
       throw new RunRequestError(500, error.message, failed);
     }

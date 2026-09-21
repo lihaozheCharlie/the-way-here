@@ -21,11 +21,12 @@ try {
   page.on('pageerror', error=>errors.push(error.message));
   await page.waitForLoadState('domcontentloaded');
   const origin=new URL(page.url()).origin;
-  await expect(page.locator('h1')).toContainText('欢迎回来');
+  await expect(page.locator('h1')).toContainText('The Way Here');
   await page.evaluate(()=>localStorage.setItem('desktop.inspector','true'));
   await page.reload();
   await expect(page.locator('.desktop-inspector')).toHaveClass(/is-collapsed/);
-  await expect(page.locator('.today-entry-grid > *')).toHaveCount(3);
+  await expect(page.locator('.today-simple > section')).toHaveCount(2);
+  await expect(page.getByRole('textbox',{name:'此刻的记录'})).toBeVisible();
   for(const width of [1440,1100]) {
     await application.evaluate(({BrowserWindow},width)=>BrowserWindow.getAllWindows()[0].setSize(width,900),width);
     for(const route of ['/','/questions','/sources','/knowledge']) {

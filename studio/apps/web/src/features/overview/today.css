@@ -1,0 +1,25 @@
+.desktop-shell .home-overview.today-simple { display:grid; min-width:0; max-width:760px; margin:12px auto 0; gap:28px; }
+.desktop-shell .today-simple .home-intro-card { display:block; padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--surface-tinted); animation:none; }
+.desktop-shell .today-simple .home-intro-main { gap:16px; }
+.desktop-shell .today-simple .friend-mark { width:40px; height:40px; border:0; border-radius:10px; background:var(--accent-soft); color:var(--accent-primary); }
+.desktop-shell .today-simple .home-intro-identity { display:grid; gap:6px; }
+.desktop-shell .today-simple .home-intro-identity h1 { font-family:var(--font-ui); font-size:22px; }
+.desktop-shell .today-simple .home-intro-identity span { color:var(--ink-soft); font-size:14px; }
+.desktop-shell .today-simple .home-intro-main p { margin:14px 0 0; font-size:13px; line-height:1.8; color:var(--ink-soft); }
+.today-capture { min-width:0; }
+.today-capture h2 { margin:0 0 8px; font-size:17px; font-weight:600; }
+.today-capture > p { margin:0 0 16px; color:var(--ink-soft); }
+.today-composer { border:1px solid var(--line-strong); border-radius:12px; background:var(--surface); overflow:hidden; }
+.today-composer:focus-within { border-color:var(--accent-primary); }
+.today-composer textarea { display:block; width:100%; min-height:150px; padding:18px; border:0; border-radius:0; outline:0; box-shadow:none; background:transparent; resize:vertical; font-size:14px; line-height:1.8; color:var(--ink); }
+/* The composer owns focus; an inner textarea ring would cross the action row. */
+.today-composer .text-control:focus { outline:none; border:0; box-shadow:none; }
+.today-composer textarea::placeholder { color:var(--ink-soft); }
+.today-composer-tools { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:0 14px 14px; }
+.today-composer-tools .capture-voice { flex:1; min-width:180px; margin:0; }
+.today-composer-tools > span { color:var(--ink-soft); }
+.today-composer-tools .desktop-primary { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; min-height:34px; margin-left:auto; border:0; box-shadow:none; }
+.today-capture .today-capture-hint { margin:10px 0 0; color:var(--ink-soft); font-size:12px; }
+.today-capture .today-capture-error { margin-top:16px; color:var(--danger); }
+.today-capture .today-capture-saved { margin-top:16px; color:var(--ink-soft); }
+.today-capture-saved a { display:inline-flex; align-items:center; gap:4px; color:var(--accent-primary); text-decoration:underline; text-underline-offset:3px; }

@@ -344,3 +344,10 @@ Agent 对话与模型设置使用独立的 `agent-conversation.css` 表面样式
 看见未来通过共享 navigation 同时进入侧边栏与命令搜索，页面只发布 PageAgentContext，由桌面 Inspector 承载唯一对话。AgentDock 保留桌面草稿、语音和独立窗口，统一使用 main 的话题恢复、续聊模型选择和 AgentAnswer 更新卡片。生活记录保留连接目录、可收起栏目和编辑器，同时采用记录日期排序、新建文件夹及重命名后的导入关联同步；重命名回调绑定请求开始时的知识库索引。
 
 桌面包分发匿名预测 state.json，排除 predictions/.runtime；托管空间升级仅补齐默认演示路径中缺失的预测结果，不覆盖现有结果或自定义 demo 路径。
+
+
+### 此刻：整理为生活记录
+
+此刻仅呈现产品说明与快速记录输入。文字和桌面语音共用草稿，按知识库隔离保存；发送通过现有 `/api/runs` 发起独立 read 任务，`outputTarget.kind=life-record` 保存输入原话，禁止续接会话与构建上下文。模型使用 strictReadOnly，只返回 Markdown；服务端 CaptureRecordStore 使用 Run 的 configSnapshot 在 sources/随手记新建文件，并登记生活记录。文件名由任务日期与 ID 派生，不接受模型路径；独占创建、不覆盖，恢复同一任务时校验内容并复用。正文区分模型整理与输入原话，成功后 result.outputPageId / outputSavedAt 提供可打开的记录。切换库或离开页面不改变任务归属，失败保留草稿，返回页面通过持久化任务 ID 恢复进度。
+
+原首页话头、摘要和重复导航移出此刻；完整内容仍由侧栏的值得聊聊、生活记录与已有理解访问。

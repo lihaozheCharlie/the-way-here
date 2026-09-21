@@ -35,6 +35,7 @@ export interface AgentRunResult {
   finalAnswer?: string;
   completedAt?: string;
   outputSavedAt?: string;
+  outputPageId?: string;
 }
 
 export interface LetterVersionOutputTarget {
@@ -65,7 +66,13 @@ export interface PhotoMemoryOutputTarget {
   expectedRevision?: number;
 }
 
-export type AgentOutputTarget = LetterVersionOutputTarget | JourneyReportOutputTarget | PhotoMemoryOutputTarget;
+export interface CaptureOutputTarget {
+  kind: "life-record";
+  label: string;
+  originalText: string;
+}
+
+export type AgentOutputTarget = LetterVersionOutputTarget | JourneyReportOutputTarget | PhotoMemoryOutputTarget | CaptureOutputTarget;
 
 export interface WikiRun {
   id: string;
