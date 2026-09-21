@@ -136,7 +136,10 @@
 .prediction-detail-head h2 { font-size: 21px; }
 .prediction-stage .prediction-detail-summary { font-size: 15.5px; line-height: 1.7; font-style: italic; }
 .prediction-stage .prediction-day { font-size: 13px; }
-.prediction-probability-reason { margin-bottom: 18px; font-size: 12px; }
+.prediction-evidence-summary { max-width: 70ch; margin: 4px 0 14px; font-size: 16px; line-height: 1.9; color: var(--ink); }
+.prediction-evidence-estimate, .prediction-evidence-condition { margin: 0 0 14px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+.prediction-evidence-sources { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.prediction-evidence-sources > summary { cursor: pointer; color: var(--accent-primary); font-size: 13px; }
 .prediction-next { font-size: 12.5px; font-weight: 650; color: var(--accent-primary); }
 @media (prefers-reduced-motion: reduce) { .prediction-branches button, .prediction-outcomes button { transition: none; } .prediction-branches button:hover, .prediction-outcomes button:hover { transform: none; } }
 .prediction-branches b, .prediction-outcomes b { text-wrap: balance; }
@@ -161,7 +164,6 @@
 .life-scenario-tree { margin-bottom: 24px; }
 .life-scenario-detail { margin-top: 28px; }
 .life-probability-unknown { font-size: 11px; color: var(--muted); }
-.life-evidence-kind { font-size: 12px; color: var(--muted); }
 .life-stages { padding-left: 20px; }
 .life-stages li { padding: 4px 0 16px 8px; }
 .life-stages h3 { font-size: 15px; }
@@ -323,3 +325,40 @@
 .prediction-ready-thoughts label { display: block; margin: 20px 0 10px; }
 .prediction-ready-thoughts textarea { width: 100%; resize: vertical; font: inherit; }
 .prediction-ready-thoughts p { color: var(--muted); font-size: 12px; }
+
+/* The setup flow shares one hierarchy; completed reports retain their own layout. */
+.prediction-setup-header { margin: 0 0 28px; }
+.prediction-setup-header > p { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.prediction-setup-header h1 { max-width: 23em; margin: 0; font-size: 34px; line-height: 1.4; }
+.prediction-unlock-progress { display: flex; align-items: center; list-style: none; padding: 0; margin: 28px 0 34px; }
+.prediction-unlock-progress li { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.prediction-unlock-progress li:not(:last-child) { flex: 1; }
+.prediction-unlock-progress li:not(:last-child)::after { content: ""; flex: 1; min-width: 24px; height: 1px; margin: 0 14px; background: var(--line); }
+.prediction-step-dot { display: flex; flex: 0 0 22px; height: 22px; align-items: center; justify-content: center; background: var(--paper); border: 1px solid var(--line); border-radius: 50%; font-size: 10px; }
+.prediction-step-dot svg { width: 14px; height: 14px; }
+.prediction-unlock-progress [data-state=done], .prediction-unlock-progress [data-state=active] { color: var(--ink); }
+.prediction-unlock-progress [data-state=active] { font-weight: 600; }
+.prediction-unlock-progress [data-state=active] .prediction-step-dot { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.prediction-unlock-progress [data-state=done] .prediction-step-dot { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--paper); }
+.prediction-unlock-progress li[data-state=done]:not(:last-child)::after { background: var(--accent-primary); }
+.prediction-lock { padding: 48px 40px; }
+.prediction-lock h2 { font-size: 23px; }
+.prediction-lock > p { max-width: 46ch; font-size: 14px; overflow-wrap: anywhere; }
+.prediction-lock-icon { width: 40px; height: 40px; margin: 4px 0; }
+.prediction-lock .prediction-ring { width: 132px; height: 132px; margin: 0; }
+.prediction-ring b { font-size: 26px; line-height: 1.2; }
+.prediction-ring .prediction-goal-tick { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
+.prediction-lock-actions { margin-top: 0; }
+.prediction-assessment { margin: 16px 0 0; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); font-size: 13px; }
+.prediction-assessment > summary { padding: 14px 20px; }
+.prediction-assessment-body { padding: 0 20px 16px; color: var(--muted); }
+.prediction-assessment .prediction-facet { grid-template-columns: 64px 1fr 56px; gap: 16px; }
+.prediction-assessment-body > p { font-size: 12px; }
+.prediction-assessment.is-compact { background: transparent; border: 0; }
+.prediction-assessment.is-compact > summary { width: fit-content; margin: auto; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.prediction-ready { padding: 52px 40px; }
+.prediction-qualified { display: inline-block; margin-bottom: 16px; padding: 4px 12px; border-radius: 999px; background: var(--surface-tinted); color: var(--ink); font-size: 12px; }
+.prediction-ready h2 { font-size: 23px; margin-bottom: 12px; }
+.prediction-ready > p { margin-bottom: 20px; }
+.prediction-ready > .prediction-cta { min-height: 44px; padding: 10px 28px; font-size: 14px; margin-bottom: 12px; }
+.prediction-ready-thoughts { max-width: 420px; margin-top: 12px; }

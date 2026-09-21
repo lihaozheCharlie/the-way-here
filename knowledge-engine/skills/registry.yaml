@@ -41,6 +41,11 @@ skills:
     modes: [write]
     responsibility: "按当前调整目标修改分类、模板、抽取规则或 Skill 行为"
     triggers: ["修改分类", "调整模板", "修改抽取规则", "调整 Skill"]
+  - id: common-retrieval
+    path: knowledge-engine/skills/common/retrieval/SKILL.md
+    modes: [read, write]
+    responsibility: "查询、预测、扫描与构建共享的知识检索、来源时间核验及双链追溯；本身不写入"
+    triggers: ["检索知识库", "检索原始来源", "双链追溯", "证据核验"]
   - id: common-quality-gate
     path: knowledge-engine/skills/common/quality-gate/SKILL.md
     modes: [read, write]

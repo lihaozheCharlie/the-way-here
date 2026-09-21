@@ -13,8 +13,8 @@ describe("prediction page states", () => {
     expect(html).not.toContain('已解锁');
     expect(html).not.toContain('超过 60 分');
     expect(html).not.toContain('写满 40 字');
-    expect(html).toContain('扫描了解程度');
-    expect(html).toContain('尚未解锁');
+    expect(html).toContain('开始扫描');
+    expect(html).toContain('先了解你一点，再看见未来');
     expect(html).not.toContain('textarea');
   });
   it("focuses on one prediction action after unlocking and keeps thoughts optional", () => {
@@ -44,14 +44,14 @@ it("shows the failure instead of a second stale reminder",()=>{
  const html=render({...view,status:"failed",stale:true,error:"当前维度引用了假设证据",understanding:{...view.understanding,unlocked:true}});
  expect(html).toContain("当前维度引用了假设证据");
  expect(html).not.toContain("有更新，可以重新预测了");
- expect(html).toContain("<h1>看见未来</h1>");
+ expect(html).toContain("<h1>基于过去的选择和习惯，看看未来可能通向的几条路</h1>");
 });
 
 it("shows the saved score and both recovery actions after a scan", () => {
  const html=render({...view,understanding:{...view.understanding,score:58,threshold:65,scannedAt:"2026-09-19T00:00:00Z"}});
  expect(html).toContain('aria-valuenow="58"');
  expect(html).toContain('58%');
- expect(html).toContain('65%');
+ expect(html).toContain('目标是 65 分');
  expect(html).toContain('href="/sources"');
  expect(html).toContain('重新扫描');
  expect(html).not.toContain('textarea');
@@ -71,4 +71,22 @@ it("disables scanning while running and retains the previous assessment on failu
  expect(failed).toContain('扫描失败，请重试');
  expect(failed).toContain('资料已有变化');
  expect(failed).toContain('重新扫描');
+});
+
+it("explains actual gaps and discloses evidence without duplicating the score", () => {
+ const html = render({...view, understanding:{...view.understanding, score:46, scannedAt:"2026-09-19T00:00:00Z", facets:[{id:"health", label:"健康", value:3, max:10, observed:0, target:0, gaps:["缺少作息与身体状态的记录"], evidence:[{pageId:"health", quote:"最近开始规律运动"}]}]}});
+ expect(html).toContain("健康：缺少作息与身体状态的记录");
+ expect(html).toContain("查看四个维度的评估依据");
+ expect(html).toContain("最近开始规律运动");
+ expect(html.match(/role="progressbar"/g)).toHaveLength(1);
+ expect(html).toContain('data-state="active" aria-current="step"><span class="prediction-step-dot" aria-hidden="true">2');
+});
+it("tracks the scan and ready stages and hides assessment before the first scan", () => {
+ expect(render(view)).not.toContain("查看四个维度的评估依据");
+ const ready = render({...view, understanding:{...view.understanding, unlocked:true, score:82}});
+ expect(ready).toContain("了解程度 82/100 · 已达标");
+ expect(ready).toContain("查看了解度依据");
+ expect(ready).toContain('data-state="active" aria-current="step"><span class="prediction-step-dot" aria-hidden="true">3');
+ const rescanning = render({...view, understanding:{...view.understanding, scannedAt:"2026-09-19T00:00:00Z", scanStatus:"running"}});
+ expect(rescanning).toContain('data-state="active" aria-current="step"><span class="prediction-step-dot" aria-hidden="true">1');
 });

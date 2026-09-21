@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { copyFile, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadVaultConfig } from "@the-way-here/wiki-core";
 import { stateRootForVault } from "@the-way-here/run-manager";
@@ -70,6 +70,22 @@ export class PredictionStore {
     const runtimeDir = await this.safeFile(dir,".runtime");
     const runtime = await this.read(await this.safeFile(runtimeDir,"state.json"));
     return runtime && runtime.revision === state.revision ? {...state,...runtime.state} : state;
+  }
+  async saveStage(id:string,inputHash:string,name:string,payload:unknown) {
+    if(!/^(outline|scenario-[1-5])$/.test(name))throw new Error("非法预测阶段文件");
+    const file=await this.safeFile(await this.runtimeDirectory(id),`${name}.json`);
+    await this.atomic(file,{knowledgeBaseId:id,inputHash,payload});
+  }
+  async resetRetrievalTrace(id: string, inputHash: string) {
+    const file = await this.safeFile(await this.runtimeDirectory(id), "retrieval.jsonl");
+    await writeFile(file, JSON.stringify({knowledgeBaseId:id,inputHash}) + "\n", {mode:0o600});
+  }
+  async recordRetrieval(id: string, inputHash: string, event: unknown) {
+    const file = await this.safeFile(await this.runtimeDirectory(id), "retrieval.jsonl");
+    // Trace is diagnostic, bounded, private, and never an input to the next prediction.
+    try { if ((await lstat(file)).size >= 1_600_000) return; }
+    catch(error:any) { if(error.code !== "ENOENT") throw error; await this.resetRetrievalTrace(id,inputHash); }
+    await appendFile(file, JSON.stringify({inputHash,event}) + "\n");
   }
   async save(state: any) {
     const dir = await this.directory(state.knowledgeBaseId);

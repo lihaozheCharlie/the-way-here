@@ -15,10 +15,13 @@ const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
 const fullReport = JSON.parse(readFileSync(new URL("../../../../test/fixtures/life-prediction.json",import.meta.url),"utf8"));
 const report = JSON.stringify({...fullReport,evidence:[],scenarios:[]});
+const outlineOf=(r:any)=>({...r,scenarios:r.scenarios.map(({week,choice,dimensions,stages,actions,...outline}:any)=>outline)});
+const detailOf=({id,week,choice,dimensions,stages,actions}:any)=>({id,week,choice,dimensions,stages,actions});
 async function fixture() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-predict-")));
   await writeFile(path.join(root, "the-way-here.config.yaml"), "version: 3\ndefaultKnowledgeBase: demo\nknowledgeBases:\n  demo:\n    paths:\n      wiki: demo/wiki\n      sources: demo/sources\n  other:\n    paths:\n      wiki: other/wiki\n      sources: other/sources\nvalidation:\n  commands: []\n");
   await cp(fileURLToPath(new URL("../../../../../knowledge-engine/skills/consume/predict-self", import.meta.url)), path.join(root, "knowledge-engine/skills/consume/predict-self"), { recursive: true });
+  await cp(fileURLToPath(new URL("../../../../../knowledge-engine/skills/common/retrieval", import.meta.url)), path.join(root, "knowledge-engine/skills/common/retrieval"), { recursive: true });
   await cp(fileURLToPath(new URL("../../../../../knowledge-engine/skills/consume/scan-understanding", import.meta.url)), path.join(root, "knowledge-engine/skills/consume/scan-understanding"), { recursive: true });
   await mkdir(path.join(root, "demo/sources"), {recursive:true});
   const folders = ["01 个人主线", "02 人生阶段", "03 关键事件与决策", "04 反复循环", "06 现实系统", "11 状态追踪"];
@@ -82,10 +85,19 @@ describe("prediction lifecycle", () => {
     expect(predictionPrompt).not.toContain("SCAN_ONLY_SENTINEL");
     finish(2);
     await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
-    await writeFile(scanSkill,(await readFile(scanSkill,"utf8"))+"\n扫描规则更新");
+    const scanBeforeUpdate = await readFile(scanSkill,"utf8");
+    await writeFile(scanSkill,scanBeforeUpdate+"\n扫描规则更新");
     const after=await service.view("demo");
     expect(after.understanding.stale).toBe(true);
     expect(after.stale).toBe(false);
+    await writeFile(scanSkill,scanBeforeUpdate);
+    expect((await service.view("demo")).understanding.stale).toBe(false);
+    const commonSkill=path.join(root,"knowledge-engine/skills/common/retrieval/SKILL.md");
+    await writeFile(commonSkill,(await readFile(commonSkill,"utf8"))+"\n共享检索更新");
+    const sharedChanged=await service.view("demo");
+    expect(sharedChanged.understanding.stale).toBe(true);
+    expect(sharedChanged.stale).toBe(true);
+
   });
 
   it("makes evidence beyond the preview readable and validates its full frozen quote", async () => {
@@ -105,6 +117,11 @@ describe("prediction lifecycle", () => {
     const oldPage = frozen.pages.find((p: any) => p.markdown.includes(quote));
     expect(oldPage).toBeDefined();
     expect(frozen.catalogue.some((p: any) => p.pageId === oldPage.pageId)).toBe(true);
+    expect(frozen.lifeSearch.retrievalVersion).toBe(2);
+    expect(frozen.retrieval.profiles.some((p: any) => p.links.length > 0)).toBe(true);
+    expect(frozen.retrieval.profiles.some((p: any) => p.backlinks.length > 0)).toBe(true);
+    expect(await readFile(path.join(root,"demo/predictions/.runtime/evidence_reader.py"),"utf8")).toContain("identity/version mismatch");
+    expect(input.prompt).toContain("--action overview");
     expect(frozen.lifeSearch.scanned.sources).toBeGreaterThan(0);
     expect(frozen.lifeSearch.scanned.wiki).toBeGreaterThan(0);
     expect(frozen.lifeSearch.hits.some((hit: any) => hit.pageId === oldPage.pageId)).toBe(true);
@@ -113,8 +130,18 @@ describe("prediction lifecycle", () => {
     const result = structuredClone(fullReport);
     result.evidence[0].pageId = oldPage.pageId;
     result.evidence[0].quote = quote;
-    finish(1, JSON.stringify(result));
+    finish(1, JSON.stringify(outlineOf(result)));
+    for(let i=0;i<result.scenarios.length;i++) {
+      await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(i+2));
+      expect((await service.view("demo")).report).toBeUndefined();
+      expect((await service.view("demo")).progress).toContain(`${i+1} / ${result.scenarios.length}`);
+      finish(i+2,JSON.stringify(detailOf(result.scenarios[i])));
+    }
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
+    const stage=JSON.parse(await readFile(path.join(root,"demo/predictions/.runtime/outline.json"),"utf8"));
+    expect(stage.knowledgeBaseId).toBe("demo");
+    expect(stage.payload.scenarios[0]).not.toHaveProperty("week");
+
     const saved = (await service.view("demo")).report;
     expect(saved?.evidence[0]?.quote).toBe(quote);
     expect((await service.view("other")).report).toBeUndefined();
@@ -122,7 +149,9 @@ describe("prediction lifecycle", () => {
     for (let i=0;i<3;i++) expect((await service.view("demo")).stale).toBe(false);
     await service.request("demo");
     delete result.scenarios[0].dimensions[0].gainShare;
-    finish(2, JSON.stringify(result));
+    finish(result.scenarios.length+2, JSON.stringify(outlineOf(result)));
+    await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(result.scenarios.length+3));
+    finish(result.scenarios.length+3,JSON.stringify(detailOf(result.scenarios[0])));
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("failed"));
     expect((await service.view("demo")).error).toContain("gainShare");
     expect((await service.view("demo")).report).toEqual(saved);
@@ -327,4 +356,47 @@ describe("bounded prediction repair and rule dependencies",()=>{
   const after=await service.view("demo");expect(after.changeToken).toBe(before.changeToken);expect(after.stale).toBe(false);
   await service.request("demo","一个新的想法");finish(2,"bad JSON");await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("failed"));expect((await service.view("demo")).stale).toBe(true);
  });
+});
+
+async function stagedFixture() {
+  const f=await fixture();const full=structuredClone(fullReport);
+  await writeFile(path.join(f.root,"demo/sources/staged.md"),full.evidence.map((e:any)=>e.quote).join("\n"));
+  full.evidence.forEach((e:any)=>{e.pageId="sources/staged";});
+  return {...f,full};
+}
+it("resumes a completed detail after restart without rerunning evidence or changing the planned probabilities",async()=>{
+  const {root,service,start,finish,full,runtime,provider,knowledge,app}=await stagedFixture();
+  await service.request("demo");finish(1,JSON.stringify(outlineOf(full)));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2));service.close();
+  runtime.recover.mockResolvedValueOnce({status:"completed",finalAnswer:JSON.stringify(detailOf(full.scenarios[0]))});
+  const restarted=new PredictionService(knowledge,provider,app.log);cleanups.push(async()=>restarted.close());
+  await restarted.reconcile();
+  for(let i=1;i<full.scenarios.length;i++) {
+    await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(i+2));
+    finish(i+2,JSON.stringify(detailOf(full.scenarios[i])));
+  }
+  await vi.waitFor(async()=>expect((await restarted.view("demo")).status).toBe("ready"));
+  expect((await restarted.view("demo")).report).toEqual(full);
+  expect(JSON.parse(await readFile(path.join(root,"demo/predictions/.runtime/scenario-1.json"),"utf8")).payload.probability).toBe(full.scenarios[0].probability);
+});
+it("stops a staged run when the frozen corpus changes between details",async()=>{
+  const {root,service,start,finish,full}=await stagedFixture();
+  await service.request("demo");finish(1,JSON.stringify(outlineOf(full)));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2));
+  await writeFile(path.join(root,"demo/sources/staged.md"),"新的事实");finish(2,JSON.stringify(detailOf(full.scenarios[0])));
+  await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("failed"));
+  expect(start).toHaveBeenCalledTimes(2);expect((await service.view("demo")).report).toBeUndefined();
+});
+it("repairs only one detail fragment and continues with the next scenario",async()=>{
+  const {service,start,finish,full}=await stagedFixture();
+  await service.request("demo");finish(1,JSON.stringify(outlineOf(full)));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2));
+  finish(2,JSON.stringify({...detailOf(full.scenarios[0]),week:"长".repeat(145)}));
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(3));
+  finish(3,JSON.stringify({repairs:[{path:"$.week",value:full.scenarios[0].week}]}));
+  for(let i=1;i<full.scenarios.length;i++) {
+    await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(i+3));finish(i+3,JSON.stringify(detailOf(full.scenarios[i])));
+  }
+  await vi.waitFor(async()=>expect((await service.view("demo")).status).toBe("ready"));
+  expect((await service.view("demo")).report).toEqual(full);
 });

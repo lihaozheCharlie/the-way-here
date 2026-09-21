@@ -247,5 +247,9 @@
         "攀岩"
       ]
     }
-  ]
+  ],
+  "retrieval": {
+    "perGroup": 6,
+    "perLane": 6
+  }
 }

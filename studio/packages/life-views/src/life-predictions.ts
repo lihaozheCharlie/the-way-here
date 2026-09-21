@@ -1,4 +1,4 @@
-import type { LifePredictionReport, WikiPage } from "@the-way-here/shared";
+import type { LifePredictionReport, LifeScenario, WikiPage } from "@the-way-here/shared";
 export interface PredictionIssue { path: string; message: string; repairable: boolean }
 export class PredictionValidationError extends Error {
   constructor(public issues: PredictionIssue[]) { super(issues.map(i=>`${i.path}：${i.message}`).join("；")); this.name="PredictionValidationError"; }
@@ -12,7 +12,21 @@ export function parseLifePredictionReport(text:string,pages:Pick<WikiPage,"id"|"
 export function parseStoredLifePredictionReport(text:string):LifePredictionReport {
  return validateReport(text);
 }
-function validateReport(text:string,pages?:Pick<WikiPage,"id"|"markdown">[]):LifePredictionReport {
+export type PredictionOutline = Omit<LifePredictionReport,"scenarios"> & {scenarios:Array<Omit<LifeScenario,"week"|"choice"|"dimensions"|"stages"|"actions">>};
+export type PredictionDetail = Pick<LifeScenario,"id"|"week"|"choice"|"dimensions"|"stages"|"actions">;
+export function parsePredictionOutline(text:string,pages:Pick<WikiPage,"id"|"markdown">[]):PredictionOutline {
+ return validateReport(text,pages,{outline:true}) as unknown as PredictionOutline;
+}
+export function parsePredictionDetail(text:string,outline:PredictionOutline,index:number,pages:Pick<WikiPage,"id"|"markdown">[]):LifeScenario {
+ let detail:any;try{detail=JSON.parse(text);}catch{throw new PredictionValidationError([{path:"$",message:"需要纯JSON对象",repairable:false}]);}
+ const fields=["id","week","choice","dimensions","stages","actions"];
+ if(!detail||typeof detail!=="object"||Array.isArray(detail)||Object.keys(detail).some(k=>!fields.includes(k))||fields.some(k=>!Object.hasOwn(detail,k)))throw new PredictionValidationError([{path:"$",message:"只允许本情景的id/week/choice/dimensions/stages/actions且均必填",repairable:false}]);
+ const planned=outline.scenarios[index];
+ if(!planned||detail.id!==planned.id)throw new PredictionValidationError([{path:"$.id",message:"必须与本次指定情景ID一致",repairable:false}]);
+ try{return validateReport(JSON.stringify({...outline,scenarios:[{...planned,...detail}]}),pages,{single:true}).scenarios[0]!;}
+ catch(error){if(error instanceof PredictionValidationError)throw new PredictionValidationError(error.issues.map(i=>({...i,path:i.path.replace(/^\$\.scenarios\[0\]/,"$")})));throw error;}
+}
+function validateReport(text:string,pages?:Pick<WikiPage,"id"|"markdown">[],options:{outline?:boolean;single?:boolean}={}):LifePredictionReport {
  const issues:PredictionIssue[]=[];
  const issue=(path:string,message:string,repairable=false)=>{issues.push({path,message,repairable});};
  let r:any;try{r=JSON.parse(text);}catch{throw new PredictionValidationError([{path:"$",message:"需要纯JSON对象",repairable:false}]);}
@@ -37,16 +51,18 @@ function validateReport(text:string,pages?:Pick<WikiPage,"id"|"markdown">[]):Lif
  const current=arr(r.dimensions,"$.dimensions",4,4);dims(current.map(d=>d?.id),"$.dimensions.id",true);
  current.forEach((d,i)=>{const p=`$.dimensions[${i}]`;if(!obj(d,p,["id","current","desired","constraints","evidenceIds"]))return;str(d.current,p+".current");str(d.desired,p+".desired");strings(d.constraints,p+".constraints");refs(d.evidenceIds,p+".evidenceIds",0,true);});
  const scenarios=arr(r.scenarios,"$.scenarios",0,5);unique(scenarios.map(s=>s?.id),"$.scenarios.id");unique(scenarios.map(s=>s?.title),"$.scenarios.title");
- if(scenarios.length>0&&!scenarios.some(s=>s?.pathway==="wildcard"))issue("$.scenarios","须包含一条随机事件情景");
- scenarios.forEach((s,i)=>{const p=`$.scenarios[${i}]`;if(!obj(s,p,["id","title","pathway","probability","probabilityBasis","probabilityCondition","probabilityReason","confidence","overview","week","choice","dimensions","evidenceIds","assumptions","counterEvidence","unknowns","stages","actions"]))return;
+ if(!options.single&&scenarios.length>0&&!scenarios.some(s=>s?.pathway==="wildcard"))issue("$.scenarios","须包含一条随机事件情景");
+ scenarios.forEach((s,i)=>{const p=`$.scenarios[${i}]`;if(!obj(s,p,["id","title","pathway","probability","probabilityBasis","probabilityCondition","probabilityReason","confidence","overview","evidenceIds","assumptions","counterEvidence","unknowns",...(options.outline?[]:["week","choice","dimensions","stages","actions"])]))return;
  str(s.id,p+".id",40);str(s.title,p+".title",20);en(s.pathway,p+".pathway",["inertia","willed","wildcard"]);
  if(s.probability!==null&&(!Number.isInteger(s.probability)||s.probability<0||s.probability>100||s.probability%5))issue(p+".probability","需要0—100的5的倍数或null");
  en(s.probabilityBasis,p+".probabilityBasis",["overall","conditional"]);
  if(s.probabilityBasis==="conditional")str(s.probabilityCondition,p+".probabilityCondition");else if(s.probabilityCondition!==null)issue(p+".probabilityCondition","整体估计的条件字段须为null");
  str(s.probabilityReason,p+".probabilityReason",180);en(s.confidence,p+".confidence",["low","medium","high"]);
- str(s.overview,p+".overview",80);str(s.week,p+".week",140);str(s.choice,p+".choice",70);refs(s.evidenceIds,p+".evidenceIds",1);
+ str(s.overview,p+".overview",80);refs(s.evidenceIds,p+".evidenceIds",1);
  if(s.confidence!=="low"&&Array.isArray(s.evidenceIds)&&s.evidenceIds.every((id:string)=>["wish","plan","hypothesis"].includes(evidence.find(e=>e?.id===id)?.kind)))issue(p+".confidence","只有愿望、计划或假设时必须为low");
  strings(s.assumptions,p+".assumptions",1);strings(s.counterEvidence,p+".counterEvidence");strings(s.unknowns,p+".unknowns");
+ if(options.outline)return;
+ str(s.week,p+".week",140);str(s.choice,p+".choice",70);
  const ds=arr(s.dimensions,p+".dimensions",4,4);dims(ds.map(d=>d?.id),p+".dimensions.id",true);
  ds.forEach((d,j)=>{const q=`${p}.dimensions[${j}]`;if(!obj(d,q,["id","future","verdict","gainShare","gains","costs","notes"]))return;
  str(d.future,q+".future",100);if(obj(d.verdict,q+".verdict",["label","tone"])){str(d.verdict.label,q+".verdict.label",20);en(d.verdict.tone,q+".verdict.tone",["up","mixed","down"]);}en(d.gainShare,q+".gainShare",[20,35,50,65,80,null]);strings(d.gains,q+".gains",1,2,60);strings(d.costs,q+".costs",1,2,60);

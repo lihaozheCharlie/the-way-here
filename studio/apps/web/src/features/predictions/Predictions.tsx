@@ -1,24 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import type { PredictionView, PredictionThoughtKind, UnderstandingScore } from "@the-way-here/shared";
+import type { PredictionView, PredictionThoughtKind } from "@the-way-here/shared";
 import { api } from "../../api";
 import { useApi } from "../../shared/use-api";
-import { pageHref } from "../../shared/routing";
 import { ContextualAgentDock } from "../collaboration/Collaboration";
 import "./predictions.css";
+import { PredictionProgress, UnderstandingDetails } from "./PredictionSetup";
 import { LockedUnderstanding } from "./LockedUnderstanding";
 import { LifeScenarios } from "./LifeScenarios";
 import { TextArea } from "../../shared/form-controls";
-
-export function Understanding({ score, scan, busy, showAction = true }: { score: UnderstandingScore; scan?: () => void; busy?: boolean; showAction?: boolean }) {
-  return <section className="prediction-score">{showAction && <button className="prediction-refresh" type="button" onClick={scan} disabled={busy}>{score.scanStatus === "running" ? "正在扫描 Wiki…" : score.scannedAt ? "重新扫描" : "扫描了解程度"}</button>}
-    <p>{score.scannedAt ? `上次扫描：${new Date(score.scannedAt).toLocaleString("zh-CN")}` : "尚未扫描。让 AI 阅读 Wiki，评估对你的了解是否足够。"}</p>
-    {score.stale && <p>资料已有变化，可以重新扫描。</p>}{score.error && <p role="alert">{score.error}</p>}
-    <details><summary>{score.scannedAt ? `了解程度 ${score.score} / 100 · 查看依据` : "了解度如何评估"}</summary>
-    <p>这是资料覆盖程度，不是对你的评价，也不代表预测准确率。AI 根据 Wiki 内容的具体程度、覆盖和依据评估，达到 {score.threshold} 分开启预测，不要求多年记录。</p>
-    {score.facets.map(facet => <div className="prediction-facet" key={facet.id}><span>{facet.label}</span><meter min={0} max={facet.max} value={facet.value} aria-label={facet.label} /><span>{facet.value} / {facet.max}</span>{facet.reason && <details className="prediction-facet-detail"><summary>查看判断与缺口</summary><p>{facet.reason}</p>{facet.gaps?.map((gap,i)=><p key={i}>{gap}</p>)}{facet.evidence?.map((e,i)=><blockquote key={i}>{e.quote} <Link to={pageHref(e.pageId)}>查看 Wiki 依据 →</Link></blockquote>)}</details>}</div>)}
-    </details></section>;
-}
 
 export function PredictionContent({ view, refresh, busy, scan }: { view: PredictionView; refresh: (thoughts: string, kind: PredictionThoughtKind) => void; busy: boolean; scan?: () => void }) {
   const locked = !view.understanding.unlocked;
@@ -32,19 +21,20 @@ export function PredictionContent({ view, refresh, busy, scan }: { view: Predict
   const canPredict = !locked;
   const submit = () => refresh(thoughts, thoughtKind);
   if (locked && !view.report) return <div className="prediction-page">
-    <header className="prediction-header"><div><h1>看见未来</h1><p>基于过去的选择和习惯，看看未来可能通向的几条路。</p></div></header>
+    <header className="prediction-setup-header"><p>看见未来</p><h1>基于过去的选择和习惯，看看未来可能通向的几条路</h1></header>
+    <PredictionProgress score={view.understanding} />
     <LockedUnderstanding score={view.understanding} scan={scan} busy={generating} />
-    {view.understanding.scannedAt
-      ? <Understanding score={view.understanding} showAction={false} />
-      : view.understanding.error && <p className="prediction-notice prediction-error" role="alert">{view.understanding.error}</p>}
+    {view.understanding.scannedAt && <UnderstandingDetails score={view.understanding} />}
   </div>;
   if (!view.report) return <div className="prediction-page">
-    <header className="prediction-header"><div><h1>看见未来</h1><p>基于过去的选择和习惯，看看未来可能通向的几条路。</p></div></header>
-    <section className="prediction-ready" aria-labelledby="prediction-ready-heading">
+    <header className="prediction-setup-header"><p>看见未来</p><h1>基于过去的选择和习惯，看看未来可能通向的几条路</h1></header>
+    <PredictionProgress score={view.understanding} />
+    <section className="prediction-ready" aria-labelledby="prediction-ready-heading" aria-busy={generating}>
+      <span className="prediction-qualified">了解程度 {view.understanding.score}/100 · 已达标</span>
       <h2 id="prediction-ready-heading">看看未来的几种可能</h2>
       <p>从你的经历和选择出发，梳理接下来可能走向的生活。</p>
-      <button type="button" className="prediction-cta" disabled={generating} onClick={submit}>{generating ? "正在预测…" : "预测未来"}</button>
-      {view.status === "running" && <p role="status">正在梳理可能的路径，完成后会显示在这里。</p>}
+      <button type="button" className="prediction-cta" disabled={generating} onClick={submit}>{view.understanding.scanStatus === "running" ? "正在扫描…" : generating ? "正在预测…" : "预测未来"}</button>
+      {view.status === "running" && <p role="status">{view.progress || "正在梳理可能的路径，完成后会显示在这里。"}</p>}
       {view.error && <p className="prediction-notice prediction-error" role="alert">这次预测没有完成：{view.error}。请重试。</p>}
       <details className="prediction-ready-thoughts">
         <summary>补充你的想法（可选）</summary>
@@ -52,7 +42,10 @@ export function PredictionContent({ view, refresh, busy, scan }: { view: Predict
         <TextArea id="prediction-thoughts" rows={3} maxLength={maximum} value={thoughts} disabled={generating} onChange={event => {setThoughts(event.target.value);setThoughtKind("update");}} placeholder="一句话也可以，不填写也能开始预测。" />
         <p>仅用于本次预测，不会写入原始记录。 · {thoughts.length} / {maximum}</p>
       </details>
+      {view.understanding.scanStatus === "running" && <p role="status">正在重新阅读资料，扫描完成后即可继续。</p>}
+      {view.understanding.error && <p className="prediction-notice prediction-error" role="alert">{view.understanding.error}</p>}
     </section>
+    <UnderstandingDetails score={view.understanding} compact />
   </div>;
   return <div className="prediction-page">
     <header className="prediction-header"><div><h1>看见未来</h1><p>基于过去的选择和习惯，看看未来可能通向的几条路。</p></div>
@@ -60,7 +53,7 @@ export function PredictionContent({ view, refresh, busy, scan }: { view: Predict
     </header>
     {view.report && <button type="button" className="prediction-feedback-jump" onClick={()=>{thoughtsInput.current?.scrollIntoView({block:"center",behavior:"auto"});thoughtsInput.current?.focus({preventScroll:true});}}>写下你的想法 ↓</button>}
     {view.stale && view.status !== "failed" && !view.error && (!dismissedChange || dismissedChange !== (view.changeToken || "changed")) && view.status !== "running" && <aside className="prediction-update" role="status"><div><strong>{locked ? "请先扫描了解度，再更新预测" : "有更新，可以重新预测了"}</strong><p>资料或预测规则已发生变化，可能影响原来的判断。</p></div><button type="button" className="prediction-refresh" disabled={generating} onClick={locked ? scan : submit}>{locked ? "扫描了解度" : "重新预测"}</button><button type="button" className="prediction-dismiss" onClick={() => setDismissedChange(view.changeToken || "changed")}>暂时不用</button></aside>}
-    {view.status === "running" && <p className="prediction-notice" role="status">正在结合记录和你的想法梳理可能的路径。{view.report ? "你可以先阅读上一版。" : "完成后会显示在这里。"}</p>}
+    {view.status === "running" && <p className="prediction-notice" role="status">{view.progress || "正在结合记录和你的想法梳理可能的路径"}。{view.report ? "你可以先阅读上一版。" : "完成后会显示在这里。"}</p>}
     {view.error && <p className="prediction-notice prediction-error" role="alert">这次预测没有完成：{view.error}。{view.report ? "当前展示的是上次成功生成的旧版，尚未更新。" : "请重新预测。"}</p>}
     <LifeScenarios key={view.generatedAt} report={view.report} />
     <section className="prediction-feedback" aria-labelledby="prediction-feedback-heading">

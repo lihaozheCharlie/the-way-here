@@ -1,3 +1,6 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import type { StartAgentExecution } from "../types.js";
 import { createHash, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { lstat, mkdir, readFile, readdir, realpath, rename, stat, writeFile } from "node:fs/promises";
@@ -12,10 +15,35 @@ const maxSearchedFiles = 5_000;
 const maxSearchMatches = 200;
 
 export function createPiTools(options: {
+  knowledgeEvidence?: StartAgentExecution["knowledgeEvidence"];
   cwd: string;
   config: VaultConfig;
   mode: Exclude<WikiRun["mode"], "validate">;
 }): AgentTool[] {
+  if (options.knowledgeEvidence) {
+    const bound = options.knowledgeEvidence;
+    // Host supplies paths and identity. Model parameters cannot change the snapshot or executable.
+    return [{
+      name: "read_knowledge_evidence", label: "读取冻结知识资料",
+      description: "仅检索本次冻结资料：overview 入口，search 关键词，read 带行号段落，neighbors 双链。填写简短目的并按总数分页。",
+      parameters: Type.Object({
+        action: Type.Union([Type.Literal("overview"),Type.Literal("search"),Type.Literal("read"),Type.Literal("neighbors")]),
+        purpose: Type.String({minLength:1,maxLength:300}),
+        page: Type.Optional(Type.String()), terms: Type.Optional(Type.Array(Type.String())),
+        start: Type.Optional(Type.Integer({minimum:1})), offset: Type.Optional(Type.Integer({minimum:0})),
+        limit: Type.Optional(Type.Integer({minimum:1,maximum:200})),
+      }),
+      execute: async (_callId, params) => {
+        const p = params as {action:string; purpose:string; page?:string; terms?:string[]; start?:number; offset?:number; limit?:number};
+        const args = [bound.reader,"--file",bound.file,"--knowledge-base",bound.knowledgeBaseId,"--hash",bound.inputHash,"--action",p.action,"--purpose",p.purpose];
+        if (p.page !== undefined) args.push("--page",p.page);
+        for (const field of ["start","offset","limit"] as const) if (p[field] !== undefined) args.push(`--${field}`,String(p[field]));
+        if (p.terms?.length) args.push("--terms",...p.terms);
+        const {stdout} = await promisify(execFile)("python3",args,{cwd:options.cwd,maxBuffer:4_000_000,timeout:30_000});
+        return textResult(stdout,JSON.parse(stdout));
+      },
+    }];
+  }
   const access = new WorkspaceAccess(options.cwd, options.config);
   const tools: AgentTool[] = [
     {

@@ -78,3 +78,17 @@ describe("Pi workspace tools", () => {
     await expect(writer.execute("product", { path: "apps/server/injected.ts", content: "unsafe" } as any)).rejects.toThrow("允许目录");
   });
 });
+
+it("offers only a bound frozen-evidence tool during prediction, including scans without profiles", async () => {
+  const root = await workspaceFixture();
+  const file = path.join(root,"evidence.json");
+  const reader = path.resolve(import.meta.dirname,"../../../../../../../knowledge-engine/skills/common/retrieval/scripts/evidence_reader.py");
+  await writeFile(file,JSON.stringify({knowledgeBaseId:"demo",inputHash:"frozen",pages:[{pageId:"source",markdown:"这是冻结原文"}],catalogue:[{pageId:"source",title:"来源"}]}));
+  const tools = createPiTools({cwd:root,config,mode:"read",knowledgeEvidence:{file,reader,knowledgeBaseId:"demo",inputHash:"frozen"}});
+  expect(tools.map(t=>t.name)).toEqual(["read_knowledge_evidence"]);
+  const result = await tools[0]!.execute("read",{action:"read",purpose:"核实原文",page:"source"} as any);
+  expect(result.content[0]).toMatchObject({text:expect.stringContaining("这是冻结原文")});
+  const overview = await tools[0]!.execute("overview",{action:"overview",purpose:"浏览目录"} as any);
+  expect((overview.details as any).result.catalogue[0].pageId).toBe("source");
+  await expect(tools[0]!.execute("foreign",{action:"read",purpose:"核实原文",page:"foreign"} as any)).rejects.toThrow();
+});

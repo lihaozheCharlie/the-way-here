@@ -57,7 +57,7 @@ export class PiRuntimeAdapter extends RuntimeEventSource implements AgentRuntime
     const restored = input.sessionId ? await this.sessions.load(sessionId) : undefined;
     const turnId = randomUUID();
     const ref = { runtimeId: this.id, sessionId, turnId } satisfies AgentExecutionRef;
-    const tools = createPiTools({ cwd: input.cwd, config: input.config, mode: input.mode });
+    const tools = createPiTools({ cwd: input.cwd, config: input.config, mode: input.mode, knowledgeEvidence: input.knowledgeEvidence });
     const agent = new Agent({
       initialState: {
         systemPrompt: "你是 The Way Here 的知识 Agent。严格遵守用户 prompt 中绑定的知识库、AGENTS.md、Skills、证据追溯、原始笔记保护和变更范围边界。只使用当前提供的工具。",
@@ -169,7 +169,7 @@ function normalizePiEvent(event: AgentEvent): AgentRuntimeEvent | undefined {
     const text = assistantText(event.message);
     return text ? { type: "assistant.message", text, final: false } : undefined;
   }
-  if (event.type === "tool_execution_start") return { type: "tool.started", callId: event.toolCallId, toolName: event.toolName };
+  if (event.type === "tool_execution_start") return { type: "tool.started", callId: event.toolCallId, toolName: event.toolName, summary:event.toolName === "read_knowledge_evidence" ? JSON.stringify(event.args).slice(0,8000) : undefined };
   if (event.type === "tool_execution_end") return { type: "tool.completed", callId: event.toolCallId, toolName: event.toolName, success: !event.isError };
   return undefined;
 }

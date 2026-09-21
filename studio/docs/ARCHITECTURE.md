@@ -204,9 +204,13 @@ LifePredictionReport 不含版本号，按实际结构校验。读取时忽略�
 
 情景保留标题、走法、概率口径/条件/依据、置信度、overview、week、choice、四维、引用、条件/反例/未知、四阶段和行动。删除gain/cost重复字段、lenses/environment、factors/forks、顶层tensions/changes。行动只生成在actions中，由维度标签显示；notes只保存前提/风险。走法为inertia/willed/wildcard，显示顺从惯性/追随意愿/随机事件。概率区分overall/conditional，后者在节点标注“假设成立时”，每条有明确条件；情景概率不相加。gainShare仅20/35/50/65/80/null，表示五档主观权衡，不是健康或幸福评分。
 
-运行先冻结绑定知识库的完整资料并全文召回，每组提供有限候选入口，同时保留完整命中及原文用于定向扩展。Skill规定分批阅读、冲突核查与停止条件。提示不再附带12万字符摘录，也不传旧报告。检索排序只提供导航，知识判断由Skill负责。
+运行先冻结绑定知识库的完整资料、标题/别名与已解析出入链。预测检索 v2 排除元数据关键词噪声，按 common/retrieval 的 source-policy.json 生成来源、时间和词语线索，再由预测 life-search.json 提供主题词与预算，形成预测多路入口；这些都是导航提示，个人意义判断只由 Skill 负责。索引日志与回信不进入普通主题候选，但保留全文可查；读书材料单设认同线索入口。候选兼顾来源与综合页、词语相关性和时间，近期与历史改变入口独立，保留所有命中。
 
-扫描调用 consume-scan-understanding，预测调用 consume-predict-self；两者独立入口、参考文件和注册触发词。扫描不运行预测专用的生活关键词检索。扫描hash使用冻结资料、扫描SKILL.md、understanding.md及assessment完整配置；预测hash使用冻结资料、SKILL.md、output.md、life-search.json及当前想法/输入类型。保存前核对对应hash，变化则失败，不自动重跑。扫描和预测独立手动触发，更新预测规则不使扫描因无关规则过期。了解度仍用assessment v2。
+时间线索分记录日期、文件名日期、元数据范围、综合覆盖时间和带行号的正文日期/年份/相对时间；文件名支持点号、连字符、斜线、中英文逗号与年月日。冲突保留，不把正文最新日期或修改时间当个人现状。段落中的事件时间、撤回、作者身份与同源证据合并由预测 Skill 判断。
+
+运行目录保存冻结的只读 evidence_reader.py，提供 overview/search/read/neighbors，校验知识库 ID 和 hash，支持分页、原始行号和短检索目的。工具只读，输出供模型审阅，服务端在私有运行目录 retrieval.jsonl 保留工具调用摘要与成功状态（摘要上限8000字符、总文件约1.6MB封顶），不保存内部推理，不增加公开报告字段；图扩展仅返回快照内节点。Pi 运行时仅暴露绑定文件和版本的 read_knowledge_evidence 专用工具，通过同一冻结脚本执行，不给模型任意命令或实时库读取入口；扫描与修复也支持该入口。Skill 从入口逐步读取段落/全文、追溯来源和后续反例，并根据覆盖与信息增量停止。无向量检索、不传旧预测，不改写原始笔记。
+
+扫描调用 consume-scan-understanding，预测调用 consume-predict-self；两者独立入口、参考文件和注册触发词。扫描不运行预测专用的生活关键词检索。扫描hash使用冻结资料、扫描SKILL.md、understanding.md、assessment完整配置及共享检索 Skill/工具说明/来源配置/只读脚本；预测hash使用检索版本、冻结资料、预测 SKILL.md、output.md、life-search.json、预测 retrieval.md、共享检索 Skill/工具说明/来源配置/只读脚本及当前想法/输入类型。保存前核对对应hash，变化则失败，不自动重跑。扫描和预测独立手动触发，更新预测规则不使扫描因无关规则过期。了解度仍用assessment v2。
 
 解析器拒绝未知字段，返回精确路径错误。只有全部错误均为超长文本或有对应来源的引文不匹配时，允许一次局部修复：只接受指定文本叶子的path/value补丁，禁止修改概率、其他字段或整份报告。修复后重新验证所有字段及原文，不截断、不补造概率，失败不再次修复。修复复用知识库、快照、模型和原始20分钟截止时间，重启可以恢复待修复候选。字段边界不能证明模型改写忠实，仍需语义评测。
 
@@ -221,3 +225,23 @@ LifePredictionReport 不含版本号，按实际结构校验。读取时忽略�
 预测存储由配置中绑定知识库的 `paths.wiki` 父目录确定，本工作区为 `vault/<id>/predictions/`。`state.json` 保存可移植的报告、了解度、补充想法与输入版本；`.runtime/` 保存冻结证据、会话、执行配置及修复中间数据，Git 始终忽略。运行态与结果以 revision 配对，避免跨版本混合；前端仍只通过 API 读取。预测目录不参与 Wiki 或来源索引。
 
 新文件缺失时，按工作区和知识库 ID 从旧应用数据目录自动迁移，保留旧文件作为恢复副本；新文件优先，损坏时不静默回退旧数据。知识库 ID 与文件身份必须一致，目标目录和文件不允许符号链接。匿名 `vault/demo/predictions/state.json` 随仓库分发，其他 `vault/<id>/` 继续默认忽略。克隆后无需调用模型即可查看演示结果。
+
+
+## 共享知识检索
+
+`knowledge-engine/skills/common/retrieval` 是共享检索规则、来源提示配置与工具入口的唯一负责人；`consume/query` 组织回答，`consume/predict-self` 保留四维词表、预测入口预算和未来推演，扫描与构建保留各自目标。各调用者按需引用共享规则，不经由 query 间接调用，不设 common/predict-self。共享层不要求预测页数配额或反例轮次用于简单事实查询。
+
+`wiki-core` 提供 evidence-metadata、evidence-retrieval 与 evidence-snapshot，负责来源线索、日期线索、正文/标题/别名召回、冻结图和通用快照；`life-views` 的 prediction-life-search 只编排预测专用分组、候选及 lanes。公共配置作为参数注入，代码不内嵌人生判断。通用读取脚本接受顶层 retrieval.profiles，兼容已有 lifeSearch.profiles；普通快照没有 lifeSearch，也无需预测配置。
+
+普通查询/构建可用现有只读工具，或从项目根运行 common/retrieval/scripts/snapshot.mts，显式指定 THE_WAY_HERE_KNOWLEDGE_BASE。它把当前库资料和同一套 profiles 写入本任务系统临时目录，提供绑定 hash 的渐进读取；无需启动服务、不写原始材料。写入后的刷新由调用者显式发起，任务结束清理自己创建的临时目录。
+
+运行时 knowledgeEvidence 是可选、由服务端提供的冻结文件/脚本/库ID/hash绑定；Pi 在该模式仅提供 read_knowledge_evidence，禁用实时文件工具。预测、扫描及局部修复均使用此通道；其他普通任务维持原有工具。共享规则改变会使预测与扫描都过期；预测策略改变仅使预测过期。
+
+
+## 预测分步生成与经历总结
+
+预测不再要求模型一次返回完整大报告。新任务先生成 outline（现状、已核验引文、最多5条情景的去向/概率/依据/前提），然后逐个生成 detail（id、普通一周、取舍、未来四维、四阶段、可逆行动）。outline 和 detail 分别校验；detail 不允许输出或更改标题、概率、证据ID等既定判断。程序最终合并并复用完整报告校验器，全部成功才替换公开报告，失败继续显示旧版。
+
+各阶段复用同一知识库、冻结输入hash、模型与推理设置，且共享原始20分钟截止时间。私有运行态保存 pipeline 的当前阶段、已验证 outline 和已完成情景；`.runtime/outline.json`、`scenario-1.json` 等带库ID与输入hash保存可审阅阶段产物，旧hash产物不会被下一次任务当作输入。重启可恢复进行中的阶段或两阶段之间的待启动状态；无 pipeline 的旧运行记录仍走原单次报告解析。每阶段至多一次指定文本叶子的修复，修复不能重算概率或替换整份输出。阶段协议 stages.md 纳入预测hash，不影响扫描hash。
+
+PredictionView.progress 返回阅读友好的阶段进度。界面“经历依据”首先展示 probabilityReason：2—3句串联少量关键个人经历、具体去向、阻力与概率；条件概率和未知概率保持明确。原始引文集中在下方一个“查看原文”折叠区，保留完整记录链接；逐条审计式 interpretation 仍留在报告中供核查，不再占据页面主要阅读位置。旧报告直接使用原有 probabilityReason，不伪造或自动重算总结。

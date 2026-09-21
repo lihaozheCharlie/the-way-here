@@ -106,5 +106,23 @@
     "expected": ["consume-scan-understanding"],
     "must_not": ["consume-predict-self", "build-wiki"],
     "mode": "read-only"
+  },
+  {
+    "prompt": "检索知识库里关于某次迁居的原始记录和后续变化，只读回答",
+    "expected": ["consume-query", "common-retrieval"],
+    "must_not": ["consume-predict-self", "build-wiki"],
+    "mode": "read-only"
+  },
+  {
+    "prompt": "预测未来时查证旧愿望是否落实，只使用本次冻结资料",
+    "expected": ["consume-predict-self", "common-retrieval"],
+    "must_not": ["consume-query", "build-wiki"],
+    "mode": "read-only"
+  },
+  {
+    "prompt": "新增来源与旧事件复盘有冲突，核验后局部更新事件页",
+    "expected": ["build-life-review", "common-retrieval"],
+    "must_not": ["consume-predict-self"],
+    "mode": "write"
   }
 ]

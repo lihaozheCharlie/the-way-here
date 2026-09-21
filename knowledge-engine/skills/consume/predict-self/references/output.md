@@ -1,6 +1,6 @@
 # 预测输出结构
 
-仅返回JSON对象，不加围栏。所有下列字段必填，未列出的字段禁止输出。只接受下述结构。顶层不再生成version/gaps/summary/horizon/presentationVersion/pathwayAssessment/changes/tensions/probabilityMode/probabilityScope；情景不再生成lenses/environment/factors/forks；维度不再生成gain/cost。
+这是最终合并报告的字段契约。实际模型输出按 [分步协议](stages.md) 只返回当前阶段字段；每次仅返回JSON对象，不加围栏。所有下列字段必填，未列出的字段禁止输出。只接受下述结构。顶层不再生成version/gaps/summary/horizon/presentationVersion/pathwayAssessment/changes/tensions/probabilityMode/probabilityScope；情景不再生成lenses/environment/factors/forks；维度不再生成gain/cost。
 
 ## 结构
 
@@ -17,7 +17,7 @@
   "probability":null,
   "probabilityBasis":"overall",
   "probabilityCondition":null,
-  "probabilityReason":"<180字内判断依据或具体缺口>",
+  "probabilityReason":"<180字内串联个人经历、去向、关键阻力与概率的简短总结>",
   "confidence":"low",
   "overview":"<80字内生活概述>",
   "week":"<140字内普通一周>",

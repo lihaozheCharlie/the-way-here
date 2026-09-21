@@ -15,6 +15,7 @@ export interface PredictionView {
   status: "locked" | "idle" | "running" | "ready" | "failed";
   stale: boolean;
   changeToken?: string;
+  progress?: string;
   thoughts?: string;
   thoughtKind?: PredictionThoughtKind;
   generatedAt?: string;

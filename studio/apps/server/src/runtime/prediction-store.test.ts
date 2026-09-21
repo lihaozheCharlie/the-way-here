@@ -33,3 +33,14 @@ it('isolates concurrent readers until a new state is committed',async()=>{
  const [a,b]=await Promise.all([store.load('demo'),store.load('demo')]);a.status='ready';a.report.current='after';
  expect(b).toMatchObject({status:'running',report:{current:'before'}});expect(await store.load('demo')).toMatchObject({status:'running',report:{current:'before'}});
 });
+it('keeps bounded retrieval diagnostics private and resets them for a new corpus',async()=>{
+ const {root,store}=await fixture();
+ await store.save({knowledgeBaseId:'demo',status:'running'});
+ await store.recordRetrieval('demo','first',{request:'read frozen source',success:true});
+ const file=path.join(root,'vault/demo/predictions/.runtime/retrieval.jsonl');
+ expect(await readFile(file,'utf8')).toContain('read frozen source');
+ expect(await readFile(path.join(root,'vault/demo/predictions/state.json'),'utf8')).not.toContain('read frozen source');
+ await writeFile(file,'x'.repeat(1_600_000));await store.recordRetrieval('demo','first',{request:'over budget'});
+ expect((await readFile(file,'utf8')).length).toBe(1_600_000);
+ await store.resetRetrievalTrace('demo','second');expect(await readFile(file,'utf8')).not.toContain('first');
+});
