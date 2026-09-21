@@ -24,11 +24,18 @@ test('fresh installation creates a usable library and upgrades preserve records 
     const custom = original + '\n# keep custom settings\n';
     await writeFile(configPath,custom);
     assert.equal(await readFile(path.join(root,'vault/demo/wiki/旧演示.md'),'utf8'),'Original Web demo');
+    await mkdir(path.join(resources,'demo/predictions'),{recursive:true});
+    await writeFile(path.join(resources,'demo/predictions/state.json'),'{"knowledgeBaseId":"demo","thoughts":"bundled"}');
     await writeFile(path.join(resources,'knowledge-engine/tools/version'),'two');
     assert.equal(await prepareWorkspace({userData,resources}),root);
     assert.equal(await readFile(path.join(root,'app/personal/wiki/记忆.md'),'utf8'),'keep this record');
     assert.equal(await readFile(path.join(root,'the-way-here.config.yaml'),'utf8'),custom);
     assert.equal(await readFile(path.join(root,'knowledge-engine/tools/version'),'utf8'),'two');
+    const report = path.join(root,'vault/demo/predictions/state.json');
+    assert.equal(JSON.parse(await readFile(report,'utf8')).thoughts,'bundled');
+    await writeFile(report,'{"knowledgeBaseId":"demo","thoughts":"user edit"}');
+    await prepareWorkspace({userData,resources});
+    assert.equal(JSON.parse(await readFile(report,'utf8')).thoughts,'user edit');
     const oldConfig=YAML.parse(custom); delete oldConfig.knowledgeBases.demo;
     await writeFile(configPath,YAML.stringify(oldConfig));
     await writeFile(path.join(root,'vault/demo/wiki/旧演示.md'),'User demo edit');

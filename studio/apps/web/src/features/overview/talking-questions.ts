@@ -16,6 +16,7 @@ export function openLifeConversation(question: TalkingQuestion): void {
   openContextAgent({
     mode: "read",
     attachedContext: {
+      topicId: question.id,
       title: question.question,
       currentUnderstanding: question.currentUnderstanding,
       reason: question.reason,

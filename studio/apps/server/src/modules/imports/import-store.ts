@@ -59,6 +59,39 @@ export class ImportStore {
     return uniqueLiveBatches(live.filter((batch) => batch.files.length > 0));
   }
 
+  async renameSource(previousPath: string, storedPath: string): Promise<void> {
+    if (previousPath === storedPath) return;
+    const sourceRoot = this.sourceRoot();
+    if (![previousPath, storedPath].every((entry) => isPathInside(sourceRoot, path.resolve(this.knowledge.vaultRoot, entry)))) {
+      throw new ImportRequestError(403, "路径超出生活记录目录");
+    }
+    let manifests: string[];
+    try { manifests = (await readdir(this.manifestRoot())).filter((name) => name.endsWith(".json")); }
+    catch (error: any) { if (error.code === "ENOENT") return; throw error; }
+    // Read the persisted manifests: list() hides the old path once the file has moved.
+    const changed: SourceImportBatch[] = [];
+    try {
+      for (const name of manifests) {
+        const batch = JSON.parse(await readFile(path.join(this.manifestRoot(), name), "utf8")) as SourceImportBatch;
+        if (!batch.files.some((file) => file.storedPath === previousPath)) continue;
+        const updated = structuredClone(batch);
+        for (const file of updated.files) {
+          if (file.storedPath === previousPath) file.storedPath = storedPath;
+        }
+        if (updated.journey?.reportPath === previousPath) {
+          updated.journey.reportPath = storedPath;
+          updated.journey.agentPrompt = updated.journey.agentPrompt.split(previousPath).join(storedPath);
+        }
+        await this.writeBatch(updated);
+        changed.push(batch);
+      }
+    } catch (error) {
+      for (const batch of changed) await this.writeBatch(batch);
+      throw error;
+    }
+    if (changed.length) this.knowledge.events.broadcast("import", { previousPath, storedPath });
+  }
+
   async updateBuildStatus(batchId: string, storedPath: string, status: Extract<SourceBuildStatus, "deferred">): Promise<SourceImportBatch> {
     const batch = await this.read(batchId);
     const file = batch.files.find((candidate) => candidate.storedPath === storedPath && candidate.buildKind);

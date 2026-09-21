@@ -5,6 +5,8 @@ description: "在 wiki/01-04、09 和 13 中构建或更新有证据支持的个
 
 # 构建：人生复盘
 
+检索历史上下文时依赖 [common-retrieval](../../common/retrieval/SKILL.md)，从当前来源和目标阶段/事件/循环追溯前后变化与反例；本 Skill 负责归档与综合判断。
+
 仅用于当前任务中的复盘层构建或更新。先读 `knowledge-engine/skills/common/quality-gate/SKILL.md`，再根据影响矩阵中受影响的行，只选择确实需要的参考文件。
 
 个人主线、人生阶段、事件事后判断、反复循环和思维模型属于解释层。处理这些内容时同时读取 `knowledge-engine/skills/common/reasoning-lenses/SKILL.md`，动态选择主视角；金句原句与来源身份保持中性。

@@ -1,0 +1,292 @@
+{
+  "current": "正在考虑不同生活安排",
+  "dimensions": [
+    {
+      "id": "health",
+      "current": "身体作息与收入安排的资料都不足，尚不清楚。",
+      "desired": "资料不足，尚不清楚。",
+      "constraints": [],
+      "evidenceIds": []
+    },
+    {
+      "id": "work",
+      "current": "资料不足，尚不清楚",
+      "desired": "资料不足，尚不清楚",
+      "constraints": [],
+      "evidenceIds": []
+    },
+    {
+      "id": "play",
+      "current": "资料不足，尚不清楚",
+      "desired": "资料不足，尚不清楚",
+      "constraints": [],
+      "evidenceIds": []
+    },
+    {
+      "id": "love",
+      "current": "资料不足，尚不清楚",
+      "desired": "资料不足，尚不清楚",
+      "constraints": [],
+      "evidenceIds": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e1",
+      "kind": "wish",
+      "dimensions": [
+        "love"
+      ],
+      "pageId": "s",
+      "cue": "想与父母住得更近",
+      "quote": "我想将来回到小城与父母常常见面，这是我自己的愿望。",
+      "interpretation": "支持迁居探索，收入和共同期待仍需确认。"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "near-family",
+      "pathway": "willed",
+      "title": "在父母附近工作生活",
+      "probability": null,
+      "probabilityReason": "只有愿望，现实条件尚未知，暂不能估计。",
+      "confidence": "low",
+      "week": "第4—5年住在父母附近，工作日维持收入，平日也能见面，周末保留自己的活动。",
+      "choice": "多一些相处时间，少一些原城市的便利。",
+      "dimensions": [
+        {
+          "id": "health",
+          "future": "这方面的未来安排仍需确认，也包括收入与缓冲是否够用。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        },
+        {
+          "id": "work",
+          "future": "这方面的未来安排仍需确认。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        },
+        {
+          "id": "play",
+          "future": "这方面的未来安排仍需确认。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        },
+        {
+          "id": "love",
+          "future": "这方面的未来安排仍需确认。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        }
+      ],
+      "evidenceIds": [
+        "e1"
+      ],
+      "assumptions": [
+        "愿望仍成立",
+        "能够维持收入"
+      ],
+      "stages": [
+        {
+          "period": "months0_3",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
+        },
+        {
+          "period": "months3_12",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
+        },
+        {
+          "period": "years1_3",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
+        },
+        {
+          "period": "years3_5",
+          "change": "验证工作与生活安排。",
+          "condition": "愿望与收入条件仍成立。"
+        }
+      ],
+      "counterEvidence": [],
+      "unknowns": [
+        "工作安排未知"
+      ],
+      "actions": [
+        {
+          "action": "与家人讨论一次短住。",
+          "observation": "期待和实际相处有何差别。",
+          "reviewAfter": "两周后",
+          "dimensions": [
+            "love"
+          ]
+        }
+      ],
+      "overview": "住得近，平日与父母相处，同时保留各自空间。",
+      "probabilityBasis": "overall",
+      "probabilityCondition": null
+    },
+    {
+      "id": "s-wildcard",
+      "pathway": "wildcard",
+      "title": "父母搬来后留在原城市",
+      "probability": null,
+      "probabilityReason": "想常见父母的愿望支持这个条件探索；父母是否愿意迁居未知，不能估计发生概率。",
+      "confidence": "low",
+      "week": "在原城市维持日常安排，每周与父母见面，留出自己的休息时间；收入与居住成本还需核实。",
+      "choice": "不用自己迁回小城，但父母要适应新环境，同城居住成本也需承担。",
+      "dimensions": [
+        {
+          "id": "health",
+          "future": "这方面的未来安排仍需确认，也包括收入与缓冲是否够用。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        },
+        {
+          "id": "work",
+          "future": "这方面的未来安排仍需确认。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        },
+        {
+          "id": "play",
+          "future": "这方面的未来安排仍需确认。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        },
+        {
+          "id": "love",
+          "future": "这方面的未来安排仍需确认。",
+          "verdict": {
+            "label": "待进一步了解",
+            "tone": "mixed"
+          },
+          "gainShare": null,
+          "gains": [
+            "资料不足，尚不能判断。"
+          ],
+          "costs": [
+            "需要进一步核对。"
+          ],
+          "notes": []
+        }
+      ],
+      "evidenceIds": [
+        "e1"
+      ],
+      "assumptions": [
+        "父母搬来只是外部触发假设，不是已提出的计划",
+        "同城居住有可负担的安排"
+      ],
+      "stages": [
+        {
+          "period": "months0_3",
+          "change": "确认父母是否有同城生活意愿",
+          "condition": "父母主动提出搬来"
+        },
+        {
+          "period": "months3_12",
+          "change": "先短住试着相处",
+          "condition": "双方同意且短住开支可负担"
+        },
+        {
+          "period": "years1_3",
+          "change": "再决定是否长期同城生活",
+          "condition": "适应新环境且收入覆盖成本"
+        },
+        {
+          "period": "years3_5",
+          "change": "维持同城见面与各自生活空间",
+          "condition": "彼此愿意继续这种安排"
+        }
+      ],
+      "counterEvidence": [],
+      "unknowns": [
+        "工作安排未知"
+      ],
+      "actions": [
+        {
+          "action": "与家人讨论一次短住。",
+          "observation": "期待和实际相处有何差别。",
+          "reviewAfter": "两周后",
+          "dimensions": [
+            "love"
+          ]
+        }
+      ],
+      "overview": "如果父母选择搬来，你可能留在原城市生活，通过同城相处实现陪伴愿望。",
+      "probabilityBasis": "conditional",
+      "probabilityCondition": "父母主动提出并能够搬来同城生活"
+    }
+  ]
+}

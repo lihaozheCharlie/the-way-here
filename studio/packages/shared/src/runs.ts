@@ -83,6 +83,7 @@ export interface WikiRun {
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
   contextPageId?: string;
+  contextTopicId?: string;
   recoveredFromLegacyWorkspace?: boolean;
   mode: "auto" | "read" | "write" | "validate";
   status: RunStatus;

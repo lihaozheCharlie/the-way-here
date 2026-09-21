@@ -65,10 +65,15 @@ describe("Pi workspace tools", () => {
     const reader = tools.find((tool) => tool.name === "read_file")!;
     const writer = tools.find((tool) => tool.name === "write_file")!;
     const read = await reader.execute("read", { path: "vault/demo/wiki/overview.md" } as any);
-    const sha256 = (read.details as { sha256: string }).sha256;
+    const visible = JSON.parse(read.content.filter((part) => part.type === "text").map((part) => part.text).join("\n"));
+    const sha256 = visible.sha256;
+    expect(visible.path).toBe("vault/demo/wiki/overview.md");
+    expect(visible.content).toContain("可追溯的演示知识");
+    expect(sha256).toMatch(/^[a-f0-9]{64}$/);
     await expect(writer.execute("write-without-version", { path: "vault/demo/wiki/overview.md", content: "changed" } as any)).rejects.toThrow("expectedSha256");
     await writer.execute("write", { path: "vault/demo/wiki/overview.md", content: "# Updated\n", expectedSha256: sha256 } as any);
     await expect(readFile(path.join(root, config.paths.wiki, "overview.md"), "utf8")).resolves.toBe("# Updated\n");
+    await expect(writer.execute("stale", { path: visible.path, content: "stale overwrite", expectedSha256: sha256 } as any)).rejects.toThrow("文件已被其他操作修改");
   });
 
   it("rejects traversal and writes outside the selected knowledge base", async () => {
@@ -77,4 +82,18 @@ describe("Pi workspace tools", () => {
     await expect(writer.execute("traversal", { path: "../outside.md", content: "unsafe" } as any)).rejects.toThrow("超出工作区");
     await expect(writer.execute("product", { path: "apps/server/injected.ts", content: "unsafe" } as any)).rejects.toThrow("允许目录");
   });
+});
+
+it("offers only a bound frozen-evidence tool during prediction, including scans without profiles", async () => {
+  const root = await workspaceFixture();
+  const file = path.join(root,"evidence.json");
+  const reader = path.resolve(import.meta.dirname,"../../../../../../../knowledge-engine/skills/common/retrieval/scripts/evidence_reader.py");
+  await writeFile(file,JSON.stringify({knowledgeBaseId:"demo",inputHash:"frozen",pages:[{pageId:"source",markdown:"这是冻结原文"}],catalogue:[{pageId:"source",title:"来源"}]}));
+  const tools = createPiTools({cwd:root,config,mode:"read",knowledgeEvidence:{file,reader,knowledgeBaseId:"demo",inputHash:"frozen"}});
+  expect(tools.map(t=>t.name)).toEqual(["read_knowledge_evidence"]);
+  const result = await tools[0]!.execute("read",{action:"read",purpose:"核实原文",page:"source"} as any);
+  expect(result.content[0]).toMatchObject({text:expect.stringContaining("这是冻结原文")});
+  const overview = await tools[0]!.execute("overview",{action:"overview",purpose:"浏览目录"} as any);
+  expect((overview.details as any).result.catalogue[0].pageId).toBe("source");
+  await expect(tools[0]!.execute("foreign",{action:"read",purpose:"核实原文",page:"foreign"} as any)).rejects.toThrow();
 });

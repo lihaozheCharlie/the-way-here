@@ -29,6 +29,7 @@ source:
 
 | 模块 Skill | 职责 | 配方覆盖 |
 |---|---|---|
+| `knowledge-engine/skills/common/retrieval/SKILL.md` | 共享关键词召回、来源时间核验、渐进阅读与双链追溯；只提供证据，不负责消费结论或写入 | 独立快照/读取工具与来源提示配置；查询、预测、扫描和需要旧知识的构建模块按需依赖 |
 | `knowledge-engine/skills/common/quality-gate/SKILL.md` | 跨模块内容质量和区分读写模式的验证 | 标签/链接验证器、Skill 体系验证器和安全的生成索引检查 |
 | `knowledge-engine/skills/common/skill-system/SKILL.md` | Skill 设计、`AGENTS.md` 路由健康和模块演进 | `AGENTS.md`、`knowledge-engine/skills/common/skill-system/module-map.md`、`skill体系重构思路.md` 和 GBrain 的 Skill 思路 |
 | `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` | 查询、回信和解释性构建共享的人物推理视角；只改变怎样理解证据，不负责归档，也不决定是否写入 | 动态人物发现、证据护栏、人物推理文件和跨领域语义回归 |
@@ -40,6 +41,10 @@ source:
 |---|---|---|
 | `knowledge-engine/skills/consume/query/SKILL.md` | 严格只读、wiki 优先的查询与综合 | 查询流程 |
 
+| `knowledge-engine/skills/consume/predict-self/SKILL.md` | 冻结证据下的未来情景与校正，Studio 独立保存，不写回 Wiki | 四维生活情景、证据与 JSON 输出契约 |
+
+| `knowledge-engine/skills/consume/scan-understanding/SKILL.md` | 冻结 Wiki 下的了解程度评估，Studio 保存评分与解锁结果 | 四维评估流程、评分配置与 assessment v2 JSON 契约 |
+
 ## 设计说明
 
 - 根 `AGENTS.md` 先区分产品与 Wiki；Wiki 请求再按注册表区分读写模式并选择规范 Skill。
@@ -48,4 +53,4 @@ source:
 - 人物推理文件只保存在 `knowledge-engine/skills/common/reasoning-lenses/references/figures/`；下游通过动态发现脚本选择，不保存名单或副本。
 - 构建 Skill 采用扇出方式；一个来源可以更新多种对象。
 - 通用 Skill 提供可复用质量门，有实质修改后应串联使用。
-- 消费 Skill 先从综合 wiki 回答，并且自身不写入；若同一任务需要沉淀耐久信息，退出查询流程后路由到相应构建 Skill。
+- 查询 Skill 通常先从相关综合 Wiki 回答；预测与扫描按自己的冻结资料契约检索，消费 Skill 自身不写入；若同一任务需要沉淀耐久信息，退出查询流程后路由到相应构建 Skill。

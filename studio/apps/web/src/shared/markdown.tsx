@@ -200,6 +200,22 @@ function NoteProperties({ properties, compact = false }: { properties: Record<st
   </section>;
 }
 
+function SourceProperties({ properties }: { properties: Record<string, unknown> }) {
+  const [expanded, setExpanded] = useState(false);
+  const entries = Object.entries(properties).filter(([, value]) => propertyHasValue(value));
+  const labels: Record<string, string> = { type: "类型", tags: "标签", aliases: "别名", source: "来源", status: "状态", Start: "开始", end: "结束", location: "地点" };
+  const tokens = entries.flatMap(([key, value]) => (Array.isArray(value) ? value : [value]).map((entry) => {
+    const text = propertyLabel(entry, notePropertyKind(key, value));
+    const tag = key === "tags" ? text.match(/^(类型|人物|实体|索引|来源)\/(.+)$/) : null;
+    return { label: tag?.[1] || labels[key] || key, value: tag?.[2] || text };
+  })).sort((a, b) => (a.label === "类型" ? 0 : a.label === "人物" ? 1 : 2) - (b.label === "类型" ? 0 : b.label === "人物" ? 1 : 2));
+  if (!tokens.length) return null;
+  return <section className="source-property-summary" aria-label="记录标签">
+    {(expanded ? tokens : tokens.slice(0, 2)).map((token, index) => <span className="source-property-chip" key={index}>{token.label}<b>{token.value}</b></span>)}
+    {tokens.length > 2 && <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? "收起标签" : `+${tokens.length - 2} 个标签`}</button>}
+  </section>;
+}
+
 function pageNoteProperties(page: WikiPage): Record<string, unknown> {
   if (page.properties && Object.keys(page.properties).length) return Object.fromEntries(Object.entries(page.properties).filter(([, value]) => propertyHasValue(value)));
   const entries: Array<[string, unknown]> = [
@@ -493,7 +509,7 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   const statusMessage = saveError ? saveState : saveNotice !== "hidden" ? "已保存" : /正在/.test(saveState) ? saveState : "";
   const saveFeedback = <span className={`document-save-state${statusMessage && saveNotice !== "fading" ? " visible" : ""}${saveError ? " error" : ""}`} role="status">{statusMessage}</span>;
   const toolbar = !showIdentity && <div className="editable-document-toolbar">{saveFeedback}</div>;
-  const propertyPanel = propertiesPinned && Object.keys(properties).length > 0 && <div className="editable-document-properties"><NoteProperties properties={properties} compact /></div>;
+  const propertyPanel = propertiesPinned && Object.keys(properties).length > 0 && <div className="editable-document-properties">{page.isSource && variant === "preview" ? <SourceProperties key={page.id} properties={properties} /> : <NoteProperties properties={properties} compact />}</div>;
 
   return <DocumentFrame variant={variant} showIdentity={showIdentity} editing={editing} showOutline={showOutline} markdown={readingMarkdown} headingPrefix={headingPrefix}>
     {showIdentity && <header className="editable-document-identity">

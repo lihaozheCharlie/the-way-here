@@ -52,3 +52,5 @@ studio/.runtime/
 
 # Rebuilt from the product logo by build-brand-assets.mjs
 studio/apps/web/public/brand/
+# Prediction execution snapshots stay local, including for the shared demo.
+/vault/*/predictions/.runtime/

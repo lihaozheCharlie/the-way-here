@@ -40,7 +40,22 @@ async function ensureWebDemo(root, resources) {
   const target = path.join(root, configName);
   const document = YAML.parseDocument(await readFile(target, 'utf8'));
   if (document.errors.length || !YAML.isMap(document.contents) || !YAML.isMap(document.get('knowledgeBases'))) throw new Error('知识空间配置无法读取，请保留原文件并恢复之前的配置。');
-  if (document.hasIn(['knowledgeBases', 'demo'])) return;
+  if (document.hasIn(['knowledgeBases', 'demo'])) {
+    // Only seed missing bundled reports in the managed demo; preserve custom libraries/results.
+    if (document.getIn(['knowledgeBases', 'demo', 'paths', 'wiki']) === 'vault/demo/wiki') {
+      const report = path.join(root, 'vault/demo/predictions/state.json');
+      try { await access(report); }
+      catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        const bundled = path.join(resources, 'demo/predictions/state.json');
+        try { await access(bundled); }
+        catch (missing) { if (missing.code === 'ENOENT') return; throw missing; }
+        await mkdir(path.dirname(report), { recursive:true });
+        await cp(bundled, report, { force:false });
+      }
+    }
+    return;
+  }
   // Retain original paths: photo and bill sidecars contain vault/demo references.
   await cp(path.join(resources, 'demo'), path.join(root, 'vault/demo'), { recursive:true, force:false });
   document.setIn(['knowledgeBases', 'demo'], {

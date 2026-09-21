@@ -7,6 +7,7 @@ import { QuickCapture } from "../features/desktop/QuickCapture";
 import { useInspector } from "../features/desktop/InspectorContext";
 import { AgentDock } from "../features/collaboration/Collaboration";
 import { openDesktopWindow, type DesktopCommand } from "../features/desktop/bridge";
+import { Predictions } from "../features/predictions/Predictions";
 import React, { useEffect, useRef, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import type { VaultInfo } from "@the-way-here/shared";
@@ -284,6 +285,7 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/preferences" element={<Preferences revision={revision} vault={vault} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} onSwitch={(id) => void switchKnowledgeBase(id)} />} />
             <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">正在打开知识库…</p>} />
             <Route path="/" element={<Today revision={revision} />} />
+            <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : null} />
             <Route path="/questions" element={<QuestionsHub revision={revision} />} />
             <Route path="/sources" element={<OrganizedSources revision={revision} />} />
             <Route path="/sources/materials" element={<OrganizedSources revision={revision} />} />

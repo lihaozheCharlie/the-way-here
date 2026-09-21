@@ -76,7 +76,7 @@ export class RunCoordinator {
   }
 
   async start(input: StartRunInput): Promise<WikiRun> {
-    for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId]] as const) {
+    for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId], ["contextTopicId", input.contextTopicId]] as const) {
       if (value !== undefined && typeof value !== "string") throw new RunRequestError(400, `${field} 必须是字符串`);
     }
     const prompt = input.prompt?.trim();
@@ -89,12 +89,14 @@ export class RunCoordinator {
       throw new RunRequestError(404, error.message || "知识库不存在");
     }
     const taskConfig = resolvedKnowledge.config;
+    const contextTopicId = input.contextTopicId?.trim() || undefined;
+    if (contextTopicId && contextTopicId.length > 500) throw new RunRequestError(400, "话题 ID 过长");
     const contextPageId = input.contextPageId?.trim();
     if (contextPageId && !resolvedKnowledge.index.get(contextPageId)) throw new RunRequestError(404, "绑定的上下文文件不存在");
     const outputTarget = input.outputTarget === undefined ? undefined : parseAgentOutputTarget(input.outputTarget);
     if (input.outputTarget !== undefined && !outputTarget) throw new RunRequestError(400, "结果保存目标无效");
     await this.outputs.assertTarget(taskConfig, resolvedKnowledge.index, mode, outputTarget);
-    const normalizedInput = { ...input, outputTarget, contextPageId };
+    const normalizedInput = { ...input, outputTarget, contextPageId, contextTopicId };
     if (!prompt && mode !== "validate") throw new RunRequestError(400, "请输入任务内容");
     const requestedEffort = input.effort ? parseReasoningEffort(input.effort) : undefined;
     if (input.effort && !requestedEffort) throw new RunRequestError(400, "思考深度无效");
@@ -121,6 +123,8 @@ export class RunCoordinator {
     normalizedInput.outputTarget = outputTarget || previous?.outputTarget;
     normalizedInput.sourceContext = input.sourceContext || previous?.sourceContext;
     normalizedInput.contextPageId = contextPageId || previous?.contextPageId;
+    if (previous?.contextTopicId && contextTopicId && previous.contextTopicId !== contextTopicId) throw new RunRequestError(400, "同一会话不能切换话题");
+    normalizedInput.contextTopicId = previous?.contextTopicId || contextTopicId;
     if (previous && previous.knowledgeBaseId !== taskConfig.knowledgeBaseId) throw new RunRequestError(400, "不能跨知识库继续同一段对话");
     if (previous?.outputTarget?.kind === "photo-memory" && mode !== "read") throw new RunRequestError(400, "照片对话保持只读，请另开构建任务");
     const prepared = await this.outputs.prepare(taskConfig, resolvedKnowledge.index, mode, normalizedInput,
@@ -243,7 +247,7 @@ export class RunCoordinator {
         mode,
         config.knowledgeBaseId,
         config,
-        { displayPrompt: input.displayPrompt?.trim() || prompt, outputTarget: input.outputTarget, sourceContext: input.sourceContext, contextPageId: input.contextPageId, ...agent },
+        { displayPrompt: input.displayPrompt?.trim() || prompt, outputTarget: input.outputTarget, sourceContext: input.sourceContext, contextPageId: input.contextPageId, contextTopicId: input.contextTopicId, ...agent },
       );
     } catch (error: any) {
       throw new RunRequestError(409, error.message || "无法创建任务");

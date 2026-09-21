@@ -1,5 +1,7 @@
 import { SourceConnections } from "./runtime/source-connections.js";
 import { registerSourceConnectionRoutes } from "./routes/source-connection-routes.js";
+import { PredictionService } from "./runtime/prediction-service.js";
+import { registerPredictionRoutes } from "./routes/prediction-routes.js";
 import path from "node:path";
 import { registerAgentSettingsRoutes } from "./routes/agent-settings-routes.js";
 import { fileURLToPath } from "node:url";
@@ -26,6 +28,7 @@ export class StudioServer {
     private readonly knowledge: KnowledgeRuntime,
     private readonly runs: RunCoordinator,
     private readonly sourceConnections: SourceConnections,
+    private readonly predictions: PredictionService,
   ) {}
 
   static async create(options: StudioServerOptions): Promise<StudioServer> {
@@ -44,8 +47,10 @@ export class StudioServer {
     });
     const runtimes = await AgentRuntimeRegistry.create(knowledge.index.config.agents, knowledge.vaultRoot);
     const runs = new RunCoordinator(knowledge, runtimes, app.log);
+    const predictions = new PredictionService(knowledge, runtimes, app.log);
+    registerPredictionRoutes(app, knowledge, predictions);
     const imports = new ImportStore(knowledge);
-    registerContentRoutes(app, knowledge, imports, () => runtimes.catalog(), (knowledgeBaseId) => runs.hasActiveKnowledgeBaseRun(knowledgeBaseId));
+    registerContentRoutes(app, knowledge, imports, () => runtimes.catalog(), async (knowledgeBaseId) => await runs.hasActiveKnowledgeBaseRun(knowledgeBaseId) || await predictions.hasActive(knowledgeBaseId));
     registerImportRoutes(app, imports, runs);
     registerRunRoutes(app, runs);
     const sourceConnections = new SourceConnections(knowledge, runs);
@@ -62,9 +67,10 @@ export class StudioServer {
         return reply.sendFile("index.html");
       });
     }
+    await predictions.reconcile();
     await runs.reconcile();
     await sourceConnections.start();
-    return new StudioServer(app, knowledge, runs, sourceConnections);
+    return new StudioServer(app, knowledge, runs, sourceConnections, predictions);
   }
 
   async listen(host: string, port: number): Promise<void> {
@@ -75,6 +81,7 @@ export class StudioServer {
 
   async close(): Promise<void> {
     await this.sourceConnections.close();
+    this.predictions.close();
     this.runs.close();
     await this.knowledge.close();
     await this.app.close();

@@ -12,7 +12,7 @@ export async function packageKnowledge(studio) {
     filter: (source) => !['__pycache__','.DS_Store','.git'].includes(path.basename(source)) && !source.endsWith('.pyc'),
   });
   // The Web demo is the only authoritative demo dataset, including photo/bill sidecars.
-  await cp(path.join(studio, '../vault/demo'), path.join(destination, 'demo'), { recursive:true, verbatimSymlinks:true, filter:source => !['.DS_Store','__pycache__'].includes(path.basename(source)) });
+  await cp(path.join(studio, '../vault/demo'), path.join(destination, 'demo'), { recursive:true, verbatimSymlinks:true, filter:source => !['.DS_Store','__pycache__','.runtime'].includes(path.basename(source)) });
   // uv supplies a relocatable CPython distribution; consumers need no developer tools.
   const uv = process.env.TWH_UV || 'uv';
   function run(args) {

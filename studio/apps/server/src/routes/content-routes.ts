@@ -13,7 +13,10 @@ import { PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
 
 export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, _imports: ImportStore, runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
   const contentWorkspace = () => ({ vaultRoot: knowledge.vaultRoot, index: knowledge.index, events: knowledge.events });
-  const writer = () => new PageWriter(contentWorkspace());
+  const writer = () => {
+    const bound = contentWorkspace();
+    return new PageWriter(bound, (previousPath, storedPath) => new ImportStore(bound).renameSource(previousPath, storedPath));
+  };
   app.get("/api/health", async () => ({ ok: true, vaultRoot: knowledge.vaultRoot, indexedAt: knowledge.index.lastIndexedAt }));
   app.get("/api/vault", async () => knowledge.vaultInfo(await runtimeCatalog()));
   app.post<{ Body: { name?: string } }>("/api/vault", async (request, reply) => {
@@ -60,6 +63,7 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
   app.get<{ Querystring: { q?: string } }>("/api/search", async (request) => knowledge.index.search(request.query.q || ""));
 
   app.get("/api/sources/folders", async () => listSourceFolders(knowledge));
+  app.post<{ Body: { folder?: unknown } }>("/api/sources/folders", async (request, reply) => handleContent(reply, () => writer().createSourceFolder(request.body?.folder), 201));
   app.post<{ Body: { title?: string; folder?: string } }>("/api/sources", async (request, reply) => handleContent(reply, async () => {
     const bound = contentWorkspace();
     const page = await new PageWriter(bound).createSource(request.body?.title, request.body?.folder);

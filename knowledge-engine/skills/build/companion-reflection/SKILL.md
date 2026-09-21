@@ -5,6 +5,8 @@ description: "当用户想要回信，或日记摄取标记 companion=update 时
 
 # 构建：近况回信
 
+检索相关旧线索时依赖 [common-retrieval](../../common/retrieval/SKILL.md)，只扩展能实质改变本次理解的来源；本文保留中性证据卡、人物视角与朋友式回信流程，不套用预测检索预算。
+
 这个 Skill 负责 `wiki/12 近况对话/` 的朋友式回信。共享人物库和主辅推理契约只由 `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` 维护；本 Skill 负责来源选择、朋友身份、成文、归档和总览。
 
 ## 使用边界

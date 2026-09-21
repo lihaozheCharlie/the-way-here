@@ -425,3 +425,9 @@ html:has(.quick-capture),body:has(.quick-capture),#root:has(.quick-capture) { mi
 .segmented-tabs button { white-space:nowrap; }
 
 .capture-feedback.is-visible { opacity:1; }
+
+/* Keep imported prediction actions inside the content pane, clear of the Inspector. */
+.desktop-shell .prediction-feedback-jump { position:static; display:block; margin:0 0 16px auto; }
+.desktop-shell .organized-sources-page .source-workspace-intro { flex-wrap:wrap; gap:12px 20px; }
+.desktop-shell .source-workspace-intro .source-toolbar-actions { margin-left:auto; }
+.desktop-shell .prediction-page { min-width:0; }

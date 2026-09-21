@@ -2,15 +2,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import type { WikiPageSummary } from "@the-way-here/shared";
 
+import { subscribeLiveRevision } from "./live-revision";
+
 export type ReturnContext = { returnTo: string; returnLabel: string };
 
 export function useLiveRevision(): number {
   const [revision, setRevision] = useState(0);
-  useEffect(() => {
-    const events = new EventSource("/api/events");
-    for (const event of ["index", "run", "approval", "file", "agent-settings"]) events.addEventListener(event, () => setRevision((value) => value + 1));
-    return () => events.close();
-  }, []);
+  useEffect(() => subscribeLiveRevision(() => setRevision((value) => value + 1)), []);
   return revision;
 }
 

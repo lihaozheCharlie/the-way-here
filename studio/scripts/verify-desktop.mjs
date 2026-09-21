@@ -28,7 +28,7 @@ try {
   await page.reload();
   expect(await page.evaluate(() => localStorage.getItem('desktop.verify-persistence'))).toBe('kept');
   const invokeMenu=async(label)=> application.evaluate(({Menu},label) => { const walk=(items)=>{for(const item of items){if(item.label===label){item.click();return true;}if(item.submenu&&walk(item.submenu.items))return true;}return false;};if(!walk(Menu.getApplicationMenu().items))throw Error('Missing menu: '+label); },label);
-  for (const route of ['/','/questions','/sources','/knowledge','/insights','/timeline','/letters','/relationships','/cards/personal-lines','/cards/cycles','/cards/systems','/mental-models']) {
+  for (const route of ['/','/questions','/predict-self','/sources','/knowledge','/insights','/timeline','/letters','/relationships','/cards/personal-lines','/cards/cycles','/cards/systems','/mental-models']) {
     console.log('Route',route);
     await page.goto(origin+route); await expect(page.locator('.desktop-sidebar')).toBeVisible();
     await page.locator('h1').first().waitFor(); await page.waitForTimeout(260);
@@ -42,6 +42,14 @@ try {
       await expect.poll(composerBottom).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
       await page.evaluate(() => document.getElementById('late-layout-notice').remove());
       await expect.poll(composerBottom).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
+    }
+    if(route==='/predict-self') {
+      await expect(page.getByRole('heading',{name:'看见未来',exact:true})).toBeVisible();
+      await expect(page.locator('.life-scenario-tree')).toBeVisible();
+      await expect(page.locator('.context-agent-panel')).toHaveCount(1);
+      await page.locator('.life-scenario-tree .prediction-branches button').first().click();
+      await expect(page.locator('.prediction-detail')).toBeVisible();
+      await page.screenshot({path:path.join(captures,'desktop-predictions.png')});
     }
     if(route==='/sources') { const body=await page.locator('.source-preview .editable-document-body').boundingBox(); expect(body.width).toBeGreaterThanOrEqual(300); }
     if(['/','/sources','/letters','/relationships','/questions','/knowledge','/insights','/timeline'].includes(route)) await page.screenshot({path:path.join(captures,`desktop-${route==='/'?'today':route.slice(1)}.png`)});
@@ -71,10 +79,11 @@ try {
   await page.getByRole('button',{name:'展开文件列表',exact:true}).click();
   await page.getByRole('button',{name:'展开文件夹栏',exact:true}).click();
   const doc=page.locator('.source-preview .editable-document');
-  await expect(doc.locator('.note-properties dl')).toBeHidden();
-  await doc.getByRole('button',{name:'展开全部属性',exact:true}).click();
-  await expect(doc.locator('.note-properties dl')).toBeVisible();
-  await doc.getByRole('button',{name:'收起属性',exact:true}).click();
+  await expect(doc.locator('.source-property-chip')).toHaveCount(2);
+  await doc.getByRole('button',{name:/\+\d+ 个标签/}).click();
+  await expect(doc.locator('.source-property-chip')).toHaveCount(5);
+  await doc.getByRole('button',{name:'收起标签',exact:true}).click();
+  await expect(doc.locator('.source-property-chip')).toHaveCount(2);
   await expect(doc.getByRole('button',{name:'展开本页目录',exact:true})).toBeVisible();
   await doc.getByRole('button',{name:'展开本页目录',exact:true}).click();
   await expect(doc.locator('.document-outline')).toBeVisible();
@@ -209,7 +218,7 @@ try {
   await page.getByRole('link',{name:'回到原文',exact:true}).click();
   await expect(page.locator('.external-source-notice')).toBeVisible();
   await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='main')?.setSize(1100,780));
-  for (const route of ['/','/sources','/relationships']) {
+  for (const route of ['/','/predict-self','/sources','/relationships']) {
     await page.goto(origin+route); await page.locator('h1').first().waitFor();
     const box=await page.locator('.main-area').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
     expect(box.scroll, 'compact '+route).toBeLessThanOrEqual(box.width+2);
@@ -230,5 +239,5 @@ try {
   await reopened.getByRole('button',{name:'确认断开',exact:true}).click();
   await expect(reopened.locator('.source-connections article')).toHaveCount(0);
   expect(await readFile(path.join(linkedDirectory,'连接原文.md'),'utf8')).toBe(linkedText);
-  console.log('Desktop verified: source/Wiki links, backlinks, heading navigation, connected directories, original-file updates, no copies, readonly sources, connection persistence and safe disconnect; 12 routes, native menus, search, inspector, preferences, voice confirmation, capture persistence, stale-library guard, readonly reader, focus window, photo import, stable workspace storage across app restart, sandbox and IPC rejection.');
+  console.log('Desktop verified: source/Wiki links, backlinks, heading navigation, connected directories, original-file updates, no copies, readonly sources, connection persistence and safe disconnect; 13 routes including prediction reports, native menus, search, inspector, preferences, voice confirmation, capture persistence, stale-library guard, readonly reader, focus window, photo import, stable workspace storage across app restart, sandbox and IPC rejection.');
 } catch(error) { const page=application?.windows()[0]; if(page) { console.log('Failed route',page.url(),(await page.locator('body').innerText()).slice(0,2500)); await page.screenshot({path:path.join(captures,'verification-failure.png')}); } throw error; } finally { await application?.close(); await rm(root,{recursive:true,force:true}); await rm(linkedDirectory,{recursive:true,force:true}); }

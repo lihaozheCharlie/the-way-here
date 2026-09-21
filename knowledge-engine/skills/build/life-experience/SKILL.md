@@ -5,6 +5,8 @@ description: "构建或更新 wiki/06 及 wiki/07 非人物分支下的现实系
 
 # 构建：生活经历
 
+检索现实系统及实体上下文时依赖 [common-retrieval](../../common/retrieval/SKILL.md)，从当前来源涉及的城市、组织或项目扩展相关证据；本 Skill 保留对象归档与解释职责。
+
 本 Skill 是 `wiki/06 现实系统/`，以及 `wiki/07 人物与城市/` 下生活过的城市、组织/项目和出现过的地点的唯一模板负责人。人物证据路由到 `knowledge-engine/skills/build/people/SKILL.md`，不要在这里复制人物模板。
 
 ## 先读

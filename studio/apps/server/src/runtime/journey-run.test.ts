@@ -31,7 +31,7 @@ async function fixture() {
   const start = vi.fn(async () => ({ runtimeId: "codex" as const, sessionId: "session", turnId: "turn" }));
   const provider = {
     subscribe: (callback: typeof listener) => { listener = callback; return () => undefined; },
-    resolve: async () => ({ runtimeId: "codex", runtime: { start }, model: { id: "test-model" }, effort: "high" }),
+    resolve: async (_runtime: unknown, model?: string, effort?: string) => ({ runtimeId: "codex", runtime: { start }, model: { id: model || "test-model" }, effort: effort || "high" }),
     close: vi.fn(),
   } as unknown as AgentRuntimeProvider;
   const coordinator = new RunCoordinator(knowledge, provider, { error: vi.fn(), warn: vi.fn() } as unknown as FastifyBaseLogger);
@@ -73,4 +73,29 @@ describe("journey output orchestration", () => {
     expect(start).not.toHaveBeenCalled();
     expect(await coordinator.list()).toEqual([]);
   });
+});
+
+
+it("persists topic identity across resumed runs and rejects switching topics or libraries", async () => {
+  const { coordinator, finish, start } = await fixture();
+  const first = await coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "匿名话题", contextTopicId: "wiki:demo-question" });
+  finish(first);
+  await vi.waitFor(async () => expect((await coordinator.get(first.id))?.status).toBe("completed"));
+  const next = await coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "接着说", sessionId: first.runtimeSessionId });
+  expect(await coordinator.get(next.id)).toMatchObject({ contextTopicId: "wiki:demo-question", runtimeSessionId: first.runtimeSessionId });
+  expect((start.mock.calls as unknown[][]).at(-1)?.[0]).toMatchObject({ sessionId: first.runtimeSessionId });
+  await expect(coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "别的话题", sessionId: first.runtimeSessionId, contextTopicId: "different" })).rejects.toThrow("不能切换话题");
+  await expect(coordinator.start({ knowledgeBaseId: "other", mode: "read", prompt: "另一个库", sessionId: first.runtimeSessionId })).rejects.toThrow("不能跨知识库");
+  await expect(coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "错误字段", contextTopicId: 42 as any })).rejects.toThrow("必须是字符串");
+});
+
+
+it("applies a changed model and effort while retaining the existing conversation", async () => {
+  const { coordinator, finish, start } = await fixture();
+  const first = await coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "匿名对话", model: "first-model", effort: "low" });
+  finish(first);
+  await vi.waitFor(async () => expect((await coordinator.get(first.id))?.status).toBe("completed"));
+  const next = await coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "换个模型继续", sessionId: first.runtimeSessionId, runtimeId: "codex", model: "second-model", effort: "high" });
+  expect(next).toMatchObject({ model: "second-model", effort: "high", runtimeSessionId: first.runtimeSessionId });
+  expect((start.mock.calls as unknown[][]).at(-1)?.[0]).toMatchObject({ model: "second-model", effort: "high", sessionId: first.runtimeSessionId });
 });

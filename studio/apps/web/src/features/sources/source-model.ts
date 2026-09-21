@@ -49,7 +49,8 @@ export function sourceRecordType(page: Pick<WikiPageSummary, "relativePath" | "t
 export function sourceRecordDate(page: Pick<WikiPageSummary, "title" | "relativePath" | "start" | "modifiedAt">): Date {
   const datedIdentity = `${page.start || ""} ${page.title} ${page.relativePath}`;
   const explicitDate = datedIdentity.match(/(?:19|20)\d{2}[-/.,，](?:0?[1-9]|1[0-2])[-/.,，](?:[12]\d|3[01]|0?[1-9])(?!\d)/)?.[0]?.replace(/[-/.,，]/g, "-");
-  const parsed = new Date(explicitDate ? `${explicitDate}T00:00:00` : page.modifiedAt);
+  const normalizedDate = explicitDate?.split("-").map((part) => part.padStart(2, "0")).join("-");
+  const parsed = new Date(normalizedDate ? `${normalizedDate}T00:00:00` : page.modifiedAt);
   return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
 }
 
