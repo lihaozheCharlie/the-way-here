@@ -403,18 +403,12 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .context-run-details > summary .icon { transition: transform .16s var(--ease); }
 .context-run-details[open] > summary .icon { transform: rotate(180deg); }
 .context-run-detail-body { padding: 10px 11px 2px; }
-.context-run-detail-tabs { width: fit-content; display: flex; gap: 2px; margin-bottom: 10px; padding: 3px; background: var(--surface-subtle); border-radius: 7px; }
-.context-run-detail-tabs > button { min-height: 26px; padding: 4px 9px; color: var(--muted); background: transparent; border: 0; border-radius: 5px; font-size: 10px; }
-.context-run-detail-tabs > button.active { color: var(--ink); background: #fff; box-shadow: 0 1px 3px rgba(39, 62, 61, .1); }
 .context-run-detail-body > dl { margin: 0 0 12px; padding: 9px 11px; background: var(--surface-subtle); }
 .context-run-detail-body > dl > div { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 4px 0; }
 .context-run-detail-body dt, .context-run-detail-body dd { margin: 0; font-size: 9.5px; line-height: 1.5; }
 .context-run-detail-body dt { color: var(--muted); }
 .context-run-detail-body h3 { margin: 0 0 8px; font-size: 11.5px; }
 .context-run-detail-body section > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
-.context-change-list details, .context-validation-list details { border-top: 1px dashed var(--line); }
-.context-change-list summary, .context-validation-list summary { padding: 9px 0; cursor: pointer; overflow-wrap: anywhere; font-size: 10px; line-height: 1.5; }
-.context-change-list pre, .context-validation-list pre { max-height: 240px; overflow: auto; padding: 11px; color: #e7eceb; background: var(--ink); font-size: 9.5px; line-height: 1.55; white-space: pre-wrap; }
 .context-technical-list > div { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 9px; padding: 7px 0; border-top: 1px dashed var(--line); }
 .context-technical-list time, .context-technical-list p { margin: 0; color: var(--muted); font-size: 9.5px; line-height: 1.55; }
 .context-retry-run { margin-top: 13px; padding: 0; color: var(--watch); background: transparent; border: 0; font-size: 10px; font-weight: 650; }

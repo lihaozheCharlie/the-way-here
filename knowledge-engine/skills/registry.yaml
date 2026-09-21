@@ -41,6 +41,11 @@ skills:
     modes: [write]
     responsibility: "按当前调整目标修改分类、模板、抽取规则或 Skill 行为"
     triggers: ["修改分类", "调整模板", "修改抽取规则", "调整 Skill"]
+  - id: common-retrieval
+    path: knowledge-engine/skills/common/retrieval/SKILL.md
+    modes: [read, write]
+    responsibility: "查询、预测、扫描与构建共享的知识检索、来源时间核验及双链追溯；本身不写入"
+    triggers: ["检索知识库", "检索原始来源", "双链追溯", "证据核验"]
   - id: common-quality-gate
     path: knowledge-engine/skills/common/quality-gate/SKILL.md
     modes: [read, write]
@@ -61,3 +66,13 @@ skills:
     modes: [read, write]
     responsibility: "耐久信号分类与信号路由诊断"
     triggers: ["耐久信号", "信号分类", "路由诊断"]
+  - id: consume-predict-self
+    path: knowledge-engine/skills/consume/predict-self/SKILL.md
+    modes: [read]
+    responsibility: "预测自己页面主动触发独立的未来情景、证据链与可验证行动；由 Studio 保存派生档案"
+    triggers: ["预测自己", "重新预测", "五年后的我", "个人未来情景"]
+  - id: consume-scan-understanding
+    path: knowledge-engine/skills/consume/scan-understanding/SKILL.md
+    modes: [read]
+    responsibility: "只读评估 Wiki 对用户的了解程度与证据缺口；由 Studio 计算评分和预测门槛"
+    triggers: ["扫描 Wiki 了解度", "重新扫描了解度", "评估了解程度"]

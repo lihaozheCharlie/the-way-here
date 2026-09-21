@@ -88,3 +88,8 @@ export {
   type WikiRun,
   type DeletedAgentConversation,
 } from "./runs.js";
+export type { UnderstandingScore, PredictionView } from "./predictions.js";
+
+export type { LifeDimension, LifeEvidence, LifeScenario, LifePredictionReport, PredictionThoughtKind } from "./predictions.js";
+
+export { predictionPathwayLabels, type PredictionPathway } from "./predictions.js";

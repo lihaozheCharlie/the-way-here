@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WikiPage } from "@the-way-here/shared";
 import type { KnowledgeRuntime } from "../../runtime/knowledge-runtime.js";
+import { ImportStore } from "../imports/import-store.js";
 import { ContentRequestError, PageWriter } from "./page-writer.js";
 
 const roots: string[] = [];
@@ -50,16 +51,58 @@ async function fixture() {
     index: { config: { paths: { wiki: "wiki", sources: "sources" } }, get, list: () => [page], rebuild, lastIndexedAt: "2026-09-02T00:00:00.000Z" },
     events: { broadcast },
   } as unknown as KnowledgeRuntime;
-  return { root, filePath, page, rebuild, broadcast, writer: new PageWriter(knowledge) };
+  return { root, filePath, page, knowledge, get, rebuild, broadcast, writer: new PageWriter(knowledge) };
 }
 
 describe("PageWriter source files", () => {
+  it("creates empty source folders and rejects duplicates, invalid input and escaped parents", async () => {
+    const { root, writer } = await fixture();
+    await expect(writer.createSourceFolder("日记/旅行")).resolves.toEqual({ path: "日记/旅行" });
+    expect((await stat(path.join(root, "sources/日记/旅行"))).isDirectory()).toBe(true);
+    await expect(writer.createSourceFolder("日记/旅行")).rejects.toMatchObject({ statusCode: 409 });
+    for (const value of [null, 42, "", "../outside", ".imports/private"]) await expect(writer.createSourceFolder(value)).rejects.toBeInstanceOf(ContentRequestError);
+    await mkdir(path.join(root, "outside"));
+    await symlink(path.join(root, "outside"), path.join(root, "sources/shortcut"));
+    await expect(writer.createSourceFolder("shortcut/escape")).rejects.toMatchObject({ statusCode: 403 });
+  });
+
   it("creates a life-record file without duplicating its filename as a Markdown heading", async () => {
     const { root, writer } = await fixture();
 
     await writer.createSource("新记录", "日记");
 
     await expect(readFile(path.join(root, "sources/日记/新记录.md"), "utf8")).resolves.toBe("");
+  });
+
+  it.each(["ready", "deferred", "built"] as const)("preserves %s build tracking after saving and renaming a diary, including reload", async (status) => {
+    const { root, page, knowledge, get, broadcast } = await fixture();
+    const imports = new ImportStore(knowledge);
+    const batch = await imports.trackCreatedSource(page);
+    const manifestPath = path.join(root, "sources/.imports", `${batch.id}.json`);
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    Object.assign(manifest.files[0], { buildStatus: status, buildRunId: "existing-run", builtRefs: [] });
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const writer = new PageWriter(knowledge, (before, after) => imports.renameSource(before, after));
+    await writer.save(page.id, "今天完成了一份记录。");
+    const renamed = sourcePage("sources/日记/写完后的标题.md", page.modifiedAt);
+    get.mockImplementation((id: string) => id === page.id ? page : renamed);
+
+    await writer.rename(page.id, "写完后的标题");
+
+    const reloaded = await new ImportStore(knowledge).list();
+    expect(reloaded).toHaveLength(1);
+    expect(reloaded[0]?.id).toBe(batch.id);
+    expect(reloaded[0]?.files[0]).toMatchObject({ storedPath: renamed.relativePath, buildStatus: status, buildRunId: "existing-run" });
+    await expect(readFile(path.join(root, renamed.relativePath), "utf8")).resolves.toBe("今天完成了一份记录。");
+    expect(broadcast).toHaveBeenCalledWith("import", { previousPath: page.relativePath, storedPath: renamed.relativePath });
+  });
+
+  it("restores the original filename when build tracking cannot be migrated", async () => {
+    const { filePath, page, knowledge, rebuild } = await fixture();
+    const writer = new PageWriter(knowledge, async () => { throw new Error("manifest unavailable"); });
+    await expect(writer.rename(page.id, "新标题")).rejects.toThrow("manifest unavailable");
+    await expect(readFile(filePath, "utf8")).resolves.toBe("# 今天\n");
+    expect(rebuild).not.toHaveBeenCalled();
   });
 
   it("deletes one indexed life-record file with a concurrency check", async () => {

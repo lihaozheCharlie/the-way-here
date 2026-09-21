@@ -1,0 +1,81 @@
+[
+  {
+    "id": "inertia",
+    "input": "基于这些冻结匿名资料按consume-predict-self按当前输出结构生成报告，不补造事实。",
+    "pages": [
+      {
+        "id": "sources/inertia",
+        "markdown": "连续三年想辞职做产品，但每次忙起来就停止尝试。目前仍保持原工作，每周陪家人，积蓄只够维持三个月。"
+      }
+    ],
+    "checks": {
+      "requireInertia": true,
+      "requireConditional": false,
+      "requireWildcard": true
+    }
+  },
+  {
+    "id": "executed-change",
+    "input": "基于这些冻结匿名资料按consume-predict-self按当前输出结构生成报告，不补造事实。",
+    "pages": [
+      {
+        "id": "sources/executed-change",
+        "markdown": "过去搬家前做过半年预算并落实工作。最近六个月每周完成两个产品试验，家庭已同意预留半年生活费。"
+      }
+    ],
+    "checks": {
+      "requireInertia": true,
+      "requireConditional": false,
+      "requireWildcard": true
+    }
+  },
+  {
+    "id": "hypothesis",
+    "input": "基于这些冻结匿名资料按consume-predict-self按当前输出结构生成报告，不补造事实。",
+    "pages": [
+      {
+        "id": "sources/hypothesis",
+        "markdown": "我在本地工作，喜欢和朋友踢球。如果能每周减少一天工作，我想多陪父母。这仍是一个假设，尚未与公司协商。"
+      }
+    ],
+    "checks": {
+      "requireInertia": true,
+      "requireConditional": true,
+      "requireWildcard": true
+    }
+  },
+  {
+    "id": "nonprofit-play",
+    "input": "基于这些冻结匿名资料按consume-predict-self按当前输出结构生成报告，不补造事实。",
+    "pages": [
+      {
+        "id": "sources/nonprofit-play",
+        "markdown": "我每周做一次社区志愿服务，平日有工作。周末打游戏只是觉得好玩，不想做直播或靠兴趣赚钱。近期睡眠一般，存款不多。"
+      }
+    ],
+    "checks": {
+      "requireInertia": true,
+      "requireConditional": false,
+      "requireWildcard": true
+    }
+  },
+  {
+    "id": "concrete-destinations",
+    "input": "根据冻结资料评估所有具体去向，保留随机事件分支。候选不是已做出的决定。",
+    "pages": [
+      {
+        "id": "sources/present",
+        "markdown": "我目前在杭州做互联网程序员，主要靠工资生活，周末会回嘉兴看父母。以前换工作时优先考虑收入稳定。最近每周练英语，但还没有海外offer。"
+      },
+      {
+        "id": "prediction-input/current",
+        "markdown": "未来可能继续在杭州的大厂做程序员，也考虑深圳的大厂；或者去嘉兴生活。还想过新加坡、澳大利亚，长期希望定居。小概率会考虑创业公司，前同事在创业，但没有邀约。"
+      }
+    ],
+    "checks": {
+      "requireInertia": true,
+      "requireWildcard": true,
+      "requireConditional": true
+    }
+  }
+]

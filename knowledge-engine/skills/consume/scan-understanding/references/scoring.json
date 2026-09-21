@@ -1,0 +1,28 @@
+{
+  "assessment": {
+    "version": 2,
+    "threshold": 60,
+    "facets": [
+      {
+        "id": "health",
+        "label": "健康",
+        "max": 30
+      },
+      {
+        "id": "work",
+        "label": "工作",
+        "max": 24
+      },
+      {
+        "id": "play",
+        "label": "娱乐",
+        "max": 22
+      },
+      {
+        "id": "love",
+        "label": "爱",
+        "max": 24
+      }
+    ]
+  }
+}

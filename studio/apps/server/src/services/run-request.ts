@@ -13,6 +13,7 @@ export type StartRunInput = {
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
   contextPageId?: string;
+  contextTopicId?: string;
 };
 
 export class RunRequestError extends Error {

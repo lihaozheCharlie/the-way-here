@@ -1,3 +1,4 @@
+import type { AgentSelection } from "./AgentSettings";
 import { JOURNEY_REPORT_OUTPUT_END, JOURNEY_REPORT_OUTPUT_START, type AgentOutputTarget, type AgentRuntimeEvent, type SourceRunContext, type WikiRun } from "@the-way-here/shared";
 
 export type AgentContext = {
@@ -14,6 +15,7 @@ export type AgentContext = {
 };
 
 export type AgentAttachedContext = {
+  topicId?: string;
   title: string;
   currentUnderstanding: string;
   reason: string;
@@ -139,6 +141,15 @@ export function groupAgentThreads(runs: WikiRun[]): AgentThread[] {
     const sorted = threadRuns.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     return { id, latest: sorted.at(-1)!, runs: sorted };
   }).sort((a, b) => b.latest.createdAt.localeCompare(a.latest.createdAt));
+}
+
+export function boundAgentThreadForTopic(runs: WikiRun[], topic: AgentAttachedContext, knowledgeBaseId: string): AgentThread | undefined {
+  const threads = groupAgentThreads(runs.filter((run) => run.knowledgeBaseId === knowledgeBaseId));
+  const bound = topic.topicId && threads.find((thread) => thread.runs.some((run) => run.contextTopicId === topic.topicId));
+  if (bound) return bound;
+  // Older conversations predate topic IDs; require the generated background marker as well as the title.
+  return threads.find((thread) => !thread.runs.some((run) => run.contextTopicId) && thread.runs.some((run) =>
+    run.title === `处理：${topic.title}` && run.prompt.includes(`- 话题：${topic.title}\n`)));
 }
 
 export function boundAgentThreadForPage(runs: WikiRun[], pageId?: string): AgentThread | undefined {
@@ -273,4 +284,12 @@ export function contextPrompt(context: AgentContext, request: string): string {
     "用户请求：",
     request.trim(),
   ].filter(Boolean).join("\n");
+}
+
+
+export function continuationModelSelection(run: WikiRun, selection: AgentSelection): AgentSelection {
+  if (run.runtimeId && selection.runtimeId !== run.runtimeId) {
+    throw new Error(`继续此对话请选择${run.runtimeId === "codex" ? " Codex" : "第三方模型"}；切换运行方式请开始新对话，原聊天记录会保留。`);
+  }
+  return { runtimeId: selection.runtimeId, model: selection.model, effort: selection.effort };
 }

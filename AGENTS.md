@@ -14,6 +14,7 @@
 1. 产品代码、API、UI、索引器或运行管理任务：读取并遵守 `studio/AGENTS.md`。
 2. Wiki 查询、摄取、规则、质量或 Skill 任务：先选择知识库，再读取 `knowledge-engine/skills/registry.yaml`，按其中 `triggers`、`modes` 和 `path` 加载最小必要 Skill。
 3. 跨产品与 Wiki 的任务必须分别遵守两侧边界；产品实现不得复制 Wiki 判断规则，Wiki 构建不得修改 Studio。
+4. 各 Skill 需要检索既有 Wiki 或来源时，按需依赖 `common-retrieval`；调用者保留任务目的、资料范围、阅读深度与停止标准。预测与扫描沿用冻结资料，普通查询和构建绑定本次选定知识库；不得把预测策略复制到共享检索层。
 
 ## 知识库选择
 

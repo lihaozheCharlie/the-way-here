@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
-export type IconName = "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
+export type IconName = "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
+    info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7h.01" /></>,
     image: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 5-5 4 4 4-6 5 7" /></>,
     now: <><circle cx="12" cy="12" r="7" /><path d="M12 7v5l3 2" /></>,
     compass: <><circle cx="12" cy="12" r="8" /><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z" /></>,

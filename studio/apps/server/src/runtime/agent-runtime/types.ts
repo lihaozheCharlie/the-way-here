@@ -21,6 +21,7 @@ export interface AgentExecutionRef {
 
 export interface StartAgentExecution {
   strictReadOnly?: boolean;
+  knowledgeEvidence?: {file:string; reader:string; knowledgeBaseId:string; inputHash:string};
   images?: Array<{ path: string; mimeType: "image/jpeg" }>;
   cwd: string;
   prompt: string;

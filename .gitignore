@@ -48,3 +48,6 @@ studio/.runtime/
 *.tmp
 *.temp
 *.bak
+
+# Prediction execution snapshots stay local, including for the shared demo.
+/vault/*/predictions/.runtime/
