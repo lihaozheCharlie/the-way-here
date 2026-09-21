@@ -5,7 +5,7 @@ import { PageLink } from "../../shared/routing";
 import { TextArea } from "../../shared/form-controls";
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import type { PaymentJourneySummary, SourceImportBatch, TodayView, WikiPageSummary } from "@the-way-here/shared";
+import type { PaymentJourneySummary, SourceImportBatch, TodayView, VaultInfo, WikiPageSummary } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent, shouldSubmitAgentInput } from "../collaboration/model";
@@ -26,6 +26,7 @@ export function Today({ revision }: { revision: number }) {
   const conversationInputRef = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => resizeComposerTextarea(conversationInputRef.current), [conversationDraft]);
   const { data, loading, error } = useApi<TodayView>("/api/views/today", revision);
+  const { data: vault } = useApi<VaultInfo>("/api/vault", revision);
   const { data: sourcePages } = useApi<WikiPageSummary[]>("/api/pages?sources=true", revision);
   const { data: importBatches } = useApi<SourceImportBatch[]>("/api/imports", revision);
   if (loading) return <Loading label="正在找回我们上次聊到的地方" />;
@@ -107,9 +108,15 @@ export function Today({ revision }: { revision: number }) {
         </form>
       </section>
       {data.latestLetter ? <NavLink to="/letters" className="home-pending-build"><Icon name="message" size={16} /><span>有一封近况回信等你读：{data.latestLetter.title}</span><Icon name="arrow" size={15} /></NavLink> : null}
-      <section className="desktop-today-reminder"><Icon name="spark" size={18} /><div><h2>今日提醒</h2><p>{data.conversationPrompts.find(item => item.status === "active")?.question || data.guidingQuestion || "最近发生的事，都可以从一句话开始说。"}</p></div><NavLink to="/questions">看看话题 <Icon name="arrow" size={14} /></NavLink></section>
+      <nav className="today-entry-grid" aria-label="从这里继续">
+        <NavLink to="/questions"><span><Icon name="message" size={16} />值得聊聊</span><b>{data.conversationPrompts.filter(item => item.status === "active").length} 条话题</b><p>从你现在最在意的事情开始</p></NavLink>
+        <button type="button" onClick={() => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture")}><span><Icon name="journal" size={16} />生活记录</span><b>随手记一笔</b><p>写下今天，也可以说一段</p></button>
+        <NavLink to="/knowledge"><span><Icon name="library" size={16} />已有理解</span><b>{vault ? `${vault.pageCount} 条理解` : "回看已有理解"}</b><p>看看从记录里慢慢读出了什么</p></NavLink>
+      </nav>
+      <div className="today-record-actions"><NavLink to="/sources">查看生活记录 <Icon name="arrow" size={14} /></NavLink><RecordImportTrigger onClick={() => setImportOpen(true)} /></div>
+      <details className="today-recent-disclosure"><summary>最近的线索与理解</summary>
       <div className="desktop-today-grid"><section><h2>最近的线索</h2><div className="desktop-keywords">{[...new Set(data.recentPages.flatMap(page => page.tags.filter(tag => !tag.includes("/"))))].slice(0,5).map(tag => <NavLink to={`/search?q=${encodeURIComponent(tag)}`} key={tag}>{tag}</NavLink>)}{!data.recentPages.some(page => page.tags.length) ? <p>留下生活记录，线索会慢慢浮现。</p> : null}</div></section><section><h2>近期理解</h2>{data.recentPages.filter(page => !page.isSource && page.category !== "maintenance").slice(0,2).map(page => <PageLink key={page.id} page={page} />)}{!data.recentPages.length ? <p>你的理解会从真实记录里生长。</p> : null}</section></div>
-      <section className="desktop-today-capture"><h2>随手记一笔</h2><p>日记、照片、AI 对话和账单，都可以成为下一次理解的来路。</p><div><button type="button" onClick={() => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture")}><Icon name="journal" size={15} />写一段或说一段</button><RecordImportTrigger onClick={() => setImportOpen(true)} /></div></section>
+      </details>
       <PageAgentContext context={{ scope: "此刻 · 随口话头", title: featuredQuestion.question, summary: "从一个新近发生的具体片段开始；收到回答后，再沿相关 Wiki 和原始记录理解它的来路。", defaultMode: "read", suggestions: [featuredQuestion.agentPrompt, journeyPrompt || "我想讲一件最近发生、但还没有说清楚的事。请一次问我一个具体问题，先陪我理解。"] }} />
     </div>
   );

@@ -32,7 +32,7 @@ export function useReturnContext(): ReturnContext {
 
 export function PageLink({ page, className = "", children }: { page: WikiPageSummary; className?: string; children?: ReactNode }) {
   const returnContext = useReturnContext();
-  return <NavLink to={pageDestination(page)} state={returnContext} className={className}>{children || page.title}</NavLink>;
+  return <NavLink data-overflow-tooltip="off" to={pageDestination(page)} state={returnContext} className={className}>{children || page.title}</NavLink>;
 }
 
 function returnLabelForPath(pathname: string): string {

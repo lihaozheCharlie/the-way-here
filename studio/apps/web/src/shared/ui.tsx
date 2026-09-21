@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
-export type IconName = "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
+export type IconName = "link" | "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
+    link: <><path d="m10 13 4-4M8 15l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0M13 18a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1" /></>,
     info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7h.01" /></>,
     image: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 5-5 4 4 4-6 5 7" /></>,
     now: <><circle cx="12" cy="12" r="7" /><path d="M12 7v5l3 2" /></>,
@@ -61,7 +62,7 @@ function PaneCollapseButton({ open, onToggle, label }: { open: boolean; onToggle
 }
 
 export function CollapsibleIndexPane({ open, onToggle, label, children }: { open: boolean; onToggle: () => void; label: string; children: ReactNode }) {
-  return <div className={`collapsible-index-pane${open ? "" : " collapsed"}`}><div className="collapsible-index-content">{children}</div><PaneCollapseButton open={open} onToggle={onToggle} label={label} /></div>;
+  return <div className={`collapsible-index-pane${open ? "" : " collapsed"}`}><div className="collapsible-index-content" data-overflow-tooltip="off">{children}</div><PaneCollapseButton open={open} onToggle={onToggle} label={label} /></div>;
 }
 
 export function SectionHeading({ title, action }: { title: string; action?: ReactNode }) {

@@ -106,7 +106,7 @@ export function AppShell({ revision }: { revision: number }) {
   const readerReturnContext = location.state as ReturnContext | null;
   const isSourceReader = location.pathname.startsWith("/page/") && readerReturnContext?.returnTo.startsWith("/sources");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [inspectorVisible, setInspectorVisible] = useState(() => localStorage.getItem("desktop.inspector") !== "false");
+  const [inspectorVisible, setInspectorVisible] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [sourceInspectorOverride, setSourceInspectorOverride] = useState<boolean>();
   useEffect(() => { const resize = () => setWindowWidth(window.innerWidth); window.addEventListener("resize", resize); return () => window.removeEventListener("resize", resize); }, []);
@@ -117,7 +117,7 @@ export function AppShell({ revision }: { revision: number }) {
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
   const inspector = useInspector()!;
   const utilityWindow = location.pathname === "/preferences" || location.pathname === "/capture";
-  const localConversation = location.pathname === "/questions" || location.pathname.startsWith("/focus/") || location.pathname === "/conversation";
+  const localConversation = location.pathname.startsWith("/focus/") || location.pathname === "/conversation";
   const detached = new URLSearchParams(location.search).has("detached");
   const openCapture = () => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture");
   const openPreferences = () => window.desktop ? void openDesktopWindow("/preferences", "settings") : navigate("/preferences");
@@ -127,7 +127,6 @@ export function AppShell({ revision }: { revision: number }) {
     window.addEventListener("show-inspector", show); window.addEventListener("hide-inspector", hide);
     return () => { window.removeEventListener("show-inspector", show); window.removeEventListener("hide-inspector", hide); };
   }, [sourceWorkspace]);
-  useEffect(() => { localStorage.setItem("desktop.inspector", String(inspectorVisible)); }, [inspectorVisible]);
   const [knowledgeBaseSwitching, setKnowledgeBaseSwitching] = useState(false);
   const [switchingKnowledgeBaseName, setSwitchingKnowledgeBaseName] = useState("");
   const [knowledgeBaseError, setKnowledgeBaseError] = useState("");

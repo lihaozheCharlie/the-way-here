@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SourceConnection, VaultInfo } from "@the-way-here/shared";
+import { Icon } from "../../shared/ui";
 import { api } from "../../api";
 import { useApi } from "../../shared/use-api";
 import { TextInput } from "../../shared/form-controls";
@@ -47,4 +48,22 @@ export function SourceConnectionsPanel({ compact = false }: { compact?: boolean 
     </article>)}
   </div>;
   return compact ? <details className="source-connections-disclosure"><summary>原目录连接{connections?.length ? ` · ${connections.length}` : ""}</summary>{content}</details> : content;
+}
+
+/** A disclosure keeps connection management available without taking reading space. */
+export function SourceConnectionsPopover() {
+  const root = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) root.current?.removeAttribute("open"); };
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && root.current?.open) { root.current.open = false; root.current.querySelector("summary")?.focus(); }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeEscape);
+    return () => { document.removeEventListener("pointerdown", closeOutside); document.removeEventListener("keydown", closeEscape); };
+  }, []);
+  return <details className="source-connections-popover" ref={root}>
+    <summary aria-label="连接来源目录" title="连接来源目录"><Icon name="link" size={16} /></summary>
+    <section aria-label="原目录连接"><h2>原目录连接</h2><SourceConnectionsPanel /></section>
+  </details>;
 }

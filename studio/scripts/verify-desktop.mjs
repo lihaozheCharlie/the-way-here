@@ -35,13 +35,12 @@ try {
     const geometry=await page.locator('.main-area').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
     expect(geometry.scroll,route+' horizontal overflow').toBeLessThanOrEqual(geometry.width+2);
     if(route==='/questions') {
-      const composerBottom = async () => { const input=await page.locator('.context-agent-composer textarea').boundingBox(); return input.y+input.height; };
-      await expect.poll(composerBottom).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
-      await expect(page.getByRole('button',{name:'关闭对话窗口',exact:true})).toHaveCount(0);
-      await page.evaluate(() => { const notice=document.createElement('div'); notice.id='late-layout-notice'; notice.style.height='120px'; document.querySelector('.page-frame').prepend(notice); });
-      await expect.poll(composerBottom).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
-      await page.evaluate(() => document.getElementById('late-layout-notice').remove());
-      await expect.poll(composerBottom).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
+      await expect(page.locator('.desktop-inspector')).toHaveClass(/is-collapsed/);
+      await page.locator('.questions-topic-card button').first().click();
+      await expect(page.locator('.desktop-inspector')).toHaveClass(/is-open/);
+      await expect(page.locator('.context-agent-panel')).toHaveCount(1);
+      await expect(page.locator('.questions-topic-card.active')).toHaveCount(1);
+      await expect.poll(async () => { const input=await page.locator('.context-agent-composer textarea').boundingBox(); return input.y+input.height; }).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
     }
     if(route==='/predict-self') {
       await expect(page.getByRole('heading',{name:'看见未来',exact:true})).toBeVisible();
@@ -118,7 +117,7 @@ try {
   await page.getByRole('button',{name:'展开AI 协作面板',exact:true}).click();
   await page.locator('.context-agent-composer textarea').fill('切换历史后仍保留的匿名草稿');
   await page.getByRole('tab',{name:'历史记录',exact:true}).click();
-  await page.getByRole('tab',{name:'当前任务',exact:true}).click();
+  await page.getByRole('tab',{name:'当前对话',exact:true}).click();
   await expect(page.locator('.context-agent-composer textarea')).toHaveValue('切换历史后仍保留的匿名草稿');
   await page.goto(origin+'/page/'+encodeURIComponent(fixture.id));
   await expect(page.locator('.editable-document-body')).toContainText('匿名编辑后的原话');
@@ -131,6 +130,7 @@ try {
   await page.locator('#main-content').evaluate(el=>el.scrollTo(0,0));
   await page.screenshot({path:path.join(captures,'desktop-reader-ux.png')});
   await page.goto(origin+'/knowledge');
+  await page.locator('.understanding-detail-disclosure > summary').click();
   const digest=page.locator('.understanding-digest'); await expect(digest.locator('h2')).toHaveCount(4);
   const cycle=digest.getByRole('button',{name:'展开循环',exact:true});
   await expect(cycle).toBeVisible(); await cycle.click(); await expect(digest.locator('.cycle-stages section')).toHaveCount(4);
@@ -142,7 +142,7 @@ try {
   await page.screenshot({path:path.join(captures,'desktop-search.png')});
   await invokeMenu('搜索与命令');
   await page.getByRole('combobox').fill('近况回信'); await page.getByRole('combobox').press('Enter'); await expect(page).toHaveURL(/letters/);
-  await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-collapsed/); await expect(page.getByRole('button',{name:'展开AI 协作面板',exact:true})).toBeVisible();
+  await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-open/); await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-collapsed/); await expect(page.getByRole('button',{name:'展开AI 协作面板',exact:true})).toBeVisible();
   await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-open/);
   const settingsPromise=application.waitForEvent('window'); await invokeMenu('偏好设置…'); const settings=await settingsPromise; await settings.waitForLoadState('domcontentloaded');
   await expect(settings.getByRole('tab',{name:'AI 助手'})).toBeVisible(); await settings.getByRole('tab',{name:'AI 助手'}).click(); await expect(settings.locator('.ai-configuration')).toBeVisible();
@@ -194,9 +194,9 @@ try {
   await expect(reader.locator('.editable-document')).toBeVisible(); expect(await reader.locator('.editable-document-activate').count()).toBe(0); await reader.close();
   await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='main')?.focus());
   const focusPromise=application.waitForEvent('window'); await invokeMenu('深入聊聊'); const focus=await focusPromise; await focus.waitForLoadState('domcontentloaded'); await expect(focus.locator('.context-agent-panel')).toBeVisible(); await focus.close();
-  await page.goto(origin+'/sources'); await page.getByRole('button',{name:/照片记忆 从一张照片/}).click(); await expect(page.getByRole('dialog')).toBeVisible();
+  await page.goto(origin+'/sources'); await page.getByRole('button',{name:'导入资料',exact:true}).click(); await page.getByRole('button',{name:/照片 同一段旅程/}).click(); await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.locator('.source-connections-disclosure summary').click();
+  await page.locator('.source-connections-popover > summary').click();
   await page.locator('.source-connection-add input[type="checkbox"]').uncheck();
   await application.evaluate(({dialog},directory) => { dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]}); },linkedDirectory);
   await page.getByRole('button',{name:'连接原始目录',exact:true}).click();
@@ -234,7 +234,7 @@ try {
   expect(await reopened.evaluate(() => localStorage.getItem('desktop.verify-persistence'))).toBe('kept');
   expect(await reopened.evaluate(()=>fetch('/api/search?q=来自外部编辑器').then(res=>res.json()).then(rows=>rows.length))).toBe(1);
   await reopened.goto(origin+'/sources');
-  await reopened.locator('.source-connections-disclosure summary').click();
+  await reopened.locator('.source-connections-popover > summary').click();
   await reopened.getByRole('button',{name:'断开连接',exact:true}).click();
   await reopened.getByRole('button',{name:'确认断开',exact:true}).click();
   await expect(reopened.locator('.source-connections article')).toHaveCount(0);

@@ -85,15 +85,30 @@ export function TruncatedTextTooltip() {
   const [position, setPosition] = useState({ left: 0, top: 0 });
 
   useEffect(() => {
+    let pendingTimer: number | undefined;
+    let pendingAnchor: HTMLElement | undefined;
+    const cancelPending = () => {
+      window.clearTimeout(pendingTimer);
+      pendingTimer = undefined;
+      pendingAnchor = undefined;
+    };
     const show = (anchor: HTMLElement, origin: ActiveTooltip["origin"]) => {
       setActive({ anchor, origin, rect: anchor.getBoundingClientRect(), text: overflowText(anchor) });
     };
-    const hide = () => setActive(undefined);
+    const hide = () => { cancelPending(); setActive(undefined); };
     const handlePointerOver = (event: PointerEvent) => {
       const anchor = findInPath(event.composedPath());
-      if (anchor) show(anchor, "pointer");
+      if (!anchor || anchor === pendingAnchor) return;
+      cancelPending();
+      setActive(undefined);
+      pendingAnchor = anchor;
+      pendingTimer = window.setTimeout(() => {
+        cancelPending();
+        if (anchor.isConnected && isOverflowElement(anchor)) show(anchor, "pointer");
+      }, 400);
     };
     const handlePointerOut = (event: PointerEvent) => {
+      if (pendingAnchor && !(event.relatedTarget instanceof Node && pendingAnchor.contains(event.relatedTarget))) cancelPending();
       setActive((current) => {
         if (!current || current.origin !== "pointer") return current;
         if (event.relatedTarget instanceof Node && current.anchor.contains(event.relatedTarget)) return current;
@@ -103,6 +118,7 @@ export function TruncatedTextTooltip() {
     };
     const handleFocusIn = (event: FocusEvent) => {
       if (!(event.target instanceof HTMLElement)) return;
+      cancelPending();
       const anchor = findInFocusable(event.target);
       if (anchor) show(anchor, "focus");
     };
@@ -110,6 +126,9 @@ export function TruncatedTextTooltip() {
       setActive((current) => current?.origin === "focus" ? undefined : current);
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", hide);
     document.addEventListener("pointerover", handlePointerOver, true);
     document.addEventListener("pointerout", handlePointerOut, true);
     document.addEventListener("focusin", handleFocusIn, true);
@@ -117,6 +136,9 @@ export function TruncatedTextTooltip() {
     document.addEventListener("scroll", hide, true);
     window.addEventListener("resize", hide);
     return () => {
+      cancelPending();
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", hide);
       document.removeEventListener("pointerover", handlePointerOver, true);
       document.removeEventListener("pointerout", handlePointerOut, true);
       document.removeEventListener("focusin", handleFocusIn, true);

@@ -1,4 +1,3 @@
-import { QuestionConversation } from "./QuestionConversation";
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import type { PaymentJourneySummary, SourceImportBatch, TodayView, WikiPageSummary } from "@the-way-here/shared";
@@ -7,13 +6,13 @@ import { PageAgentContext } from "../desktop/InspectorContext";
 import { ImportMaterialsModal, RecordImportTrigger } from "../sources/ImportMaterialsModal";
 import { cleanSourcePath, importedFolderForBatch } from "../sources/source-model";
 import { Empty, Icon, Loading } from "../../shared/ui";
-import { type ConversationTopicKind, conversationTopicKinds, talkingQuestions } from "./talking-questions";
+import { type ConversationTopicKind, conversationTopicKinds, talkingQuestions, openLifeConversation } from "./talking-questions";
 
 export function QuestionsHub({ revision }: { revision: number }) {
   const [selectedQuestionId, setSelectedQuestionId] = useState("");
   const navigate = useNavigate();
   const [topicKind, setTopicKind] = useState<ConversationTopicKind | "all">("all");
-  const [topicLimit, setTopicLimit] = useState(6);
+  const [topicLimit, setTopicLimit] = useState(4);
   const [importOpen, setImportOpen] = useState(false);
   const [importedJourney, setImportedJourney] = useState<PaymentJourneySummary>();
   const { data, loading, error } = useApi<TodayView>("/api/views/today", revision);
@@ -23,12 +22,9 @@ export function QuestionsHub({ revision }: { revision: number }) {
   if (error || !data) return <Empty>{error || "暂时没有可以继续聊的内容"}</Empty>;
   const recentJourney = importedJourney || importBatches?.find((batch) => batch.journey)?.journey;
   const questions = talkingQuestions(data, recentJourney);
-  const selectedQuestion = questions.find(question => question.id === selectedQuestionId) || questions[0];
   const availableKinds = (Object.keys(conversationTopicKinds) as ConversationTopicKind[]).filter((kind) => questions.some((question) => question.kind === kind));
   const filteredQuestions = topicKind === "all" ? questions : questions.filter((question) => question.kind === topicKind);
-  const concernQuestions = topicKind === "all" ? questions.filter((question) => question.kind === "state").slice(0, 3) : [];
-  const concernIds = new Set(concernQuestions.map((question) => question.id));
-  const wallQuestions = topicKind === "all" ? filteredQuestions.filter((question) => !concernIds.has(question.id)) : filteredQuestions;
+  const wallQuestions = filteredQuestions;
   const topicCards = wallQuestions.slice(0, topicLimit);
   const importFolders = [...new Set((sourcePages || []).map((page) => cleanSourcePath(page.relativePath).split("/").slice(0, -1).join("/")).filter(Boolean))].sort((left, right) => left.localeCompare(right, "zh-CN"));
 
@@ -43,14 +39,12 @@ export function QuestionsHub({ revision }: { revision: number }) {
       <h1>这段时间你说的话，我都还记得。</h1>
     </header>
 
-    {selectedQuestion ? <QuestionConversation key={selectedQuestion.id} question={selectedQuestion} revision={revision} /> : null}
-    <details className="questions-other-topics"><summary>看看其他话题 · {questions.length}</summary>
     <section className="questions-wall" aria-labelledby="questions-wall-title">
       <div className="questions-wall-head">
         <div><h2 id="questions-wall-title">挑一个话题</h2><p>从你现在想说的开始，或者看看我留意到的几条还没有说完的线索。</p></div>
         <div className="questions-filters" aria-label="筛选话题">
-          <button type="button" className={topicKind === "all" ? "active" : ""} aria-pressed={topicKind === "all"} onClick={() => { setTopicKind("all"); setTopicLimit(6); }}>全部</button>
-          {availableKinds.map((kind) => <button type="button" key={kind} className={topicKind === kind ? "active" : ""} aria-pressed={topicKind === kind} title={conversationTopicKinds[kind].description} onClick={() => { setTopicKind(kind); setTopicLimit(6); }}>{conversationTopicKinds[kind].label}</button>)}
+          <button type="button" className={topicKind === "all" ? "active" : ""} aria-pressed={topicKind === "all"} onClick={() => { setTopicKind("all"); setTopicLimit(4); }}>全部</button>
+          {availableKinds.map((kind) => <button type="button" key={kind} className={topicKind === kind ? "active" : ""} aria-pressed={topicKind === kind} title={conversationTopicKinds[kind].description} onClick={() => { setTopicKind(kind); setTopicLimit(4); }}>{conversationTopicKinds[kind].label}</button>)}
         </div>
       </div>
       {topicCards.length ? <div className="questions-topic-grid">
@@ -58,7 +52,7 @@ export function QuestionsHub({ revision }: { revision: number }) {
           const kind = conversationTopicKinds[question.kind];
           const evidenceStrength = Math.min(question.evidenceCount, 3);
           const headingId = `question-topic-${index}`;
-          return <article className={`questions-topic-card is-${question.kind}`} key={question.id} aria-labelledby={headingId}>
+          return <article className={`questions-topic-card is-${question.kind}${selectedQuestionId === question.id ? " active" : ""}`} key={question.id} aria-labelledby={headingId}>
             <span className="questions-topic-kind">{kind.label}</span>
             <h3 id={headingId}>{question.question}</h3>
             <p>{question.reason}</p>
@@ -67,20 +61,14 @@ export function QuestionsHub({ revision }: { revision: number }) {
               <small>{question.evidenceCount ? `${question.evidenceCount} 条相关记录` : "等你补充第一条记录"}</small>
             </div>
             <footer>
-              <button type="button" onClick={() => { setSelectedQuestionId(question.id); document.getElementById("question-conversation")?.scrollIntoView({block:"start",behavior:"smooth"}); }}>聊聊这个 <Icon name="arrow" size={15} /></button>
+              <button type="button" onClick={() => { setSelectedQuestionId(question.id); openLifeConversation(question); }}>聊聊这个 <Icon name="arrow" size={15} /></button>
               {question.sourceHref ? <NavLink to={question.sourceHref} state={{ returnTo: "/questions", returnLabel: "返回值得聊聊" }}>{question.sourceLabel || "查看依据"}</NavLink> : null}
             </footer>
           </article>;
         })}
       </div> : <div className="questions-wall-empty"><b>这一类还没有话题</b><p>换个分类看看，或者带进一份新的生活记录。</p></div>}
-      {wallQuestions.length > topicCards.length ? <button type="button" className="questions-wall-more" onClick={() => setTopicLimit((current) => current + 6)}>再看 {Math.min(6, wallQuestions.length - topicCards.length)} 个话题 <Icon name="down" size={15} /></button> : null}
+      {wallQuestions.length > topicCards.length ? <button type="button" className="questions-wall-more" onClick={() => setTopicLimit((current) => current + 4)}>再看 {Math.min(4, wallQuestions.length - topicCards.length)} 个话题 <Icon name="down" size={15} /></button> : null}
     </section>
-
-    </details>
-    {concernQuestions.length ? <section className="questions-concerns" aria-labelledby="questions-concerns-title">
-      <div className="questions-concerns-head"><h2 id="questions-concerns-title">你之前有点在意的</h2><i aria-hidden="true" /></div>
-      <div>{concernQuestions.map((question) => <button key={question.id} type="button" onClick={() => { setSelectedQuestionId(question.id); document.getElementById("question-conversation")?.scrollIntoView({block:"start",behavior:"smooth"}); }}>{question.title}</button>)}</div>
-    </section> : null}
 
     <section className="questions-import" aria-labelledby="questions-import-title">
       <div className="questions-import-copy">
@@ -89,6 +77,6 @@ export function QuestionsHub({ revision }: { revision: number }) {
       </div>
       <RecordImportTrigger onClick={() => setImportOpen(true)} />
     </section>
-    <PageAgentContext context={{ scope: "值得聊聊", title: topicCards[0]?.question || "最近值得聊的话题", summary: "从具体线索里挑一个想说的，我会沿着它继续问。", defaultMode: "read", suggestions: [topicCards[0]?.agentPrompt || "我想从最近一件还没有说清楚的事开始。", "我觉得这里有一条理解不符合我。请先让我说明哪里不准确，再帮我找可能的反例。"] }} />
+    <PageAgentContext context={{ scope: "值得聊聊", title: "最近值得聊的话题", summary: "从具体线索里挑一个想说的，我会沿着它继续问。", defaultMode: "read", suggestions: [questions[0]?.agentPrompt || "我想从最近一件还没有说清楚的事开始。", "我觉得这里有一条理解不符合我。请先让我说明哪里不准确，再帮我找可能的反例。"] }} />
   </div>;
 }
