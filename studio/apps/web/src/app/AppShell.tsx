@@ -103,7 +103,6 @@ export function AppShell({ revision }: { revision: number }) {
   const [inspectorVisible, setInspectorVisible] = useState(false);
   const inspectorOpen = inspectorVisible;
   const toggleInspector = () => setInspectorVisible(value => !value);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
   const inspector = useInspector()!;
   const utilityWindow = location.pathname === "/preferences" || location.pathname === "/capture";
@@ -237,11 +236,10 @@ export function AppShell({ revision }: { revision: number }) {
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
   return (
-    <div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${!sidebarVisible ? " sidebar-hidden" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
+    <div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <header className="desktop-titlebar">
         <div className="desktop-window-space" aria-hidden="true" />
-        {!utilityWindow && !detached ? <button className="desktop-icon" aria-label="切换侧边栏" title="侧边栏" onClick={() => setSidebarVisible((value) => !value)}><Icon name="library" size={17} /></button> : null}
         <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
         {!utilityWindow ? <><button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={() => setSearchOpen(true)}><Icon name="search" size={17} /></button>
         {!localConversation && !detached ? <button className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
@@ -255,7 +253,7 @@ export function AppShell({ revision }: { revision: number }) {
             {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{child.label}</NavLink>)}</div> : null}
           </React.Fragment>)}
         </nav>
-        <div className="desktop-sidebar-bottom"><button onClick={openCapture}><Icon name="plus" size={16} />随手记<kbd>⌘N</kbd></button><button onClick={openPreferences}><Icon name="controls" size={16} />偏好设置<kbd>⌘,</kbd></button><span><i />{vault ? "本机知识库" : "正在连接本机…"}</span></div>
+        <div className="desktop-sidebar-bottom"><button onClick={openPreferences}><Icon name="controls" size={16} />偏好设置</button></div>
       </aside>
       <main className="main-area" id="main-content" tabIndex={-1}>
         {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />正在打开「{switchingKnowledgeBaseName}」…</div> : null}
@@ -268,7 +266,7 @@ export function AppShell({ revision }: { revision: number }) {
           /> : null}
           <Routes>
             <Route path="/conversation" element={<ConversationWindow revision={revision} />} />
-            <Route path="/preferences" element={<Preferences revision={revision} vault={vault} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} onSwitch={(id) => void switchKnowledgeBase(id)} />} />
+            <Route path="/preferences" element={<Preferences revision={revision} />} />
             <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">正在打开知识库…</p>} />
             <Route path="/" element={<Today revision={revision} />} />
             <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : null} />

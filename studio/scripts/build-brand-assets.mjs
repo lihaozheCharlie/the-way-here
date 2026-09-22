@@ -6,6 +6,8 @@ import path from 'node:path';
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sharp = createRequire(new URL('../apps/server/package.json', import.meta.url))('sharp');
 const master = await readFile(path.join(studio, 'apps/desktop/assets/app-icon.svg'), 'utf8');
+const favicon = await readFile(path.join(studio, 'apps/desktop/assets/favicon.svg'), 'utf8');
+const faviconIco = await readFile(path.join(studio, 'apps/desktop/assets/favicon.ico'));
 const web = path.join(studio, 'apps/web/public/brand');
 const desktop = path.join(studio, 'apps/desktop/dist');
 await mkdir(web, { recursive: true });
@@ -13,24 +15,13 @@ await mkdir(path.join(desktop, 'app.iconset'), { recursive: true });
 
 // Web assets preserve the supplied artwork without stroke or viewBox rewriting.
 await writeFile(path.join(web, 'app-icon.svg'), master);
-await writeFile(path.join(web, 'favicon.svg'), master);
+await writeFile(path.join(web, 'favicon.svg'), favicon);
+await writeFile(path.join(web, 'favicon.ico'), faviconIco);
 await sharp(Buffer.from(master)).resize(180, 180).png().toFile(path.join(web, 'apple-touch-icon.png'));
 // macOS icons retain a transparent 64px safe area around the supplied tile.
 const inner = master.replace(/<svg[^>]*>/, '').replace('</svg>', '');
 const dock = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(64 64) scale(.875)">${inner}</g></svg>`;
-// ICO embeds multiple PNG representations for legacy browsers and Windows tabs.
-const pngs = await Promise.all([16, 32, 48].map((size) => sharp(Buffer.from(master)).resize(size, size).png().toBuffer()));
-const header = Buffer.alloc(6 + 16 * pngs.length);
-header.writeUInt16LE(1, 2); header.writeUInt16LE(pngs.length, 4);
-let offset = header.length;
-pngs.forEach((png, i) => {
-  const entry = 6 + i * 16;
-  header[entry] = header[entry + 1] = [16, 32, 48][i];
-  header.writeUInt16LE(1, entry + 4); header.writeUInt16LE(32, entry + 6);
-  header.writeUInt32LE(png.length, entry + 8); header.writeUInt32LE(offset, entry + 12);
-  offset += png.length;
-});
-await writeFile(path.join(web, 'favicon.ico'), Buffer.concat([header, ...pngs]));
+// Preserve the separately supplied favicon artwork, including its 16/32/48px ICO frames.
 for (const size of [16, 32, 128, 256, 512]) {
   for (const scale of [1, 2]) {
     await sharp(Buffer.from(dock)).resize(size * scale, size * scale).png()

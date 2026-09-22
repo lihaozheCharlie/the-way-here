@@ -6,10 +6,10 @@
   max-height: min(240px, calc(100dvh - 24px));
   padding: 9px 11px;
   overflow: auto;
-  color: #fff;
-  background: var(--ink);
+  color:var(--ink);
+  background:var(--paper);
   border-radius: 5px;
-  box-shadow: 0 10px 28px rgba(38, 52, 64, .22);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow-ink) 22%, transparent);
   font-size: 14px;
   line-height: 1.65;
   overflow-wrap: anywhere;

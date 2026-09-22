@@ -1,15 +1,12 @@
 .desktop-shell .home-overview.today-simple { display:grid; min-width:0; max-width:760px; margin:12px auto 0; gap:28px; }
-.desktop-shell .today-simple .home-intro-card { display:block; padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--surface-tinted); animation:none; }
-.desktop-shell .today-simple .home-intro-main { gap:16px; }
-.desktop-shell .today-simple .friend-mark { width:40px; height:40px; border:0; border-radius:10px; background:var(--accent-soft); color:var(--accent-primary); }
-.desktop-shell .today-simple .home-intro-identity { display:grid; gap:6px; }
-.desktop-shell .today-simple .home-intro-identity h1 { font-family:var(--font-ui); font-size:22px; }
-.desktop-shell .today-simple .home-intro-identity span { color:var(--ink-soft); font-size:14px; }
-.desktop-shell .today-simple .home-intro-main p { margin:14px 0 0; font-size:13px; line-height:1.8; color:var(--ink-soft); }
+.today-companion-card { padding:32px; border:1px solid var(--line); border-radius:var(--radius-card); background:var(--hero-surface); box-shadow:var(--shadow-card); }
+.today-companion-badge { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border-radius:var(--radius-pill); background:var(--paper); color:var(--accent-ink); font-size:14px; font-weight:650; }
+.desktop-shell .today-simple .today-companion-card h1 { margin:20px 0 14px; color:var(--ink); font-family:var(--font-ui); font-size:clamp(28px, 3vw, 36px); font-weight:750; line-height:1.35; letter-spacing:-.02em; }
+.desktop-shell .today-simple .today-companion-card p { margin:0; color:var(--ink-soft); font-size:16px; line-height:1.85; }
 .today-capture { min-width:0; }
 .today-capture h2 { margin:0 0 8px; font-size:17px; font-weight:600; }
 .today-capture > p { margin:0 0 16px; color:var(--ink-soft); }
-.today-composer { border:1px solid var(--line-strong); border-radius:12px; background:var(--surface); overflow:hidden; }
+.today-composer { border:1px solid var(--line-strong); border-radius:var(--radius-card-small); background:var(--surface); overflow:hidden; }
 .today-composer:focus-within { border-color:var(--accent-primary); }
 .today-composer textarea { display:block; width:100%; min-height:150px; padding:18px; border:0; border-radius:0; outline:0; box-shadow:none; background:transparent; resize:vertical; font-size:14px; line-height:1.8; color:var(--ink); }
 /* The composer owns focus; an inner textarea ring would cross the action row. */

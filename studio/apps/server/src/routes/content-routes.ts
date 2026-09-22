@@ -1,3 +1,4 @@
+import { CompanionshipStore } from "../runtime/companionship-store.js";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { AgentRuntimeDescriptor, PageCategory } from "@the-way-here/shared";
 import { buildCards, buildFocusWorkspace, buildGraph, buildLetters, buildLifeMap, buildMentalModels, buildQuotes, buildRelationships, buildTimeline, buildToday } from "@the-way-here/life-views";
@@ -18,7 +19,12 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
     return new PageWriter(bound, (previousPath, storedPath) => new ImportStore(bound).renameSource(previousPath, storedPath));
   };
   app.get("/api/health", async () => ({ ok: true, vaultRoot: knowledge.vaultRoot, indexedAt: knowledge.index.lastIndexedAt }));
-  app.get("/api/vault", async () => knowledge.vaultInfo(await runtimeCatalog()));
+  const companionship = new CompanionshipStore(knowledge.vaultRoot);
+  app.get("/api/vault", async () => {
+    const vault = knowledge.vaultInfo();
+    const [runtimes, companionshipStartedAt] = await Promise.all([runtimeCatalog(), companionship.startedAt(vault.knowledgeBaseId)]);
+    return { ...vault, runtimes, agentAvailable: runtimes.some(runtime => runtime.available), companionshipStartedAt };
+  });
   app.post<{ Body: { name?: string } }>("/api/vault", async (request, reply) => {
     try {
       const created = await knowledge.createKnowledgeBase(request.body?.name);

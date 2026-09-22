@@ -8,6 +8,12 @@ const css = files.filter((file) => extname(file) === ".css").map(read).join("\n"
 const source = files.filter((file) => [".ts", ".tsx"].includes(extname(file))).map(read).join("\n");
 const violations = [];
 
+// Keep every renderer surface on the shared palette, including utility windows.
+const literalColor = /#[\da-f]{3,8}\b|\brgba?\(\s*[\d.]/i;
+const unthemed = files.filter(file => extname(file) === ".css" && !file.endsWith("/theme-tokens.css") && literalColor.test(read(file)));
+assert(!unthemed.length, "component colors must use theme-tokens.css semantic roles", unthemed.map(file => file.slice(sourceRoot.length)));
+
+
 const pageLevelSelectors = [
   ".page-hero", ".workspace-page-head", ".layer-hero", ".knowledge-hero", ".focus-workspace-head",
   ".now-board", ".stage-focus-turns", ".life-map-note", ".model-definition",

@@ -6,14 +6,14 @@
 .page-frame:has(.understanding-overview), .page-frame:has(.understanding-self-page), .page-frame:has(.understanding-life-page), .page-frame:has(.understanding-people-page) { width: min(1600px, calc(100% - 96px)); padding-right: 0; padding-left: 0; }
 
 .understanding-overview, .understanding-self-page, .understanding-life-page, .understanding-people-page {
-  --understanding-self: #527f78;
-  --understanding-self-soft: #e7f0ee;
-  --understanding-life: #697b5d;
-  --understanding-life-soft: #edf1e8;
-  --understanding-letter: var(--understanding-life);
-  --understanding-letter-soft: var(--understanding-life-soft);
-  --understanding-people: #8b6d52;
-  --understanding-people-soft: #f3ede4;
+  --understanding-self: var(--accent);
+  --understanding-self-soft: var(--surface-tinted);
+  --understanding-life: var(--accent);
+  --understanding-life-soft: var(--surface-tinted);
+  --understanding-letter: var(--warm-ink);
+  --understanding-letter-soft: var(--warm-soft);
+  --understanding-people: var(--warm-ink);
+  --understanding-people-soft: var(--warm-soft);
   color: var(--ink);
 }
 
@@ -46,7 +46,7 @@
 .understanding-overview-foot { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin-top: 32px; padding: 26px 0 0; border-top: 1px solid var(--line); }
 .understanding-overview-foot h2 { margin: 0 0 7px; font-size: 16px; font-weight: 650; }
 .understanding-overview-foot p { max-width: 64ch; margin: 0; color:var(--ink-soft); font-size: 12px; line-height: 1.65; }
-.understanding-overview-foot button { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; flex: none; padding: 9px 14px; color: var(--paper); background: var(--ink); border: 0; border-radius: var(--radius-control); font-size: 12px; font-weight: 650; }
+.understanding-overview-foot button { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; flex: none; padding: 9px 14px; color: var(--paper); background:var(--accent); border: 0; border-radius: var(--radius-control); font-size: 12px; font-weight: 650; }
 
 .understanding-banner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 22px; margin-bottom: 28px; padding: 28px 32px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
 .understanding-banner h1 { margin: 0 0 6px; font-family: var(--font-display); font-size: 28px; font-weight: 540; letter-spacing: -.03em; line-height: 1.1; }
@@ -88,12 +88,12 @@
 
 /* 「理解自己」总览：以渐进展开代替摘要列表，页面内容始终来自当前知识库。 */
 .growth-hub.understanding-self-page {
-  --insights-cycle: #9f633d;
-  --insights-cycle-soft: #f7ede2;
-  --insights-system: #4a6d8a;
-  --insights-system-soft: #e8eef3;
-  --insights-model: #6d5a94;
-  --insights-model-soft: #eeeafa;
+  --insights-cycle: var(--watch-ink);
+  --insights-cycle-soft: var(--watch-soft);
+  --insights-system: var(--ink-soft);
+  --insights-system-soft: var(--surface-tinted);
+  --insights-model: var(--category-violet);
+  --insights-model-soft: var(--category-violet-soft);
   width: min(1180px, 100%);
   margin: 0 auto;
   padding-bottom: 46px;
@@ -120,7 +120,7 @@
 .insights-section-mark--model { color: var(--insights-model); background: var(--insights-model-soft); }
 
 .insights-spotlight { position: relative; display: grid; grid-template-columns: 168px minmax(0, 1fr) auto; align-items: center; gap: 28px; margin-bottom: 56px; overflow: hidden; padding: 30px 34px; background: linear-gradient(120deg, var(--understanding-self-soft), var(--paper) 62%); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-panel); }
-.insights-spotlight::after { position: absolute; top: -70px; right: -70px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(82, 127, 120, .1), transparent 70%); border-radius: 50%; pointer-events: none; content: ""; }
+.insights-spotlight::after { position: absolute; top: -70px; right: -70px; width: 220px; height: 220px; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%); border-radius: 50%; pointer-events: none; content: ""; }
 .insights-spotlight-glyph { width: 168px; height: 168px; color: color-mix(in srgb, var(--understanding-self) 42%, transparent); }
 .insights-spotlight-glyph svg { width: 100%; height: 100%; }
 .insights-spotlight-glyph svg circle:nth-of-type(3) { fill: var(--understanding-self-soft); stroke: var(--understanding-self); stroke-width: 1.5; }
@@ -131,9 +131,9 @@
 .insights-spotlight-copy h2 { max-width: 31ch; margin: 0 0 8px; font-family: var(--font-display); font-size: 24px; font-weight: 500; line-height: 1.32; letter-spacing: -.015em; }
 .insights-spotlight-copy p { max-width: 58ch; margin: 0; color:var(--ink-soft); font-size: 13px; line-height: 1.72; }
 .insights-spotlight-copy > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
-.insights-spotlight-copy > div span { padding: 4px 9px; color: var(--understanding-self); background: rgba(255, 255, 255, .68); border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: 12px; font-weight: 620; }
-.insights-spotlight-action { position: relative; z-index: 1; min-height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; color: #fff; background: var(--ink); border-radius: var(--radius-control); font-size: 12px; font-weight: 700; white-space: nowrap; transition: background-color .18s var(--ease); }
-.insights-spotlight-action:hover { color: #fff; background: var(--understanding-self); }
+.insights-spotlight-copy > div span { padding: 4px 9px; color: var(--understanding-self); background: color-mix(in srgb, var(--paper) 68%, transparent); border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: 12px; font-weight: 620; }
+.insights-spotlight-action { position: relative; z-index: 1; min-height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; color: var(--paper); background:var(--accent); border-radius: var(--radius-control); font-size: 12px; font-weight: 700; white-space: nowrap; transition: background-color .18s var(--ease); }
+.insights-spotlight-action:hover { color: var(--paper); background: var(--understanding-self); }
 
 .insights-section { margin-bottom: 58px; scroll-margin-top: 124px; }
 .insights-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
@@ -218,7 +218,7 @@
 .insights-foot-cta { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 46px; padding: 25px 29px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-panel); }
 .insights-foot-cta h2 { margin: 0 0 6px; font-family: var(--font-display); font-size: 18px; font-weight: 500; }
 .insights-foot-cta p { max-width: 65ch; margin: 0; color:var(--ink-soft); font-size: 12px; line-height: 1.6; }
-.insights-foot-cta button { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; flex: none; padding: 9px 16px; color: #fff; background: var(--ink); border: 0; border-radius: var(--radius-control); font-size: 12px; font-weight: 700; }
+.insights-foot-cta button { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; flex: none; padding: 9px 16px; color: var(--paper); background:var(--accent); border: 0; border-radius: var(--radius-control); font-size: 12px; font-weight: 700; }
 .insights-foot-cta button:hover { background: var(--understanding-self); }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -256,11 +256,11 @@ button.understanding-timeline-item:hover > div,
 .relationship-web-edges line { stroke: var(--understanding-people); stroke-width: 1.4; stroke-opacity: .25; }
 .relationship-web-edges line.direct { stroke-dasharray: 4 5; stroke-opacity: .16; }
 .relationship-web-center circle { fill: var(--understanding-people); }
-.relationship-web-center text { fill: #fff; font-size: 12px; font-weight: 700; text-anchor: middle; }
+.relationship-web-center text { fill: var(--paper); font-size: 12px; font-weight: 700; text-anchor: middle; }
 .relationship-web-role circle { fill: var(--understanding-people-soft); stroke: color-mix(in srgb, var(--understanding-people) 30%, transparent); }
 .relationship-web-role text { fill: var(--understanding-people); font-size: 12px; font-weight: 650; text-anchor: middle; }
 .relationship-web-person { cursor: pointer; }
-.relationship-web-person circle { fill: #fff; stroke: var(--understanding-people); stroke-width: 1.5; }
+.relationship-web-person circle { fill: var(--paper); stroke: var(--understanding-people); stroke-width: 1.5; }
 .relationship-web-person:hover circle,
 .relationship-web-person:focus circle { fill: var(--understanding-people-soft); stroke-width: 2.5; }
 .relationship-web-person text { fill: var(--ink); font-size: 12px; font-weight: 600; text-anchor: middle; }
@@ -270,7 +270,7 @@ button.understanding-timeline-item:hover > div,
 .understanding-relationship-web footer i { width: 8px; height: 8px; border-radius: 50%; }
 .understanding-relationship-web footer i.center { background: var(--understanding-people); }
 .understanding-relationship-web footer i.role { background: var(--understanding-people-soft); border: 1px solid color-mix(in srgb, var(--understanding-people) 35%, transparent); }
-.understanding-relationship-web footer i.person { background: #fff; border: 1px solid var(--understanding-people); }
+.understanding-relationship-web footer i.person { background: var(--paper); border: 1px solid var(--understanding-people); }
 @media (max-width: 1180px) {
   .understanding-entry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

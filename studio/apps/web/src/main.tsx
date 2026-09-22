@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "@fontsource-variable/noto-sans-sc";
 import App from "./App";
+import "./styles/theme-tokens.css";
 import "./styles/base.css";
 import "./styles/form-controls.css";
 import "./styles/features.css";

@@ -15,10 +15,10 @@
   min-height: 44px;
   padding: 12px 16px;
   border: 0;
-  border-radius: 10px;
-  background: var(--ink);
+  border-radius:var(--radius-control);
+  background:var(--accent);
   color: var(--paper);
-  box-shadow: 0 8px 24px rgba(23, 32, 28, .18);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent);
   font-size: 14px;
   line-height: 1.5;
   text-align: left;

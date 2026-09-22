@@ -1,7 +1,7 @@
 /* Reference: letters-redesign. Read mode: one header, one filter row, quiet index,
    compact provenance and uninterrupted prose. Reuse the archive palette and
    TimelineFilter with Life Records; keep desktop editing and version history. */
-.understanding-letters-page { --letter-action: color-mix(in srgb, var(--accent-primary) 70%, var(--ink)); }
+.understanding-letters-page { --letter-action: var(--warm-ink); }
 .letters-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 14px 0 22px; border-bottom: 1px solid var(--line); }
 .letters-page-head h1 { margin: 0 0 8px; font-family: var(--font-display); font-size: 40px; font-weight: 500; line-height: 1.1; }
 .letters-page-head p { margin: 0; color:var(--ink-soft); font-size: 14px; }
@@ -11,7 +11,7 @@
 .letters-view-switch button { min-height: 36px; padding: 7px 14px; color:var(--ink-soft); background: var(--paper); border: 0; font-size: 13px; }
 .letters-view-switch button + button { border-left: 1px solid var(--line); }
 .letters-view-switch button:hover { background: var(--surface-subtle); }
-.letters-view-switch button[aria-pressed="true"] { color: var(--paper); background: var(--ink); }
+.letters-view-switch button[aria-pressed="true"] { color: var(--paper); background:var(--accent); }
 .letters-view-switch button:focus-visible { outline-offset: -3px; }
 .letters-load-warning { color:var(--ink-soft); font-size: 12px; }
 .letter-meta-themes { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -32,33 +32,33 @@
 .letter-lens-popover small { margin-top: 2px; color:var(--ink-soft); font-size: 12px; line-height: 1.6; }
 /* Letter controls follow the shared document identity. */
 .letter-provenance { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; margin-top:10px; font-size:12px; color:var(--ink-soft); }
-.letter-provenance .letter-meta-themes a,.letter-provenance .letter-more-themes summary { border:0; background:var(--surface-tinted); border-radius:12px; color:var(--ink-soft); }
+.letter-provenance .letter-meta-themes a,.letter-provenance .letter-more-themes summary { border:0; background:var(--surface-tinted); border-radius:var(--radius-card-small); color:var(--ink-soft); }
 .letter-version-bar { display:flex; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px 16px; padding:8px 22px 16px; border-bottom:1px solid var(--line); }
 .letter-version-bar .letter-perspective-tabs { margin:0; padding:0; gap:6px; border-radius:0; background:transparent; }
 .letter-version-bar .letter-perspective-tabs::before { display:none; }
-.letter-version-bar .letter-perspective-tabs button { min-height:30px; padding:4px 12px; font-size:12px; color:var(--ink-soft); border:1px solid transparent; border-radius:16px; }
+.letter-version-bar .letter-perspective-tabs button { min-height:30px; padding:4px 12px; font-size:12px; color:var(--ink-soft); border:1px solid transparent; border-radius:var(--radius-panel); }
 .letter-version-bar .letter-perspective-tabs button[aria-selected=true] { color:var(--accent-ink); background:var(--accent-soft); border-color:var(--line); }
 .letter-version-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .letter-version-actions select { max-width:155px; padding:4px 8px; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); font-size:12px; }
-.letter-version-actions .letter-lens-picker > button { padding:5px 12px; border:1px solid var(--line); border-radius:8px; background:var(--accent-soft); color:var(--accent-ink); font-size:12px; }
-.letter-history-banner { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:18px 32px 0; padding:10px 14px; background:var(--accent-soft); color:var(--accent-ink); border-radius:8px; font-size:12px; }
+.letter-version-actions .letter-lens-picker > button { padding:5px 12px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--accent-soft); color:var(--accent-ink); font-size:12px; }
+.letter-history-banner { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:18px 32px 0; padding:10px 14px; background:var(--accent-soft); color:var(--accent-ink); border-radius:var(--radius-control); font-size:12px; }
 .letter-history-banner button { padding:0; min-height:24px; background:transparent; border:0; color:inherit; text-decoration:underline; text-underline-offset:3px; }
 .letter-generation-link { display:inline-flex; gap:6px; align-items:center; margin:0 32px 24px; padding:0; background:transparent; border:0; color:var(--ink-soft); font-size:12px; }
-.letter-lens-popover { width:min(460px,calc(100vw - 48px)); border-radius:14px; padding:16px; box-shadow:var(--shadow-float); }
+.letter-lens-popover { width:min(460px,calc(100vw - 48px)); border-radius:var(--radius-panel); padding:16px; box-shadow:var(--shadow-float); }
 .letter-lens-popover .letter-lens-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.letter-lens-popover button.letter-lens-choice { display:flex; align-items:center; gap:10px; padding:10px; background:var(--paper); min-width:0; border-radius:10px; }
+.letter-lens-popover button.letter-lens-choice { display:flex; align-items:center; gap:10px; padding:10px; background:var(--paper); min-width:0; border-radius:var(--radius-control); }
 .letter-lens-choice:hover,.letter-lens-choice:focus-visible { background:var(--surface-tinted); }
-.letter-lens-avatar { display:grid; place-items:center; flex:none; width:32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent-ink); font:600 14px var(--font-display); }
+.letter-lens-avatar { display:grid; place-items:center; flex:none; width:32px; height:32px; border-radius:50%; background:var(--warm-soft); color:var(--warm-ink); font:600 14px var(--font-display); }
 .letter-lens-copy { min-width:0; }
 .letter-lens-copy small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.letter-lens-tooltip { position:fixed; z-index:1400; width:320px; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); overflow:auto; padding:12px 14px; border-radius:8px; background:var(--ink); color:var(--paper); box-shadow:var(--shadow-float); font-size:12px; line-height:1.7; }
+.letter-lens-tooltip { position:fixed; z-index:1400; width:320px; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); overflow:auto; padding:12px 14px; border-radius:var(--radius-control); background:var(--paper); color:var(--ink); box-shadow:var(--shadow-float); font-size:12px; line-height:1.7; }
 .letter-lens-tooltip p { margin:6px 0 0; }
 
-.letter-history-trigger { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--line); border-radius:8px; background:var(--surface-subtle); color:var(--ink); font-size:12px; }
+.letter-history-trigger { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface-subtle); color:var(--ink); font-size:12px; }
 .letter-history-trigger[aria-expanded=true] .icon { transform:rotate(180deg); }
-.letter-history-popover { position:fixed; z-index:180; width:min(360px,calc(100vw - 24px)); padding:10px; overflow:auto; border:1px solid var(--line); border-radius:12px; background:var(--paper); box-shadow:var(--shadow-float); }
+.letter-history-popover { position:fixed; z-index:180; width:min(360px,calc(100vw - 24px)); padding:10px; overflow:auto; border:1px solid var(--line); border-radius:var(--radius-card-small); background:var(--paper); box-shadow:var(--shadow-float); }
 .letter-history-popover > p { margin:8px 12px 10px; color:var(--muted); font-size:12px; }
-.letter-history-popover > button { display:flex; align-items:center; gap:12px; width:100%; padding:12px; border:0; border-radius:10px; text-align:left; background:transparent; color:var(--ink); }
+.letter-history-popover > button { display:flex; align-items:center; gap:12px; width:100%; padding:12px; border:0; border-radius:var(--radius-control); text-align:left; background:transparent; color:var(--ink); }
 .letter-history-popover > button > i { width:7px; height:7px; border-radius:50%; background:var(--line-strong); flex:none; }
 .letter-history-popover > button > span { min-width:0; display:grid; gap:6px; }
 .letter-history-popover b { font-size:14px; font-weight:600; overflow-wrap:anywhere; }

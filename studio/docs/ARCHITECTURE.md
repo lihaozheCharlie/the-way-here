@@ -355,3 +355,7 @@ Agent 对话与模型设置使用独立的 `agent-conversation.css` 表面样式
 随手记浮窗与「此刻」复用 `LifeRecordCapture`：统一通过 `POST /api/runs` 的 `life-record` 输出调用模型整理并保存，保留原话、失败草稿和任务恢复。两入口草稿分别按知识库隔离，浮窗旧标题合入草稿；提交显式绑定窗口当前知识库。右侧 Agent 面板收起至零宽，保持挂载以保留对话，仅标题栏提供开关。
 
 文件列表共用 `FileMenu`，Wiki 菜单提供重命名、删除和打开原始目录；外部来源保持只读，仅支持打开原始目录。`DELETE /api/pages/file` 仅接受当前库 Wiki 文件，要求修改时间并校验实际路径、符号链接与并发变更，删除后重建索引并广播刷新；来源文件沿用原有删除接口。结构化摘要点击菜单时按 ID 获取完整文件信息。
+
+### 陪伴起点
+
+`GET /api/vault` 返回按当前 knowledgeBaseId 绑定的 `companionshipStartedAt`。CompanionshipStore 在应用状态目录下以知识库 ID 的 SHA-256 分文件持久化；首次迁移取该库最早 AI Run 的 createdAt，无历史则使用首次访问时间，不从导入日记的年代推算。持久化后删除对话不重置起点；并发初始化使用排他创建。前端按本地自然日包含首日计数，每分钟更新，跨库随 VaultInfo 切换。该状态不写入 Vault 内容。

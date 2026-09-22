@@ -35,6 +35,8 @@ export interface VaultConfig {
 }
 
 export interface VaultInfo {
+  /** First known AI interaction, persisted per personal space. */
+  companionshipStartedAt?: string;
   name: string;
   root: string;
   knowledgeBaseId: string;

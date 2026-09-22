@@ -1,0 +1,37 @@
+/* Scoped settings surface; model controls retain the shared controller. */
+.desktop-shell .desktop-preferences { width:100%; max-width:720px; margin:12px auto 0; }
+.desktop-preferences .preferences-heading h1 { margin:0 0 8px; }
+.desktop-preferences .preferences-heading p { margin:0; color:var(--ink-soft); font-size:14px; line-height:1.7; }
+.desktop-preferences .preferences-tabs { margin:24px 0; }
+.desktop-preferences .preferences-tabs button { min-width:100px; padding:8px 20px; }
+.desktop-preferences .preferences-body { display:grid; gap:20px; }
+.desktop-preferences .preferences-group { overflow:hidden; padding:24px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-card); }
+.desktop-preferences .preferences-group > header { margin-bottom:20px; }
+.desktop-preferences .preferences-group h2 { margin:0 0 6px; font-size:16px; font-weight:650; }
+.desktop-preferences .preferences-group header p { margin:0; color:var(--ink-soft); font-size:13px; line-height:1.65; }
+.desktop-preferences .preference-row { padding:16px 0 0; border-top:1px solid var(--line); gap:24px; }
+.desktop-preferences .preference-row > span { gap:6px; }
+.desktop-preferences .preference-row b { font-size:14px; font-weight:550; }
+.desktop-preferences .preference-row small { line-height:1.65; }
+.desktop-preferences .preference-row input { margin:0; }
+.desktop-preferences .preferences-shortcuts { margin:0; }
+.preferences-shortcuts > div { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:12px 0; border-top:1px solid var(--line); }
+.preferences-shortcuts > div:last-child { padding-bottom:0; }
+.preferences-shortcuts dt { font-size:14px; }
+.preferences-shortcuts dd { margin:0; }
+.preferences-shortcuts kbd { display:inline-block; min-width:74px; padding:4px 8px; border:1px solid var(--line); border-radius:6px; color:var(--ink-soft); background:var(--canvas); font:12px var(--font-ui); text-align:center; }
+.desktop-preferences .preferences-footnote { margin:0 4px; color:var(--ink-soft); font-size:13px; line-height:1.7; }
+.desktop-preferences .ai-configuration { margin:0; padding:0; border:0; background:transparent; }
+.desktop-preferences .agent-config-section-title { margin:0 0 12px; font-size:14px; font-weight:600; }
+.desktop-preferences .ai-runtime-choices { grid-template-columns:1fr; gap:10px; }
+.desktop-preferences .ai-runtime-choices > button { margin:0; padding:14px; min-height:72px; border-radius:var(--radius-control); background:var(--paper); }
+.desktop-preferences .ai-runtime-choices > button.active { border-color:var(--accent); background:var(--accent-soft); box-shadow:none; }
+.desktop-preferences .ai-runtime-choices b { font-size:14px; }
+.desktop-preferences .ai-runtime-choices small { font-size:13px; line-height:1.6; }
+.desktop-preferences .ai-config-fields { margin-top:24px; padding-top:20px; gap:16px; }
+.desktop-preferences .ai-config-fields label { font-size:13px; gap:8px; }
+.desktop-preferences .ai-config-fields :is(select,input) { border-radius:var(--radius-control); font-size:14px; }
+.desktop-preferences .ai-config-intro { margin:0 0 4px; }
+.desktop-preferences .ai-config-footer { margin-top:24px; padding-top:20px; gap:20px; }
+.desktop-preferences .ai-config-footer > button { margin:0; border-radius:var(--radius-control); padding:10px 16px; font-size:13px; }
+.desktop-preferences .ai-config-footer small { line-height:1.6; }

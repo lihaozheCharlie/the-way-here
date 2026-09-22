@@ -7,7 +7,7 @@
 .graph-viewport-svg:active { cursor:grabbing; }
 .graph-viewport-svg [role=button], .graph-viewport-svg button { cursor:pointer; }
 .graph-expanded-dialog { width:calc(100vw - 48px); height:calc(100vh - 48px); max-width:none; max-height:none; padding:12px; border:1px solid var(--line); border-radius:var(--radius-panel); background:var(--paper); color:var(--ink); box-shadow:var(--shadow-float); }
-.graph-expanded-dialog::backdrop { background:#17201c66; }
+.graph-expanded-dialog::backdrop { background:color-mix(in srgb, var(--shadow-ink) 40.0%, transparent); }
 .graph-expanded-dialog .graph-viewport { height:100%; display:flex; flex-direction:column; }
 .graph-expanded-dialog .graph-viewport svg.graph-viewport-svg { flex:1; min-height:0; height:100%; }
 

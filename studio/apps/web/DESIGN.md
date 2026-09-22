@@ -1,25 +1,25 @@
 ---
 name: The Way Here
-description: 纸灰与灰绿的 macOS 阅读、记录与对话桌面
+description: 清新蓝白与暖珊瑚色的 macOS 阅读、记录与对话桌面
 colors:
-  accent: "#2e6e5b"
-  accent-soft: "#e7f1ec"
-  accent-ink: "#1f5245"
-  canvas: "#fafbf8"
+  accent: "#0a7cff"
+  accent-soft: "#e6f1ff"
+  accent-ink: "#08529e"
+  canvas: "#f3f7fd"
   paper: "#ffffff"
   surface: "#ffffff"
-  surface-tinted: "#eef2ee"
-  ink: "#16211b"
-  ink-soft: "#51625a"
-  muted: "#7a8981"
-  faint: "#aeb8b0"
-  sidebar: "#f2f4f0"
-  line: "#e3e8e1"
-  line-strong: "#c3cdc4"
-  attention: "#b9874c"
-  attention-soft: "#fbf1e2"
-  danger: "#c1503a"
-  danger-soft: "#fbeae5"
+  surface-tinted: "#eaf2ff"
+  ink: "#16233a"
+  ink-soft: "#4c5c74"
+  muted: "#8493a8"
+  faint: "#b4c2d6"
+  sidebar: "#ffffff"
+  line: "#e2eaf5"
+  line-strong: "#c9d6ea"
+  attention: "#f0a326"
+  attention-soft: "#fef3e1"
+  danger: "#c43c43"
+  danger-soft: "#fff0f1"
 typography:
   headline:
     fontFamily: '"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif'
@@ -46,8 +46,8 @@ typography:
     fontWeight: 400
     lineHeight: 1.85
 rounded:
-  control: "8px"
-  panel: "14px"
+  control: "11px"
+  panel: "18px"
   pill: "999px"
 spacing:
   xs: "4px"
@@ -74,8 +74,8 @@ components:
     height: "32px"
     padding: "0 10px"
   navigation-active:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.accent-ink}"
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.paper}"
     rounded: "{rounded.control}"
     height: "32px"
     padding: "0 10px"
@@ -175,7 +175,7 @@ Questions 在页面内放置（6:4）对话和证据，间距（16px），高度
 
 ## Components
 
-产品标志使用用户提供的实心书本与书签 SVG：深墨绿 #1a3733 底、纸白 #fbfaf5 书页、暖棕 #b9874c 书签。侧栏和浏览器图标保持原稿；macOS Dock 图标保留系统所需外边距，菜单栏从同一图形生成透明底单色模板。统一母版为 apps/desktop/assets/app-icon.svg。
+产品标志使用用户提供的实心书本与书签 SVG：深墨绿 #1a3733 底、纸白 #fbfaf5 书页、暖棕 #f0a326 书签。侧栏和浏览器图标保持原稿；macOS Dock 图标保留系统所需外边距，菜单栏从同一图形生成透明底单色模板。统一母版为 apps/desktop/assets/app-icon.svg。
 
 ### Buttons
 
@@ -249,12 +249,36 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 
 ## 清晰纸面 · 分层阅读体系
 
-页面底色使用 #fafbf8，侧栏使用 #f2f4f0，卡片、阅读面板与弹层使用白色。背景明度差、清晰细边线与轻微投影共同建立空间层次。
+页面底色使用 #f3f7fd，侧栏使用 #ffffff，卡片、阅读面板与弹层使用白色。背景明度差、清晰细边线与轻微投影共同建立空间层次。
 
-主文字使用 ink；说明、摘要、操作标签与占位文字使用 ink-soft（#51625a）；时间戳、计数等需要阅读的元数据使用 ink-soft；muted（#7a8981）用于弱化的非必要状态；faint（#aeb8b0）仅用于装饰，不用于文字。正文、说明与占位文字须满足 4.5:1。保留深绿主按钮以保证白字对比度。
+主文字使用 ink；说明、摘要、操作标签与占位文字使用 ink-soft（#4c5c74）；时间戳、计数等需要阅读的元数据使用 ink-soft；muted（#8493a8）用于弱化的非必要状态；faint（#b4c2d6）仅用于装饰，不用于文字。正文、说明与占位文字须满足 4.5:1。保留深绿主按钮以保证白字对比度。
 
 保留 PingFang SC UI 与 Songti / Noto Serif 阅读字体体系。说明文字为 13–14px，部分说明使用 450 字重，摘要和对话为 15px，长文为 17px / 1.85；紧凑标签与数字可以保留 12px。保持现有布局、工作流和清晰键盘焦点。
 
 ## 2026-09-22 配色设计稿落地
 
-以用户提供的 desktop-color-redesign.html 为配色依据：明亮纸灰画布、白色卡片、浅描边与轻阴影共同分层。卡片阴影为 `0 1px 2px rgba(20,30,24,.05), 0 8px 22px rgba(20,30,24,.06)`，浮层为 `0 12px 32px rgba(20,30,24,.14)`；交互卡片悬停或选中使用强调色描边。accent-hover 为 #255a4a。保留现有字号、内容和布局，Agent 仍为可拖宽、记忆宽度及 Esc 关闭的悬浮窗，不恢复设计稿中的旧对话提示。
+以用户提供的 desktop-color-redesign.html 为配色依据：明亮纸灰画布、白色卡片、浅描边与轻阴影共同分层。卡片阴影为 `0 1px 2px rgba(20,30,24,.05), 0 8px 22px rgba(20,30,24,.06)`，浮层为 `0 12px 32px rgba(20,30,24,.14)`；交互卡片悬停或选中使用强调色描边。accent-hover 为 #0868d6。保留现有字号、内容和布局，Agent 仍为可拖宽、记忆宽度及 Esc 关闭的悬浮窗，不恢复设计稿中的旧对话提示。
+
+## 2026-09-22 蓝白 v2 色调规范（当前视觉依据）
+
+按用户提供的 desktop-ux-redesign-v2.html 还原色调；此前纸灰、灰绿描述由本节取代。页面结构、文案、功能、字体和浮动 Agent 交互维持现状。
+
+所有组件通过 `src/styles/theme-tokens.css` 消费语义变量，不在组件样式中写颜色字面量。画布 #f3f7fd，白色侧边栏和卡片，正文 #16233a，次级文字 #4c5c74，分隔线 #e2eaf5。#0a7cff 用于主操作及实心导航选中，hover 为 #0868d6，文字链接可用 #08529e。珊瑚色 #ff7a45、浅底 #fff0e8、文字 #c65021 用于书信、关系和陪伴标识。成功绿 #16a870 与关注黄 #f0a326 仅表达状态，错误单独使用 danger；状态保留文字说明。读数分类允许使用集中定义的紫色分类变量。
+
+卡片圆角 18px，紧凑卡片 12px，控件 11px；阴影与设计稿一致，卡片 `0 1px 2px rgb(22 46 84 / 4%), 0 14px 34px rgb(22 46 84 / 7%)`，浮层 `0 18px 44px rgb(22 46 84 / 16%)`。首页介绍卡采用浅蓝至白渐变。提示、代码阅读和独立窗口使用明亮表面，不使用近黑背景。
+
+新增或修改样式必须使用语义变量；构建时的 design contract 阻止组件重新引入硬编码色值。原生窗口启动底色与画布保持一致。
+
+### 此刻陪伴卡
+
+顶部介绍卡按用户截图采用浅蓝渐变、白色爱心标签“长期陪伴 · 已相处 N 天”、标题“有什么，都可以聊聊”及原样说明文案。N 由服务端保留的当前空间首次交互时间按本地自然日计算（首日为 1），不使用示例中的固定 128。首页下方生活记录输入保持原有功能。
+
+### 产品图标 · 渐变蓝书本
+
+图标以用户提供的 SVG/ICO 为准：对角渐变蓝、左上高光、书页投影、冷白右页与珊瑚色书签。`apps/desktop/assets/app-icon.svg` 是桌面与网页 Logo、Apple Touch 图标的源文件；独立的 `favicon.svg` / `favicon.ico` 保存浏览器图标原稿，构建只同步，不用桌面原稿覆盖。当前提供的 SVG 图形一致，ICO 包含 16/32/48px 帧。macOS 图标保留既有透明安全区，托盘仍生成单色模板。
+
+### 偏好设置与侧栏精简
+
+侧栏底部仅保留偏好设置入口，去除随手记和本机知识库状态文字。偏好设置只保留通用 / AI 助手；通用按通知与快捷键分组，AI 助手沿用全局模型配置、应用与错误反馈。移除没有功能消费者的对话提示和每日话头开关。设置页面使用独立作用域样式，避免通用按钮规则覆盖模型选择和保存操作。值得聊聊页导入标签使用 10px 间距、6px × 12px 内边距，并与正文保持 12px 间距。
+
+主窗口左侧导航始终展开，不提供标题栏收缩按钮。偏好设置和独立阅读窗口继续使用各自的无侧栏布局。

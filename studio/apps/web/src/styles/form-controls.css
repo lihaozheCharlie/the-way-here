@@ -7,7 +7,7 @@
 .text-field-shell:has(> .text-control:focus) {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(87,138,131,.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .text-field-shell > .text-control:focus {

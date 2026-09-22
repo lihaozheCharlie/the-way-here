@@ -1,6 +1,5 @@
 /* The conversation overlays the workspace; opening it never changes the reading width. */
 .desktop-shell.inspector-visible { grid-template-columns:var(--desktop-sidebar) minmax(0,1fr) 0; }
-.desktop-shell.sidebar-hidden.inspector-visible { grid-template-columns:minmax(0,1fr) 0; }
 .desktop-shell .desktop-inspector.floating-agent-panel {
   position:fixed;
   inset:50px 12px 12px auto;
