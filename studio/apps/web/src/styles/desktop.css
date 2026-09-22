@@ -270,8 +270,8 @@ input:not([type=checkbox]):not([type=radio]),select { min-height:32px; border-ra
 mark { background:var(--attention-soft); color:var(--ink); border-radius:var(--radius-control); padding:0 2px; }
 .desktop-shell .understanding-entry h2 { font-size:14px; }
 .desktop-shell .understanding-entry p { font-size:14px; }
-.desktop-shell .collection-list > div button b,.desktop-shell .people-index b,.desktop-shell .letter-index b { font-size:14px; }
-.desktop-shell .collection-list > div button span,.desktop-shell .people-index small,.desktop-shell .letter-index small,.desktop-shell .letter-index time { font-size:13px; }
+.desktop-shell .collection-list > div button b,.desktop-shell .people-index b{ font-size:14px; }
+.desktop-shell .collection-list > div button span,.desktop-shell .people-index small{ font-size:13px; }
 .preferences-body { display:grid; gap:24px; }
 .preference-row { padding:0; border:0; }
 .preference-row input[type=checkbox] { appearance:none; flex:none; width:38px; height:22px; border-radius:var(--radius-pill); background:var(--line-strong); position:relative; cursor:pointer; transition:background .2s var(--ease); }
@@ -433,7 +433,7 @@ html:has(.quick-capture),body:has(.quick-capture),#root:has(.quick-capture) { mi
 
 /* Indexes stick to the main scrollport, below the separate desktop titlebar.
    Legacy web navigation offsets otherwise leave an empty strip while reading. */
-.desktop-shell .collapsible-index-content > :is(.people-index, .letter-index, .model-index, .collection-list) {
+.desktop-shell .collapsible-index-content > :is(.people-index, .model-index, .collection-list) {
   top: 0;
   max-height: calc(100dvh - 38px);
   overscroll-behavior: contain;
@@ -481,3 +481,6 @@ html:has(.quick-capture),body:has(.quick-capture),#root:has(.quick-capture) { mi
 .desktop-shell .organized-sources-page .source-vault .source-preview .editable-document-body { font:400 14.5px/1.9 var(--font-ui); color:var(--ink-soft); }
 .desktop-shell .organized-sources-page .source-vault .source-preview-actions { align-items:center; }
 .desktop-shell .organized-sources-page .source-vault .source-preview-actions > :is(a,button) { min-height:32px; height:auto; }
+
+.desktop-shell .editable-document > .document-header-content { grid-column:1; min-width:0; }
+.desktop-shell .editable-document:has(> .document-header-content) > :is(.editable-document-body,textarea) { grid-row:auto; }

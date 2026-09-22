@@ -1,3 +1,6 @@
+import { FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
+import { DocumentPreview } from "../../shared/DocumentPreview";
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { PaneShelf } from "../../shared/PaneShelf";
 import { QuietScroll } from "../../shared/QuietScroll";
 import { FileMenu } from "../../shared/FileMenu";
@@ -14,8 +17,8 @@ import { type ReturnContext } from "../../shared/routing";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
 import { journeyDeepConversationPrompt, journeyOverviewConversationPrompt } from "./journey-conversation";
-import { EditableDocument, ReadOnlyDocument, documentIdentity } from "../../shared/markdown";
-import { apiPageHref, pageHref } from "../../shared/routing";
+import { documentIdentity } from "../../shared/markdown";
+import { pageHref } from "../../shared/routing";
 import { ConfirmDeleteDialog } from "../../shared/ConfirmDeleteDialog";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { TimelineFilter } from "../../shared/TimelineFilter";
@@ -43,21 +46,15 @@ function SourceItemMenu({ label, actions }: { label: string; actions: SourceItem
   const rootRef = useRef<HTMLSpanElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  useDismissLayer(open, () => { setOpen(false); triggerRef.current?.focus(); });
   useEffect(() => {
     if (!open) return;
     const dismiss = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
     window.addEventListener("pointerdown", dismiss);
-    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("pointerdown", dismiss);
-      window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
   return <span ref={rootRef} className={`source-item-menu source-item-menu--row${open ? " is-open" : ""}`}>
@@ -76,6 +73,7 @@ function SourceBuildConfirmAction({ record, busy, onConfirm, detail = false }: {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+  useDismissLayer(open, () => { setOpen(false); triggerRef.current?.focus(); });
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -95,23 +93,15 @@ function SourceBuildConfirmAction({ record, busy, onConfirm, detail = false }: {
       if (popoverRef.current?.contains(event.target as Node) || triggerRef.current?.contains(event.target as Node)) return;
       setOpen(false);
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      event.preventDefault();
-      triggerRef.current?.focus();
-    };
     placePopover();
     cancelRef.current?.focus();
     window.addEventListener("pointerdown", dismiss);
     window.addEventListener("resize", placePopover);
     window.addEventListener("scroll", placePopover, true);
-    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("pointerdown", dismiss);
       window.removeEventListener("resize", placePopover);
       window.removeEventListener("scroll", placePopover, true);
-      window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
@@ -213,12 +203,11 @@ function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
 }
 
 function SourcePreview({ page, revision, startEditing = false, fileNameFocusToken = 0, buildRecord, buildBusy = false, onStartBuild, onRenamed }: { page: WikiPageSummary; revision: number; startEditing?: boolean; fileNameFocusToken?: number; buildRecord?: SourceBuildRecord; buildBusy?: boolean; onStartBuild: (record: SourceBuildRecord, intent?: SourceBuildIntent) => void; onRenamed: (page: WikiPage) => void }) {
-  const { data, loading, error } = useApi<WikiPage>(apiPageHref(page.id), revision);
   const journeyRecord = buildRecord?.file.buildKind === "dialogue" ? buildRecord : undefined;
-  if (data?.importChannel === "photos") return <section className="source-preview source-preview-photo"><ReadOnlyDocument id={data.id} markdown={data.renderedMarkdown || data.markdown} toolbar={<span>通过“打开照片记忆”修改人物和讲述</span>} /><SourceKnowledgeConnections key={data.id} page={data} /></section>;
-  return <article className="source-preview">
-    {loading ? <Loading label="正在展开正文" /> : error || !data ? <Empty>{error || "正文暂时无法读取"}</Empty> : <EditableDocument page={data} variant="preview" startEditing={startEditing} showOutline identityActions={journeyRecord && journeyRecord.batch.channel !== "alipay" ? <SourceBuildAction record={journeyRecord} busy={buildBusy} onStart={onStartBuild} detail /> : undefined} fileNameFocusToken={fileNameFocusToken} beforeContent={journeyRecord ? <SourceJourneyContext file={journeyRecord.file} /> : null} afterContent={<SourceKnowledgeConnections key={data.id} page={data} />} onRenamed={onRenamed} />}
-  </article>;
+  return <DocumentPreview pageId={page.id} revision={revision} startEditing={startEditing} fileNameFocusToken={fileNameFocusToken} onRenamed={onRenamed}
+    identityActions={journeyRecord && journeyRecord.batch.channel !== "alipay" ? <SourceBuildAction record={journeyRecord} busy={buildBusy} onStart={onStartBuild} detail /> : undefined}
+    beforeContent={journeyRecord ? <SourceJourneyContext file={journeyRecord.file} /> : null}
+    afterContent={data => <SourceKnowledgeConnections key={data.id} page={data} />} />;
 }
 
 function NewSourceForm({ folder, folders, foldersLoading, foldersError, onCancel, onCreated }: { folder: string; folders: string[]; foldersLoading: boolean; foldersError?: string; onCancel: () => void; onCreated: (page: WikiPage) => void }) {
@@ -226,6 +215,8 @@ function NewSourceForm({ folder, folders, foldersLoading, foldersError, onCancel
   const [targetFolder, setTargetFolder] = useState(folder);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+
+  useDismissLayer(true, onCancel, { dismissible: !creating, priority: 1 });
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
@@ -299,16 +290,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "file"; page: WikiPageSummary } | { kind: "folder"; folder: string; count: number }>();
   const [selectedBuildPaths, setSelectedBuildPaths] = useState<Set<string>>(() => new Set());
   const [renameRequest, setRenameRequest] = useState<{ pageId: string; token: number }>();
-  useEffect(() => {
-    if (!creatingSource && !importOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setCreatingSource(false);
-      setImportOpen(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [creatingSource, importOpen]);
   const pages = (data || []).filter((page) => !deletedSourcePaths.has(page.relativePath));
   const batches = excludeDeletedSources(mergeSourceBatches(importBatches || [], recentBatch, recentBatchAcknowledged), deletedSourcePaths);
   const buildRecords = sourceBuildRecords(batches);
@@ -588,16 +569,11 @@ export function OrganizedSources({ revision }: { revision: number }) {
           finally { setFolderBusy(false); }
         }}><TextInput autoFocus aria-label="新文件夹名称" placeholder="文件夹名称" value={folderName} disabled={folderBusy} onChange={(event) => setFolderName(event.target.value)} /><div><button type="submit" disabled={folderBusy || !folderName.trim()}>{folderBusy ? "创建中…" : "创建"}</button><button type="button" disabled={folderBusy} onClick={() => setCreatingFolder(false)}>取消</button></div>{folderError && <p role="alert">{folderError}</p>}</form> : <button type="button" onClick={() => { setCreatingFolder(true); setFolderError(""); }}><Icon name="plus" size={13} />新建文件夹</button>}</div>}</aside>
       </div>
-      <div className={`source-pane-shell source-file-shell${filePaneOpen ? "" : " collapsed"}`}>
-        <section className="source-file-pane">
-          <PaneShelf label={folder ? folder.split("/").at(-1)! : "全部记录"} count={`${filtered.length} 份`} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)} toggleLabel="文件列表" />
-          <div className="source-file-contents">
-            <p className="source-file-order">{oldestFirst ? "按时间从旧到新" : "按记录时间从新到旧"}</p>
-            {type === "pending" && selectableBuildRecords.length > 0 ? <div className="source-batch-toolbar">
+      <FileBrowserPane label={folder ? folder.split("/").at(-1)! : "全部记录"} count={`${filtered.length} 份`} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)} order={oldestFirst ? "按时间从旧到新" : "按记录时间从新到旧"} toolbar={
+            type === "pending" && selectableBuildRecords.length > 0 ? <div className="source-batch-toolbar">
               <label><input type="checkbox" checked={allSelectableBuildsSelected} ref={(node) => { if (node) node.indeterminate = anySelectableBuildsSelected && !allSelectableBuildsSelected; }} onChange={(event) => setSelectedBuildPaths(event.target.checked ? new Set(selectableBuildPaths) : new Set())} />全选可直接构建 <small>（{selectableBuildRecords.length} 份）</small></label>
               <button type="button" disabled={!selectedBuildRecords.length || Boolean(busyBuildPath)} onClick={() => beginSelectedBuild(selectedBuildRecords)}><Icon name="build" size={13} />{selectedBuildRecords.length > 1 ? `批量构建 ${selectedBuildRecords.length} 份` : selectedBuildRecords.length === 1 ? "构建这份记录" : "选择记录"}</button>
-            </div> : null}
-            <QuietScroll className="source-file-list" data-overflow-tooltip="off">
+            </div> : null}>
             {visiblePages.map((page) => {
               const fileName = page.externalSource ? page.title : documentIdentity(page.relativePath).fileName;
               const recordType = sourceRecordType(page);
@@ -605,22 +581,16 @@ export function OrganizedSources({ revision }: { revision: number }) {
               const buildRecord = trackedBuildRecord || buildableSourceRecordForPage(page, buildRecords);
               const buildState = trackedBuildRecord ? sourceBuildPresentation(trackedBuildRecord.file) : undefined;
               const selectable = type === "pending" && selectableBuildRecords.some(({ file }) => file.storedPath === trackedBuildRecord?.file.storedPath);
-              return <article key={page.id} className={`source-file-row${selected?.id === page.id ? " active" : ""}${selectable ? " is-selectable" : ""}`}>
-                {selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">选择构建「{fileName}」</span></label> : null}
-                <button type="button" className="source-file-select" aria-label={fileName} onClick={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}>
-                  <span className={`source-record-icon source-record-icon--${recordType}`} aria-label={sourceRecordTypes.find((item) => item.id === recordType)?.label}><Icon name={recordType === "photos" ? "image" : recordType === "notes" ? "journal" : recordType === "ai" ? "message" : "receipt"} size={15} /></span>
-                  <span className="source-record-copy"><time dateTime={sourceRecordDate(page).toISOString()}>{sourceRecordDate(page).getTime() ? sourceRecordDate(page).toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).replaceAll("/", ".") : "日期未知"}</time>
-                  <b>{page.title.replace(/^(?:19|20)\d{2}[-/.,，]\d{1,2}[-/.,，]\d{1,2}[\s·_-]*/, "") || page.title}</b><small data-overflow-tooltip="off">{page.excerpt || cleanSourcePath(page.relativePath)}</small></span>
-                </button>
-                <FileMenu page={page} extraActions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />
+              return <FileBrowserItem key={page.id} title={page.title.replace(/^(?:19|20)\d{2}[-/.,，]\d{1,2}[-/.,，]\d{1,2}[\s·_-]*/, "") || page.title} label={fileName} date={sourceRecordDate(page).toISOString()} dateLabel={sourceRecordDate(page).getTime() ? sourceRecordDate(page).toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).replaceAll("/", ".") : "日期未知"} excerpt={page.excerpt || cleanSourcePath(page.relativePath)} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
+                icon={<span className={`source-record-icon source-record-icon--${recordType}`} aria-label={sourceRecordTypes.find((item) => item.id === recordType)?.label}><Icon name={recordType === "photos" ? "image" : recordType === "notes" ? "journal" : recordType === "ai" ? "message" : "receipt"} size={15} /></span>}
+                selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">选择构建「{fileName}」</span></label> : null} actions={<FileMenu page={page} extraActions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />}>
+
                 {trackedBuildRecord && buildState ? <div className={`source-file-build${trackedBuildRecord.file.buildKind === "dialogue" && trackedBuildRecord.file.buildStatus === "ready-to-build" ? " is-dual" : ""}`}><span className={`source-build-chip is-${buildState.tone}`}><i aria-hidden="true" />{buildState.label}{buildState.detail ? <small>{buildState.detail}</small> : null}</span><SourceBuildAction record={trackedBuildRecord} busy={busyBuildPath === trackedBuildRecord.file.storedPath} onStart={beginBuild} /></div> : null}
-              </article>;
+              </FileBrowserItem>;
             })}
             {visiblePages.length < filtered.length ? <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>继续显示 <b>{Math.min(120, filtered.length - visiblePages.length)}</b> 份</button> : null}
             {visiblePages.length === 0 ? <div className="source-list-empty"><b>没有匹配的记录</b><p>{type === "pending" ? "新带进来的记录都已经构建完成。" : "换一个来源、月份或搜索词试试。"}</p></div> : null}
-          </QuietScroll></div>
-        </section>
-      </div>
+      </FileBrowserPane>
       {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={renameRequest?.pageId === selected.id ? renameRequest.token : 0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>没有匹配的来源</span><p>换一个文件夹或搜索词。</p></div>}
     </div>
     <PageAgentContext context={photoBatch ? { scope: "照片记忆", title: photoBatch.files[0]?.originalName || "照片记忆", pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: "记忆报告", phase: "enrich" }, suggestions: ["我想讲讲这批照片里的故事，一次问我一个具体问题。"], } : agentContext} />

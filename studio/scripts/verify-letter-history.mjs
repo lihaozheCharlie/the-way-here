@@ -37,10 +37,10 @@ try {
   await page.waitForURL('**/');
   origin = new URL(page.url()).origin;
   await page.goto(origin + '/letters');
-  const reading = page.getByRole('tabpanel');
+  const reading = page.locator('.source-preview');
   await expect(reading).toContainText('latest 版本的匿名回信正文');
   await expect(page.getByRole('tab', { name: '埃隆·马斯克视角回信', exact: true })).toHaveCount(1);
-  const title = await page.locator('.letter-document-header h1').boundingBox();
+  const title = await page.locator('.editable-document-identity').boundingBox();
   const bar = await page.locator('.letter-version-bar').boundingBox();
   expect(title.y).toBeLessThan(bar.y);
   await expect(page.locator('.letter-history-banner')).toHaveCount(0);
@@ -75,7 +75,7 @@ try {
   await history.click();
   await expect(page.getByRole('menu')).toHaveCount(0);
   await history.click();
-  await page.locator('.letter-document-header h1').click();
+  await page.locator('.editable-document-identity').click();
   await expect(page.getByRole('menu')).toHaveCount(0);
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1100,900));
   await history.click();

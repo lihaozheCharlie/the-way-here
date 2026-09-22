@@ -93,8 +93,8 @@ h1, h2, h3, h4 { scroll-margin-top: 124px; }
 .context-agent-panel { background: var(--canvas); }
 .context-agent-header { background: var(--paper); }
 
-.person-detail, .letter-detail, .model-detail, .collection-detail, .letter-feature { border: 0; border-radius: var(--radius-panel); }
-.people-index, .letter-index, .model-index, .collection-list { top: 136px; border: 0; border-radius: var(--radius-panel); }
+.person-detail, .model-detail, .collection-detail, .letter-feature { border: 0; border-radius: var(--radius-panel); }
+.people-index, .model-index, .collection-list { top: 136px; border: 0; border-radius: var(--radius-panel); }
 .stage-map-card { border-color: transparent; border-radius: var(--radius-panel); }
 .view-switch, .segmented, .letter-filters { width: max-content; max-width: 100%; padding: 4px; border-radius: var(--radius-panel); background: rgba(0, 0, 0, .055); }
 .view-switch button, .segmented button, .letter-filters button { border: 0; border-radius: var(--radius-panel); }

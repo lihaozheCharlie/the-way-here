@@ -14,16 +14,6 @@
 .letters-view-switch button[aria-pressed="true"] { color: var(--paper); background: var(--ink); }
 .letters-view-switch button:focus-visible { outline-offset: -3px; }
 .letters-load-warning { color:var(--ink-soft); font-size: 12px; }
-.understanding-letters-page .letter-explorer { grid-template-columns: 260px minmax(0, 1fr); gap: 0; align-items: stretch; min-height: 640px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
-.understanding-letters-page .letter-explorer.index-collapsed { grid-template-columns: 0 minmax(0, 1fr); gap: 0; }
-.understanding-letters-page .collapsible-index-pane { border-right: 1px solid var(--line); }
-.understanding-letters-page .letter-index { top: 130px; max-height: min(720px, calc(100vh - 150px)); border: 0; border-radius: 8px 0 0 0; }
-.understanding-letters-page .letter-index button { padding: 12px 16px; }
-.understanding-letters-page .letter-index time { margin-bottom: 3px; color: var(--muted); font-family: "SF Mono", Consolas, monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
-.understanding-letters-page .letter-index b { margin: 0; color: inherit; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
-.understanding-letters-page .letter-index button.active { color: var(--letter-action); background: var(--surface-subtle); box-shadow: inset 3px 0 0 var(--accent-primary); }
-.understanding-letters-page .letter-index button:focus-visible { outline-offset: -3px; }
-.understanding-letters-page .letter-detail { min-width: 0; padding: 0; overflow: visible; border: 0; border-radius: 0 8px 8px 0; }
 .letter-meta-themes { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .letter-meta-themes a, .letter-more-themes summary { display: inline-block; padding: 2px 8px; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-control); font-size: 12px; overflow-wrap: anywhere; }
 .letter-meta-themes a:hover { color: var(--ink); border-color: var(--accent-primary); }
@@ -32,37 +22,27 @@
 .letter-more-themes > div { position: absolute; top: calc(100% + 8px); left: 0; z-index: 4; width: 240px; display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); box-shadow: var(--shadow); }
 .letter-lens-picker { position: relative; }
 .letter-lens-picker > button { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0; color: var(--letter-action); background: transparent; border: 0; font: inherit; }
-.letter-lens-popover { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; width: 320px; max-height: min(520px, 60vh); overflow-y: auto; padding: 14px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); box-shadow: var(--shadow); }
+.letter-lens-popover { position: fixed; z-index: 120; width: 320px; max-height: min(520px, 60vh); overflow-y: auto; padding: 14px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); box-shadow: var(--shadow); }
 .letter-lens-popover p { margin: 0 0 10px; color:var(--ink-soft); font-size: 12px; line-height: 1.6; }
-.letter-lens-popover[data-placement="above"] { top: auto; bottom: calc(100% + 6px); }
 .letter-lens-popover > div { display: grid; gap: 6px; }
 .letter-lens-popover button { padding: 7px 9px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: var(--radius-control); text-align: left; }
 .letter-lens-popover button:hover { border-color: var(--accent-primary); }
 .letter-lens-popover b, .letter-lens-popover small { display: block; }
 .letter-lens-popover b { font-size: 12px; font-weight: 500; }
 .letter-lens-popover small { margin-top: 2px; color:var(--ink-soft); font-size: 12px; line-height: 1.6; }
-/* Letter reading: identity first, then quiet provenance and one version bar. */
-.understanding-letters-page .letter-document-header { padding:26px clamp(24px,3vw,40px) 18px; border-bottom:1px solid var(--line); }
-.understanding-letters-page .letter-document-header h1 { margin:0; font:500 27px/1.4 var(--font-display); color:var(--ink); }
+/* Letter controls follow the shared document identity. */
 .letter-provenance { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; margin-top:10px; font-size:12px; color:var(--ink-soft); }
 .letter-provenance .letter-meta-themes a,.letter-provenance .letter-more-themes summary { border:0; background:var(--surface-tinted); border-radius:12px; color:var(--ink-soft); }
-.letter-version-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px 16px; padding:12px clamp(24px,3vw,40px); border-bottom:1px solid var(--line); }
+.letter-version-bar { display:flex; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px 16px; padding:8px 22px 16px; border-bottom:1px solid var(--line); }
 .letter-version-bar .letter-perspective-tabs { margin:0; padding:0; gap:6px; border-radius:0; background:transparent; }
 .letter-version-bar .letter-perspective-tabs::before { display:none; }
 .letter-version-bar .letter-perspective-tabs button { min-height:30px; padding:4px 12px; font-size:12px; color:var(--ink-soft); border:1px solid transparent; border-radius:16px; }
 .letter-version-bar .letter-perspective-tabs button[aria-selected=true] { color:var(--accent-ink); background:var(--accent-soft); border-color:var(--line); }
-.letter-version-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-left:auto; }
+.letter-version-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .letter-version-actions select { max-width:155px; padding:4px 8px; border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); font-size:12px; }
 .letter-version-actions .letter-lens-picker > button { padding:5px 12px; border:1px solid var(--line); border-radius:8px; background:var(--accent-soft); color:var(--accent-ink); font-size:12px; }
 .letter-history-banner { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:18px 32px 0; padding:10px 14px; background:var(--accent-soft); color:var(--accent-ink); border-radius:8px; font-size:12px; }
 .letter-history-banner button { padding:0; min-height:24px; background:transparent; border:0; color:inherit; text-decoration:underline; text-underline-offset:3px; }
-.letter-reading { min-width:0; }
-.letter-reading .editable-document-body > h1:first-child { display:none; }
-.letter-reading .editable-document-properties { display:none; }
-.letter-reading .editable-document-toolbar { min-height:0; padding:0 24px; border:0; background:transparent; }
-.letter-reading .editable-document-toolbar:has(.document-save-state:empty) { display:none; }
-.letter-reading .editable-document-body { padding:24px clamp(24px,3vw,40px) 48px; }
-.letter-reading .editable-document-body > p:first-of-type { margin-top:0; }
 .letter-generation-link { display:inline-flex; gap:6px; align-items:center; margin:0 32px 24px; padding:0; background:transparent; border:0; color:var(--ink-soft); font-size:12px; }
 .letter-lens-popover { width:min(460px,calc(100vw - 48px)); border-radius:14px; padding:16px; box-shadow:var(--shadow-float); }
 .letter-lens-popover .letter-lens-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
@@ -88,3 +68,13 @@
 .letter-history-popover > button[aria-checked=true] small { color:var(--accent-ink); }
 .letter-history-popover > button:hover { background:var(--surface-tinted); }
 .letter-history-popover > button:focus-visible { outline:2px solid var(--accent-primary); outline-offset:-2px; }
+
+/* Reuse the records browser with two columns when there is no folder tree. */
+.desktop-shell .organized-sources-page .source-vault.file-browser-documents { grid-template-columns:var(--files) minmax(360px,1fr); }
+.letter-provenance { padding:0 22px 12px; margin-top:0; }
+
+/* Keep letter actions beside the title, wrapping only when the reader is narrow. */
+.understanding-letters-page .editable-document-identity { flex-wrap:wrap; gap:12px; }
+.understanding-letters-page .document-identity-copy { flex:1 1 280px; min-width:0; }
+.understanding-letters-page .document-header-actions { margin-left:auto; flex:0 0 auto; max-width:100%; }
+.understanding-letters-page .document-header-actions .letter-version-actions { justify-content:flex-end; }

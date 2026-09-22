@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WikiPageSummary } from "@the-way-here/shared";
@@ -5,6 +6,7 @@ import { api } from "../../api";
 import { pageDestination } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
 export function CommandPalette({ onClose, onCapture, onSettings, routes }: { routes: Array<{ title: string; to: string }>; onClose: () => void; onCapture: () => void; onSettings: () => void }) {
+  useDismissLayer(true, onClose, { priority: 1 });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<WikiPageSummary[]>([]);
   const [error, setError] = useState("");
@@ -27,7 +29,6 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
   function choose(index: number) { commands[index]?.action(); onClose(); }
   return <div className="desktop-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
     <section className="command-palette" role="dialog" aria-modal="true" aria-label="搜索与命令" onKeyDown={(e) => {
-      if (e.key === "Escape") onClose();
       if (e.key === "Tab") { e.preventDefault(); input.current?.focus(); }
       if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setSelected((value) => Math.max(0, Math.min(commands.length - 1, value + (e.key === "ArrowDown" ? 1 : -1)))); }
       if (e.key === "Enter" && !e.nativeEvent.isComposing && commands.length) { e.preventDefault(); choose(selected); }

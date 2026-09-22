@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { VaultInfo, WikiRun } from "@the-way-here/shared";
@@ -12,6 +13,7 @@ export function VoiceInput({ onConfirm }: { onConfirm: (text: string) => void })
   const [error, setError] = useState("");
   const [runId, setRunId] = useState("");
   const dialog = useRef<HTMLElement>(null);
+  useDismissLayer(open, () => setOpen(false), { dismissible: !busy && !recording, priority: 1, element: dialog });
   const recordingRef = useRef(false);
   useEffect(() => () => { if (recordingRef.current) void window.desktop?.stopSpeech().catch(() => {}); }, []);
   useEffect(() => {
@@ -53,7 +55,6 @@ export function VoiceInput({ onConfirm }: { onConfirm: (text: string) => void })
     } catch (e: any) { setError(e.message); setBusy(false); }
   }
   return <><button type="button" className="voice-input-button" aria-label="语音说一段" title="语音说一段" onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8" /></svg></button>{open ? createPortal(<div className="desktop-modal-backdrop"><section ref={dialog} tabIndex={-1} className="voice-dialog" role="dialog" aria-modal="true" aria-label="语音说一段" onKeyDown={(e) => {
-    if (e.key === "Escape" && !busy && !recording) setOpen(false);
     if (e.key === "Tab") { const nodes = [...(dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]),textarea') || [])]; const first = nodes[0], last = nodes.at(-1); if (e.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { e.preventDefault(); last?.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); } }
   }}><header><h2>语音说一段</h2><button disabled={busy || recording} onClick={() => setOpen(false)}>关闭</button></header><p>录音 → 整理 → 你确认。不会直接保存或发送。</p><button className={recording ? "voice-recording" : "desktop-primary"} disabled={busy} onClick={() => void (recording ? stop() : record())}>{busy ? "正在处理…" : recording ? "结束录音" : "开始说（最多 60 秒）"}</button><label>口述原话<textarea value={raw} disabled={recording || busy} onChange={(e) => { setRaw(e.target.value); setDraft(e.target.value); }} rows={3} /></label><button disabled={!raw || recording || busy} onClick={() => void tidy()}>AI 整理文字</button><label>确认或修改<textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} /></label>{error ? <p role="alert">{error}</p> : null}<footer><span>确认后填回输入框；你仍可继续编辑。</span><button className="desktop-primary" disabled={!draft.trim() || busy || recording} onClick={() => { onConfirm(draft === raw ? draft : `${draft}\n\n口述原话：\n${raw}`); setOpen(false); setRaw(""); setDraft(""); }}>使用这段文字</button></footer></section></div>, document.body) : null}</>;
 }

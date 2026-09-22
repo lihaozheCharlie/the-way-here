@@ -32,7 +32,7 @@ try {
   origin=new URL(page.url()).origin;
   for (const route of ['/letters','/cards/personal-lines','/cards/systems','/cards/cycles','/mental-models']) {
     await page.goto(origin+route);
-    const index=page.locator('.collapsible-index-content > aside');
+    const index=page.locator(route === '/letters' ? '.source-file-list' : '.collapsible-index-content > aside');
     await expect(index).toBeVisible();
     if (route==='/mental-models') await page.locator('.model-detail').evaluate(el=>el.style.minHeight='3000px');
     await page.locator('#main-content').evaluate(el=>el.scrollTop=700);

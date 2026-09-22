@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import "./floating-agent-panel.css";
 
@@ -7,6 +8,7 @@ const MIN_WIDTH = 320;
 const MAX_WIDTH = 960;
 
 export function FloatingAgentPanel({ open, children }: { open: boolean; children: ReactNode }) {
+  useDismissLayer(open, () => { window.dispatchEvent(new Event("hide-inspector")); document.querySelector<HTMLButtonElement>(".agent-toggle")?.focus(); }, { priority: 0 });
   const id = useId();
   const [preferredWidth, setPreferredWidth] = useState(() => {
     try {

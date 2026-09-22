@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../../shared/ui";
@@ -5,6 +6,7 @@ import { Icon } from "../../shared/ui";
 type Version = { id: string; label: string; createdAt: string };
 export function LetterHistory({ versions, activeId, onSelect }: { versions: Version[]; activeId?: string; onSelect: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  useDismissLayer(open, () => close(true));
   const [position, setPosition] = useState({ top: 0, left: 0, maxHeight: 480 });
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -36,7 +38,6 @@ export function LetterHistory({ versions, activeId, onSelect }: { versions: Vers
   return <>
     <button ref={trigger} type="button" className="letter-history-trigger" aria-label="历史版本" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(!open)}>历史版本 · {versions.length - 1}<Icon name="down" size={14} /></button>
     {open && createPortal(<div ref={menu} id={id} className="letter-history-popover" style={position} role="menu" aria-label="这封信的历史版本" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node) && event.relatedTarget !== trigger.current) close(); }} onKeyDown={event => {
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(true); }
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
         event.preventDefault(); const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
         const index = items.indexOf(document.activeElement as HTMLButtonElement);

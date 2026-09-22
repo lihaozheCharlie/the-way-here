@@ -29,7 +29,7 @@ try {
   await page.waitForURL('**/');
   origin = new URL(page.url()).origin;
   await page.goto(origin + '/letters');
-  const menus = page.locator('.letter-index .file-menu-trigger');
+  const menus = page.locator('.source-file-list .file-menu-trigger');
   await expect(menus.first()).toBeVisible();
   await menus.first().click();
   await expect(page.getByRole('menuitem')).toHaveText(['重命名', '打开原始目录', '删除']);

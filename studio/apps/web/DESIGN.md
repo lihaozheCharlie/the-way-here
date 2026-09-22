@@ -2,24 +2,24 @@
 name: The Way Here
 description: 纸灰与灰绿的 macOS 阅读、记录与对话桌面
 colors:
-  accent: "#326a5b"
-  accent-soft: "#edf4ee"
-  accent-ink: "#285448"
-  canvas: "#f0f2ef"
+  accent: "#2e6e5b"
+  accent-soft: "#e7f1ec"
+  accent-ink: "#1f5245"
+  canvas: "#fafbf8"
   paper: "#ffffff"
   surface: "#ffffff"
-  surface-tinted: "#f4f6f3"
-  ink: "#17201c"
-  ink-soft: "#4a5a63"
-  muted: "#5f6d6d"
-  faint: "#a6b0ad"
-  sidebar: "#e9ede8"
-  line: "#d0d7d0"
-  line-strong: "#a5b1a7"
+  surface-tinted: "#eef2ee"
+  ink: "#16211b"
+  ink-soft: "#51625a"
+  muted: "#7a8981"
+  faint: "#aeb8b0"
+  sidebar: "#f2f4f0"
+  line: "#e3e8e1"
+  line-strong: "#c3cdc4"
   attention: "#b9874c"
-  attention-soft: "#f6ecdd"
-  danger: "#b6543f"
-  danger-soft: "#f7e8e3"
+  attention-soft: "#fbf1e2"
+  danger: "#c1503a"
+  danger-soft: "#fbeae5"
 typography:
   headline:
     fontFamily: '"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif'
@@ -249,8 +249,12 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 
 ## 清晰纸面 · 分层阅读体系
 
-页面底色使用 #f0f2ef，侧栏使用 #e9ede8，卡片、阅读面板与弹层使用白色。背景明度差、清晰细边线与轻微投影共同建立空间层次。
+页面底色使用 #fafbf8，侧栏使用 #f2f4f0，卡片、阅读面板与弹层使用白色。背景明度差、清晰细边线与轻微投影共同建立空间层次。
 
-主文字使用 ink；说明、摘要、操作标签与占位文字使用 ink-soft（#4a5a63）；时间戳、计数与元数据使用 muted（#5f6d6d）；faint（#a6b0ad）仅用于装饰，不用于文字。三级文字在页面和侧栏底色上也须满足 4.5:1。保留深绿主按钮以保证白字对比度。
+主文字使用 ink；说明、摘要、操作标签与占位文字使用 ink-soft（#51625a）；时间戳、计数等需要阅读的元数据使用 ink-soft；muted（#7a8981）用于弱化的非必要状态；faint（#aeb8b0）仅用于装饰，不用于文字。正文、说明与占位文字须满足 4.5:1。保留深绿主按钮以保证白字对比度。
 
 保留 PingFang SC UI 与 Songti / Noto Serif 阅读字体体系。说明文字为 13–14px，部分说明使用 450 字重，摘要和对话为 15px，长文为 17px / 1.85；紧凑标签与数字可以保留 12px。保持现有布局、工作流和清晰键盘焦点。
+
+## 2026-09-22 配色设计稿落地
+
+以用户提供的 desktop-color-redesign.html 为配色依据：明亮纸灰画布、白色卡片、浅描边与轻阴影共同分层。卡片阴影为 `0 1px 2px rgba(20,30,24,.05), 0 8px 22px rgba(20,30,24,.06)`，浮层为 `0 12px 32px rgba(20,30,24,.14)`；交互卡片悬停或选中使用强调色描边。accent-hover 为 #255a4a。保留现有字号、内容和布局，Agent 仍为可拖宽、记忆宽度及 Esc 关闭的悬浮窗，不恢复设计稿中的旧对话提示。

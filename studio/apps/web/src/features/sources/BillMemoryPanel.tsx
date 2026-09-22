@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { isTerminalRunStatus, type VaultInfo, type WikiRun } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
@@ -60,12 +61,12 @@ function BuildConfirmation({ batch, busy, onClose, onConfirm }: { batch: SourceI
   const titleId = useId();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
+  useDismissLayer(true, onClose, { dismissible: !busy, priority: 1, element: dialogRef });
   const journey = batch.journey!;
   const states = new Map(journeyClueStates(journey).map((state) => [state.clusterId, state]));
   useEffect(() => {
     cancelRef.current?.focus();
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) onClose();
       if (event.key !== "Tab") return;
       const focusable = [...(dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") || [])];
       const first = focusable[0];

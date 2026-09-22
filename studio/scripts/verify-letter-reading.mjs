@@ -37,13 +37,19 @@ try {
   await page.waitForURL('**/');
   origin = new URL(page.url()).origin;
   await page.goto(origin + '/letters');
-  const reading = page.getByRole('tabpanel');
+  const reading = page.locator('.source-preview');
   await expect(reading).toContainText('latest 版本的匿名回信正文');
+  await expect(reading.locator('.document-meta-row,.editable-document-properties')).toHaveCount(0);
   await expect(page.getByRole('tab', { name: '埃隆·马斯克视角回信', exact: true })).toHaveCount(1);
-  const title = await page.locator('.letter-document-header h1').boundingBox();
+  const title = await page.locator('.editable-document-identity').boundingBox();
   const bar = await page.locator('.letter-version-bar').boundingBox();
   expect(title.y).toBeLessThan(bar.y);
+  await expect(page.locator('.editable-document-identity .letter-version-actions')).toBeVisible();
+  const actions = await page.locator('.letter-version-actions').boundingBox();
+  expect(actions.y).toBeLessThan(bar.y);
+  expect(actions.x + actions.width).toBeGreaterThan(title.x + title.width - 35);
   await expect(page.locator('.letter-history-banner')).toHaveCount(0);
+  await page.screenshot({path:path.join(captures,'header-clean.png')});
   await page.getByRole('tab', { name: '查理·芒格视角回信', exact: true }).click();
   await expect(reading).toContainText('other 版本的匿名回信正文');
   await expect(page.locator('.letter-history-banner')).toContainText('你正在查看历史版本');
@@ -91,7 +97,10 @@ try {
   expect(errors).toEqual([]);
   console.log('Letter title hierarchy, perspective tabs, history, editing, nine tooltips and single-perspective reread checks passed.');
 } finally {
-  if (app) await app.close();
+  if (app) {
+    const forceExit = setTimeout(() => app.process().kill("SIGKILL"), 5000);
+    try { await app.close(); } finally { clearTimeout(forceExit); }
+  }
   if (appPid) { let alive = true; try { process.kill(appPid, 0); } catch { alive = false; } if (alive) throw new Error('Verification desktop process is still running'); }
   if (origin) { let response; try { response = await fetch(`${origin}/api/health`); } catch {} if (response?.ok) throw new Error('Verification server is still listening'); }
   await rm(root, { recursive: true, force: true });

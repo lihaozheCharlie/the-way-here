@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReasoningLens } from "@the-way-here/shared";
@@ -36,9 +37,11 @@ function LensChoice({ lens, onSelect }: { lens: ReasoningLens; onSelect: () => v
 export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]; onSelect: (lens: ReasoningLens) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const id = useId();
-  const [placement, setPlacement] = useState({ above: false, maxHeight: 520 });
+  useDismissLayer(open, () => { setOpen(false); triggerRef.current?.focus(); });
+  const [placement, setPlacement] = useState({ above: false, maxHeight: 520, left: 0, edge: 0 });
   useLayoutEffect(() => {
     if (!open) return;
     const measure = () => {
@@ -47,7 +50,10 @@ export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]
       const below = window.innerHeight - rect.bottom - 24;
       const above = below < 240 && rect.top > below;
       const maxHeight = Math.max(100, Math.min(520, above ? rect.top - 24 : below));
-      setPlacement((current) => current.above === above && current.maxHeight === maxHeight ? current : { above, maxHeight });
+      const width = Math.min(460, window.innerWidth - 48);
+      const left = Math.max(24, Math.min(rect.left, window.innerWidth - width - 24));
+      const edge = above ? window.innerHeight - rect.top + 6 : rect.bottom + 6;
+      setPlacement((current) => current.above === above && current.maxHeight === maxHeight && current.left === left && current.edge === edge ? current : { above, maxHeight, left, edge });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -60,29 +66,21 @@ export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]
   useEffect(() => {
     if (!open) return;
     const dismiss = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
-      setOpen(false);
-      triggerRef.current?.focus();
+      if (!rootRef.current?.contains(event.target as Node) && !popoverRef.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", escape);
     return () => {
       document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", escape);
     };
   }, [open]);
   if (!lenses.length) return null;
   return <div ref={rootRef} className="letter-lens-picker" onBlur={(event) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+    if (!rootRef.current?.contains(event.relatedTarget as Node | null) && !popoverRef.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
   }}>
     <button ref={triggerRef} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}>用新视角重读 <Icon name="down" size={14} /></button>
-    {open && <section id={id} className="letter-lens-popover" data-placement={placement.above ? "above" : "below"} style={{ maxHeight: placement.maxHeight }} aria-label="选择重读视角">
+    {open && createPortal(<section ref={popoverRef} id={id} className="letter-lens-popover" data-placement={placement.above ? "above" : "below"} style={{ maxHeight: placement.maxHeight, left: placement.left, top: placement.above ? "auto" : placement.edge, bottom: placement.above ? placement.edge : "auto" }} aria-label="选择重读视角">
       <p>用 {lenses.length} 种从公开原则提炼的视角重新写这封信。</p>
       <div className="letter-lens-grid">{lenses.map(lens => <LensChoice key={lens.id} lens={lens} onSelect={() => { setOpen(false); onSelect(lens); }} />)}</div>
-    </section>}
+    </section>, document.body)}
   </div>;
 }

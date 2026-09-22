@@ -25,7 +25,7 @@
 .stage-focus-turns p { margin: 12px 0 2px; color:var(--ink-soft); font-size: 12px; line-height: 1.65; }
 
 /* Complete master-detail reading */
-.person-detail, .letter-detail { padding: 0; overflow: hidden; }
+.person-detail{ padding: 0; overflow: hidden; }
 .embedded-page { min-height: 520px; background: var(--paper); }
 .embedded-page-toolbar { position: sticky; top: 64px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 15px 22px; background: var(--paper); border-bottom: 1px solid var(--line); }
 .embedded-page-toolbar > div { min-width: 0; display: grid; gap: 3px; }
@@ -216,13 +216,11 @@
 .letter-version-switcher > div > small { grid-column: 2; color:var(--ink-soft); font-size: 12px; }
 .letter-version-switcher > label { flex: none; display: grid; gap: 5px; color:var(--ink-soft); font-size: 12px; }
 .letter-version-switcher select { min-width: 220px; height: 36px; padding: 0 32px 0 10px; color: var(--ink); background: var(--surface-subtle); border: 1px solid var(--line-strong); border-radius: var(--radius-control); font-size: 12px; }
-.letter-version-preview { min-height: 520px; }
 .letter-version-document-meta { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 13px 22px; background: var(--surface-subtle); border-bottom: 1px solid var(--line); }
 .letter-version-document-meta > div { min-width: 0; display: grid; gap: 3px; }
 .letter-version-document-meta span, .letter-version-document-meta small { color: var(--muted); font-size: 12px; }
 .letter-version-document-meta b { font-size: 12px; }
 .letter-version-document-meta button { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 0; color: var(--accent-primary); background: transparent; border: 0; font-size: 12px; font-weight: 720; }
-.letter-index small { display: block; margin: 5px 0; color: #6c5b1d; font-size: 12px; }
 .letter-threads { display: flex; gap: 7px; margin-bottom: 22px; padding-bottom: 6px; overflow-x: auto; }
 .letter-thread-note { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 9px; }
 .letter-thread-note span { color:var(--ink-soft); font-size: 12px; }

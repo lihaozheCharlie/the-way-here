@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { TextInput } from "../../shared/form-controls";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/ui";
@@ -31,13 +32,11 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const dialogRef = useRef<HTMLElement>(null);
-  const closeRef = useRef(onClose), savingRef = useRef(saving);
-  closeRef.current = onClose; savingRef.current = saving;
+  useDismissLayer(true, onClose, { dismissible: !saving, priority: 1, element: dialogRef });
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     inputRef.current?.focus(); inputRef.current?.select();
     const keyboard = (event: KeyboardEvent) => {
-      if(event.key === "Escape" && !savingRef.current) { event.preventDefault(); closeRef.current(); }
       if(event.key !== "Tab") return;
       const nodes = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled)') || [])];
       const first = nodes[0], last = nodes.at(-1);

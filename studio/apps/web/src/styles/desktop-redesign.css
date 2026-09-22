@@ -142,3 +142,21 @@
 .desktop-shell .source-folder-pane { background:var(--canvas); }
 .desktop-shell .source-file-pane { background:var(--surface-tinted); }
 .desktop-shell .source-preview { background:var(--paper); }
+
+/* Approved color reference: bright paper, subtle edges and shared elevation. */
+.desktop-titlebar { background:var(--sidebar); }
+.desktop-shell :is(.home-intro-card, .today-capture, .home-opener, .questions-topic-card, .questions-import, .understanding-entry, .understanding-digest-card, .understanding-overview-foot, .insights-line-card, .insights-loop-card, .insights-model-card) {
+  background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow-card);
+}
+.desktop-shell .today-simple .home-intro-card { background:var(--surface); }
+.desktop-shell .today-capture { padding:24px; border-radius:var(--radius-panel); }
+.desktop-shell .organized-sources-page :is(.source-pane-shell, .source-preview) { border:1px solid var(--line); box-shadow:var(--shadow-card); }
+.desktop-shell :is(.questions-topic-card, .understanding-entry):hover,
+.desktop-shell .questions-topic-card.active { background:var(--surface); border-color:var(--accent); box-shadow:0 1px 0 var(--accent),var(--shadow-card); }
+.desktop-shell .desktop-inspector.floating-agent-panel { border:1px solid var(--line); box-shadow:var(--shadow-pop); }
+.desktop-nav-badge { background:var(--attention); }
+.desktop-shell :is(.questions-topic-kind, .questions-import-types > span) { color:var(--accent-ink); background:var(--accent-soft); }
+.desktop-shell :is(input,textarea) { caret-color:var(--accent); }
+.desktop-shell :is(.source-record-copy > time, .source-record-meta, .document-meta-row) { color:var(--ink-soft); }
+
+.desktop-shell .organized-sources-page .source-vault :is(.source-record-copy time, .source-record-copy small, .source-file-order) { color:var(--ink-soft); }

@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../shared/use-dismiss-layer";
 import { FloatingAgentPanel } from "../features/desktop/FloatingAgentPanel";
 import { ConversationWindow } from "../features/desktop/ConversationWindow";
 import { useDesktopNotifications } from "../features/desktop/use-desktop-notifications";
@@ -38,6 +39,7 @@ type KnowledgeBaseSummary = VaultInfo["knowledgeBases"][number];
 function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDelete }: { vault: VaultInfo; disabled: boolean; onChange: (knowledgeBaseId: string) => void; onCreate: () => void; onDelete: (knowledgeBase: KnowledgeBaseSummary) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  useDismissLayer(open, () => { setOpen(false); rootRef.current?.querySelector<HTMLButtonElement>(".global-kb-trigger")?.focus(); });
   const active = vault.knowledgeBases.find((knowledgeBase) => knowledgeBase.id === vault.knowledgeBaseId) || vault.knowledgeBases[0];
 
   useEffect(() => {
@@ -45,17 +47,9 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
     function closeOnOutsidePointer(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-        rootRef.current?.querySelector<HTMLButtonElement>(".global-kb-trigger")?.focus();
-      }
-    }
     window.addEventListener("pointerdown", closeOnOutsidePointer);
-    window.addEventListener("keydown", closeOnEscape);
     return () => {
       window.removeEventListener("pointerdown", closeOnOutsidePointer);
-      window.removeEventListener("keydown", closeOnEscape);
     };
   }, [open]);
 

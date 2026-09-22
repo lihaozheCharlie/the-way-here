@@ -23,9 +23,9 @@
 .people-groups button.active { color: var(--accent-primary); background: rgba(87, 138, 131, .09); border-color: rgba(87, 138, 131, .2); }
 .people-toolbar input, .library-toolbar input, .collection-list input { font-size: 12px; }
 .people-toolbar > span, .library-toolbar > span, .collection-list > small { font-size: 12px; }
-.people-index span, .people-index small, .letter-index time, .letter-index small, .letter-index span,
+.people-index span, .people-index small,
 .collection-list > div button span { font-size: 12px; }
-.people-index b, .letter-index b, .collection-list > div button b { font-size: 12px; }
+.people-index b, .collection-list > div button b { font-size: 12px; }
 
 .search-result small { font-size: 12px; }
 
@@ -197,7 +197,7 @@
 .ai-config-footer > button:disabled { color:var(--ink-soft); background: #e7e9eb; }
 .ai-config-error { margin-top: 8px; }
 
-.people-explorer, .letter-explorer, .model-explorer, .collection-explorer { grid-template-columns: minmax(190px, 220px) minmax(0, 1fr); gap: 20px; }
+.people-explorer, .model-explorer, .collection-explorer { grid-template-columns: minmax(190px, 220px) minmax(0, 1fr); gap: 20px; }
 .editable-document--preview.has-outline { grid-template-columns: minmax(0, 1fr) 176px; }
 .knowledge-document { height: auto; min-height: 0; }
 .knowledge-document > .editable-document-toolbar { grid-column: 1 / -1; }
@@ -251,7 +251,7 @@
 
 /* Sticky children need a full-height containing block and no clipping ancestor. */
 .collapsible-index-pane, .collapsible-index-content { height: 100%; align-self: stretch; }
-.collection-detail, .person-detail, .letter-detail { overflow: visible; }
+.collection-detail, .person-detail{ overflow: visible; }
 .editable-document { overflow-anchor: none; }
 
 .editable-document-properties { min-width: 0; max-height: 126px; overflow: auto; padding: 8px 18px; background: #fafafd; border-bottom: 1px solid var(--line); scrollbar-color: #c9ccd3 transparent; scrollbar-width: thin; }

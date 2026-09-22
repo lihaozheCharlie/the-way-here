@@ -1,3 +1,4 @@
+import { useDismissLayer } from "./use-dismiss-layer";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { WikiPage, WikiPageSummary } from "@the-way-here/shared";
@@ -23,6 +24,7 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const renameDialog = useRef<HTMLDialogElement>(null);
+  useDismissLayer(open, () => { setOpen(false); trigger.current?.focus(); });
   const fileName = page.relativePath?.split("/").at(-1)?.replace(/\.md$/i, "") || page.title;
   useEffect(() => {
     if (!open) return;
@@ -74,7 +76,7 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
   return <>
     <button ref={trigger} type="button" className="file-menu-trigger" aria-label={`更多文件操作：${fileName}`} aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={(event) => { event.stopPropagation(); void toggleMenu(); }}><Icon name="more" size={16} /></button>
     {open && createPortal(<div ref={menu} className="file-menu-popover" role="menu" aria-label={`${fileName}的文件操作`} style={position} onKeyDown={event => {
-      if (event.key === "Escape" || event.key === "Tab") { setOpen(false); trigger.current?.focus(); }
+      if (event.key === "Tab") { setOpen(false); trigger.current?.focus(); }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); const buttons = [...menu.current!.querySelectorAll<HTMLButtonElement>("button")]; const index = buttons.indexOf(document.activeElement as HTMLButtonElement); buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus(); }
     }}>{actions.map(action => <button role="menuitem" type="button" className={action.label === "删除" ? "danger" : ""} key={action.label} onClick={() => { setOpen(false); trigger.current?.focus(); action.onSelect(); }}>{action.label}</button>)}</div>, document.body)}
     {dialog === "rename" && createPortal(<dialog ref={renameDialog} className="file-rename-dialog" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}><form onSubmit={event => { event.preventDefault(); void rename(); }}><h2>重命名文件</h2><label>文件名<input autoFocus value={name} disabled={busy} onFocus={event => event.currentTarget.select()} onChange={event => setName(event.target.value)} /></label>{error && <p role="alert">{error}</p>}<footer><button type="button" disabled={busy} onClick={closeDialog}>取消</button><button type="submit" disabled={busy || !name.trim()}>{busy ? "正在保存…" : "保存"}</button></footer></form></dialog>, document.body)}

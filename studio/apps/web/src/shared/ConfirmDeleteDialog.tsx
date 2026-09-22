@@ -1,3 +1,4 @@
+import { useDismissLayer } from "./use-dismiss-layer";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./ui";
 
@@ -15,21 +16,14 @@ export function ConfirmDeleteDialog({ title, description, itemName, impact, conf
   const dialogRef = useRef<HTMLElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  const closeRef = useRef(onClose);
-  const deletingRef = useRef(deleting);
+  useDismissLayer(true, onClose, { dismissible: !deleting, priority: 1, element: dialogRef });
 
-  useEffect(() => { closeRef.current = onClose; }, [onClose]);
-  useEffect(() => { deletingRef.current = deleting; }, [deleting]);
   useEffect(() => {
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const focusCancel = window.setTimeout(() => cancelRef.current?.focus(), 0);
     function handleKeyboard(event: KeyboardEvent) {
-      if (event.key === "Escape" && !deletingRef.current) {
-        closeRef.current();
-        return;
-      }
       if (event.key !== "Tab") return;
       const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [tabindex]:not([tabindex="-1"])') || [])];
       if (!focusable.length) return;

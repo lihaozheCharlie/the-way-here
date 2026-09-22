@@ -1,3 +1,4 @@
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { SourceConnectionsPanel } from "./SourceConnectionsPanel";
 import { SelectInput, TextInput } from "../../shared/form-controls";
 import React, { useEffect, useRef, useState } from "react";
@@ -118,8 +119,7 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  const closeRef = useRef(onClose);
-  const importingRef = useRef(importing);
+  useDismissLayer(true, onClose, { dismissible: !importing, priority: 1, element: dialogRef });
   const totalBytes = files.reduce((total, item) => total + item.file.size, 0);
   const channel: SourceImportChannel = route === "photos" ? "photos" : route === "chat" ? provider : route === "bill" ? "alipay" : "files";
   const acceptedPattern = route === "photos" ? /\.(jpe?g|png|webp)$/i : route === "bill" ? /\.csv$/i : route === "files" ? /\.(md|txt|zip)$/i : /\.(md|txt|zip|json|html?)$/i;
@@ -134,8 +134,6 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
     return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, [files, route]);
 
-  useEffect(() => { closeRef.current = onClose; }, [onClose]);
-  useEffect(() => { importingRef.current = importing; }, [importing]);
   useEffect(() => {
     try {
       window.localStorage.setItem(rememberedImportRouteKey, route);
@@ -169,10 +167,6 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
     document.body.style.overflow = "hidden";
     const focusDialog = window.setTimeout(() => dialogRef.current?.querySelector<HTMLElement>("[data-autofocus], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])")?.focus(), 0);
     const manageKeyboard = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !importingRef.current) {
-        closeRef.current();
-        return;
-      }
       if (event.key !== "Tab") return;
       const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])') || [])].filter((element) => element.getClientRects().length > 0);
       if (!focusable.length) return;
