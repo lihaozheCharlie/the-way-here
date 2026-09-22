@@ -2,19 +2,20 @@
 name: The Way Here
 description: 纸灰与灰绿的 macOS 阅读、记录与对话桌面
 colors:
-  accent: "#578a83"
-  accent-soft: "#e7f0ee"
-  accent-ink: "#33544f"
-  canvas: "#f2f3f1"
-  paper: "#fbfbfa"
+  accent: "#326a5b"
+  accent-soft: "#edf4ee"
+  accent-ink: "#285448"
+  canvas: "#f0f2ef"
+  paper: "#ffffff"
   surface: "#ffffff"
-  surface-tinted: "#f3f6f5"
-  ink: "#263440"
+  surface-tinted: "#f4f6f3"
+  ink: "#17201c"
   ink-soft: "#4a5a63"
-  muted: "#7c8a8a"
+  muted: "#5f6d6d"
   faint: "#a6b0ad"
-  line: "#e7e9e7"
-  line-strong: "#d7dbd8"
+  sidebar: "#e9ede8"
+  line: "#d0d7d0"
+  line-strong: "#a5b1a7"
   attention: "#b9874c"
   attention-soft: "#f6ecdd"
   danger: "#b6543f"
@@ -31,17 +32,17 @@ typography:
     lineHeight: 1.4
   body:
     fontFamily: '"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif'
-    fontSize: "13px"
+    fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.55
   label:
     fontFamily: '"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif'
-    fontSize: "12px"
+    fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.5
   reading:
     fontFamily: '"Songti SC","Noto Serif SC",Georgia,serif'
-    fontSize: "16px"
+    fontSize: "17px"
     fontWeight: 400
     lineHeight: 1.85
 rounded:
@@ -174,7 +175,7 @@ Questions 在页面内放置（6:4）对话和证据，间距（16px），高度
 
 ## Components
 
-产品标志沿用书页与道路的轮廓，使用 accent-soft 浅灰绿底与 accent-ink 深灰绿线条，保持平面质感。侧栏、favicon 与 macOS 应用图标从同一 SVG 母版生成；菜单栏沿用系统单色模板。
+产品标志使用用户提供的实心书本与书签 SVG：深墨绿 #1a3733 底、纸白 #fbfaf5 书页、暖棕 #b9874c 书签。侧栏和浏览器图标保持原稿；macOS Dock 图标保留系统所需外边距，菜单栏从同一图形生成透明底单色模板。统一母版为 apps/desktop/assets/app-icon.svg。
 
 ### Buttons
 
@@ -245,3 +246,11 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 - 导入：620px 弹窗，四类材料两列排列，默认显示材料选择与拖放；连接原目录为附加选项。第二步确认文件夹和摘要，保留照片、账单、聊天平台解析及错误处理。
 
 最后加载的 `src/styles/desktop-redesign.css` 定义以上表面，沿用纸灰、白色、灰绿与现有字体令牌。
+
+## 清晰纸面 · 分层阅读体系
+
+页面底色使用 #f0f2ef，侧栏使用 #e9ede8，卡片、阅读面板与弹层使用白色。背景明度差、清晰细边线与轻微投影共同建立空间层次。
+
+主文字使用 ink；说明、摘要、操作标签与占位文字使用 ink-soft（#4a5a63）；时间戳、计数与元数据使用 muted（#5f6d6d）；faint（#a6b0ad）仅用于装饰，不用于文字。三级文字在页面和侧栏底色上也须满足 4.5:1。保留深绿主按钮以保证白字对比度。
+
+保留 PingFang SC UI 与 Songti / Noto Serif 阅读字体体系。说明文字为 13–14px，部分说明使用 450 字重，摘要和对话为 15px，长文为 17px / 1.85；紧凑标签与数字可以保留 12px。保持现有布局、工作流和清晰键盘焦点。

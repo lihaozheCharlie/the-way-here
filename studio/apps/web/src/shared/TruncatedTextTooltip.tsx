@@ -61,8 +61,13 @@ function findInPath(path: EventTarget[]): HTMLElement | undefined {
 }
 
 function findInFocusable(element: HTMLElement): HTMLElement | undefined {
+  // Route containers receive programmatic focus; they must never expose a
+  // tooltip belonging to an unrelated descendant card.
+  if (element.tabIndex < 0 || !element.matches(":focus-visible")) return;
   if (isOverflowElement(element)) return element;
-  return [...element.querySelectorAll<HTMLElement>("*")].find(isOverflowElement);
+  return [...element.querySelectorAll<HTMLElement>("*")].find((child) =>
+    !child.closest('[inert], [aria-hidden="true"]')
+    && child.closest('button, a, [tabindex]') === element && isOverflowElement(child));
 }
 
 function tooltipPosition(anchor: DOMRect, tooltip: DOMRect): { left: number; top: number } {
@@ -85,6 +90,7 @@ export function TruncatedTextTooltip() {
   const [position, setPosition] = useState({ left: 0, top: 0 });
 
   useEffect(() => {
+    let keyboardFocus = false;
     let pendingTimer: number | undefined;
     let pendingAnchor: HTMLElement | undefined;
     const cancelPending = () => {
@@ -97,6 +103,7 @@ export function TruncatedTextTooltip() {
     };
     const hide = () => { cancelPending(); setActive(undefined); };
     const handlePointerOver = (event: PointerEvent) => {
+      if (event.pointerType === "touch" || event.buttons) return;
       const anchor = findInPath(event.composedPath());
       if (!anchor || anchor === pendingAnchor) return;
       cancelPending();
@@ -104,7 +111,7 @@ export function TruncatedTextTooltip() {
       pendingAnchor = anchor;
       pendingTimer = window.setTimeout(() => {
         cancelPending();
-        if (anchor.isConnected && isOverflowElement(anchor)) show(anchor, "pointer");
+        if (anchor.isConnected && anchor.matches(":hover") && isOverflowElement(anchor)) show(anchor, "pointer");
       }, 400);
     };
     const handlePointerOut = (event: PointerEvent) => {
@@ -117,8 +124,8 @@ export function TruncatedTextTooltip() {
       });
     };
     const handleFocusIn = (event: FocusEvent) => {
-      if (!(event.target instanceof HTMLElement)) return;
-      cancelPending();
+      hide();
+      if (!keyboardFocus || !(event.target instanceof HTMLElement)) return;
       const anchor = findInFocusable(event.target);
       if (anchor) show(anchor, "focus");
     };
@@ -126,7 +133,12 @@ export function TruncatedTextTooltip() {
       setActive((current) => current?.origin === "focus" ? undefined : current);
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
+    const handlePointerDown = () => { keyboardFocus = false; hide(); };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Tab" || event.key.startsWith("Arrow")) { keyboardFocus = true; hide(); }
+      if (event.key === "Escape") hide();
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
     document.addEventListener("keydown", handleKeyDown);
     window.addEventListener("blur", hide);
     document.addEventListener("pointerover", handlePointerOver, true);
@@ -137,6 +149,7 @@ export function TruncatedTextTooltip() {
     window.addEventListener("resize", hide);
     return () => {
       cancelPending();
+      document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("blur", hide);
       document.removeEventListener("pointerover", handlePointerOver, true);
@@ -159,6 +172,20 @@ export function TruncatedTextTooltip() {
       else active.anchor.setAttribute("aria-describedby", previous);
     };
   }, [active, tooltipId]);
+
+  useEffect(() => {
+    if (!active) return;
+    // Filtering and navigation can replace an anchor without a pointerout.
+    const observer = new MutationObserver(() => {
+      const rect = active.anchor.getBoundingClientRect();
+      if (!active.anchor.isConnected || overflowText(active.anchor) !== active.text
+        || !active.anchor.getClientRects().length
+        || rect.x !== active.rect.x || rect.y !== active.rect.y
+        || rect.width !== active.rect.width || rect.height !== active.rect.height) setActive(undefined);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "style", "hidden", "aria-hidden"] });
+    return () => observer.disconnect();
+  }, [active]);
 
   useLayoutEffect(() => {
     if (!active || !tooltipRef.current) return;

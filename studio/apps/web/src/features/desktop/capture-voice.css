@@ -1,0 +1,28 @@
+.capture-voice-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
+.capture-voice-toast > button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 0 8px 24px rgba(23, 32, 28, .18);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.capture-voice-toast > button:hover { background: var(--ink-soft); }
+.capture-voice-toast svg { flex: none; width: 16px; height: 16px; }

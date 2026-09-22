@@ -1,5 +1,3 @@
-import { SegmentedTabs } from "../../shared/SegmentedTabs";
-import { useDesktopPreference } from "../desktop/preferences-store";
 import { isTerminalRunStatus } from "@the-way-here/shared";
 import { TextArea } from "../../shared/form-controls";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -24,7 +22,6 @@ function submitAgentFormOnEnter(event: React.KeyboardEvent<HTMLTextAreaElement>)
 }
 
 export function AgentDock({ revision, context, initialRunId = "", embedded = false }: { revision: number; context: AgentContext; initialRunId?: string; embedded?: boolean }) {
-  const [hintsEnabled] = useDesktopPreference("desktop.ai-hints");
   const { data: vault, loading: vaultLoading } = useApi<VaultInfo>("/api/vault", revision);
   const [runListRevision, setRunListRevision] = useState(0);
   const { data: runList, loading: runsLoading, error: runsError } = useApi<WikiRun[]>("/api/runs", revision + runListRevision);
@@ -240,32 +237,26 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
       <aside className="context-agent-panel" data-run-id={runId} role="complementary" aria-labelledby="context-agent-title">
         <header className="context-agent-header">
           <div className="context-agent-title">
-            {runId || view === "history" ? <button type="button" className="context-agent-icon-button" aria-label={runId ? "返回对话历史" : "返回对话"} onClick={() => runId ? showHistory(runId) : leaveHistory()}><Icon name="back" size={17} /></button> : <span className="context-agent-spark"><Icon name="spark" size={14} /></span>}
+            {!runId && view === "history" ? <button type="button" className="context-agent-icon-button" aria-label="返回对话" onClick={leaveHistory}><Icon name="back" size={17} /></button> : <span className="context-agent-spark"><Icon name="spark" size={14} /></span>}
             <h2 id="context-agent-title">{panelTitle}</h2>
           </div>
           <div className="context-agent-header-actions">
-            {!runId && view === "compose" && <button type="button" className="context-agent-icon-button" aria-label={`聊过的事，${threads.length} 个话题`} title="聊过的事" onClick={() => showHistory()}><Icon name="history" size={17} /></button>}
+            {(runId || view === "compose") && <button type="button" className="context-agent-icon-button" aria-label={`聊过的事，${threads.length} 个话题`} title="聊过的事" onClick={() => showHistory(runId)}><Icon name="history" size={17} /></button>}
             {!runId && view === "history" && <button type="button" className="context-agent-icon-button" aria-label="开始新话题" title="开始新话题" onClick={startNewQuestion}><Icon name="plus" size={18} /></button>}
             {!embedded && <button type="button" className="context-agent-icon-button" aria-label="关闭对话窗口" onClick={closeDock}><Icon name="close" size={17} /></button>}
           </div>
         </header>
-        <SegmentedTabs className="inspector-tabs" label="AI 协作" value={runId || view === "compose" ? "compose" : "history"} options={[{value:"compose",label:"当前对话"},{value:"history",label:"历史记录"}]} onChange={value => { if(value === "history") showHistory(runId); else if(!runId) leaveHistory(); }} />
-        {!runId && view === "compose" && <div className="context-agent-context-chip"><span>{mode === "validate" ? "检查" : collaborationModes[mode].short}</span><b>{attachedContext ? attachedContext.title : context.title}</b><i aria-hidden="true" /><small>{vault?.name || context.scope}</small></div>}
         {topicRestore === "loading" ? <Loading label="正在找回这个话题的聊天记录" /> : topicRestore === "error" ? <p role="alert">{error}。请关闭后重新打开这个话题。</p> : runId ? <ContextualRunPanel agent={agent} runId={runId} revision={revision} runList={runList || []} onRunId={setRunId} onNew={startNewQuestion} onClose={closeDock} /> : view === "history" ? <AgentHistory threads={threads} loading={runsLoading} error={runsError} knowledgeBaseName={vault?.name} onOpen={setRunId} onNew={startNewQuestion} onDelete={deleteConversation} /> : <form className="context-agent-compose" onSubmit={submit}>
           <div className={`context-agent-compose-body${draft ? " has-draft" : ""}`}>
             {outputTarget?.kind === "letter-version" && <div className="context-output-target"><Icon name="library" size={15} /><div><b>将保留为「{outputTarget.label}」</b><span>完成后会成为这封回信的最新版本，原始回信仍可随时切换查看。</span></div></div>}
             {(outputTarget?.kind === "journey-report" || outputTarget?.kind === "photo-memory") && <div className="context-output-target is-journey"><Icon name="receipt" size={15} /><div><b>只更新「{outputTarget.label}」</b><span>会查阅已有 Wiki 帮你理解线索，但这段对话不会构建或修改 Wiki。</span></div></div>}
-            {mode === "validate" ? <div className="context-validate-summary"><span className="context-agent-empty-glyph"><Icon name="check" size={20} /></span><b>检查当前知识库</b><p>运行既有标签、链接与结构检查，不生成新的知识内容。</p></div> : <>
-              <div className="context-agent-empty-state"><b>{attachedContext ? attachedContext.title : context.title}</b>{attachedContext ? <details className="context-topic-evidence"><summary>查看话题依据</summary><p>{attachedContext.currentUnderstanding}</p><p>{attachedContext.reason}</p></details> : <p>{context.summary || "说说你想聊、补充或整理什么。"}</p>}</div>
-              {hintsEnabled && !attachedContext && context.suggestions.length > 0 && <div className="context-suggestions" aria-label="建议问题">{context.suggestions.slice(0, 3).map((suggestion) => <button key={suggestion} type="button" onClick={() => { setDraft(suggestion); setMode(resolveComposerMode(context.defaultMode, context.defaultOutputTarget)); setOutputTarget(context.defaultOutputTarget); setSourceContext(context.defaultSourceContext); window.setTimeout(() => textareaRef.current?.focus(), 0); }}>{suggestion}</button>)}</div>}
-            </>}
+            {mode === "validate" ? <div className="context-validate-summary"><span className="context-agent-empty-glyph"><Icon name="check" size={20} /></span><b>检查当前知识库</b><p>运行既有标签、链接与结构检查，不生成新的知识内容。</p></div> : null}
           </div>
           <div className="context-agent-composer">
-            {attachedContext && <details className="context-agent-attached-context">
-              <summary><span>{attachedContext.title}</span><Icon name="down" size={15} /></summary>
+            {mode !== "validate" && <details className="context-agent-attached-context">
+              <summary><span>{attachedContext?.title || context.title}</span><Icon name="down" size={15} /></summary>
               <div>
-                <p><b>已有理解</b><span>{attachedContext.currentUnderstanding}</span></p>
-                <p><b>为什么值得聊</b><span>{attachedContext.reason}</span></p>
+                {attachedContext ? <><p><b>已有理解</b><span>{attachedContext.currentUnderstanding}</span></p><p><b>为什么值得聊</b><span>{attachedContext.reason}</span></p></> : <p>{context.summary || "说说你想聊、补充或整理什么。"}</p>}
               </div>
             </details>}
             <div className={`text-field-shell context-composer-shell${mode === "validate" ? " validate" : ""}`}>
@@ -273,7 +264,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
               {mode !== "validate" && <AgentComposerSettings id={`context-ai-${context.pageId || context.scope}`} agent={agent} />}
               <button type="submit" className="context-agent-send" disabled={submitDisabled} aria-label={submitting ? "正在开始" : collaborationModes[mode].action} title={submitting ? "正在开始…" : collaborationModes[mode].action}><Icon name="up" size={16} /></button>
             </div>
-            <p className="context-agent-boundary">{outputTarget?.kind === "photo-memory" ? "只保存对话或故事草稿；回到讲故事后收进理解" : outputTarget?.kind === "journey-report" ? "Wiki 仅检索；本轮只更新消费旅程报告" : collaborationModes[mode].boundary}</p>
+            {(mode !== "auto" || outputTarget?.kind === "photo-memory" || outputTarget?.kind === "journey-report") && <p className="context-agent-boundary">{outputTarget?.kind === "photo-memory" ? "只保存对话或故事草稿；回到讲故事后收进理解" : outputTarget?.kind === "journey-report" ? "Wiki 仅检索；本轮只更新消费旅程报告" : collaborationModes[mode].boundary}</p>}
             {error && <p className="context-agent-error" role="alert">{error}</p>}
             {!vaultLoading && !vault?.agentAvailable && <p className="context-agent-offline">暂时无法开始对话；请在偏好设置中连接 AI 助手。</p>}
           </div>

@@ -1,3 +1,4 @@
+import { useQuietScroll } from "./QuietScroll";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -62,7 +63,8 @@ function PaneCollapseButton({ open, onToggle, label }: { open: boolean; onToggle
 }
 
 export function CollapsibleIndexPane({ open, onToggle, label, children }: { open: boolean; onToggle: () => void; label: string; children: ReactNode }) {
-  return <div className={`collapsible-index-pane${open ? "" : " collapsed"}`}><div className="collapsible-index-content" data-overflow-tooltip="off">{children}</div><PaneCollapseButton open={open} onToggle={onToggle} label={label} /></div>;
+  const onScrollCapture = useQuietScroll();
+  return <div onScrollCapture={onScrollCapture} className={`collapsible-index-pane${open ? "" : " collapsed"}`}><div className="collapsible-index-content" data-overflow-tooltip="off">{children}</div><PaneCollapseButton open={open} onToggle={onToggle} label={label} /></div>;
 }
 
 export function SectionHeading({ title, action }: { title: string; action?: ReactNode }) {

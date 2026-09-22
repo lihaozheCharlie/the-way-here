@@ -1,3 +1,6 @@
+import { PaneShelf } from "../../shared/PaneShelf";
+import { QuietScroll } from "../../shared/QuietScroll";
+import { FileMenu } from "../../shared/FileMenu";
 import { SourceConnectionsPopover } from "./SourceConnectionsPanel";
 import { SearchField, SelectInput, TextInput } from "../../shared/form-controls";
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -215,7 +218,6 @@ function SourcePreview({ page, revision, startEditing = false, fileNameFocusToke
   if (data?.importChannel === "photos") return <section className="source-preview source-preview-photo"><ReadOnlyDocument id={data.id} markdown={data.renderedMarkdown || data.markdown} toolbar={<span>通过“打开照片记忆”修改人物和讲述</span>} /><SourceKnowledgeConnections key={data.id} page={data} /></section>;
   return <article className="source-preview">
     {loading ? <Loading label="正在展开正文" /> : error || !data ? <Empty>{error || "正文暂时无法读取"}</Empty> : <EditableDocument page={data} variant="preview" startEditing={startEditing} showOutline identityActions={journeyRecord && journeyRecord.batch.channel !== "alipay" ? <SourceBuildAction record={journeyRecord} busy={buildBusy} onStart={onStartBuild} detail /> : undefined} fileNameFocusToken={fileNameFocusToken} beforeContent={journeyRecord ? <SourceJourneyContext file={journeyRecord.file} /> : null} afterContent={<SourceKnowledgeConnections key={data.id} page={data} />} onRenamed={onRenamed} />}
-    {data ? <footer className="source-preview-actions"><NavLink to={pageHref(data.id)} state={{returnTo:window.location.pathname + window.location.search, returnLabel:"返回生活记录"}}>在编辑器中打开</NavLink><button type="button" onClick={() => openContextAgent({mode:"read", prompt:`我想聊聊这条记录：${data.title}。请先阅读这份原始记录，再一次问我一个具体问题。`, attachedContext:{title:data.title,currentUnderstanding:data.excerpt,reason:"从这条原始记录继续聊",} })}>与 AI 聊聊这条记录</button></footer> : null}
   </article>;
 }
 
@@ -567,7 +569,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
 
     <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label="生活记录工作区">
       <div className={`source-pane-shell source-folder-shell${folderPaneOpen ? "" : " collapsed"}`}>
-        <aside className="source-folder-pane"><header><div><b>文件夹</b><span>{folders.length}</span></div><div className="source-pane-header-actions"><button type="button" className="source-pane-collapse" onClick={() => setFolderOverride(!folderPaneOpen)} aria-expanded={folderPaneOpen} aria-label={`${folderPaneOpen ? "收起" : "展开"}文件夹栏`}><Icon name={folderPaneOpen ? "back" : "arrow"} size={13} /></button></div></header><div className="source-folder-contents">
+        <aside className="source-folder-pane"><PaneShelf label="文件夹" count={folders.length} open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel="文件夹栏" /><QuietScroll className="source-folder-contents">
           <div className={`source-folder-row${!folder ? " active" : ""}`}><button type="button" className="source-folder-select" onClick={() => { setCreatedPageId(undefined); update({ folder: undefined, file: undefined, limit: undefined }); }}><Icon name="source" size={15} /><span>全部材料</span><small>{pages.length}</small></button></div>
           {folders.map(([name, count]) => {
             const recordType = sourceRecordType({ relativePath: name, tags: [], type: undefined });
@@ -576,7 +578,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
               {name.startsWith("外部来源") ? null : <SourceItemMenu label={`更多文件夹操作：${name}`} actions={[{ label: "删除文件夹…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "folder", folder: name, count }) }]} />}
             </div>;
           })}
-        </div>{folderPaneOpen && <div className="source-new-folder">{creatingFolder ? <form onSubmit={async (event) => {
+        </QuietScroll>{folderPaneOpen && <div className="source-new-folder">{creatingFolder ? <form onSubmit={async (event) => {
           event.preventDefault(); if (!folderName.trim() || folderBusy) return;
           setFolderBusy(true); setFolderError("");
           try {
@@ -588,13 +590,14 @@ export function OrganizedSources({ revision }: { revision: number }) {
       </div>
       <div className={`source-pane-shell source-file-shell${filePaneOpen ? "" : " collapsed"}`}>
         <section className="source-file-pane">
-          <header><div><b>{folder ? folder.split("/").at(-1) : "全部记录"}</b><span>{filtered.length} 份</span></div><div className="source-pane-header-actions"><button type="button" className="source-pane-collapse" onClick={() => setFilePaneOpen((value) => !value)} aria-expanded={filePaneOpen} aria-label={`${filePaneOpen ? "收起" : "展开"}文件列表`}><Icon name={filePaneOpen ? "back" : "arrow"} size={13} /></button></div></header>
+          <PaneShelf label={folder ? folder.split("/").at(-1)! : "全部记录"} count={`${filtered.length} 份`} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)} toggleLabel="文件列表" />
           <div className="source-file-contents">
+            <p className="source-file-order">{oldestFirst ? "按时间从旧到新" : "按记录时间从新到旧"}</p>
             {type === "pending" && selectableBuildRecords.length > 0 ? <div className="source-batch-toolbar">
               <label><input type="checkbox" checked={allSelectableBuildsSelected} ref={(node) => { if (node) node.indeterminate = anySelectableBuildsSelected && !allSelectableBuildsSelected; }} onChange={(event) => setSelectedBuildPaths(event.target.checked ? new Set(selectableBuildPaths) : new Set())} />全选可直接构建 <small>（{selectableBuildRecords.length} 份）</small></label>
               <button type="button" disabled={!selectedBuildRecords.length || Boolean(busyBuildPath)} onClick={() => beginSelectedBuild(selectedBuildRecords)}><Icon name="build" size={13} />{selectedBuildRecords.length > 1 ? `批量构建 ${selectedBuildRecords.length} 份` : selectedBuildRecords.length === 1 ? "构建这份记录" : "选择记录"}</button>
             </div> : null}
-            <div className="source-file-list" data-overflow-tooltip="off">
+            <QuietScroll className="source-file-list" data-overflow-tooltip="off">
             {visiblePages.map((page) => {
               const fileName = page.externalSource ? page.title : documentIdentity(page.relativePath).fileName;
               const recordType = sourceRecordType(page);
@@ -609,13 +612,13 @@ export function OrganizedSources({ revision }: { revision: number }) {
                   <span className="source-record-copy"><time dateTime={sourceRecordDate(page).toISOString()}>{sourceRecordDate(page).getTime() ? sourceRecordDate(page).toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).replaceAll("/", ".") : "日期未知"}</time>
                   <b>{page.title.replace(/^(?:19|20)\d{2}[-/.,，]\d{1,2}[-/.,，]\d{1,2}[\s·_-]*/, "") || page.title}</b><small data-overflow-tooltip="off">{page.excerpt || cleanSourcePath(page.relativePath)}</small></span>
                 </button>
-                {page.externalSource ? <small>原目录 · 只读</small> : <SourceItemMenu label={`更多文件操作：${fileName}`} actions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", icon: recordType === "photos" || recordType === "bill" ? undefined : "build", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }, ...(recordType === "photos" ? [] : [{ label: "重命名", icon: "edit" as const, onSelect: () => requestRename(page) }]), { label: "删除文件…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "file", page }) }]} />}
+                <FileMenu page={page} extraActions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />
                 {trackedBuildRecord && buildState ? <div className={`source-file-build${trackedBuildRecord.file.buildKind === "dialogue" && trackedBuildRecord.file.buildStatus === "ready-to-build" ? " is-dual" : ""}`}><span className={`source-build-chip is-${buildState.tone}`}><i aria-hidden="true" />{buildState.label}{buildState.detail ? <small>{buildState.detail}</small> : null}</span><SourceBuildAction record={trackedBuildRecord} busy={busyBuildPath === trackedBuildRecord.file.storedPath} onStart={beginBuild} /></div> : null}
               </article>;
             })}
             {visiblePages.length < filtered.length ? <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>继续显示 <b>{Math.min(120, filtered.length - visiblePages.length)}</b> 份</button> : null}
             {visiblePages.length === 0 ? <div className="source-list-empty"><b>没有匹配的记录</b><p>{type === "pending" ? "新带进来的记录都已经构建完成。" : "换一个来源、月份或搜索词试试。"}</p></div> : null}
-          </div></div>
+          </QuietScroll></div>
         </section>
       </div>
       {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={renameRequest?.pageId === selected.id ? renameRequest.token : 0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>没有匹配的来源</span><p>换一个文件夹或搜索词。</p></div>}

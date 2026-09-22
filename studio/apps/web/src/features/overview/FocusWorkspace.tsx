@@ -1,3 +1,5 @@
+import { GraphViewport } from "../../shared/GraphViewport";
+import { ReadOnlyPageDialog } from "../knowledge/ReadOnlyPageDialog";
 import { ConversationWorkspace } from "../../shared/ConversationWorkspace";
 import { useState } from "react";
 import { AuxPanel } from "../../shared/AuxPanel";
@@ -13,7 +15,8 @@ import { signalConversationPrompt } from "./talking-questions";
 
 const evidenceKindLabels = { source: "原始证据", letter: "回信回应", event: "事件记录", wiki: "已有判断" } as const;
 
-function ContextGraph({ data }: { data: GraphData }) {
+function ContextGraph({ data, revision }: { data: GraphData; revision: number }) {
+  const [preview, setPreview] = useState<string>();
   const returnContext = useReturnContext();
   const focus = data.nodes.find((node) => node.id === data.focusId) || data.nodes[0];
   const others = data.nodes.filter((node) => node.id !== focus?.id).slice(0, 28);
@@ -29,7 +32,7 @@ function ContextGraph({ data }: { data: GraphData }) {
   });
   const shown = new Set([focus?.id, ...others.map((node) => node.id)].filter(Boolean));
   return <div className="context-graph">
-    <svg viewBox="0 0 640 420" role="img" aria-labelledby="context-graph-title">
+    <GraphViewport label="局部关系图谱" width={640} height={420}>
       <title id="context-graph-title">当前问题与相关知识页面之间的局部关系</title>
       <g className="graph-links">{data.links.filter((link) => shown.has(link.source) && shown.has(link.target)).map((link) => {
         const source = positions.get(link.source); const target = positions.get(link.target);
@@ -38,12 +41,13 @@ function ContextGraph({ data }: { data: GraphData }) {
       <g>{[focus, ...others].filter(Boolean).map((node) => {
         const position = positions.get(node!.id)!;
         const isFocus = node!.id === focus?.id;
-        return <g key={node!.id} className={`context-graph-node ${isFocus ? "focus" : ""}`} transform={`translate(${position.x} ${position.y})`}>
+        return <g role="button" tabIndex={0} aria-label={`预览 ${node!.title}`} onClick={() => setPreview(node!.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPreview(node!.id); } }} key={node!.id} className={`context-graph-node ${isFocus ? "focus" : ""}`} transform={`translate(${position.x} ${position.y})`}>
           <circle r={isFocus ? 27 : 8} />
           <text textAnchor="middle" y={isFocus ? 45 : 22}>{node!.title.slice(0, isFocus ? 12 : 8)}</text>
         </g>;
       })}</g>
-    </svg>
+    </GraphViewport>
+    {preview && <ReadOnlyPageDialog pageId={preview} revision={revision} onClose={() => setPreview(undefined)} />}
     <div className="context-graph-list" aria-label="局部关系的可访问列表">{others.slice(0, 12).map((node) => <NavLink key={node.id} to={pageHref(node.id)} state={returnContext}><span>{graphCategoryNames[node.category] || node.category}</span><b>{node.title}</b></NavLink>)}</div>
   </div>;
 }
@@ -75,7 +79,7 @@ export function FocusWorkspace({ revision }: { revision: number }) {
       <section className="evidence-history"><SectionHeading title="证据怎样变化" />{data.evidenceTimeline.length ? <ol>{data.evidenceTimeline.map((item) => <li key={`${item.page.id}-${item.kind}`}><time>{item.date.slice(0, 10)}</time><i /><div><span>{evidenceKindLabels[item.kind]}</span><PageLink page={item.page}>{item.label}</PageLink><p>{item.excerpt}</p></div></li>)}</ol> : <Empty>相关页面已经找到，但还没有可排序的证据切片。</Empty>}</section>
       <aside className="focus-relations"><SectionHeading title="它连接到什么" />{data.related.map((group) => <section key={group.category}><h3>{group.label}<span>{group.pages.length}</span></h3>{group.pages.map((page) => <PageLink key={page.id} page={page}><b>{page.title}</b><small>{page.excerpt}</small></PageLink>)}</section>)}</aside>
     </div>
-    <section className="local-graph-section"><SectionHeading title="这件事在知识系统里的位置" /><p>只显示与当前问题相距两步以内的页面；下方列表是同一关系的可访问入口。</p><ContextGraph data={data.graph} /></section>
+    <section className="local-graph-section"><SectionHeading title="这件事在知识系统里的位置" /><p>只显示与当前问题相距两步以内的页面；下方列表是同一关系的可访问入口。</p><ContextGraph data={data.graph} revision={revision} /></section>
     </details>
     <PageAgentContext context={{ scope: `值得聊聊 · ${data.signal.name}`, title: data.signal.judgment, summary: `仍在观察：${data.signal.observation}。相关上下文：${data.related.map((group) => `${group.label} ${group.pages.map((page) => page.title).join("、")}`).join("；")}`, defaultMode: "read", suggestions: [signalConversationPrompt(data.signal), `我觉得关于“${data.signal.name}”的理解不完全符合我。请先让我说明哪里不准确，再一起找反例。`, "基于当前证据，给我设计一个未来两周可观察、但不会制造额外压力的验证方式。"] }} />
   </div>;

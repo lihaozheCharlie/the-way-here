@@ -104,7 +104,7 @@
 .source-import-guide-mark { width: 28px; height: 28px; flex: none; display: grid; place-items: center; color: var(--source-accent-ink); background: var(--source-tint); border-radius: 50%; }
 .source-import-guide h2 { margin: 0 0 3px; font-size: 15px; font-weight: 690; letter-spacing: -.015em; }
 .source-import-guide header p { margin: 0; color: var(--source-muted); font-size: 12px; line-height: 1.55; }
-.source-import-guide header time { flex: none; color: var(--source-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.source-import-guide header time { flex: none; color:var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .source-import-guide-list { padding: 0 20px; }
 .source-import-guide-list > article { min-height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--source-line); }
 .source-import-guide-list > article:last-child { border-bottom: 0; }
@@ -121,7 +121,7 @@
 
 .source-build-chip { display: inline-flex; align-items: center; gap: 6px; color: var(--source-muted); font-size: 12px; white-space: nowrap; }
 .source-build-chip > i { width: 7px; height: 7px; flex: none; background: var(--attention-gold, #b9874c); border-radius: 50%; }
-.source-build-chip > small { color: var(--source-faint); font-size: 12px; }
+.source-build-chip > small { color:var(--ink-soft); font-size: 12px; }
 .source-build-chip.is-progress > i { background: rgba(87, 138, 131, .45); animation: source-build-pulse 1.6s ease-in-out infinite; }
 .source-build-chip.is-done > i { background: var(--source-accent); }
 .source-build-chip.is-quiet > i { background: transparent; border: 1px dashed var(--source-faint); }
@@ -148,11 +148,11 @@
   font-family: var(--font-ui);
 }
 .source-build-confirm > b { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 720; line-height: 1.4; }
-.source-build-confirm > p { margin: 0 0 15px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.source-build-confirm > p { margin: 0 0 15px; color:var(--ink-soft); font-size: 12px; line-height: 1.65; }
 .source-build-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
 .source-build-confirm button { min-height: 32px; padding: 6px 11px; border-radius: var(--radius-control); font: inherit; font-size: 12px; font-weight: 680; cursor: pointer; }
 .source-build-confirm button:focus-visible { outline: 3px solid rgba(87, 138, 131, .2); outline-offset: 2px; }
-.source-build-confirm-cancel { color: var(--muted); background: transparent; border: 1px solid var(--line-strong); }
+.source-build-confirm-cancel { color:var(--ink-soft); background: transparent; border: 1px solid var(--line-strong); }
 .source-build-confirm-cancel:hover { color: var(--ink); border-color: var(--accent-primary); }
 .source-build-confirm-submit { color: #fff; background: var(--ink); border: 1px solid var(--ink); }
 .source-build-confirm-submit:hover { background: var(--accent-primary); border-color: var(--accent-primary); }
@@ -502,7 +502,7 @@
 .source-folder-row.active { color: var(--source-accent-ink); background: var(--source-tint); font-weight: 680; }
 .source-folder-select .icon { opacity: .74; }
 .source-folder-select span { min-width: 0; flex: 1; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.source-folder-select small { flex: none; color: var(--source-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.source-folder-select small { flex: none; color:var(--ink-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
 .source-folder-row.active .source-folder-select { color: var(--source-accent-ink); }
 .source-folder-row.active .source-folder-select small { color: var(--source-accent-ink); }
 
@@ -514,7 +514,7 @@
   display: grid;
   place-items: center;
   padding: 0;
-  color: var(--source-faint);
+  color:var(--ink-soft);
   background: transparent;
   border: 0;
   border-radius: var(--radius-control);
@@ -799,7 +799,7 @@
 }
 
 .organized-sources-page .editable-document-identity > div > small {
-  color: var(--source-faint);
+  color:var(--ink-soft);
   font-size: 12px;
 }
 
@@ -814,7 +814,7 @@
 
 .source-journey-actions.is-detail { align-items: flex-start; gap: 10px; }
 .source-journey-action-col { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-.source-journey-action-col > small { max-width: 180px; color: var(--source-faint); font-size: 12px; line-height: 1.45; text-align: right; white-space: nowrap; }
+.source-journey-action-col > small { max-width: 180px; color:var(--ink-soft); font-size: 12px; line-height: 1.45; text-align: right; white-space: nowrap; }
 .source-build-action.is-detail { min-height: 34px; padding: 7px 11px; font-size: 12px; }
 .source-journey-context {
   margin: -14px 0 30px;
@@ -827,13 +827,13 @@
   align-items: center;
   margin: 0 0 14px;
   padding: 0;
-  color: var(--source-faint);
+  color:var(--ink-soft);
   list-style: none;
 }
 .source-journey-progress li:not(.rail) { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
 .source-journey-progress li:not(.rail) > i { width: 7px; height: 7px; flex: none; background: var(--source-line-strong); border-radius: 50%; }
 .source-journey-progress li:not(.rail) > b { font-weight: 680; }
-.source-journey-progress li:not(.rail) > span { color: var(--source-faint); font-size: 12px; }
+.source-journey-progress li:not(.rail) > span { color:var(--ink-soft); font-size: 12px; }
 .source-journey-progress li.done { color: var(--source-accent-ink); }
 .source-journey-progress li.done > i { background: var(--source-accent); }
 .source-journey-progress li.current { color: var(--ink); }

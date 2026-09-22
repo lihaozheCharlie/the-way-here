@@ -81,6 +81,7 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
     return page;
   }, 201));
   app.delete<{ Body: { pageId?: string; expectedModifiedAt?: string } }>("/api/sources/file", async (request, reply) => handleContent(reply, () => writer().deleteSource(request.body?.pageId, request.body?.expectedModifiedAt)));
+  app.delete<{ Body: { pageId?: unknown; expectedModifiedAt?: unknown } }>("/api/pages/file", async (request, reply) => handleContent(reply, () => writer().deleteWikiPage(request.body?.pageId, request.body?.expectedModifiedAt)));
   app.delete<{ Body: { folder?: string; expectedFileCount?: number } }>("/api/sources/folder", async (request, reply) => handleContent(reply, () => writer().deleteSourceFolder(request.body?.folder, request.body?.expectedFileCount)));
   app.post<{ Body: { pageId?: string } }>("/api/files/reveal", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId, true)));
   app.post<{ Body: { pageId?: string } }>("/api/files/open-in-editor", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId)));

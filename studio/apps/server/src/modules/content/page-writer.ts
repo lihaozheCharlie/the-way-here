@@ -117,6 +117,22 @@ export class PageWriter {
     return { ok: true, pageId: page.id };
   }
 
+  async deleteWikiPage(pageId: unknown, expectedModifiedAt: unknown): Promise<{ ok: true; pageId: string }> {
+    if (typeof pageId !== "string" || !pageId.trim() || typeof expectedModifiedAt !== "string" || !Number.isFinite(Date.parse(expectedModifiedAt))) throw new ContentRequestError(400, "缺少有效的文件标识或修改时间，请刷新后重试");
+    const page = this.knowledge.index.get(pageId);
+    if (!page || page.isSource) throw new ContentRequestError(404, "Wiki 文件不存在，请刷新后重试");
+    const wikiRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.wiki);
+    const absolutePath = path.resolve(this.knowledge.vaultRoot, page.relativePath);
+    if (page.externalSource || !isPathInside(wikiRoot, absolutePath)) throw new ContentRequestError(403, "只能删除当前知识库中的 Wiki 文件");
+    const [root, resolved, info] = await Promise.all([realpath(wikiRoot), realpath(absolutePath), lstat(absolutePath)]);
+    if (!isPathInside(root, resolved) || !info.isFile() || info.isSymbolicLink()) throw new ContentRequestError(403, "所选文件不在可删除的 Wiki 目录中");
+    await this.assertCurrent(absolutePath, expectedModifiedAt);
+    await rm(absolutePath);
+    await this.knowledge.index.rebuild();
+    this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, deletedPath: page.relativePath });
+    return { ok: true, pageId };
+  }
+
   async deleteSourceFolder(folderValue: string | undefined, expectedFileCount?: unknown): Promise<{ ok: true; folder: string }> {
     let folder: string;
     try {

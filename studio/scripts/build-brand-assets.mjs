@@ -11,21 +11,15 @@ const desktop = path.join(studio, 'apps/desktop/dist');
 await mkdir(web, { recursive: true });
 await mkdir(path.join(desktop, 'app.iconset'), { recursive: true });
 
-// Keep the supplied paths in one master; only adjust weight and framing by size.
-function artwork(size, fullBleed = false) {
-  const [road, book] = size <= 32 ? [11, 10] : size <= 64 ? [9, 8.5] : size <= 128 ? [7, 6.5] : [6.5, 6];
-  let svg = master.replace('stroke-width="6.5"', `stroke-width="${road}"`).replace('stroke-width="6"', `stroke-width="${book}"`);
-  // Open the gap at tiny sizes so the heavier book and road remain distinct.
-  if (size <= 64) svg = svg.replace("M14 70 Q 50 78 86 70", "M14 73 Q 50 81 86 73");
-  if (fullBleed) svg = svg.replace('viewBox="0 0 1024 1024"', 'viewBox="64 64 896 896"');
-  return svg;
-}
-await writeFile(path.join(web, 'app-icon.svg'), artwork(28, true));
-await writeFile(path.join(web, 'favicon.svg'), artwork(16, true));
-const touch = artwork(180, true).replace(/rx="20[12]"/g, 'rx="0"');
-await sharp(Buffer.from(touch)).resize(180, 180).png().toFile(path.join(web, 'apple-touch-icon.png'));
+// Web assets preserve the supplied artwork without stroke or viewBox rewriting.
+await writeFile(path.join(web, 'app-icon.svg'), master);
+await writeFile(path.join(web, 'favicon.svg'), master);
+await sharp(Buffer.from(master)).resize(180, 180).png().toFile(path.join(web, 'apple-touch-icon.png'));
+// macOS icons retain a transparent 64px safe area around the supplied tile.
+const inner = master.replace(/<svg[^>]*>/, '').replace('</svg>', '');
+const dock = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(64 64) scale(.875)">${inner}</g></svg>`;
 // ICO embeds multiple PNG representations for legacy browsers and Windows tabs.
-const pngs = await Promise.all([16, 32, 48].map((size) => sharp(Buffer.from(artwork(size, true))).resize(size, size).png().toBuffer()));
+const pngs = await Promise.all([16, 32, 48].map((size) => sharp(Buffer.from(master)).resize(size, size).png().toBuffer()));
 const header = Buffer.alloc(6 + 16 * pngs.length);
 header.writeUInt16LE(1, 2); header.writeUInt16LE(pngs.length, 4);
 let offset = header.length;
@@ -39,13 +33,16 @@ pngs.forEach((png, i) => {
 await writeFile(path.join(web, 'favicon.ico'), Buffer.concat([header, ...pngs]));
 for (const size of [16, 32, 128, 256, 512]) {
   for (const scale of [1, 2]) {
-    await sharp(Buffer.from(artwork(size))).resize(size * scale, size * scale).png()
+    await sharp(Buffer.from(dock)).resize(size * scale, size * scale).png()
       .toFile(path.join(desktop, 'app.iconset', `icon_${size}x${size}${scale === 2 ? '@2x' : ''}.png`));
   }
 }
-await sharp(Buffer.from(master)).png().toFile(path.join(desktop, 'app-icon.png'));
-const paths = master.match(/<path[^>]+\/>/g).join('\n').replace('M14 70 Q 50 78 86 70', 'M14 73 Q 50 81 86 73').replace('stroke-width="6.5"', 'stroke-width="10"').replace('stroke-width="6"', 'stroke-width="9"');
-const template = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 100 100"><g fill="none" stroke="#000">${paths}</g></svg>`;
+await sharp(Buffer.from(dock)).png().toFile(path.join(desktop, 'app-icon.png'));
+// A mask preserves the spine as transparent negative space in the monochrome tray.
+const book = master.match(/<g\b[^>]*>([\s\S]*?)<\/g>/)?.[1];
+if (!book) throw new Error('Brand master must contain the book artwork group.');
+const silhouette = book.replace(/fill="#[a-fA-F0-9]+"/g, 'fill="#fff"').replace(/stroke="#[a-fA-F0-9]+"/g, 'stroke="#000"');
+const template = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="-46 -48 92 72"><defs><mask id="book" maskUnits="userSpaceOnUse" x="-46" y="-48" width="92" height="72">${silhouette}</mask></defs><rect x="-46" y="-48" width="92" height="72" fill="#000" mask="url(#book)"/></svg>`;
 for (const scale of [1, 2]) {
   await sharp(Buffer.from(template)).resize(18 * scale, 18 * scale).png()
     .toFile(path.join(desktop, `trayTemplate${scale === 2 ? '@2x' : ''}.png`));

@@ -5,11 +5,16 @@ import { api } from "../../api";
 import { TextArea } from "../../shared/form-controls";
 import { pageHref } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
+import "./today.css";
 import { CaptureVoice } from "../desktop/CaptureVoice";
 
-export function LifeRecordCapture({ knowledgeBaseId }: { knowledgeBaseId: string }) {
-  const key = `today.capture.${knowledgeBaseId}`;
-  const [draft, setDraft] = useState(() => localStorage.getItem(key) || "");
+export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { knowledgeBaseId: string; standalone?: boolean }) {
+  const key = `${standalone ? "desktop" : "today"}.capture.${knowledgeBaseId}`;
+  const [draft, setDraft] = useState(() => {
+    const text = localStorage.getItem(key) || "";
+    const title = standalone ? localStorage.getItem(`${key}.title`) : "";
+    return title ? `${title}\n\n${text}` : text;
+  });
   const [runId, setRunId] = useState(() => localStorage.getItem(`${key}.run`) || "");
   const [run, setRun] = useState<WikiRun>();
   const [starting, setStarting] = useState(false);
@@ -18,7 +23,7 @@ export function LifeRecordCapture({ knowledgeBaseId }: { knowledgeBaseId: string
   const submitting = useRef(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const busy = starting || Boolean(runId && (!run || !isTerminalRunStatus(run.status)));
-  useEffect(() => { localStorage.setItem(key, draft); }, [key, draft]);
+  useEffect(() => { localStorage.setItem(key, draft); if (standalone) localStorage.removeItem(`${key}.title`); }, [key, draft, standalone]);
   useEffect(() => {
     if (!runId) return;
     let active = true;
@@ -65,7 +70,7 @@ export function LifeRecordCapture({ knowledgeBaseId }: { knowledgeBaseId: string
   }
 
   return <section className="today-capture" aria-labelledby="today-capture-title">
-    <h2 id="today-capture-title">随手记一笔</h2>
+    {standalone ? <h1 id="today-capture-title">随手记</h1> : <h2 id="today-capture-title">随手记一笔</h2>}
     <p>写下来，或者说一段。我会帮你整理成一条生活记录。</p>
     <form onSubmit={event => { event.preventDefault(); void submit(); }}>
       <div className="today-composer">

@@ -1,4 +1,3 @@
-import { OpenOriginal } from "./OpenOriginal";
 import { AuxPanel } from "./AuxPanel";
 import { TextArea, TextInput } from "./form-controls";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
@@ -288,7 +287,7 @@ export function ReadOnlyDocument({ id, markdown, toolbar, page, showOutline = tr
   const content = page ? editableMarkdownDocument(markdown, true).body : markdown;
   const body = page?.isSource ? markdownWithoutSourceRelations(content) : content;
   return <DocumentFrame variant="preview" showIdentity={Boolean(page)} showOutline={showOutline} markdown={body} headingPrefix={headingPrefix}>
-    {page ? <header className="editable-document-identity"><div className="document-identity-copy"><h1 className="document-readonly-title">{documentIdentity(page.relativePath).fileName}</h1><div className="document-meta-row"><span>{documentIdentity(page.relativePath).folder}</span><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span><OpenOriginal pageId={page.id} /></div></div></header> : null}
+    {page ? <header className="editable-document-identity"><div className="document-identity-copy"><h1 className="document-readonly-title">{documentIdentity(page.relativePath).fileName}</h1><div className="document-meta-row"><span>{documentIdentity(page.relativePath).folder}</span><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span></div></div></header> : null}
     {toolbar && <div className="editable-document-toolbar">{toolbar}</div>}
     {page && Object.keys(pageNoteProperties(page)).length ? <div className="editable-document-properties"><NoteProperties properties={pageNoteProperties(page)} compact /></div> : null}
     <div className="editable-document-body"><MarkdownBody headingPrefix={headingPrefix}>{body}</MarkdownBody></div>
@@ -513,7 +512,7 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
 
   return <DocumentFrame variant={variant} showIdentity={showIdentity} editing={editing} showOutline={showOutline} markdown={readingMarkdown} headingPrefix={headingPrefix}>
     {showIdentity && <header className="editable-document-identity">
-      <div className="document-identity-copy"><label className="document-file-name"><span className="sr-only">文件名</span><TextInput ref={fileNameInputRef} name={`file-name-${page.id}`} autoComplete="off" aria-label={`${page.title} 文件名`} style={{ width: `${Math.min(Math.max(fileName.length * 1.08 + 2, 12), 37)}em` }} value={fileName} onChange={(event) => changeFileName(event.target.value)} onBlur={() => void persistFileName(fileNameRef.current)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") { changeFileName(lastSavedFileNameRef.current); event.currentTarget.blur(); } }} spellCheck={false} /></label><div className="document-meta-row"><small>{identity.folder}</small><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span><OpenOriginal pageId={page.id} />{identityActions}</div></div>
+      <div className="document-identity-copy"><label className="document-file-name"><span className="sr-only">文件名</span><TextInput ref={fileNameInputRef} name={`file-name-${page.id}`} autoComplete="off" aria-label={`${page.title} 文件名`} style={{ width: `${Math.min(Math.max(fileName.length * 1.08 + 2, 12), 37)}em` }} value={fileName} onChange={(event) => changeFileName(event.target.value)} onBlur={() => void persistFileName(fileNameRef.current)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") { changeFileName(lastSavedFileNameRef.current); event.currentTarget.blur(); } }} spellCheck={false} /></label><div className="document-meta-row"><small>{identity.folder}</small><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span>{identityActions}</div></div>
       <div className="editable-document-identity-actions">{saveFeedback}</div>
     </header>}
     {toolbar}{propertyPanel}

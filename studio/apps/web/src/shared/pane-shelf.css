@@ -1,0 +1,25 @@
+/* One control strip for each level of a column browser. */
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) { display:flex; flex:none; align-items:center; justify-content:space-between; gap:8px; min-height:46px; padding:9px 12px; background:var(--surface-tinted); border-bottom:1px solid var(--line); }
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) .pane-shelf-label { min-width:0; }
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) .pane-shelf-label > b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-soft); font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; }
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) .pane-shelf-actions { display:flex; align-items:center; gap:8px; flex:none; }
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) .pane-shelf-count { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 7px; border:1px solid var(--line); border-radius:999px; background:var(--paper); color:var(--ink-soft); font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) .pane-shelf-toggle { display:grid; place-items:center; width:26px; height:26px; padding:0; flex:none; border:0; border-radius:50%; background:transparent; color:var(--ink-soft); }
+:is(header.pane-shelf, .desktop-shell .source-vault .source-pane-shell header.pane-shelf) .pane-shelf-toggle:hover { color:var(--ink); background:var(--paper); }
+.desktop-shell .source-vault .source-pane-shell.collapsed header.pane-shelf { justify-content:center; padding-inline:0; }
+.desktop-shell .source-vault .source-pane-shell.collapsed header.pane-shelf .pane-shelf-count { display:none; }
+/* Transparent track; thumb only appears during interaction. */
+.quiet-scroll, .collapsible-index-content > aside { scrollbar-width:none; scrollbar-gutter:auto; }
+.quiet-scroll::-webkit-scrollbar, .collapsible-index-content > aside::-webkit-scrollbar { width:0; height:0; }
+.quiet-scroll:is(:hover,:focus-within,[data-scrolling=true]), .collapsible-index-content > aside:is(:hover,:focus-within,[data-scrolling=true]) { scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent; }
+.quiet-scroll:is(:hover,:focus-within,[data-scrolling=true])::-webkit-scrollbar, .collapsible-index-content > aside:is(:hover,:focus-within,[data-scrolling=true])::-webkit-scrollbar { width:5px; height:5px; }
+.quiet-scroll::-webkit-scrollbar-thumb, .collapsible-index-content > aside::-webkit-scrollbar-thumb { background:var(--line-strong); border-radius:999px; }
+.quiet-scroll::-webkit-scrollbar-track, .collapsible-index-content > aside::-webkit-scrollbar-track { background:transparent; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell > :is(.source-folder-pane,.source-file-pane) { display:flex; flex-direction:column; overflow:hidden; }
+.desktop-shell .source-folder-contents { flex:1; min-height:0; overflow:auto; padding-top:8px; }
+.desktop-shell .source-new-folder { flex:none; }
+.desktop-shell .organized-sources-page .source-vault .source-file-list { padding:10px 8px 12px; gap:8px; }
+.desktop-shell .organized-sources-page .source-vault .source-file-row { flex:none; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .source-file-row.active { border-color:var(--accent-primary); background:var(--accent-soft); }
+.desktop-shell .organized-sources-page .source-vault .source-file-list > .source-file-list-more { flex:none; min-height:40px; margin-top:8px; padding:9px 12px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface-tinted); color:var(--accent-ink); }
+.desktop-shell .organized-sources-page .source-vault .source-file-list > .source-file-list-more:hover { background:var(--accent-soft); }

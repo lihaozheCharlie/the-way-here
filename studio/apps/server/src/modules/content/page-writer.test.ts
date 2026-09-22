@@ -124,3 +124,36 @@ describe("PageWriter source files", () => {
     await expect(writer.deleteSourceFolder("")).rejects.toMatchObject({ statusCode: 400 } satisfies Partial<ContentRequestError>);
   });
 });
+
+describe("Wiki file deletion", () => {
+  it("deletes only the selected Wiki file and broadcasts the refreshed index", async () => {
+    const { root, get, writer, broadcast, rebuild, filePath } = await fixture();
+    const wikiFile = path.join(root, "wiki/近况回信/示例回信.md");
+    await mkdir(path.dirname(wikiFile), { recursive: true });
+    await writeFile(wikiFile, "# 匿名回信\n");
+    const page = { ...sourcePage("wiki/近况回信/示例回信.md", (await stat(wikiFile)).mtime.toISOString()), isSource: false };
+    get.mockReturnValue(page);
+    await expect(writer.deleteWikiPage(page.id, "2000-01-01T00:00:00.000Z")).rejects.toMatchObject({ statusCode: 409 });
+    await expect(writer.deleteWikiPage(page.id, page.modifiedAt)).resolves.toEqual({ ok: true, pageId: page.id });
+    await expect(stat(wikiFile)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readFile(filePath, "utf8")).resolves.toContain("今天");
+    expect(rebuild).toHaveBeenCalledOnce();
+    expect(broadcast).toHaveBeenCalledWith("index", expect.objectContaining({ deletedPath: page.relativePath }));
+  });
+  it("rejects missing versions, source files and paths outside the Wiki root", async () => {
+    const { page, get, writer } = await fixture();
+    await expect(writer.deleteWikiPage(page.id, undefined)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(writer.deleteWikiPage(42, page.modifiedAt)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(writer.deleteWikiPage(page.id, page.modifiedAt)).rejects.toMatchObject({ statusCode: 404 });
+    get.mockReturnValue({ ...page, isSource: false });
+    await expect(writer.deleteWikiPage(page.id, page.modifiedAt)).rejects.toMatchObject({ statusCode: 403 });
+  });
+  it("rejects a symbolic link escaping the Wiki root", async () => {
+    const { root, page, get, writer, filePath } = await fixture();
+    await mkdir(path.join(root, "wiki"));
+    await symlink(filePath, path.join(root, "wiki/shortcut.md"));
+    get.mockReturnValue({ ...page, isSource: false, relativePath: "wiki/shortcut.md" });
+    await expect(writer.deleteWikiPage(page.id, page.modifiedAt)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(readFile(filePath, "utf8")).resolves.toContain("今天");
+  });
+});

@@ -1,0 +1,23 @@
+/* The conversation overlays the workspace; opening it never changes the reading width. */
+.desktop-shell.inspector-visible { grid-template-columns:var(--desktop-sidebar) minmax(0,1fr) 0; }
+.desktop-shell.sidebar-hidden.inspector-visible { grid-template-columns:minmax(0,1fr) 0; }
+.desktop-shell .desktop-inspector.floating-agent-panel {
+  position:fixed;
+  inset:50px 12px 12px auto;
+  height:auto;
+  max-width:calc(100vw - 24px);
+  border:0;
+  border-radius:var(--radius-panel);
+  box-shadow:var(--shadow-float);
+  overflow:visible;
+  z-index:100;
+}
+.desktop-shell .floating-agent-panel.is-collapsed { visibility:hidden; pointer-events:none; }
+.floating-agent-content { height:100%; overflow:hidden; border-radius:inherit; }
+.agent-panel-resize { position:absolute; inset:0 auto 0 -6px; width:12px; z-index:2; cursor:ew-resize; touch-action:none; border-radius:var(--radius-control); }
+.agent-panel-resize::after { content:""; position:absolute; top:calc(50% - 22px); left:5px; width:3px; height:44px; border-radius:var(--radius-pill); background:var(--line-strong); }
+.agent-panel-resize:hover::after,.agent-panel-resize:focus-visible::after,.is-resizing .agent-panel-resize::after { background:var(--accent-primary); }
+.floating-agent-panel.is-resizing { user-select:none; }
+
+.agent-panel-resize:focus-visible { outline:none; }
+.agent-panel-resize:focus-visible::after { outline:2px solid var(--accent-primary); outline-offset:3px; }

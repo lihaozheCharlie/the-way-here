@@ -34,7 +34,6 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
     }}>
       <div className="command-input"><Icon name="search" size={20} /><input ref={input} role="combobox" aria-label="搜索记录、理解或命令" aria-expanded="true" aria-controls="command-results" aria-activedescendant={commands.length ? `command-${selected}` : undefined} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索记录、理解，或前往…" /><button onClick={onClose}>esc</button></div>
       <div id="command-results" className="command-results" role="listbox">{commands.map((item, index) => <button id={`command-${index}`} tabIndex={-1} role="option" aria-selected={index === selected} className={index === selected ? "selected" : ""} key={`${item.title}-${index}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(index)}><span>{item.title}</span><small>{item.detail}</small></button>)}{loading ? <p role="status">正在查找…</p> : error ? <p role="alert">{error}</p> : !commands.length ? <p>没有找到相关内容，试试其他关键词。</p> : null}</div>
-      <footer>↑ ↓ 选择 <span>↵ 打开</span><span>esc 关闭</span></footer>
     </section>
   </div>;
 }

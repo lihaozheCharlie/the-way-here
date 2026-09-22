@@ -54,7 +54,7 @@ describe("letter reader", () => {
     expect(index).not.toContain("家庭");
     expect(html).not.toContain("letter-origin-facts");
     expect(html).not.toContain("letter-version-switcher");
-    expect(html).not.toContain('aria-label="切换回信版本"');
+    expect(html).not.toContain('aria-label="历史版本"');
     expect(html).toContain("原始回信正文。");
   });
 
@@ -63,17 +63,32 @@ describe("letter reader", () => {
     expect(html).toContain('aria-label="另外 2 个主题"');
     expect(html).toContain("创作");
     expect(html).toContain("关系");
-    expect(html).toContain("用其他视角重读");
+    expect(html).toContain("用新视角重读");
     expect(html).not.toContain("选择重读视角");
   });
 
   it("defaults to the latest completed version and retains original/version deep links", () => {
     runs = [version, { ...version, id: "version-2", createdAt: "2026-02-22T10:00:00Z", result: { ...version.result!, finalAnswer: "最新正文。" } }];
     expect(render()).toContain("最新正文。");
-    expect(render()).toContain('aria-label="切换回信版本"');
+    expect(render()).toContain('aria-label="历史版本"');
     expect(render()).toContain("查看生成对话");
     expect(render("?letter=letter-new&version=version-1")).toContain("这是新视角的回信正文。");
     expect(render("?letter=letter-new&version=original")).toContain("原始回信正文。");
+  });
+
+  it("puts title and provenance before version controls and keeps one tab per perspective", () => {
+    runs = [version, { ...version, id: "version-2", createdAt: "2026-02-22T10:00:00Z", result: { ...version.result!, finalAnswer: "最新正文。" } }];
+    const html = render();
+    expect(html.indexOf('class="letter-document-header"')).toBeLessThan(html.indexOf('class="letter-version-bar"'));
+    expect(html.indexOf('class="letter-provenance"')).toBeLessThan(html.indexOf('class="letter-version-bar"'));
+    expect(html.match(/role="tab"/g)).toHaveLength(1);
+    expect(html).toContain("示例视角回信");
+    expect(html).not.toContain("你正在查看历史版本");
+    const history = render("?letter=letter-new&version=version-1");
+    expect(history).toContain("你正在查看历史版本");
+    expect(history).toContain("回到最新版本");
+    expect(history).not.toContain("letter-version-document-meta");
+    expect(history).not.toContain("对比两个视角");
   });
 
   it("honors the selected letter instead of forcing the newest one", () => {

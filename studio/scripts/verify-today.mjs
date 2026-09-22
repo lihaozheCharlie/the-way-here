@@ -11,7 +11,7 @@ await writeFile(path.join(root, 'the-way-here.config.yaml'), 'version: 3\ndefaul
 let app, appPid, origin;
 const errors = [];
 try {
-  app = await electron.launch({ args: [path.join(studio, 'apps/desktop'), '--diagnostics'], env: { ...process.env, THE_WAY_HERE_VAULT: root, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo' }, timeout: 60000 });
+  app = await electron.launch({ args: [path.join(studio, 'apps/desktop'), '--diagnostics', `--user-data-dir=${path.join(root, 'electron-profile')}`], env: { ...process.env, THE_WAY_HERE_VAULT: root, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo' }, timeout: 60000 });
   appPid = app.process().pid;
   const page = await app.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
@@ -26,6 +26,22 @@ try {
     expect(box.x + box.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
   }
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 900));
+  await expect(page.locator('.desktop-titlebar button[aria-label="返回"]')).toHaveCount(0);
+  await expect(page.locator('.desktop-titlebar button[aria-label="在独立窗口打开"]')).toHaveCount(0);
+  const agentToggle = page.getByRole('button', { name: '打开Agent对话', exact: true });
+  await agentToggle.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('打开Agent对话');
+  expect(await page.locator('.desktop-inspector').evaluate(node => node.getBoundingClientRect().width)).toBe(0);
+  await expect(page.locator('.desktop-inspector > .aux-panel-toggle')).toHaveCount(0);
+  await agentToggle.click();
+  await expect(page.getByRole('button', { name: '收起Agent对话', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '收起Agent对话', exact: true }).click();
+  await page.getByRole('button', { name: '搜索与命令', exact: true }).click();
+  await expect(page.locator('.command-palette footer')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  for (const route of ['/', '/capture']) {
+  await page.goto(origin + route);
+  await page.evaluate(() => sessionStorage.clear());
   const input = page.getByRole('textbox', { name: '此刻的记录' });
   await input.fill('今天去公园散步，路上见到了一只猫。');
   await page.reload();
@@ -53,7 +69,7 @@ try {
   const requested = await page.evaluate(() => JSON.parse(sessionStorage.getItem('test.request')));
   expect(requested.knowledgeBaseId).toBe('demo');
   expect(requested.outputTarget.originalText).toBe('今天去公园散步，路上见到了一只猫。');
-  await expect.poll(() => page.evaluate(() => localStorage.getItem('today.capture.demo.run'))).toBe('capture-ui-test');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem(location.pathname === '/capture' ? 'desktop.capture.demo.run' : 'today.capture.demo.run'))).toBe('capture-ui-test');
   await page.reload();
   await expect(input).toBeDisabled();
   await page.evaluate(() => sessionStorage.setItem('test.finished', 'true'));
@@ -66,6 +82,15 @@ try {
   await expect(page.getByRole('alert')).toContainText('请先配置 AI 助手');
   await expect(input).toHaveValue('失败后仍然留下的原话');
   await expect(page.getByRole('button', { name: '整理并保存' })).toBeEnabled();
+  if (route === '/capture') {
+    await app.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows()[0]; win.setMinimumSize(380, 480); win.setSize(420, 580); });
+    await expect(page.getByText('保存到', { exact: true })).toHaveCount(0);
+    await expect(page.getByPlaceholder('标题（可选）')).toHaveCount(0);
+    if (!process.env.SKIP_CAPTURE) await page.screenshot({ path: path.join(captures, 'quick-capture.png') });
+    const box = await page.getByRole('button', { name: '整理并保存' }).boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+  }
+  }
   expect(errors).toEqual([]);
   console.log('Today desktop layout, draft recovery, bound model request, run recovery, completion and failure checks passed.');
 } finally {

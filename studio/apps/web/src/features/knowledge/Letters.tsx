@@ -1,4 +1,6 @@
-import { SelectInput } from "../../shared/form-controls";
+import { FileListRow } from "../../shared/FileMenu";
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
+import { LetterHistory } from "./LetterHistory";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { LettersView, ReasoningLens, WikiRun } from "@the-way-here/shared";
@@ -12,15 +14,10 @@ import { TimelineFilter } from "../../shared/TimelineFilter";
 import { LetterLensPicker } from "./LetterLensPicker";
 import { EmbeddedPagePreview } from "./PagePreview";
 
-function LetterVersionPreview({ pageTitle, version }: { pageTitle: string; version: LetterRunVersion }) {
-  const markdown = /^#\s+.+$/m.test(version.markdown) ? version.markdown : `# ${pageTitle}\n\n${version.markdown}`;
+function LetterVersionPreview({ version }: { version: LetterRunVersion }) {
   return <article className="embedded-page letter-version-preview" aria-live="polite">
-    <ReadOnlyDocument id={`letter-version-${version.id}`} markdown={markdown} toolbar={
-      <header className="letter-version-document-meta">
-        <div><b>{version.label}</b><small>生成于 {new Date(version.createdAt).toLocaleString("zh-CN", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></div>
-        <button type="button" onClick={() => openContextAgent({ runId: version.runId })}>查看生成对话 <Icon name="arrow" size={14} /></button>
-      </header>
-    } />
+    <ReadOnlyDocument id={`letter-version-${version.id}`} markdown={version.markdown} />
+    <button className="letter-generation-link" type="button" onClick={() => openContextAgent({ runId: version.runId })}>查看生成对话 <Icon name="arrow" size={14} /></button>
   </article>;
 }
 
@@ -42,6 +39,9 @@ export function Letters({ revision }: { revision: number }) {
   const versions = selected ? [{ id: "original", label: "原始回信", lensName: "", markdown: "", createdAt: selected.letterDate, runId: "" }, ...generatedVersions] : [];
   const latestVersion = versions.at(-1);
   const activeVersion = versions.find((version) => version.id === params.get("version")) || latestVersion;
+  const perspectiveVersions = [...new Map(generatedVersions.map(version => [version.lensName, version])).values()];
+  const activePerspective = activeVersion?.id === "original" ? "original" : activeVersion?.lensName;
+  const historical = Boolean(activeVersion && latestVersion && activeVersion.id !== latestVersion.id);
   const selectLetter = (id?: string, replace = false) => { setParams((current) => { const next = new URLSearchParams(current); if (id) next.set("letter", id); else next.delete("letter"); next.delete("version"); return next; }, { replace }); };
   const selectVersion = (id?: string) => { setParams((current) => { const next = new URLSearchParams(current); if (!id || id === latestVersion?.id) next.delete("version"); else next.set("version", id); return next; }, { replace: true }); };
   return (
@@ -61,19 +61,24 @@ export function Letters({ revision }: { revision: number }) {
       <div className={`letter-explorer${indexOpen ? "" : " index-collapsed"}`}>
         <CollapsibleIndexPane open={indexOpen} onToggle={() => setIndexOpen((value) => !value)} label="回信列表">
           <aside className="letter-index" aria-label="回信列表">
-            {filtered.map((letter) => <button type="button" aria-current={selected?.page.id === letter.page.id ? "true" : undefined} key={letter.page.id} className={selected?.page.id === letter.page.id ? "active" : ""} onClick={() => selectLetter(letter.page.id)}><time dateTime={letter.letterDate.slice(0, 10)}>{letter.letterDate.slice(0, 10)}</time><b>{letter.page.title.replace(/^\d{4}-\d{2}-\d{2}\s*/, "")}</b></button>)}
+            {filtered.map((letter) => <FileListRow key={letter.page.id} page={letter.page} onRenamed={page => selectLetter(page.id, true)} onDeleted={() => selectLetter(undefined, true)}><button type="button" aria-current={selected?.page.id === letter.page.id ? "true" : undefined} key={letter.page.id} className={selected?.page.id === letter.page.id ? "active" : ""} onClick={() => selectLetter(letter.page.id)}><time dateTime={letter.letterDate.slice(0, 10)}>{letter.letterDate.slice(0, 10)}</time><b>{letter.page.title.replace(/^\d{4}-\d{2}-\d{2}\s*/, "")}</b></button></FileListRow>)}
           </aside>
         </CollapsibleIndexPane>
-        <div className="letter-detail">{selected ? <><section className="letter-meta-line" aria-label="这封信的来历">
+        <div className="letter-detail">{selected ? <><header className="letter-document-header"><h1>{selected.page.title}</h1><div className="letter-provenance" aria-label="这封信的来历">
           <span>写于 <time dateTime={selected.letterDate.slice(0, 10)}>{selected.letterDate.slice(0, 10)}</time></span>
           {selected.evidenceFrom && <span>依据 {selected.evidenceFrom}{selected.evidenceTo && selected.evidenceTo !== selected.evidenceFrom ? ` 至 ${selected.evidenceTo}` : ""} 的材料</span>}
           <div className="letter-meta-themes">{selected.themes.slice(0, 2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}{selected.themes.length > 2 && <details key={selected.page.id} className="letter-more-themes"><summary aria-label={`另外 ${selected.themes.length - 2} 个主题`}>+{selected.themes.length - 2}</summary><div>{selected.themes.slice(2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}</div></details>}</div>
-          <div className="letter-meta-actions">
-            {versions.length > 1 && activeVersion && <SelectInput aria-label="切换回信版本" value={activeVersion.id} onChange={(event) => selectVersion(event.target.value)}>{[...versions].reverse().map((version) => <option key={version.id} value={version.id}>{version.id === latestVersion?.id ? "最新 · " : "历史 · "}{version.label}{version.id === "original" ? " · 最初版本" : ` · ${new Date(version.createdAt).toLocaleDateString("zh-CN")}`}</option>)}</SelectInput>}
+        </div></header>
+        <div className="letter-version-bar">
+          {perspectiveVersions.length > 0 && <SegmentedTabs className="letter-perspective-tabs" label="切换回信视角" value={activePerspective || "original"} options={perspectiveVersions.map(version => ({ value: version.lensName, label: `${version.lensName}视角回信` }))} onChange={value => selectVersion(value === "original" ? "original" : perspectiveVersions.find(version => version.lensName === value)?.id)} />}
+          <div className="letter-version-actions">
+            {generatedVersions.length > 0 && <LetterHistory key={selected.page.id} versions={versions} activeId={activeVersion?.id} onSelect={selectVersion} />}
             <LetterLensPicker key={selected.page.id} lenses={lenses || []} onSelect={(lens) => { selectVersion(); openContextAgent({ mode: "read", outputTarget: { kind: "letter-version", pageId: selected.page.id, lensId: lens.id, lensName: lens.displayName, label: `${lens.displayName}视角回信` }, prompt: `请用「${lens.displayName}」的思考方式，重新写一版完整的近况回信《${selected.page.title}》，并重读它所依据的材料。这个视角特别关注：${lens.attention}。保持一位了解我来路的朋友口吻，只依据知识库里的原始材料和已有判断，不虚构事实、不模仿人物口头禅，也不要替我下结论。最终只输出可直接阅读的完整回信正文，并在末尾用“依据”列出引用的材料；不要修改任何文件，系统会把回答保留为「${lens.displayName}视角回信」。` }); }} />
           </div>
-        </section>
-        {activeVersion?.id !== "original" ? <LetterVersionPreview key={activeVersion?.id} pageTitle={selected.page.title} version={activeVersion as LetterRunVersion} /> : <EmbeddedPagePreview key={selected.page.id} page={selected.page} revision={revision} onRenamed={(renamed) => selectLetter(renamed.id, true)} />}</> : <Empty>当前范围暂无回信，可以切换筛选查看。</Empty>}</div>
+        </div>
+        {historical && <div className="letter-history-banner" role="status">你正在查看历史版本 <button type="button" onClick={() => selectVersion()}>回到最新版本</button></div>}
+        <div className="letter-reading" role="tabpanel" aria-label={activeVersion?.label || "原始回信"}>
+        {activeVersion?.id !== "original" ? <LetterVersionPreview key={activeVersion?.id} version={activeVersion as LetterRunVersion} /> : <EmbeddedPagePreview key={selected.page.id} page={selected.page} revision={revision} onRenamed={(renamed) => selectLetter(renamed.id, true)} />}</div></> : <Empty>当前范围暂无回信，可以切换筛选查看。</Empty>}</div>
       </div>
       <PageAgentContext context={{ scope: view === "themes" ? `近况回信 · ${selectedThread?.title || "全部主题"}` : `近况回信 · ${year}`, title: selected?.page.title || `${year === "全部" ? "最近" : year + " 年"}的近况回信`, pageId: selected?.page.id, summary: selected?.page.excerpt || "从选定年份的日记和已有知识生成回信。", defaultMode: "write", suggestions: [year === "全部" ? "从 2025 年日记中抽样几篇，结合已有知识写一封新的近况回信。" : `从 ${year} 年日记中抽样几篇，结合已有知识写一封新的近况回信。`, selected ? "根据更多原始证据重新写这封回信，保留朋友式回应，不做绩效复盘。" : "请先帮我选择最值得回看的一个时间切片，再写回信。"] }} />
     </div>

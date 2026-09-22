@@ -1,3 +1,4 @@
+import { FileMenu } from "../../shared/FileMenu";
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -39,7 +40,7 @@ export function MentalModels({ revision }: { revision: number }) {
         {calibrations && <section><SectionHeading title="近期校准" /><ReactMarkdown remarkPlugins={[remarkGfm]}>{calibrations.body}</ReactMarkdown></section>}
         {priorities && <section><SectionHeading title="当前优先观察" /><ReactMarkdown remarkPlugins={[remarkGfm]}>{priorities.body}</ReactMarkdown></section>}
       </div>
-      <PageLink page={page} className="source-page-link">阅读完整模型总览 <Icon name="arrow" size={15} /></PageLink>
+      <div className="model-file-actions"><FileMenu page={page} /><PageLink page={page} className="source-page-link">阅读完整模型总览 <Icon name="arrow" size={15} /></PageLink></div>
       <PageAgentContext context={{ scope: "理解自己 · 思维模型", title: selected?.heading.replace(/^[一二三四五六七]、/, "") || "思维模型", pageId: page.id, summary: selected?.body.slice(0, 260), defaultMode: "write", suggestions: ["结合最近的经历，为当前模型补充一个真实反例或适用边界。", "请用当前模型解释最近的一次选择，并明确证据、推断和竞争解释。"] }} />
     </div>
   );

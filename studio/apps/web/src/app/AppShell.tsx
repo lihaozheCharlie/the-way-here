@@ -1,4 +1,4 @@
-import { AuxPanel } from "../shared/AuxPanel";
+import { FloatingAgentPanel } from "../features/desktop/FloatingAgentPanel";
 import { ConversationWindow } from "../features/desktop/ConversationWindow";
 import { useDesktopNotifications } from "../features/desktop/use-desktop-notifications";
 import { CommandPalette } from "../features/desktop/CommandPalette";
@@ -107,12 +107,8 @@ export function AppShell({ revision }: { revision: number }) {
   const isSourceReader = location.pathname.startsWith("/page/") && readerReturnContext?.returnTo.startsWith("/sources");
   const [searchOpen, setSearchOpen] = useState(false);
   const [inspectorVisible, setInspectorVisible] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [sourceInspectorOverride, setSourceInspectorOverride] = useState<boolean>();
-  useEffect(() => { const resize = () => setWindowWidth(window.innerWidth); window.addEventListener("resize", resize); return () => window.removeEventListener("resize", resize); }, []);
-  const sourceWorkspace = location.pathname === "/sources";
-  const inspectorOpen = sourceWorkspace ? sourceInspectorOverride ?? (inspectorVisible && windowWidth >= 1540) : inspectorVisible;
-  const toggleInspector = () => sourceWorkspace ? setSourceInspectorOverride(!inspectorOpen) : setInspectorVisible(value => !value);
+  const inspectorOpen = inspectorVisible;
+  const toggleInspector = () => setInspectorVisible(value => !value);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
   const inspector = useInspector()!;
@@ -122,11 +118,11 @@ export function AppShell({ revision }: { revision: number }) {
   const openCapture = () => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture");
   const openPreferences = () => window.desktop ? void openDesktopWindow("/preferences", "settings") : navigate("/preferences");
   useEffect(() => {
-    const show = () => { setInspectorVisible(true); if (sourceWorkspace) setSourceInspectorOverride(true); };
-    const hide = () => { setInspectorVisible(false); if (sourceWorkspace) setSourceInspectorOverride(false); };
+    const show = () => { setInspectorVisible(true); };
+    const hide = () => { setInspectorVisible(false); };
     window.addEventListener("show-inspector", show); window.addEventListener("hide-inspector", hide);
     return () => { window.removeEventListener("show-inspector", show); window.removeEventListener("hide-inspector", hide); };
-  }, [sourceWorkspace]);
+  }, []);
   const [knowledgeBaseSwitching, setKnowledgeBaseSwitching] = useState(false);
   const [switchingKnowledgeBaseName, setSwitchingKnowledgeBaseName] = useState("");
   const [knowledgeBaseError, setKnowledgeBaseError] = useState("");
@@ -252,16 +248,13 @@ export function AppShell({ revision }: { revision: number }) {
       <header className="desktop-titlebar">
         <div className="desktop-window-space" aria-hidden="true" />
         {!utilityWindow && !detached ? <button className="desktop-icon" aria-label="切换侧边栏" title="侧边栏" onClick={() => setSidebarVisible((value) => !value)}><Icon name="library" size={17} /></button> : null}
-        {(!utilityWindow || !window.desktop) ? <button className="desktop-icon" aria-label="返回" onClick={() => navigate(-1)}><Icon name="back" size={16} /></button> : null}
         <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
         {!utilityWindow ? <><button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={() => setSearchOpen(true)}><Icon name="search" size={17} /></button>
-        <button className="desktop-icon" aria-label="在独立窗口打开" title="在独立窗口打开 ⌘↩" onClick={() => { const params = new URLSearchParams(location.search); params.set("detached", "true"); void openDesktopWindow(`${location.pathname}?${params}`); }}><Icon name="arrow" size={17} /></button>
-        {!localConversation && !detached ? <button className={`desktop-icon${inspectorOpen ? " selected" : ""}`} aria-label="切换 AI 协作面板" aria-pressed={inspectorOpen} title="AI 协作面板 ⌘⌥I" onClick={toggleInspector}><Icon name="spark" size={17} /></button> : null}</> : null}
+        {!localConversation && !detached ? <button className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
       </header>
       <aside className="desktop-sidebar" aria-label="侧边栏">
-        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=sage" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
+        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=ink-bookmark" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
         {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
-        <button className="desktop-sidebar-search" onClick={() => setSearchOpen(true)}><Icon name="search" size={15} /><span>搜索</span><kbd>⌘K</kbd></button>
         <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航">
           {navigation.map((item) => <React.Fragment key={item.to}>
             <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{item.label}</span>{item.to === "/questions" && topicCount > 0 ? <small className="desktop-nav-badge">{topicCount}</small> : null}</NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? "收起已有理解" : "展开已有理解"} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
@@ -304,7 +297,7 @@ export function AppShell({ revision }: { revision: number }) {
           </Routes>
         </div>
       </main>
-      {!utilityWindow && !detached && !localConversation ? <AuxPanel className="desktop-inspector" label="AI 协作面板" icon="spark" open={inspectorOpen} onToggle={toggleInspector} width={326}><AgentDock revision={revision} context={inspector.context} /></AuxPanel> : null}
+      {!utilityWindow && !detached && !localConversation ? <FloatingAgentPanel open={inspectorOpen}><AgentDock revision={revision} context={inspector.context} /></FloatingAgentPanel> : null}
       {searchOpen ? <CommandPalette routes={navigation.flatMap(item => [{ title: item.label, to: item.to }, ...item.children.map(child => ({ title: child.label, to: child.to }))])} onClose={() => setSearchOpen(false)} onCapture={openCapture} onSettings={openPreferences} /> : null}
       {createKnowledgeBaseOpen ? <CreateKnowledgeBaseDialog onClose={() => setCreateKnowledgeBaseOpen(false)} onSubmit={createKnowledgeBase} /> : null}
       {deleteKnowledgeBaseTarget ? <ConfirmDeleteDialog

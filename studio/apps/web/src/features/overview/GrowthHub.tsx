@@ -1,3 +1,4 @@
+import { FileMenu, FileListRow } from "../../shared/FileMenu";
 import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
@@ -90,8 +91,8 @@ export function GrowthHub({ revision }: { revision: number }) {
         {lineRoute.items.slice(0, 4).map((item) => {
           const open = expandedLines.has(item.id);
           const detailId = `line-detail-${item.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-          return <article className={`insights-line-card${open ? " is-open" : ""}`} key={item.id}>
-            <span>{item.sections.length ? `${item.sections.length} 个证据切面` : "待继续补充"}</span><h3>{item.title}</h3><small>{item.updatedAt ? `更新于 ${item.updatedAt}` : "可以回到原文继续核对"}</small>
+          return <article className={`insights-line-card file-action-card${open ? " is-open" : ""}`} key={item.id}>
+            <FileMenu page={item} /><span>{item.sections.length ? `${item.sections.length} 个证据切面` : "待继续补充"}</span><h3>{item.title}</h3><small>{item.updatedAt ? `更新于 ${item.updatedAt}` : "可以回到原文继续核对"}</small>
             <button type="button" onClick={() => toggleInSet(setExpandedLines, item.id)} aria-expanded={open} aria-controls={detailId}>{open ? "收起判断" : "看核心判断"}<Icon name="arrow" size={12} /></button>
             <p className="insights-card-detail" id={detailId}>{insightExcerpt(insightCoreJudgment(item), 220)}</p>
             {open ? <NavLink to={insightItemHref(lineRoute, item)} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>打开完整主线</NavLink> : null}
@@ -111,8 +112,8 @@ export function GrowthHub({ revision }: { revision: number }) {
           const detailId = `cycle-detail-${item.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
           const trigger = insightSectionText(item, "常见触发");
           const cost = insightSectionText(item, "代价");
-          return <article className={`insights-loop-card${open ? " is-open" : ""}`} key={item.id}>
-            <div><InsightSectionMark kind="cycle" /><h3>{item.title}</h3></div><p>{insightExcerpt(insightCardDetail(item, ["循环定义"]), 130)}</p>
+          return <article className={`insights-loop-card file-action-card${open ? " is-open" : ""}`} key={item.id}>
+            <FileMenu page={item} /><div><InsightSectionMark kind="cycle" /><h3>{item.title}</h3></div><p>{insightExcerpt(insightCardDetail(item, ["循环定义"]), 130)}</p>
             <div className="insights-loop-tags">{trigger ? <span>触发 · {insightExcerpt(trigger, 22)}</span> : null}{cost ? <span>代价 · {insightExcerpt(cost, 22)}</span> : null}</div>
             <button type="button" onClick={() => toggleInSet(setExpandedCycles, item.id)} aria-expanded={open} aria-controls={detailId}>{open ? "收起详情" : "展开详情"}</button>
             <div className="insights-card-detail" id={detailId} hidden={!open}><div className="cycle-stages">{[{label:"触发", keys:["常见触发", "触发"]}, {label:"惯性反应", keys:["惯性反应", "自动反应"]}, {label:"代价", keys:["代价"]}, {label:"有效中断", keys:["中断点", "有效部分"]}].map(stage => <section key={stage.label}><b>{stage.label}</b><p>{stage.keys.map(key => insightSectionText(item, key)).find(Boolean) || "还需要补充证据"}</p></section>)}</div> <NavLink to={insightItemHref(cycleRoute, item)} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>查看完整循环</NavLink></div>
@@ -126,7 +127,7 @@ export function GrowthHub({ revision }: { revision: number }) {
       {systemRoute.items.length ? <div className="insights-system-grid">
         {systemRoute.items.slice(0, 6).map((item) => {
           const selected = selectedSystemId === item.id;
-          return <button type="button" className={selected ? "is-selected" : ""} key={item.id} onClick={() => setSelectedSystemId(selected ? "" : item.id)} aria-expanded={selected} aria-controls="insights-system-detail"><InsightSectionMark kind="system" /><b>{item.title}</b><span><i />{item.sections.length} 个切面</span></button>;
+          return <FileListRow key={item.id} page={item}><button type="button" className={selected ? "is-selected" : ""} key={item.id} onClick={() => setSelectedSystemId(selected ? "" : item.id)} aria-expanded={selected} aria-controls="insights-system-detail"><InsightSectionMark kind="system" /><b>{item.title}</b><span><i />{item.sections.length} 个切面</span></button></FileListRow>;
         })}
         {selectedSystem ? <article className="insights-system-detail" id="insights-system-detail"><div><h3>{selectedSystem.title} · 关键要点</h3><NavLink to={insightItemHref(systemRoute, selectedSystem)} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>打开完整系统 <Icon name="arrow" size={13} /></NavLink></div><ul>{selectedSystem.sections.slice(0, 3).map((section) => <li key={section.heading}><b>{section.heading}</b><span>{insightExcerpt(section.body, 150)}</span></li>)}</ul>{!selectedSystem.sections.length ? <p>{insightExcerpt(selectedSystem.excerpt, 220)}</p> : null}</article> : null}
       </div> : <Empty>还没有形成现实系统。</Empty>}

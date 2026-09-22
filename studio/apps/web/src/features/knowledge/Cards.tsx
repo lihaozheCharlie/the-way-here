@@ -1,3 +1,4 @@
+import { FileListRow } from "../../shared/FileMenu";
 import { SearchField } from "../../shared/form-controls";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -27,7 +28,7 @@ export function StructuredExplorer({ cards, revision, contextScope, emptyLabel =
       <aside className="collection-list">
         <SearchField name="collection-search" autoComplete="off" aria-label="在当前分类中查找" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="在当前分类中查找…" />
         <small>{filtered.length} / {cards.length}</small>
-        <div role="listbox" aria-label="内容列表">{filtered.map((card) => <button role="option" aria-label={card.title} aria-selected={selected?.id === card.id} key={card.id} className={selected?.id === card.id ? "active" : ""} onClick={() => selectItem(card.id)}><b>{card.title}</b><span>{card.excerpt}</span></button>)}</div>
+        <div role="list" aria-label="内容列表">{filtered.map((card) => <FileListRow key={card.id} page={card} onRenamed={page => selectItem(page.id)}><button aria-label={card.title} aria-current={selected?.id === card.id ? "true" : undefined} key={card.id} className={selected?.id === card.id ? "active" : ""} onClick={() => selectItem(card.id)}><b>{card.title}</b><span>{card.excerpt}</span></button></FileListRow>)}</div>
       </aside>
     </CollapsibleIndexPane>
     <article className="collection-detail" aria-live="polite">
