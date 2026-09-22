@@ -1,5 +1,5 @@
 import { SelectInput, TextInput } from "../../shared/form-controls";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   AgentGlobalSettings,
   AgentModelOption,
@@ -224,31 +224,32 @@ export function AgentComposerSettings({ id, agent, runtimeId }: { id: string; ag
   </>;
 }
 
-export function AiConfiguration({ id, agent, runtimeId }: { id: string; agent: AgentSettingsController; runtimeId?: AgentRuntimeId }) {
+export function AiConfiguration({ id, agent, runtimeId, heading }: { id: string; agent: AgentSettingsController; runtimeId?: AgentRuntimeId; heading?: ReactNode }) {
   const { draft } = agent;
   const codexSelected = draft.runtimeId === "codex";
 
   return <fieldset className="ai-configuration">
     <legend className="sr-only">全局 AI 设置</legend>
     <div className="agent-settings-body">
+    {heading}
     {runtimeId && <p className="agent-settings-notice"><Icon name="info" size={14} /><span>模型和思考深度调整从下一轮生效，当前回复不受影响。继续本对话需使用{runtimeId === "codex" ? " Codex" : "第三方模型"}；切换运行方式请开始新对话。</span></p>}
     <h3 className="agent-config-section-title">运行方式</h3>
     <div className="ai-runtime-choices" role="radiogroup" aria-label="选择 Agent 运行方式">
       <button type="button" role="radio" disabled={runtimeId === "pi"} aria-checked={codexSelected} className={codexSelected ? "active" : ""} onClick={() => agent.selectRuntime("codex")}>
-        <span className="ai-runtime-mark"><Icon name="spark" size={16} /></span><span><b>Codex</b><small>使用本机 Codex 登录与模型能力</small></span><i>{agent.codexRuntime.available ? "已就绪" : "不可用"}</i>
+        <span className="ai-runtime-mark"><Icon name="spark" size={16} /></span><span><b>Codex</b><small>使用本机 Codex 登录与模型能力</small></span><i data-state={agent.codexRuntime.available ? "good" : "watch"}>{agent.loading ? "读取中" : agent.codexRuntime.available ? "已就绪" : "不可用"}</i>
       </button>
       <button type="button" role="radio" disabled={runtimeId === "codex"} aria-checked={!codexSelected} className={!codexSelected ? "active" : ""} onClick={() => agent.selectRuntime("pi")}>
-        <span className="ai-runtime-mark"><Icon name="controls" size={16} /></span><span><b>第三方模型</b><small>使用你选择的模型服务和密钥</small></span><i>{agent.configuredApiKey ? "已配置" : "待配置"}</i>
+        <span className="ai-runtime-mark"><Icon name="controls" size={16} /></span><span><b>第三方模型</b><small>使用你选择的模型服务和密钥</small></span><i data-state={agent.configuredApiKey ? "good" : "watch"}>{agent.loading ? "读取中" : agent.apiKey ? "待应用" : agent.configuredApiKey ? "已配置" : "待配置"}</i>
       </button>
     </div>
 
     {codexSelected ? <div className="ai-config-fields ai-config-fields--codex">
-      <div className="ai-config-intro"><b>Codex 自行管理模型服务</b><span>这里不需要填写 API Key 或选择服务商。</span></div>
+      <div className="ai-config-intro">{heading && <Icon name="info" size={15} />}<b>Codex 自行管理模型服务</b><span>这里不需要填写 API Key 或选择服务商。</span></div>
       <label htmlFor={`${id}-codex-model`}><span>模型</span><SelectInput id={`${id}-codex-model`} value={agent.codexModels.some((entry) => entry.id === draft.codex.model) ? draft.codex.model : agent.codexModels[0]?.id} onChange={(event) => agent.selectCodexModel(event.target.value)}>{agent.codexModels.map((entry) => <option key={entry.id} value={entry.id}>{entry.displayName}</option>)}</SelectInput></label>
       <label htmlFor={`${id}-codex-effort`}><span>思考深度</span><SelectInput id={`${id}-codex-effort`} value={agent.codexEfforts.includes(draft.codex.effort) ? draft.codex.effort : agent.codexEfforts[0]} onChange={(event) => agent.setCodexEffort(event.target.value as AgentReasoningEffort)}>{agent.codexEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</SelectInput></label>
       {!agent.codexRuntime.available && <p className="ai-config-warning">{agent.codexRuntime.reason || "本机没有可用的 Codex。"}</p>}
     </div> : <div className="ai-config-fields ai-config-fields--third-party">
-      <div className="ai-config-intro"><b>连接你的 AI 服务</b><span>选择厂商即可使用官方服务地址，密钥只保存在本机。</span></div>
+      <div className="ai-config-intro">{heading && <Icon name="info" size={15} />}<b>连接你的 AI 服务</b><span>选择厂商即可使用官方服务地址，密钥只保存在本机。</span></div>
       <label className="wide" htmlFor={`${id}-provider`}><span>模型厂商</span><SelectInput id={`${id}-provider`} value={agent.selectedProvider.id} onChange={(event) => agent.selectProvider(event.target.value)}>{agent.providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.displayName} · {provider.description}</option>)}</SelectInput></label>
       <section className="wide ai-model-bundle" aria-labelledby={`${id}-model-bundle-label`}>
         <header><span id={`${id}-model-bundle-label`}>模型与思考</span><span className="agent-config-help" tabIndex={0} aria-label="模型不同，可选的思考深度也不同" title="模型不同，可选的思考深度也不同"><Icon name="info" size={13} /></span></header>
@@ -257,13 +258,13 @@ export function AiConfiguration({ id, agent, runtimeId }: { id: string; agent: A
           <label htmlFor={`${id}-third-party-effort`}><span>思考深度</span><SelectInput id={`${id}-third-party-effort`} value={agent.thirdPartyEfforts.includes(draft.thirdParty.effort) ? draft.thirdParty.effort : agent.selectedThirdPartyModel.defaultReasoningEffort} onChange={(event) => agent.setThirdPartyEffort(event.target.value as AgentReasoningEffort)}>{agent.thirdPartyEfforts.map((entry) => <option key={entry} value={entry}>{reasoningLabels[entry]}</option>)}</SelectInput></label>
         </div>
       </section>
-      <div className="wide ai-key-field"><div className="agent-key-label"><label htmlFor={`${id}-api-key`}>{agent.selectedProvider.displayName} API Key</label><span>{agent.configuredApiKey ? "已保存" : "必填"}</span>{agent.configuredApiKey && <button type="button" onClick={agent.removeApiKey}>移除</button>}</div><TextInput id={`${id}-api-key`} name={`${id}-api-key`} type="password" autoComplete="new-password" value={agent.apiKey} onChange={(event) => agent.setApiKey(event.target.value)} placeholder={agent.configuredApiKey ? "已安全保存，留空保持不变" : `粘贴 ${agent.selectedProvider.displayName} API Key`} /></div>
+      <div className="wide ai-key-field"><div className="agent-key-label"><label htmlFor={`${id}-api-key`}>{agent.selectedProvider.displayName} API Key</label><span data-state={agent.configuredApiKey ? "good" : "watch"}>{agent.apiKey ? "待应用" : agent.configuredApiKey ? "已保存" : "必填"}</span>{agent.configuredApiKey && <button type="button" onClick={agent.removeApiKey}>移除</button>}</div><TextInput id={`${id}-api-key`} name={`${id}-api-key`} type="password" autoComplete="new-password" value={agent.apiKey} onChange={(event) => agent.setApiKey(event.target.value)} placeholder={agent.configuredApiKey ? "已安全保存，留空保持不变" : `粘贴 ${agent.selectedProvider.displayName} API Key`} />{heading && <p className="preferences-key-note">密钥只保存在本机</p>}</div>
     </div>}
 
     {(agent.error || agent.loadError) && <p className="ai-config-error" role="alert">{agent.error || agent.loadError}</p>}
     </div>
     <footer className="ai-config-footer">
-      <span><Icon name="spark" size={14} /><b>一处设置，所有 AI 对话共用</b><small>{agent.dirty ? "有更改尚未应用" : agent.saved ? "全局设置已更新" : "已使用当前全局设置"}</small></span>
+      <span><Icon name="spark" size={14} /><b>一处设置，所有 AI 对话共用</b><small role="status">{agent.loading ? "正在读取全局设置…" : agent.loadError ? "读取失败，请重新打开设置" : agent.dirty ? "有更改尚未应用" : agent.saved ? "全局设置已更新" : "已使用当前全局设置"}</small></span>
       <button type="button" onClick={() => void agent.save().catch(() => undefined)} disabled={agent.loading || agent.saving || !agent.dirty}>{agent.saving ? "正在应用…" : "应用到所有入口"}</button>
     </footer>
   </fieldset>;

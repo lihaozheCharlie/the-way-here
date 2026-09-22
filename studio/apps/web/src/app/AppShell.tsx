@@ -245,7 +245,7 @@ export function AppShell({ revision }: { revision: number }) {
         {!localConversation && !detached ? <button className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
       </header>
       <aside className="desktop-sidebar" aria-label="侧边栏">
-        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=soft-compass-ring" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
+        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=soft-compass-ring-96" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
         {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
         <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航">
           {navigation.map((item) => <React.Fragment key={item.to}>
