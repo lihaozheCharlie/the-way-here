@@ -11,7 +11,7 @@ pnpm install
 pnpm desktop
 ```
 
-`pnpm desktop` 构建前后端、编译 macOS 语音辅助程序及图标，然后打开应用。需要 macOS、Xcode Command Line Tools、Node.js 22.19+、pnpm。AI 继续使用本机 Codex 登录或偏好设置中的第三方模型配置；没有配置 AI 时，浏览、搜索、记录和导入仍可用。
+`pnpm desktop` 构建前后端、编译 macOS 语音辅助程序及图标，然后通过 `.runtime/desktop-dev/The Way Here.app` 打开应用；开发包使用独立副本和正确的系统名称，不修改安装的 Electron 依赖，Dock 悬停显示 The Way Here。需要 macOS、Xcode Command Line Tools、Node.js 22.19+、pnpm。AI 继续使用本机 Codex 登录或偏好设置中的第三方模型配置；没有配置 AI 时，浏览、搜索、记录和导入仍可用。
 
 ```sh
 pnpm desktop:package
@@ -64,6 +64,8 @@ pnpm desktop:package
 | 原生菜单及随手记 | 菜单快捷键、状态项、独立记录窗口、按库暂存草稿 |
 
 设计稿中的 Continuity Camera 属于可选硬件扩展，本次没有实现专用 iPhone 扫描协议。照片及账单继续通过原生文件选择器与现有拖拽导入；不会展示不可工作的扫描按钮。
+
+所有录音入口最多录制 20 分钟，可随时再次点击结束。原生识别每 50 秒换接一段请求，麦克风连续采集，按顺序汇总各段文字，避免单次系统识别的一分钟限制。
 
 语音识别需用户主动开始并授权麦克风及系统语音识别；设备支持时优先本机识别，否则由系统决定服务可用性。AI 整理通过已配置的 Agent 运行只读任务，不直接写原始记录或 Wiki。真实麦克风输入、AI 外部服务、通知展示和 iPhone 硬件不能由匿名自动验收替代。
 

@@ -6,8 +6,28 @@ import path from 'node:path';
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sharp = createRequire(new URL('../apps/server/package.json', import.meta.url))('sharp');
 const master = await readFile(path.join(studio, 'apps/desktop/assets/app-icon.svg'), 'utf8');
-const favicon = await readFile(path.join(studio, 'apps/desktop/assets/favicon.svg'), 'utf8');
-const faviconIco = await readFile(path.join(studio, 'apps/desktop/assets/favicon.ico'));
+// Every color variant is derived from the supplied compass-ring master.
+const favicon = master;
+const frames = await Promise.all([16, 32, 48].map(async (size) => ({
+  size, png: await sharp(Buffer.from(master)).resize(size, size).png().toBuffer(),
+})));
+const directory = Buffer.alloc(6 + frames.length * 16);
+directory.writeUInt16LE(1, 2);
+directory.writeUInt16LE(frames.length, 4);
+let offset = directory.length;
+for (const [index, { size, png }] of frames.entries()) {
+  const entry = 6 + index * 16;
+  directory[entry] = size;
+  directory[entry + 1] = size;
+  directory.writeUInt16LE(1, entry + 4);
+  directory.writeUInt16LE(32, entry + 6);
+  directory.writeUInt32LE(png.length, entry + 8);
+  directory.writeUInt32LE(offset, entry + 12);
+  offset += png.length;
+}
+const faviconIco = Buffer.concat([directory, ...frames.map(({ png }) => png)]);
+await writeFile(path.join(studio, 'apps/desktop/assets/favicon.svg'), favicon);
+await writeFile(path.join(studio, 'apps/desktop/assets/favicon.ico'), faviconIco);
 const web = path.join(studio, 'apps/web/public/brand');
 const desktop = path.join(studio, 'apps/desktop/dist');
 await mkdir(web, { recursive: true });
@@ -21,7 +41,7 @@ await sharp(Buffer.from(master)).resize(180, 180).png().toFile(path.join(web, 'a
 // macOS icons retain a transparent 64px safe area around the supplied tile.
 const inner = master.replace(/<svg[^>]*>/, '').replace('</svg>', '');
 const dock = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(64 64) scale(.875)">${inner}</g></svg>`;
-// Preserve the separately supplied favicon artwork, including its 16/32/48px ICO frames.
+// Generate all standard macOS icon resolutions from the same artwork.
 for (const size of [16, 32, 128, 256, 512]) {
   for (const scale of [1, 2]) {
     await sharp(Buffer.from(dock)).resize(size * scale, size * scale).png()
@@ -29,11 +49,11 @@ for (const size of [16, 32, 128, 256, 512]) {
   }
 }
 await sharp(Buffer.from(dock)).png().toFile(path.join(desktop, 'app-icon.png'));
-// A mask preserves the spine as transparent negative space in the monochrome tray.
-const book = master.match(/<g\b[^>]*>([\s\S]*?)<\/g>/)?.[1];
-if (!book) throw new Error('Brand master must contain the book artwork group.');
-const silhouette = book.replace(/fill="#[a-fA-F0-9]+"/g, 'fill="#fff"').replace(/stroke="#[a-fA-F0-9]+"/g, 'stroke="#000"');
-const template = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="-46 -48 92 72"><defs><mask id="book" maskUnits="userSpaceOnUse" x="-46" y="-48" width="92" height="72">${silhouette}</mask></defs><rect x="-46" y="-48" width="92" height="72" fill="#000" mask="url(#book)"/></svg>`;
+// Menu-bar templates omit the tile and retain the ring and pointer in monochrome.
+// A tighter viewBox makes the symbol legible at the native 18px menu-bar size.
+const symbol = inner.replace(/<rect\b[^>]*\/\s*>/g, '')
+  .replace(/(fill|stroke)="#[a-fA-F0-9]+"/g, '$1="#000"');
+const template = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="232 232 560 560">${symbol}</svg>`;
 for (const scale of [1, 2]) {
   await sharp(Buffer.from(template)).resize(18 * scale, 18 * scale).png()
     .toFile(path.join(desktop, `trayTemplate${scale === 2 ? '@2x' : ''}.png`));

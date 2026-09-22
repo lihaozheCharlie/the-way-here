@@ -2,10 +2,11 @@
   "name": "@the-way-here/desktop",
   "version": "0.1.0",
   "private": true,
+  "productName": "The Way Here",
   "type": "module",
   "main": "src/main.mjs",
   "scripts": {
-    "dev": "electron .",
+    "dev": "node ../../scripts/dev-desktop.mjs",
     "test": "node --test src/*.test.mjs",
     "typecheck": "node --check src/main.mjs && node --check src/preload.cjs"
   },

@@ -175,7 +175,7 @@ Questions 在页面内放置（6:4）对话和证据，间距（16px），高度
 
 ## Components
 
-产品标志使用用户提供的实心书本与书签 SVG：深墨绿 #1a3733 底、纸白 #fbfaf5 书页、暖棕 #f0a326 书签。侧栏和浏览器图标保持原稿；macOS Dock 图标保留系统所需外边距，菜单栏从同一图形生成透明底单色模板。统一母版为 apps/desktop/assets/app-icon.svg。
+产品标志使用用户提供的柔和罗盘圆环 SVG：极淡浅蓝底 #EAF2FF、粗蓝色开口圆环 #0A7CFF、开口处橙色圆点 #FF7A45，像“指向此刻”的指针。统一母版为 apps/desktop/assets/app-icon.svg；侧栏、浏览器和 Apple Touch 图标由同一母版生成，macOS Dock 保留透明安全区，菜单栏使用去背景的单色圆环与圆点。
 
 ### Buttons
 
@@ -273,9 +273,9 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 
 顶部介绍卡按用户截图采用浅蓝渐变、白色爱心标签“长期陪伴 · 已相处 N 天”、标题“有什么，都可以聊聊”及原样说明文案。N 由服务端保留的当前空间首次交互时间按本地自然日计算（首日为 1），不使用示例中的固定 128。首页下方生活记录输入保持原有功能。
 
-### 产品图标 · 渐变蓝书本
+### 产品图标 · 柔和罗盘圆环
 
-图标以用户提供的 SVG/ICO 为准：对角渐变蓝、左上高光、书页投影、冷白右页与珊瑚色书签。`apps/desktop/assets/app-icon.svg` 是桌面与网页 Logo、Apple Touch 图标的源文件；独立的 `favicon.svg` / `favicon.ico` 保存浏览器图标原稿，构建只同步，不用桌面原稿覆盖。当前提供的 SVG 图形一致，ICO 包含 16/32/48px 帧。macOS 图标保留既有透明安全区，托盘仍生成单色模板。
+图标以用户提供的 concept-3-soft-compass-ring.svg 为准，保留原稿颜色、圆角、线宽与位置，不增加渐变或阴影。浅蓝背景承担 accent-soft 的视觉角色，图标本身固定使用原稿 #EAF2FF。`apps/desktop/assets/app-icon.svg` 是唯一母版；构建同步生成网页与桌面 favicon.svg、包含 16/32/48px 帧的 favicon.ico、Apple Touch、Dock 和菜单栏模板。菜单栏去掉背景，以单色保留圆环和指向此刻的圆点。
 
 ### 偏好设置与侧栏精简
 
