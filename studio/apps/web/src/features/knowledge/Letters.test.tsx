@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LettersView, WikiPage, WikiPageSummary, WikiRun } from "@the-way-here/shared";
-import { Letters } from "./Letters";
+import { Letters, letterRequestContext, requestPrompt } from "./Letters";
+import { LetterLensChoices } from "./LetterLensPicker";
 
 const mocks = vi.hoisted(() => ({ useApi: vi.fn() }));
 vi.mock("../../shared/use-api", () => ({ useApi: mocks.useApi }));
@@ -44,6 +45,55 @@ function render(search = "") {
 }
 
 describe("letter reader", () => {
+  it("offers one active request entry and builds a scoped, evidence-bound writing request", () => {
+    expect(render()).toContain("主动写一封");
+    const guided = requestPrompt({ stage: { title: "转折阶段", range: "2025-01 至 2025-03", pageId: "wiki/stage" }, lens: { name: "导师", attention: "未说出口的顾虑" }, focus: "一次决定" });
+    expect(guided.prompt).toContain("经历：转折阶段（2025-01 至 2025-03，页面 wiki/stage）");
+    expect(requestPrompt({ stage: { title: "刚辞职那段经历" }, lens: { name: "朋友" } }).prompt).toContain("经历：刚辞职那段经历。视角：朋友");
+    expect(guided.prompt).toContain("关注点：一次决定");
+    expect(guided.prompt).toContain("不虚构经历或心理");
+    const automatic = requestPrompt({ stage: { title: "刚辞职那段经历" } });
+    expect(automatic.prompt).toContain("视角：未指定，请根据证据和写信 Skill 自动选择");
+    expect(requestPrompt({ description: "写一封关于最近变化的信" }).prompt).toContain("如不能确定，先向我澄清");
+  });
+
+  it("uses stage relations as retrieval starting points and binds the run to that stage", () => {
+    const stage = {
+      title: "匿名阶段", range: "2024 至 2025", pageId: "wiki/stage", summary: "阶段摘要",
+      related: {
+        events: [{ ...page, id: "wiki/event", title: "一次转折" }],
+        people: [{ ...page, id: "wiki/person", title: "一位朋友" }],
+        places: [{ ...page, id: "wiki/place", title: "一座城市" }],
+        systems: [{ ...page, id: "wiki/system", title: "一个项目" }],
+        letters: [{ ...page, id: "wiki/letter", title: "旧回信" }],
+      },
+    };
+    const prompt = requestPrompt({ stage }).prompt;
+    for (const id of ["wiki/event", "wiki/person", "wiki/place", "wiki/system", "wiki/letter"]) expect(prompt).toContain(`[${id}]`);
+    expect(prompt).toContain("不是已核实的写信证据");
+    expect(prompt).toContain("仅用于检查重复，不作为独立事实证据");
+    expect(letterRequestContext({ stage })).toMatchObject({ scope: "近况回信 · 主动写信", title: "匿名阶段", pageId: "wiki/stage", summary: "阶段摘要" });
+    expect(letterRequestContext({ description: "匿名经历" }).pageId).toBeUndefined();
+  });
+
+  it("shares the reread lens cards with the active letter composer", () => {
+    const cards = renderToStaticMarkup(<LetterLensChoices lenses={[{ id: "lens", displayName: "示例", attention: "关注证据", signals: [], helperUse: "", relativePath: "" }]} onSelect={() => {}} />);
+    expect(cards).toContain('class="letter-lens-grid"');
+    expect(cards).toContain('class="letter-lens-choice"');
+    expect(cards).toContain("关注证据");
+    const withAuto = renderToStaticMarkup(<LetterLensChoices lenses={[]} onSelect={() => {}} onAutoSelect={() => {}} autoSelected />);
+    expect(withAuto).toContain("自动选择");
+    expect(withAuto).toContain('aria-pressed="true"');
+  });
+
+  it("shows request progress and labels only letters changed by a completed request", () => {
+    runs = [{ ...version, id: "pending", sourceModule: "近况回信", displayPrompt: "主动写一封 · 转折阶段", status: "running", changes: [] }];
+    expect(render()).toContain("正在写信：转折阶段");
+    runs = [{ ...runs[0]!, status: "completed", changes: [{ path: page.relativePath, kind: "added" }] }];
+    const html = render();
+    expect(html).toContain("由你请求");
+    expect(html).not.toContain("正在写信：转折阶段");
+  });
   it("uses the shared record list with title, date and excerpt in descending order", () => {
     const html = render();
     const index = html.slice(html.indexOf('<section class="source-file-pane"'), html.indexOf("</section>"));

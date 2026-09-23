@@ -9,7 +9,7 @@ import { resizeComposerTextarea } from "../../shared/composer-input";
 import { Icon, Loading } from "../../shared/ui";
 import { AgentComposerSettings, reasoningLabels, useAgentSelection, type AgentSettingsController } from "./AgentSettings";
 import { AgentAnswer } from "./AgentAnswer";
-import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, continuationModelSelection, runConversation, runDisplayPrompt, runFinalAnswer, runTechnicalEvents, shouldSubmitAgentInput, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runConversation, runDisplayPrompt, runFinalAnswer, runTechnicalEvents, shouldSubmitAgentInput, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
 
 const defaultAgentModel = "gpt-5.6-sol";
 const defaultAgentEffort: AgentReasoningEffort = "high";
@@ -36,6 +36,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
   const [mode, setMode] = useState<WikiRun["mode"]>(() => resolveComposerMode(context.defaultMode, context.defaultOutputTarget));
   const [outputTarget, setOutputTarget] = useState<AgentOutputTarget | undefined>(() => context.defaultOutputTarget);
   const [sourceContext, setSourceContext] = useState<SourceRunContext | undefined>(() => context.defaultSourceContext);
+  const [runContextOverride, setRunContextOverride] = useState<AgentContext>();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -71,6 +72,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
       setMode(resolveComposerMode(request.mode || context.defaultMode, requestedOutputTarget, request.lockMode));
       setOutputTarget(requestedOutputTarget);
       setSourceContext(requestedSourceContext);
+      setRunContextOverride(request.contextOverride);
       pendingAutoSubmissionRef.current = autoSubmission;
       if (request.attachedContext?.topicId) {
         const topic = request.attachedContext;
@@ -104,6 +106,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
       setTopicRestore(undefined);
       setRunId("");
       setAttachedContext(undefined);
+      setRunContextOverride(undefined);
       restoredContextRef.current = "";
     }
     previousKnowledgeBaseRef.current = vault?.knowledgeBaseId;
@@ -122,6 +125,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
     setMode(resolveComposerMode(context.defaultMode, context.defaultOutputTarget));
     setOutputTarget(context.defaultOutputTarget);
     setSourceContext(context.defaultSourceContext);
+    setRunContextOverride(undefined);
     setView(initialRunId || boundRunId ? "history" : "compose");
     // Restore the bound conversation quietly; only an explicit action opens the dock.
     setError("");
@@ -132,7 +136,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
     const pending = pendingAutoSubmissionRef.current;
     if (topicRestore || !pending || view !== "compose" || runId || submitting || vaultLoading || agent.loading || !vault?.agentAvailable) return;
     pendingAutoSubmissionRef.current = undefined;
-    void startRun(pending.prompt, pending.mode, pending.outputTarget, pending.displayPrompt, pending.sourceContext);
+    void startRun(pending.prompt, pending.mode, pending.outputTarget, pending.displayPrompt, pending.sourceContext, pending.contextOverride);
   }, [agent.loading, runId, submitting, vault?.agentAvailable, vaultLoading, view, topicRestore]);
 
   function startNewQuestion() {
@@ -146,6 +150,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
     setMode(resolveComposerMode(context.defaultMode, context.defaultOutputTarget));
     setOutputTarget(context.defaultOutputTarget);
     setSourceContext(context.defaultSourceContext);
+    setRunContextOverride(undefined);
     setError("");
     pendingAutoSubmissionRef.current = undefined;
   }
@@ -174,7 +179,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
     setRunListRevision((value) => value + 1);
   }
 
-  async function startRun(requestText: string, requestedMode = mode, requestedOutputTarget = outputTarget, displayPrompt = requestText, requestedSourceContext = sourceContext) {
+  async function startRun(requestText: string, requestedMode = mode, requestedOutputTarget = outputTarget, displayPrompt = requestText, requestedSourceContext = sourceContext, requestedContext = runContextOverride) {
     const request = requestText.trim();
     if (requestedMode !== "validate" && !request) {
       setError("先写下你想从哪里开始。");
@@ -187,11 +192,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
     try {
       const selection = requestedMode === "validate" ? undefined : await agent.save();
       const normalizedRequest = requestedMode === "validate" ? request || "运行当前知识库的质量检查。" : request;
-      const runContext = attachedContext ? {
-        ...context,
-        title: attachedContext.title,
-        summary: `已有理解：${attachedContext.currentUnderstanding}\n为什么值得聊：${attachedContext.reason}`,
-      } : context;
+      const runContext = resolveRunContext(context, requestedContext, attachedContext);
       const run = await api<WikiRun>("/api/runs", {
         method: "POST",
         body: JSON.stringify({
@@ -205,7 +206,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
           sourceModule: requestedMode === "validate" ? "系统检查" : runContext.scope.split(" · ")[0],
           outputTarget: requestedOutputTarget,
           sourceContext: requestedSourceContext,
-          contextPageId: context.pageId,
+          contextPageId: runContext.pageId,
           contextTopicId: attachedContext?.topicId,
           knowledgeBaseId: vault?.knowledgeBaseId,
         }),

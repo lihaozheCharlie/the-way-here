@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WikiRun } from "@the-way-here/shared";
-import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, contextPrompt, continuationModelSelection, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, contextPrompt, continuationModelSelection, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
 
 describe("collaboration model", () => {
   it("hides photo payloads, including a partial streaming block", () => {
@@ -105,6 +105,11 @@ describe("collaboration model", () => {
     expect(resolveAgentAutoSubmission({ prompt: "   ", autoSubmit: true })).toBeUndefined();
     const sourceContext = { importId: "batch", storedPath: "sources/日记.md", flow: "direct" as const };
     expect(resolveAgentAutoSubmission({ prompt: "收进理解", autoSubmit: true, sourceContext })?.sourceContext).toEqual(sourceContext);
+    const contextOverride = { scope: "近况回信 · 主动写信", title: "匿名阶段", pageId: "wiki/stage", suggestions: [] };
+    expect(resolveAgentAutoSubmission({ prompt: "写信", autoSubmit: true, mode: "write", lockMode: true, contextOverride })).toMatchObject({ mode: "write", contextOverride });
+    const readingContext = { scope: "近况回信", title: "正在阅读的旧回信", pageId: "wiki/old-letter", suggestions: [] };
+    expect(resolveRunContext(readingContext, contextOverride)).toEqual(contextOverride);
+    expect(contextPrompt(resolveRunContext(readingContext, contextOverride), "写一封新回信")).not.toContain("wiki/old-letter");
   });
 
   it("lets Agent infer every normal conversation while preserving validation", () => {

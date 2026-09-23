@@ -3,20 +3,53 @@ import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { LetterHistory } from "./LetterHistory";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { LettersView, ReasoningLens, WikiRun } from "@the-way-here/shared";
+import type { LettersView, LifeMapView, ReasoningLens, WikiPageSummary, WikiRun } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
-import { letterRunVersions, openContextAgent } from "../collaboration/model";
+import { letterRunVersions, openContextAgent, type AgentContext } from "../collaboration/model";
 import { FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
 import { DocumentPreview } from "../../shared/DocumentPreview";
 import { PageLink } from "../../shared/routing";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { TimelineFilter } from "../../shared/TimelineFilter";
 import { LetterLensPicker } from "./LetterLensPicker";
+import { LetterComposer, type LetterRequest } from "./LetterComposer";
+
+const REQUEST_LABEL = "主动写一封 · ";
+
+export function letterRequestContext(request: LetterRequest): AgentContext {
+  return {
+    scope: "近况回信 · 主动写信",
+    title: request.stage?.title || "主动写信",
+    pageId: request.stage?.pageId,
+    summary: request.stage?.summary || "以这次指定的经历为起点，核对相关页面和原始材料。",
+    suggestions: [],
+  };
+}
+
+export function requestPrompt(request: LetterRequest): { prompt: string; label: string } {
+  const related = request.stage?.related;
+  const groups: Array<[string, WikiPageSummary[]]> = related ? [
+    ["关联事件", related.events],
+    ["关联人物", related.people],
+    ["关联地点", related.places],
+    ["关联现实系统", related.systems],
+    ["关联旧回信（仅用于检查重复，不作为独立事实证据）", related.letters],
+  ] : [];
+  const startingPoints = groups.map(([label, pages]) => `- ${label}：${pages.length ? pages.map(page => `${page.title} [${page.id}]`).join("；") : "暂无"}`).join("\n");
+  const intent = request.description
+    ? `我的原话是：${request.description}。请先辨认所指的经历或时间；如不能确定，先向我澄清，不要猜测后写信。视角或关注点没有明确指定时，可以根据证据和写信 Skill 自动选择。`
+    : `经历：${request.stage!.title}${request.stage!.range || request.stage!.pageId ? `（${[request.stage!.range, request.stage!.pageId ? `页面 ${request.stage!.pageId}` : ""].filter(Boolean).join("，")}）` : ""}。视角：${request.lens ? `${request.lens.name}${request.lens.attention ? `（${request.lens.attention}）` : ""}` : "未指定，请根据证据和写信 Skill 自动选择"}。关注点：${request.focus || "未指定，请根据证据判断"}。`;
+  return {
+    label: request.stage?.title || request.description?.slice(0, 24) || "自由描述",
+    prompt: `请为我主动写一封近况回信。${intent}${startingPoints ? `\n所选阶段已有的关联页面，作为检索起点（不是已核实的写信证据；先读页面，再追溯原始来源，按相关性取舍）：\n${startingPoints}` : ""}\n请使用知识库注册的 build-companion-reflection 流程，检索这段经历的原始材料和必要的已有理解；如指定视角，使用其注意力和推理方式，否则按 Skill 结合材料自动选择合适视角。不模仿人物口头禅。只依据有来源的事实，不虚构经历或心理。若该段经历没有足够的具体材料，请说明并停止，不创建空泛回信。完成后按该 Skill 的归档与质量门保存到当前知识库，并说明保存位置。`,
+  };
+}
 
 export function Letters({ revision }: { revision: number }) {
   const { data, loading, error } = useApi<LettersView>("/api/views/letters", revision);
   const { data: lenses, error: lensesError } = useApi<ReasoningLens[]>("/api/lenses", revision);
+  const { data: lifeMap } = useApi<LifeMapView>("/api/views/life-map", revision);
   const { data: runList, loading: runsLoading, error: runsError } = useApi<WikiRun[]>("/api/runs", revision);
   const [params, setParams] = useSearchParams();
   const [year, setYear] = useState("全部");
@@ -35,11 +68,25 @@ export function Letters({ revision }: { revision: number }) {
   const perspectiveVersions = [...new Map(generatedVersions.map(version => [version.lensName, version])).values()];
   const activePerspective = activeVersion?.id === "original" ? "original" : activeVersion?.lensName;
   const historical = Boolean(activeVersion && latestVersion && activeVersion.id !== latestVersion.id);
+  const requestedRuns = (runList || []).filter(run => run.sourceModule === "近况回信" && run.displayPrompt?.startsWith(REQUEST_LABEL));
+  const pendingRequests = requestedRuns.filter(run => !["completed", "failed", "interrupted"].includes(run.status));
+  const requestedPaths = new Set(requestedRuns.filter(run => run.status === "completed").flatMap(run => run.changes?.filter(change => change.kind !== "deleted" && change.path.endsWith(".md")).map(change => change.path.replaceAll("\\", "/")) || []));
+  const handleRequest = (request: LetterRequest) => {
+    const { prompt, label } = requestPrompt(request);
+    openContextAgent({
+      prompt,
+      displayPrompt: `${REQUEST_LABEL}${label}`,
+      mode: "write",
+      lockMode: true,
+      autoSubmit: true,
+      contextOverride: letterRequestContext(request),
+    });
+  };
   const selectLetter = (id?: string, replace = false) => { setParams((current) => { const next = new URLSearchParams(current); if (id) next.set("letter", id); else next.delete("letter"); next.delete("version"); return next; }, { replace }); };
   const selectVersion = (id?: string) => { setParams((current) => { const next = new URLSearchParams(current); if (!id || id === latestVersion?.id) next.delete("version"); else next.set("version", id); return next; }, { replace: true }); };
   return (
     <div className="understanding-life-page understanding-letters-page organized-sources-page">
-      <header className="letters-page-head"><div><h1>近况回信</h1><p>从过去的记录回望此刻，让当时的经历与现在重新发生联系。</p></div><div className="letters-page-count"><b>{data.letters.length}</b>封回信</div></header>
+      <header className="letters-page-head"><div><h1>近况回信</h1><p>从过去的记录回望此刻，让当时的经历与现在重新发生联系。</p></div><div className="letters-page-actions"><LetterComposer stages={lifeMap?.stages || []} lenses={lenses || []} onSubmit={handleRequest} /><div className="letters-page-count"><b>{data.letters.length}</b>封回信</div></div></header>
       <TimelineFilter
         label={view === "chronology" ? "按写信年份筛选" : "按回信主题筛选"}
         allLabel={view === "chronology" ? "全部年份" : "全部主题"}
@@ -53,7 +100,11 @@ export function Letters({ revision }: { revision: number }) {
       {(runsError || lensesError) && <p className="letters-load-warning" role="status">{runsError ? "历史版本暂时无法读取，当前显示原始回信。" : "重读视角暂时无法读取。"} 请刷新重试。</p>}
       <div className={`source-vault file-browser-documents${indexOpen ? "" : " file-pane-collapsed"}`} aria-label="近况回信工作区">
         <FileBrowserPane label="回信列表" count={`${filtered.length} 封`} open={indexOpen} onToggle={() => setIndexOpen(value => !value)} order="按写信时间从新到旧" toggleLabel="回信列表">
-          {filtered.map(letter => <FileBrowserItem key={letter.page.id} title={letter.page.title.replace(/^\d{4}-\d{2}-\d{2}\s*/, "")} date={letter.letterDate.slice(0, 10)} dateLabel={letter.letterDate.slice(0, 10).replaceAll("-", ".")} excerpt={letter.page.excerpt} active={selected?.page.id === letter.page.id} onSelect={() => selectLetter(letter.page.id)} actions={<FileMenu page={letter.page} onRenamed={page => selectLetter(page.id, true)} onDeleted={() => selectLetter(undefined, true)} />} />)}
+          {pendingRequests.map(run => <button key={run.id} type="button" className="letter-request-pending" onClick={() => openContextAgent({ runId: run.id })}><span className="letter-request-spinner" aria-hidden="true" /><b>正在写信：{run.displayPrompt?.slice(REQUEST_LABEL.length)}</b><small>查看写信进度</small></button>)}
+          {filtered.map(letter => {
+            const requested = [...requestedPaths].some(path => path.endsWith(letter.page.relativePath.replaceAll("\\", "/")) || path.endsWith(letter.page.id.replaceAll("\\", "/")));
+            return <FileBrowserItem key={letter.page.id} title={letter.page.title.replace(/^\d{4}-\d{2}-\d{2}\s*/, "")} date={letter.letterDate.slice(0, 10)} dateLabel={letter.letterDate.slice(0, 10).replaceAll("-", ".")} excerpt={letter.page.excerpt} active={selected?.page.id === letter.page.id} onSelect={() => selectLetter(letter.page.id)} actions={<FileMenu page={letter.page} onRenamed={page => selectLetter(page.id, true)} onDeleted={() => selectLetter(undefined, true)} />}>{requested && <span className="letter-request-tag">由你请求</span>}</FileBrowserItem>;
+          })}
         </FileBrowserPane>
         {selected ? <DocumentPreview key={`${selected.page.id}:${activeVersion?.id}`} pageId={selected.page.id} revision={revision} showMetadata={false} onRenamed={page => selectLetter(page.id, true)}
           snapshot={activeVersion && activeVersion.id !== "original" ? { id: `letter-version-${activeVersion.id}`, markdown: activeVersion.markdown } : undefined}

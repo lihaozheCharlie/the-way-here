@@ -4,7 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReasoningLens } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
 
-function LensChoice({ lens, onSelect }: { lens: ReasoningLens; onSelect: () => void }) {
+function LensChoice({ lens, onSelect, selected = false }: { lens: ReasoningLens; onSelect: () => void; selected?: boolean }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const tooltip = useRef<HTMLDivElement>(null);
@@ -26,12 +26,19 @@ function LensChoice({ lens, onSelect }: { lens: ReasoningLens; onSelect: () => v
   }, [visible]);
   const summary = lens.attention.split(/[。；;]/)[0];
   return <>
-    <button ref={trigger} className="letter-lens-choice" type="button" aria-describedby={visible ? id : undefined} data-overflow-tooltip="off" onPointerEnter={() => { clearTimeout(timer.current); timer.current = setTimeout(() => setVisible(true), 180); }} onPointerLeave={leave} onFocus={event => { if (event.currentTarget.matches(":focus-visible")) setVisible(true); }} onBlur={hide} onClick={() => { hide(); onSelect(); }}>
+    <button ref={trigger} className="letter-lens-choice" type="button" aria-pressed={selected} aria-describedby={visible ? id : undefined} data-overflow-tooltip="off" onPointerEnter={() => { clearTimeout(timer.current); timer.current = setTimeout(() => setVisible(true), 180); }} onPointerLeave={leave} onFocus={event => { if (event.currentTarget.matches(":focus-visible")) setVisible(true); }} onBlur={hide} onClick={() => { hide(); onSelect(); }}>
       <span className="letter-lens-avatar" aria-hidden="true">{lens.displayName.split(/[·・]/).at(-1)?.slice(0, 1)}</span>
       <span className="letter-lens-copy"><b>{lens.displayName}</b><small>{summary}</small></span>
     </button>
     {visible && createPortal(<div id={id} ref={tooltip} role="tooltip" className="letter-lens-tooltip" style={position} onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave}><b>{lens.displayName}</b><p>{lens.attention}</p>{lens.helperUse && <p>{lens.helperUse}</p>}{Boolean(lens.signals?.length) && <p>关注：{lens.signals.join("、")}</p>}</div>, document.body)}
   </>;
+}
+
+export function LetterLensChoices({ lenses, onSelect, selectedId, onAutoSelect, autoSelected = false }: { lenses: ReasoningLens[]; onSelect: (lens: ReasoningLens) => void; selectedId?: string; onAutoSelect?: () => void; autoSelected?: boolean }) {
+  return <div className="letter-lens-grid">
+    {onAutoSelect && <button className="letter-lens-choice" type="button" aria-pressed={autoSelected} onClick={onAutoSelect}><span className="letter-lens-avatar" aria-hidden="true"><Icon name="spark" size={16} /></span><span className="letter-lens-copy"><b>自动选择</b><small>根据这段经历，选择合适的视角</small></span></button>}
+    {lenses.map(lens => <LensChoice key={lens.id} lens={lens} selected={selectedId === lens.id} onSelect={() => onSelect(lens)} />)}
+  </div>;
 }
 
 export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]; onSelect: (lens: ReasoningLens) => void }) {
@@ -80,7 +87,7 @@ export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]
     <button ref={triggerRef} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}>用新视角重读 <Icon name="down" size={14} /></button>
     {open && createPortal(<section ref={popoverRef} id={id} className="letter-lens-popover" data-placement={placement.above ? "above" : "below"} style={{ maxHeight: placement.maxHeight, left: placement.left, top: placement.above ? "auto" : placement.edge, bottom: placement.above ? placement.edge : "auto" }} aria-label="选择重读视角">
       <p>用 {lenses.length} 种从公开原则提炼的视角重新写这封信。</p>
-      <div className="letter-lens-grid">{lenses.map(lens => <LensChoice key={lens.id} lens={lens} onSelect={() => { setOpen(false); onSelect(lens); }} />)}</div>
+      <LetterLensChoices lenses={lenses} onSelect={lens => { setOpen(false); onSelect(lens); }} />
     </section>, document.body)}
   </div>;
 }

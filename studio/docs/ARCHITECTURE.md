@@ -184,7 +184,7 @@ agents:
 
 ## 运行记录
 
-运行记录放在操作系统应用数据目录下的 `the-way-here/vaults/<workspace-hash>/`。记录包含知识库 ID、创建时配置、`runtimeId`、通用会话/回合 ID、provider、model、最终结果、用于通知来源标识的 `sourceModule`、可选的 `outputTarget`，以及发起会话时绑定的 `contextPageId`；后续轮次自动继承同一文件绑定。界面切换到某个文件时会恢复绑定到该文件的最新会话，运行中、等待审批和已结束状态使用同一恢复路径；旧版来源构建任务仍可通过 `sourceContext.storedPath` 匹配。删除历史按通用会话 ID 一次移除全部 Run；Pi 同步删除 `agent-sessions/pi/` 中的本机会话文件，已写入生活记录或 Wiki 的内容保持不变。Pi 对话也保存在该目录的 `agent-sessions/pi/`，不会直接写入知识文件。完成的人物视角重读通过 `letter-version` 目标关联到原回信；消费旅程通过 `journey-report` 目标由服务端只物化报告受管区，并记录 `outputSavedAt`。写入及 `auto` 任务的快照覆盖配置声明的根协议、Wiki、Skills、Tools 和来源。每个任务使用唯一临时文件，同一知识库内可能改写内容的任务串行执行；旧版 `threadId`/`turnId` 会按 Codex 运行时透明迁移，旧版并发写坏后仍保留首个完整 JSON 对象的记录可自动恢复。
+运行记录放在操作系统应用数据目录下的 `the-way-here/vaults/<workspace-hash>/`。记录包含知识库 ID、创建时配置、`runtimeId`、通用会话/回合 ID、provider、model、最终结果、用于通知来源标识的 `sourceModule`、可选的 `outputTarget`，以及发起会话时绑定的 `contextPageId`；后续轮次自动继承同一文件绑定。界面切换到某个文件时会恢复绑定到该文件的最新会话，运行中、等待审批和已结束状态使用同一恢复路径；旧版来源构建任务仍可通过 `sourceContext.storedPath` 匹配。主动写近况回信可为本次请求覆盖阅读页上下文：选择人生阶段时绑定阶段页，并把阶段关联的事件、人物、地点、系统与旧回信作为待核验的检索入口；自定义经历不绑定当前选中的旧回信。删除历史按通用会话 ID 一次移除全部 Run；Pi 同步删除 `agent-sessions/pi/` 中的本机会话文件，已写入生活记录或 Wiki 的内容保持不变。Pi 对话也保存在该目录的 `agent-sessions/pi/`，不会直接写入知识文件。完成的人物视角重读通过 `letter-version` 目标关联到原回信；消费旅程通过 `journey-report` 目标由服务端只物化报告受管区，并记录 `outputSavedAt`。写入及 `auto` 任务的快照覆盖配置声明的根协议、Wiki、Skills、Tools 和来源。每个任务使用唯一临时文件，同一知识库内可能改写内容的任务串行执行；旧版 `threadId`/`turnId` 会按 Codex 运行时透明迁移，旧版并发写坏后仍保留首个完整 JSON 对象的记录可自动恢复。
 
 ## 代码组织与依赖方向
 

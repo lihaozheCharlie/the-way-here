@@ -7,6 +7,54 @@
 .letters-page-head p { margin: 0; color:var(--ink-soft); font-size: 14px; }
 .letters-page-count { flex: none; padding-bottom: 4px; color: var(--muted); font-size: 12px; text-align: right; }
 .letters-page-count b { display: block; color: var(--ink); font-family: var(--font-display); font-size: 26px; font-weight: 500; }
+.letters-page-actions { display:flex; align-items:center; gap:22px; }
+.letter-compose-cta { display:inline-flex; align-items:center; gap:7px; min-height:38px; padding:0 15px; border:0; border-radius:var(--radius-control); background:var(--warm); color:var(--paper); font-size:13px; font-weight:650; white-space:nowrap; }
+.letter-compose-cta:hover { background:var(--warm-ink); }
+.letter-compose-backdrop { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:24px; background:color-mix(in srgb,var(--ink) 45%,transparent); }
+.letter-compose-dialog { width:min(620px,100%); max-height:min(90vh,780px); overflow:auto; background:var(--paper); border-radius:var(--radius-panel); box-shadow:var(--shadow-float); }
+.letter-compose-head { display:flex; justify-content:space-between; gap:16px; padding:26px 28px 18px; border-bottom:1px solid var(--line); }
+.letter-compose-head h2 { margin:0 0 6px; font-family:var(--font-display); font-size:23px; font-weight:500; }
+.letter-compose-head p { margin:0; color:var(--ink-soft); font-size:13px; line-height:1.6; }
+.letter-compose-head > button { flex:none; display:grid; place-items:center; width:30px; height:30px; border:0; border-radius:50%; background:var(--surface-subtle); color:var(--ink-soft); }
+.letter-compose-modes { display:inline-flex; margin:18px 28px 0; border:1px solid var(--line); border-radius:var(--radius-panel); overflow:hidden; }
+.letter-compose-modes button { padding:7px 14px; border:0; background:var(--paper); color:var(--ink-soft); font-size:13px; }
+.letter-compose-modes button[aria-pressed="true"] { background:var(--accent-soft); color:var(--accent-ink); }
+.letter-compose-sentence { margin:20px 28px 0; padding:20px 22px; border-radius:var(--radius-card-small); background:var(--canvas); color:var(--ink); font-family:var(--font-display); font-size:19px; line-height:2.15; }
+.letter-compose-blank { display:inline-flex; align-items:center; gap:4px; margin:0 2px; padding:2px 7px; border:0; border-bottom:2px dashed var(--warm); border-radius:5px; background:transparent; color:var(--warm-ink); font-family:var(--font-ui); font-size:16px; font-weight:650; vertical-align:baseline; }
+.letter-compose-blank:hover,.letter-compose-blank[aria-expanded="true"] { background:var(--warm-soft); }
+.letter-compose-sentence input { width:min(290px,100%); padding:2px 6px; border:0; border-bottom:2px dashed var(--warm); border-radius:5px; background:transparent; color:var(--ink); font:16px var(--font-ui); }
+.letter-compose-sentence input::placeholder { color:var(--ink-soft); }
+.letter-compose-sentence input:focus { background:var(--warm-soft); outline:2px solid var(--warm); outline-offset:2px; }
+.letter-compose-hint { margin:5px 30px 0; color:var(--ink-soft); font-size:12px; line-height:1.6; }
+.letter-compose-picker { margin:12px 28px 0; padding:14px 16px; border:1px solid var(--line); border-radius:var(--radius-control); }
+.letter-compose-picker p { margin:0 0 10px; color:var(--ink-soft); font-size:12px; }
+.letter-compose-picker > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; }
+.letter-compose-picker button { min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--canvas); color:var(--ink); text-align:left; }
+.letter-compose-picker button:hover,.letter-compose-picker button[aria-pressed="true"] { border-color:var(--warm); background:var(--warm-soft); }
+.letter-compose-picker b,.letter-compose-picker small { display:block; }
+.letter-compose-picker b { font-size:13px; font-weight:650; }
+.letter-compose-picker small { margin-top:3px; color:var(--ink-soft); font-size:11px; line-height:1.5; }
+.letter-compose-picker > div > span { color:var(--ink-soft); font-size:12px; }
+.letter-compose-picker .letter-compose-custom-input { display:flex; align-items:center; gap:8px; max-height:none; margin-top:12px; overflow:visible; }
+.letter-compose-custom-input input { flex:1; min-width:0; min-height:36px; padding:6px 10px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--paper); color:var(--ink); font:13px var(--font-ui); }
+.letter-compose-custom-input button { min-height:36px; padding:5px 10px; white-space:nowrap; }
+.letter-compose-custom-input button:disabled { opacity:.55; cursor:not-allowed; }
+.letter-compose-free { display:grid; gap:8px; margin:20px 28px 0; }
+.letter-compose-free label { font-size:13px; font-weight:650; }
+.letter-compose-free textarea { min-height:125px; padding:13px 15px; resize:vertical; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--canvas); color:var(--ink); font:14px/1.7 var(--font-ui); }
+.letter-compose-free textarea::placeholder { color:var(--ink-soft); }
+.letter-compose-free small { color:var(--ink-soft); font-size:12px; line-height:1.6; }
+.letter-compose-foot { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding:18px 28px; border-top:1px solid var(--line); }
+.letter-compose-foot button { min-height:38px; padding:0 16px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--paper); color:var(--ink-soft); font-size:13px; }
+.letter-compose-foot button:last-child { border-color:var(--warm); background:var(--warm); color:var(--paper); font-weight:650; }
+.letter-compose-foot button:last-child:disabled { border-color:var(--line); background:var(--surface-subtle); color:var(--ink-soft); cursor:not-allowed; }
+.letter-request-pending { display:grid; grid-template-columns:auto minmax(0,1fr); gap:3px 8px; align-items:center; width:100%; margin-bottom:4px; padding:13px 12px; border:1px dashed var(--line-strong); border-radius:var(--radius-card-small); background:var(--paper); color:var(--ink-soft); text-align:left; }
+.letter-request-pending b { overflow:hidden; font-size:13px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.letter-request-pending small { grid-column:2; color:var(--ink-soft); font-size:12px; }
+.letter-request-spinner { width:14px; height:14px; border:2px solid var(--line-strong); border-top-color:var(--warm); border-radius:50%; animation:letter-request-spin 900ms linear infinite; }
+.letter-request-tag { display:inline-flex; margin:0 12px 10px; padding:2px 8px; border-radius:var(--radius-panel); background:var(--warm-soft); color:var(--warm-ink); font-size:11px; }
+@keyframes letter-request-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .letter-request-spinner { animation:none; } }
 .letters-view-switch { display: inline-flex; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-control); }
 .letters-view-switch button { min-height: 36px; padding: 7px 14px; color:var(--ink-soft); background: var(--paper); border: 0; font-size: 13px; }
 .letters-view-switch button + button { border-left: 1px solid var(--line); }
@@ -45,9 +93,9 @@
 .letter-history-banner button { padding:0; min-height:24px; background:transparent; border:0; color:inherit; text-decoration:underline; text-underline-offset:3px; }
 .letter-generation-link { display:inline-flex; gap:6px; align-items:center; margin:0 32px 24px; padding:0; background:transparent; border:0; color:var(--ink-soft); font-size:12px; }
 .letter-lens-popover { width:min(460px,calc(100vw - 48px)); border-radius:var(--radius-panel); padding:16px; box-shadow:var(--shadow-float); }
-.letter-lens-popover .letter-lens-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.letter-lens-popover button.letter-lens-choice { display:flex; align-items:center; gap:10px; padding:10px; background:var(--paper); min-width:0; border-radius:var(--radius-control); }
-.letter-lens-choice:hover,.letter-lens-choice:focus-visible { background:var(--surface-tinted); }
+.letter-lens-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.letter-lens-grid button.letter-lens-choice { display:flex; align-items:center; gap:10px; min-width:0; padding:10px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--paper); color:var(--ink); text-align:left; }
+.letter-lens-grid button.letter-lens-choice:hover,.letter-lens-grid button.letter-lens-choice:focus-visible,.letter-lens-grid button.letter-lens-choice[aria-pressed="true"] { border-color:var(--warm); background:var(--warm-soft); }
 .letter-lens-avatar { display:grid; place-items:center; flex:none; width:32px; height:32px; border-radius:50%; background:var(--warm-soft); color:var(--warm-ink); font:600 14px var(--font-display); }
 .letter-lens-copy { min-width:0; }
 .letter-lens-copy small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

@@ -30,6 +30,8 @@ export type OpenContextAgentRequest = {
   view?: "compose" | "history";
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
+  /** Context for this explicit request, instead of the page currently open behind the dock. */
+  contextOverride?: AgentContext;
 };
 
 export type AgentAutoSubmission = {
@@ -38,6 +40,7 @@ export type AgentAutoSubmission = {
   mode: WikiRun["mode"];
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
+  contextOverride?: AgentContext;
 };
 
 export const JOURNEY_WRAP_UP_DISPLAY_PROMPT = "这段先聊到这里";
@@ -80,6 +83,16 @@ export function attachedContextPrompt(attachedContext: AgentAttachedContext, req
   ].join("\n");
 }
 
+export function resolveRunContext(context: AgentContext, override?: AgentContext, attached?: AgentAttachedContext): AgentContext {
+  if (override) return override;
+  if (!attached) return context;
+  return {
+    ...context,
+    title: attached.title,
+    summary: `已有理解：${attached.currentUnderstanding}\n为什么值得聊：${attached.reason}`,
+  };
+}
+
 export function resolveAgentAutoSubmission(request: OpenContextAgentRequest, defaultMode?: WikiRun["mode"]): AgentAutoSubmission | undefined {
   const prompt = request.prompt?.trim();
   if (!request.autoSubmit || !prompt) return undefined;
@@ -89,6 +102,7 @@ export function resolveAgentAutoSubmission(request: OpenContextAgentRequest, def
     mode: resolveComposerMode(request.mode || defaultMode, request.outputTarget, request.lockMode),
     outputTarget: request.outputTarget,
     ...(request.sourceContext ? { sourceContext: request.sourceContext } : {}),
+    ...(request.contextOverride ? { contextOverride: request.contextOverride } : {}),
   };
 }
 
