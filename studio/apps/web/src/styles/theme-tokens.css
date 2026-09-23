@@ -32,6 +32,13 @@
   --danger-line: #f0c8cb;
   --category-violet: #7060a8;
   --category-violet-soft: #f1edfc;
+  --topic-violet: #7c3aed;
+  --topic-violet-ink: #6b21e8;
+  --topic-violet-soft: #f5f0ff;
+  --topic-violet-line: #e7d9ff;
+  --topic-violet-muted: #6b5a99;
+  --topic-violet-chip-line: #e0d3fa;
+  --topic-canvas: #eef1f8;
   --shadow-ink: #162e54;
   --radius-control: 11px;
   --radius-card-small: 12px;

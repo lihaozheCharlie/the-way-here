@@ -26,3 +26,4 @@ createRoot(document.getElementById("root")!).render(
 
 import "./styles/desktop.css";
 import "./styles/desktop-redesign.css";
+import "./styles/questions-redesign.css";
