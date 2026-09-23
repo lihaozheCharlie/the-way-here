@@ -5,6 +5,7 @@ import { useApi } from "../../shared/use-api";
 import { apiPageHref } from "../../shared/routing";
 import { ReadOnlyDocument } from "../../shared/markdown";
 import { Empty, Icon, Loading } from "../../shared/ui";
+import "./read-only-page-dialog.css";
 
 export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: string; revision: number; onClose: () => void }) {
   const [currentId, setCurrentId] = useState(pageId);

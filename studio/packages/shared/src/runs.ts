@@ -87,6 +87,8 @@ export interface WikiRun {
   provider?: string;
   model?: string;
   effort?: AgentReasoningEffort;
+  /** Product section where this Agent task was started, for completion notifications. */
+  sourceModule?: string;
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
   contextPageId?: string;

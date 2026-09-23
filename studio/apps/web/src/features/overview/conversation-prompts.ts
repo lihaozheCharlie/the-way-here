@@ -27,6 +27,14 @@ export function dailyPromptSeed(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Keep a topic wall at a fixed size while cycling through every available topic. */
+export function topicBatch<T>(items: readonly T[], batchIndex: number, size = 4): T[] {
+  if (!items.length) return [];
+  const pageCount = Math.ceil(items.length / size);
+  const start = ((batchIndex % pageCount) + pageCount) % pageCount * size;
+  return Array.from({ length: Math.min(size, items.length) }, (_, offset) => items[(start + offset) % items.length]!);
+}
+
 export function groundedConversationReplyPrompt(basePrompt: string, answer: string): string {
   return [
     basePrompt.trim(),

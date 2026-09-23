@@ -13,7 +13,7 @@ const shortcuts = [
 
 export function Preferences({ revision }: { revision: number }) {
   const [tab, setTab] = useState(new URLSearchParams(window.location.search).get("tab") === "ai" ? "ai" : "general");
-  const [notifications, setNotifications] = useDesktopPreference("desktop.notifications", false);
+  const [notifications, setNotifications] = useDesktopPreference("desktop.notifications", true);
   const agent = useAgentSelection(revision);
   return <section className="desktop-preferences">
     <header className="preferences-heading"><h1>偏好设置</h1><p>调整提醒方式和 AI 助手，让这里更合你的习惯。</p></header>
@@ -22,7 +22,7 @@ export function Preferences({ revision }: { revision: number }) {
       {tab === "general" ? <>
         <section className="preferences-group" aria-labelledby="notification-heading">
           <PreferenceHeading kind="notification" id="notification-heading" title="通知" description="选择什么时候收到提醒。" />
-          <label className="preference-row"><span><b>新的理解与回信</b><small>有新话题或回信时提醒，首次打开不会推送历史通知。</small></span><input type="checkbox" role="switch" checked={notifications} onChange={event => setNotifications(event.target.checked)} /></label>
+          <label className="preference-row"><span><b>Agent 任务完成提醒</b><small>任务完成或失败、且应用不在前台时提醒；通知会标明来源模块。</small></span><input type="checkbox" role="switch" checked={notifications} onChange={event => setNotifications(event.target.checked)} /></label>
         </section>
         <section className="preferences-group" aria-labelledby="shortcuts-heading">
           <PreferenceHeading kind="keyboard" id="shortcuts-heading" title="键盘快捷键" description="常用操作，随时触达。" />

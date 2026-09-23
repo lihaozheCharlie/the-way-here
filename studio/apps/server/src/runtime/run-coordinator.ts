@@ -76,7 +76,7 @@ export class RunCoordinator {
   }
 
   async start(input: StartRunInput): Promise<WikiRun> {
-    for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId], ["contextTopicId", input.contextTopicId]] as const) {
+    for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId], ["contextTopicId", input.contextTopicId], ["sourceModule", input.sourceModule]] as const) {
       if (value !== undefined && typeof value !== "string") throw new RunRequestError(400, `${field} 必须是字符串`);
     }
     const prompt = input.prompt?.trim();
@@ -96,7 +96,9 @@ export class RunCoordinator {
     const outputTarget = input.outputTarget === undefined ? undefined : parseAgentOutputTarget(input.outputTarget);
     if (input.outputTarget !== undefined && !outputTarget) throw new RunRequestError(400, "结果保存目标无效");
     await this.outputs.assertTarget(taskConfig, resolvedKnowledge.index, mode, outputTarget);
-    const normalizedInput = { ...input, outputTarget, contextPageId, contextTopicId };
+    const sourceModule = input.sourceModule?.trim() || undefined;
+    if (sourceModule && sourceModule.length > 100) throw new RunRequestError(400, "来源模块名称过长");
+    const normalizedInput = { ...input, outputTarget, contextPageId, contextTopicId, sourceModule };
     if (!prompt && mode !== "validate") throw new RunRequestError(400, "请输入任务内容");
     const requestedEffort = input.effort ? parseReasoningEffort(input.effort) : undefined;
     if (input.effort && !requestedEffort) throw new RunRequestError(400, "思考深度无效");
@@ -121,6 +123,7 @@ export class RunCoordinator {
       throw new RunRequestError(400, "同一会话不能切换 Agent 运行时；请新建任务");
     }
     normalizedInput.outputTarget = outputTarget || previous?.outputTarget;
+    normalizedInput.sourceModule = previous?.sourceModule || sourceModule;
     normalizedInput.sourceContext = input.sourceContext || previous?.sourceContext;
     normalizedInput.contextPageId = contextPageId || previous?.contextPageId;
     if (previous?.contextTopicId && contextTopicId && previous.contextTopicId !== contextTopicId) throw new RunRequestError(400, "同一会话不能切换话题");
@@ -257,7 +260,7 @@ export class RunCoordinator {
         mode,
         config.knowledgeBaseId,
         config,
-        { displayPrompt: input.displayPrompt?.trim() || prompt, outputTarget: input.outputTarget, sourceContext: input.sourceContext, contextPageId: input.contextPageId, contextTopicId: input.contextTopicId, ...agent },
+        { displayPrompt: input.displayPrompt?.trim() || prompt, sourceModule: input.sourceModule, outputTarget: input.outputTarget, sourceContext: input.sourceContext, contextPageId: input.contextPageId, contextTopicId: input.contextTopicId, ...agent },
       );
     } catch (error: any) {
       throw new RunRequestError(409, error.message || "无法创建任务");

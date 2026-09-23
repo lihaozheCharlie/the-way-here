@@ -18,5 +18,5 @@ ${scene === "bill" ? BILL_WRITING_STYLE : PHOTO_WRITING_STYLE}
 export function startMemoryWriting({ knowledgeBaseId, title, background, draft, context, outputTarget }: {
   knowledgeBaseId: string; title: string; background: string; draft: string; context?: unknown; outputTarget?: AgentOutputTarget;
 }): Promise<WikiRun> {
-  return api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({ knowledgeBaseId, mode: "read", title: `AI 帮你写 · ${title}`, displayPrompt: background.trim() ? "结合背景润色这段记忆" : "根据线索起草这段记忆", prompt: memoryWritingPrompt(background, draft, context, outputTarget?.kind === "photo-memory" ? "photo" : "bill"), outputTarget }) });
+  return api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({ knowledgeBaseId, mode: "read", title: `AI 帮你写 · ${title}`, sourceModule: outputTarget?.kind === "photo-memory" ? "照片记忆" : "账单记忆", displayPrompt: background.trim() ? "结合背景润色这段记忆" : "根据线索起草这段记忆", prompt: memoryWritingPrompt(background, draft, context, outputTarget?.kind === "photo-memory" ? "photo" : "bill"), outputTarget }) });
 }

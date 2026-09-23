@@ -6,7 +6,7 @@ export interface DesktopBridge {
   stopSpeech: () => Promise<string>;
   openWindow: (route: string, kind?: "reader" | "focus" | "settings" | "capture") => Promise<void>;
   onCommand: (callback: (command: DesktopCommand) => void) => () => void;
-  notify: (payload: { title: string; body: string; route: string; count: number }) => Promise<void>;
+  notify: (payload: { title: string; body: string; route: string }) => Promise<void>;
   setBadge: (count: number) => Promise<void>;
   revealWorkspace: () => Promise<void>;
 }

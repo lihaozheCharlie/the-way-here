@@ -80,7 +80,6 @@ input,textarea { caret-color:var(--accent-primary); }
 .desktop-shell .questions-topic-card h3 { font-size:15px; }
 .desktop-shell .questions-topic-card p { font-size:14px; }
 .desktop-shell .questions-wall-head { flex-wrap:wrap; gap:12px; }
-.desktop-shell .questions-import { padding:18px 0; }
 .desktop-shell .knowledge-hero,.desktop-shell .page-hero,.desktop-shell .workspace-page-head,.desktop-shell .layer-hero { padding:0 0 20px; min-height:0; margin-bottom:20px; }
 .desktop-shell .source-workspace { grid-template-columns:minmax(160px, .32fr) minmax(0,1fr); }
 .desktop-shell .source-pane-shell,.desktop-shell .document-outline { top:0; }
@@ -132,7 +131,6 @@ button.desktop-primary { color:var(--paper); background:var(--accent-primary); b
 .desktop-today-capture p,.desktop-today-grid p { font-size:14px; color:var(--ink-soft);  font-weight:450; }
 .desktop-today-capture > div { display:flex; gap:10px; align-items:center; }
 .desktop-today-capture button { display:flex; gap:6px; align-items:center; padding:6px 10px; border:1px solid var(--line); border-radius:var(--radius-control); font-size:13px; }
-.desktop-nav-badge { background:var(--watch); color:var(--paper); border-radius:var(--radius-panel); padding:0 5px; font-size:13px; margin-left:auto; }
 .desktop-inspector .context-agent-empty-state { flex:0; min-height:0; align-items:flex-start; text-align:left; }
 .desktop-inspector .context-suggestions { flex-direction:column; overflow-x:visible; }
 .desktop-inspector .context-suggestions button { white-space:normal; text-align:left; width:100%; }

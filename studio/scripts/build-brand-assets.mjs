@@ -6,7 +6,7 @@ import path from 'node:path';
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sharp = createRequire(new URL('../apps/server/package.json', import.meta.url))('sharp');
 const master = await readFile(path.join(studio, 'apps/desktop/assets/app-icon.svg'), 'utf8');
-// Every color variant is derived from the supplied compass-ring master.
+// Every color variant is derived from the supplied logo master.
 const favicon = master;
 const frames = await Promise.all([16, 32, 48].map(async (size) => ({
   size, png: await sharp(Buffer.from(master)).resize(size, size).png().toBuffer(),
@@ -49,13 +49,15 @@ for (const size of [16, 32, 128, 256, 512]) {
   }
 }
 await sharp(Buffer.from(dock)).png().toFile(path.join(desktop, 'app-icon.png'));
-// Menu-bar templates omit the tile and retain the ring and pointer in monochrome.
-// A tighter viewBox makes the symbol legible at the native 18px menu-bar size.
+// Menu-bar templates omit the tile. Trim transparent margins from the actual
+// artwork so any replacement mark stays visible at the native 18px size.
 const symbol = inner.replace(/<rect\b[^>]*\/\s*>/g, '')
   .replace(/(fill|stroke)="#[a-fA-F0-9]+"/g, '$1="#000"');
-const template = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="232 232 560 560">${symbol}</svg>`;
+const symbolSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${symbol}</svg>`;
+const trimmedSymbol = await sharp(Buffer.from(symbolSvg)).trim().png().toBuffer();
 for (const scale of [1, 2]) {
-  await sharp(Buffer.from(template)).resize(18 * scale, 18 * scale).png()
-    .toFile(path.join(desktop, `trayTemplate${scale === 2 ? '@2x' : ''}.png`));
+  await sharp(trimmedSymbol).resize(18 * scale, 18 * scale, {
+    fit: 'contain', background: '#00000000',
+  }).png().toFile(path.join(desktop, `trayTemplate${scale === 2 ? '@2x' : ''}.png`));
 }
 console.log('Brand assets generated for web and macOS.');

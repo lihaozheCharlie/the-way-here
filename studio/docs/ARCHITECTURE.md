@@ -46,7 +46,7 @@ apps/web
 
 各页面通过 `PageAgentContext` 发布上下文，卸载时释放；`AgentDock` 由 Shell 或独立对话窗口挂载，旧浮动入口、模态遮罩、Tab 陷阱和内嵌设置弹层已删除；关闭 Inspector 只隐藏而不销毁会话。独立深聊窗口通过当前 Run ID 恢复对话；独立阅读窗口使用 ReadOnlyDocument。内容、侧栏和 Inspector 分别滚动，Markdown 目录与编辑位置改为跟随内容滚动容器。
 
-语音遵循录音、原话、整理、确认四步；共享控件依赖可注入的语音插槽，避免 shared 反向依赖 feature。偏好设置复用原有 AI 全局配置服务。通知只对新的话题/回信触发，初始状态静默，偏好保存在本机。更多操作与验收见 [DESKTOP.md](DESKTOP.md)。
+语音遵循录音、原话、整理、确认四步；共享控件依赖可注入的语音插槽，避免 shared 反向依赖 feature。偏好设置复用原有 AI 全局配置服务。桌面主窗口订阅 Run 和预测任务事件，并在 SSE 重连时对 Run 列表补齐状态；旧任务初始静默，完成或失败后将模块标签与任务入口交给 Electron 主进程，由主进程在所有产品窗口均未聚焦时才显示系统通知。通知偏好保存在本机，Dock 不显示任务数量；值得聊聊不再有独立消息提醒。更多操作与验收见 [DESKTOP.md](DESKTOP.md)。
 
 以下章节记录保留的领域与数据能力。
 
@@ -184,7 +184,7 @@ agents:
 
 ## 运行记录
 
-运行记录放在操作系统应用数据目录下的 `the-way-here/vaults/<workspace-hash>/`。记录包含知识库 ID、创建时配置、`runtimeId`、通用会话/回合 ID、provider、model、最终结果、可选的 `outputTarget`，以及发起会话时绑定的 `contextPageId`；后续轮次自动继承同一文件绑定。界面切换到某个文件时会恢复绑定到该文件的最新会话，运行中、等待审批和已结束状态使用同一恢复路径；旧版来源构建任务仍可通过 `sourceContext.storedPath` 匹配。删除历史按通用会话 ID 一次移除全部 Run；Pi 同步删除 `agent-sessions/pi/` 中的本机会话文件，已写入生活记录或 Wiki 的内容保持不变。Pi 对话也保存在该目录的 `agent-sessions/pi/`，不会直接写入知识文件。完成的人物视角重读通过 `letter-version` 目标关联到原回信；消费旅程通过 `journey-report` 目标由服务端只物化报告受管区，并记录 `outputSavedAt`。写入及 `auto` 任务的快照覆盖配置声明的根协议、Wiki、Skills、Tools 和来源。每个任务使用唯一临时文件，同一知识库内可能改写内容的任务串行执行；旧版 `threadId`/`turnId` 会按 Codex 运行时透明迁移，旧版并发写坏后仍保留首个完整 JSON 对象的记录可自动恢复。
+运行记录放在操作系统应用数据目录下的 `the-way-here/vaults/<workspace-hash>/`。记录包含知识库 ID、创建时配置、`runtimeId`、通用会话/回合 ID、provider、model、最终结果、用于通知来源标识的 `sourceModule`、可选的 `outputTarget`，以及发起会话时绑定的 `contextPageId`；后续轮次自动继承同一文件绑定。界面切换到某个文件时会恢复绑定到该文件的最新会话，运行中、等待审批和已结束状态使用同一恢复路径；旧版来源构建任务仍可通过 `sourceContext.storedPath` 匹配。删除历史按通用会话 ID 一次移除全部 Run；Pi 同步删除 `agent-sessions/pi/` 中的本机会话文件，已写入生活记录或 Wiki 的内容保持不变。Pi 对话也保存在该目录的 `agent-sessions/pi/`，不会直接写入知识文件。完成的人物视角重读通过 `letter-version` 目标关联到原回信；消费旅程通过 `journey-report` 目标由服务端只物化报告受管区，并记录 `outputSavedAt`。写入及 `auto` 任务的快照覆盖配置声明的根协议、Wiki、Skills、Tools 和来源。每个任务使用唯一临时文件，同一知识库内可能改写内容的任务串行执行；旧版 `threadId`/`turnId` 会按 Codex 运行时透明迁移，旧版并发写坏后仍保留首个完整 JSON 对象的记录可自动恢复。
 
 ## 代码组织与依赖方向
 

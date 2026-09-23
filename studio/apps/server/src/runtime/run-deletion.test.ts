@@ -39,10 +39,11 @@ async function fixture() {
 describe("deleting Agent conversations", () => {
   it("removes every completed turn in the session and its local runtime session", async () => {
     const { coordinator, deleteSession, emit } = await fixture();
-    const first = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "第一轮" });
+    const first = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "第一轮", sourceModule: "近况回信" });
     emit(first, { type: "turn.completed", outcome: "completed", finalAnswer: "第一轮回答" });
     await vi.waitFor(async () => expect((await coordinator.get(first.id))?.status).toBe("completed"));
-    const second = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "第二轮", sessionId: first.runtimeSessionId });
+    const second = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "第二轮", sessionId: first.runtimeSessionId, sourceModule: "深入聊聊" });
+    expect((await coordinator.get(second.id))?.sourceModule).toBe("近况回信");
     emit(second, { type: "turn.completed", outcome: "completed", finalAnswer: "第二轮回答" });
     await vi.waitFor(async () => expect((await coordinator.get(second.id))?.status).toBe("completed"));
 

@@ -202,6 +202,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
           model: selection?.model,
           effort: selection?.effort,
           title: requestedMode === "validate" ? "知识健康检查" : `处理：${runContext.title}`,
+          sourceModule: requestedMode === "validate" ? "系统检查" : runContext.scope.split(" · ")[0],
           outputTarget: requestedOutputTarget,
           sourceContext: requestedSourceContext,
           contextPageId: context.pageId,

@@ -35,9 +35,3 @@
 .stage-events.is-sparse .stage-event { padding-top:18px; padding-bottom:18px; }
 .stage-events.is-sparse .stage-event b { font-size:16px; line-height:1.75; }
 .stage-events-empty { margin:auto; color:var(--ink-soft); line-height:1.8; font-size:13px; }
-.stage-document-dialog { width:min(960px,calc(100vw - 80px)); max-width:none; height:min(820px,calc(100vh - 80px)); max-height:none; padding:0; border:1px solid var(--line); border-radius:var(--radius-panel); background:var(--paper); color:var(--ink); box-shadow:var(--shadow-float); overflow:hidden; }
-.stage-document-dialog::backdrop { background:color-mix(in srgb, var(--shadow-ink) 40.0%, transparent); }
-.stage-document-dialog > header { display:flex; justify-content:space-between; align-items:center; padding:10px 18px; border-bottom:1px solid var(--line); color:var(--ink-soft); font-size:12px; }
-.stage-document-dialog > header button { display:grid; place-items:center; width:30px; height:30px; padding:0; border:0; background:transparent; color:var(--ink); }
-.stage-document-scroll { height:calc(100% - 51px); overflow:auto; }
-.stage-document-scroll .editable-document { min-height:100%; }

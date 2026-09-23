@@ -96,7 +96,7 @@ export function AppShell({ revision }: { revision: number }) {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
-  const topicCount = useDesktopNotifications(revision, vault, location.pathname);
+  useDesktopNotifications(location.pathname);
   const readerReturnContext = location.state as ReturnContext | null;
   const isSourceReader = location.pathname.startsWith("/page/") && readerReturnContext?.returnTo.startsWith("/sources");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -245,11 +245,11 @@ export function AppShell({ revision }: { revision: number }) {
         {!localConversation && !detached ? <button className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
       </header>
       <aside className="desktop-sidebar" aria-label="侧边栏">
-        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=soft-compass-ring-96" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
+        <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=app-icon-5" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
         {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
         <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航">
           {navigation.map((item) => <React.Fragment key={item.to}>
-            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{item.label}</span>{item.to === "/questions" && topicCount > 0 ? <small className="desktop-nav-badge">{topicCount}</small> : null}</NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? "收起已有理解" : "展开已有理解"} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
+            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{item.label}</span></NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? "收起已有理解" : "展开已有理解"} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
             {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{child.label}</NavLink>)}</div> : null}
           </React.Fragment>)}
         </nav>

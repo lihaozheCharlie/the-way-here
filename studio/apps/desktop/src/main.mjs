@@ -25,7 +25,7 @@ function openWindow(route, kind = 'reader') {
   route = localRoute(route);
   if (['settings', 'capture'].includes(kind)) { const existing = [...windows].find((win) => win.kind === kind); if (existing) { existing.show(); existing.focus(); return; } }
   const compact = kind === 'capture';
-  const win = new BrowserWindow({ title: 'The Way Here', width: compact ? 420 : kind === 'settings' ? 800 : 1380, height: compact ? 580 : 900, minWidth: compact ? 380 : kind === 'settings' ? 700 : 900, minHeight:480, alwaysOnTop:compact, skipTaskbar:compact, show:false, titleBarStyle:'hiddenInset', trafficLightPosition:{x:14,y:12}, backgroundColor:'#f3f7fd', webPreferences:{ preload:path.join(here,'preload.cjs'), sandbox:true, contextIsolation:true, nodeIntegration:false, spellcheck:true } });
+  const win = new BrowserWindow({ title: 'The Way Here', width: compact ? 420 : kind === 'settings' ? 800 : 1380, height: compact ? 580 : 900, minWidth: compact ? 380 : kind === 'settings' ? 700 : 900, minHeight:480, alwaysOnTop:compact, skipTaskbar:compact, show:false, titleBarStyle:'hiddenInset', trafficLightPosition:{x:14,y:12}, backgroundColor:'#f3f7fd', webPreferences:{ preload:path.join(here,'preload.cjs'), sandbox:true, contextIsolation:true, nodeIntegration:false, spellcheck:true, backgroundThrottling:kind !== 'main' } });
   win.kind = kind; windows.add(win);
   win.webContents.setWindowOpenHandler(({url}) => { if (trustedSender(url, origin)) openWindow(new URL(url).pathname + new URL(url).search); else if (allowedExternal(url)) void shell.openExternal(url); return {action:'deny'}; });
   win.webContents.on('will-navigate', (event,url) => { if (!trustedSender(url,origin)) { event.preventDefault(); if (allowedExternal(url)) void shell.openExternal(url); } });
@@ -67,6 +67,8 @@ function registerIPC() {
   handle('desktop:notify', (payload) => {
     if (!payload || typeof payload.title !== 'string' || typeof payload.body !== 'string') throw new Error('无效的通知');
     const route = localRoute(payload.route);
+    // The native process is authoritative: all renderer windows share this foreground gate.
+    if (BrowserWindow.getFocusedWindow()) return;
     if (Notification.isSupported()) { const notification = new Notification({title:payload.title.slice(0,100),body:payload.body.slice(0,300)}); notification.on('click', () => openWindow(route)); notification.show(); }
   });
 }

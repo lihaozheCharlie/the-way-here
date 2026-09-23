@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { dailyPromptSeed, groundedConversationReplyPrompt, stablePromptOrder } from "./conversation-prompts";
+import { dailyPromptSeed, groundedConversationReplyPrompt, stablePromptOrder, topicBatch } from "./conversation-prompts";
 
 describe("conversation prompt selection", () => {
   const prompts = [
@@ -20,6 +20,15 @@ describe("conversation prompt selection", () => {
 
   test("uses a calendar-day seed", () => {
     expect(dailyPromptSeed(new Date("2026-08-28T12:30:00.000Z"))).toBe("2026-08-28");
+  });
+
+  test("keeps four cards visible while rotating through every topic and wrapping back", () => {
+    const topics = ["a", "b", "c", "d", "e", "f"];
+    expect(topicBatch(topics, 0)).toEqual(["a", "b", "c", "d"]);
+    expect(topicBatch(topics, 1)).toEqual(["e", "f", "a", "b"]);
+    expect(topicBatch(topics, 2)).toEqual(["a", "b", "c", "d"]);
+    expect(topicBatch(topics.slice(0, 2), 5)).toEqual(["a", "b"]);
+    expect(topicBatch([], 0)).toEqual([]);
   });
 
   test("grounds the first reply in earlier Wiki context before asking another question", () => {

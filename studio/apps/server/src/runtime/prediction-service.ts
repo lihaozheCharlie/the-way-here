@@ -76,7 +76,7 @@ export class PredictionService {
   }
   private async save(state: StoredPrediction) {
     await this.store.save(state);
-    this.knowledge.events.broadcast("prediction", { knowledgeBaseId: state.knowledgeBaseId, status: state.status });
+    this.knowledge.events.broadcast("prediction", { knowledgeBaseId: state.knowledgeBaseId, status: state.status, job: state.job, startedAt: state.startedAt });
   }
   private async input(id: string, inputThoughts?:string, inputKind?:PredictionThoughtKind) {
     const stored=await this.load(id);

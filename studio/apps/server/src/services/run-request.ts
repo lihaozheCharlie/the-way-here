@@ -10,6 +10,7 @@ export type StartRunInput = {
   sessionId?: string;
   model?: string;
   effort?: AgentReasoningEffort;
+  sourceModule?: string;
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
   contextPageId?: string;
@@ -21,4 +22,3 @@ export class RunRequestError extends Error {
     super(message);
   }
 }
-

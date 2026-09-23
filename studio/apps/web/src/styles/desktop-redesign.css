@@ -28,7 +28,6 @@
 .desktop-shell .questions-topic-card.active .questions-topic-kind::after { content:" · 当前话题"; }
 .desktop-shell .questions-topic-card p { font-size:14px; line-height:1.6; color:var(--ink-soft);  font-weight:450; }
 .desktop-shell .questions-topic-card footer { margin-top:auto; padding-top:8px; }
-.desktop-shell .questions-wall-more { margin-top:14px; padding:9px; border:1px dashed var(--line-strong); background:var(--surface-tinted); }
 .desktop-shell .understanding-entry { display:flex; flex-direction:column; align-items:stretch; gap:10px; padding:18px; }
 .understanding-entry > header { display:flex; align-items:center; gap:10px; }
 .understanding-entry > header > b { margin-left:auto; font-size:13px; color:var(--ink-soft); }
@@ -102,11 +101,7 @@
 .desktop-shell .questions-filters { padding:4px; border-radius:999px; background:var(--surface-tinted); gap:2px; }
 .desktop-shell .questions-filters > button { background:transparent; color:var(--ink-soft); font-weight:400; min-height:28px; }
 .desktop-shell .questions-filters > button.active { background:var(--surface); color:var(--accent-ink); border-color:transparent; box-shadow:var(--shadow-panel); font-weight:600; }
-.desktop-shell .questions-import { min-height:0; padding:14px 18px; gap:16px; border:0; background:var(--surface); }
-.desktop-shell .questions-import-copy { gap:12px; }
-.desktop-shell .questions-import h2 { font-size:13px; }
-.desktop-shell .questions-import-types { gap:10px; }
-.desktop-shell .questions-import-types > span { padding:6px 12px; min-height:32px; gap:7px; font-size:13px; line-height:1.4; }
+.desktop-shell .questions-open-chat { padding:18px; }
 .desktop-shell .source-type-filter button.active { background:var(--surface); color:var(--accent-ink); box-shadow:var(--shadow-panel); }
 .desktop-shell .source-file-select { padding:12px 30px 12px 12px; }
 .desktop-shell .source-record-copy { display:flex; flex-direction:column; gap:3px; }
@@ -128,6 +123,7 @@
 .desktop-shell :is(button, input, select, textarea) { font-family:var(--font-ui); }
 .desktop-shell :is(.desktop-subnav a, .source-type-filter > button, .tabbar button, .preferences-tabs button, .section-tabs a) { font-size:14px; }
 .desktop-shell :is(.questions-topic-card p, .understanding-entry > p, .understanding-latest p, .understanding-digest-card > p, .today-entry-grid p) { font-size:15px; line-height:1.75; }
+.desktop-shell .questions-topic-card > p { font-size:13px; line-height:1.6; font-weight:400; }
 .desktop-shell .questions-filters > button { min-height:32px; font-size:14px; }
 .desktop-shell .questions-intro h1 { font-size:22px; }
 .desktop-shell .understanding-entry h2 { font-size:17px; }
@@ -146,7 +142,7 @@
 
 /* Desktop v2: white panels on a cool canvas, blue actions and coral companionship. */
 .desktop-titlebar { background:var(--sidebar); }
-.desktop-shell :is(.home-intro-card, .today-capture, .home-opener, .questions-topic-card, .questions-import, .understanding-entry, .understanding-digest-card, .understanding-overview-foot, .insights-line-card, .insights-loop-card, .insights-model-card) {
+.desktop-shell :is(.home-intro-card, .today-capture, .home-opener, .questions-topic-card, .questions-open-chat, .understanding-entry, .understanding-digest-card, .understanding-overview-foot, .insights-line-card, .insights-loop-card, .insights-model-card) {
   background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow-card);
 }
 .desktop-shell .today-simple .home-intro-card { background:var(--hero-surface); }
@@ -155,8 +151,7 @@
 .desktop-shell :is(.questions-topic-card, .understanding-entry):hover,
 .desktop-shell .questions-topic-card.active { background:var(--surface); border-color:var(--accent); box-shadow:0 1px 0 var(--accent),var(--shadow-card); }
 .desktop-shell .desktop-inspector.floating-agent-panel { border:1px solid var(--line); box-shadow:var(--shadow-pop); }
-.desktop-nav-badge { background:var(--attention); }
-.desktop-shell :is(.questions-topic-kind, .questions-import-types > span) { color:var(--accent-ink); background:var(--accent-soft); }
+.desktop-shell .questions-topic-kind { color:var(--accent-ink); background:var(--accent-soft); }
 .desktop-shell :is(input,textarea) { caret-color:var(--accent); }
 .desktop-shell :is(.source-record-copy > time, .source-record-meta, .document-meta-row) { color:var(--ink-soft); }
 
@@ -166,6 +161,5 @@
 .desktop-inspector, .floating-agent-content { background:var(--canvas); }
 .desktop-inspector .context-user-message { background:var(--accent); color:var(--paper); }
 .desktop-inspector .context-user-message :is(p, a, small) { color:inherit; }
-.desktop-nav-row > a.active .desktop-nav-badge { color:var(--accent-ink); background:var(--paper); }
 .desktop-shell .questions-topic-card.is-casual .questions-topic-kind { color:var(--warm-ink); background:var(--warm-soft); }
 .desktop-shell .today-simple .friend-mark { color:var(--warm-ink); background:var(--warm-soft); }

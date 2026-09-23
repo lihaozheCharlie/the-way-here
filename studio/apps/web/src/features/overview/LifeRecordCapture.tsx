@@ -61,7 +61,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
     submitting.current = true; setStarting(true); setError(""); setRun(undefined);
     try {
       const next = await api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({
-        knowledgeBaseId, mode: "read", title: "整理一条生活记录", prompt: "请整理这段生活记录。", displayPrompt: draft,
+        knowledgeBaseId, mode: "read", title: "整理一条生活记录", sourceModule: standalone ? "随手记" : "此刻", prompt: "请整理这段生活记录。", displayPrompt: draft,
         outputTarget: { kind: "life-record", label: "随手记", originalText: draft },
       }) });
       localStorage.setItem(`${key}.run`, next.id); setRunId(next.id); setRun(next);

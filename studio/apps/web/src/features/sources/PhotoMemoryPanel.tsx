@@ -211,7 +211,7 @@ function BoundPhotoMemory({ batch, knowledgeBaseId, revision }: { batch: SourceI
     setError(""); setBusy("正在收进理解…");
     try {
       const run = await api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({
-        knowledgeBaseId, mode: "write", title: `构建 · ${current.title}`, displayPrompt: "收进这段照片记忆",
+        knowledgeBaseId, mode: "write", title: `构建 · ${current.title}`, sourceModule: "照片记忆", displayPrompt: "收进这段照片记忆",
         prompt: `请按 build-wiki 的导入后冷启构建入口读取「${current.reportPath}」。只摄取“用户确认的讲述”和用户明确指定的人物；保留来源不变，不猜测未命名者、关系或情绪。已选人物必须沿用页面关联；其余称呼可结合姓名、别名、上下文匹配已有档案，包括“我”和“自己”，无需二次询问。完成派生内容和质量门，并说明更新或跳过的内容。`,
         sourceContext: { importId: batch.id, storedPath: current.reportPath, flow: "dialogue", operation: "build" },
       }) });
