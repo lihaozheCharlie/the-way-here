@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wiki 写入体验重设计 · 交互提案</title>
+<style>
+  :root {
+    --accent: #0a7cff;
+    --accent-hover: #0868d6;
+    --accent-soft: #e6f1ff;
+    --accent-ink: #08529e;
+    --canvas: #f3f7fd;
+    --paper: #ffffff;
+    --surface: #ffffff;
+    --surface-tinted: #eaf2ff;
+    --ink: #16233a;
+    --ink-soft: #4c5c74;
+    --muted: #8493a8;
+    --faint: #b4c2d6;
+    --line: #e2eaf5;
+    --line-strong: #c9d6ea;
+    --attention: #f0a326;
+    --attention-soft: #fef3e1;
+    --danger: #c43c43;
+    --danger-soft: #fff0f1;
+    --success: #16a870;
+    --success-soft: #e5f7ee;
+    --r-control: 11px;
+    --r-panel: 18px;
+    --r-pill: 999px;
+    --shadow-panel: 0 1px 2px rgb(22 46 84 / 4%), 0 14px 34px rgb(22 46 84 / 7%);
+    --shadow-overlay: 0 18px 44px rgb(22 46 84 / 16%);
+    --font-ui: "PingFang SC", "Helvetica Neue", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "SF Mono", Menlo, ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+
+  .page-head { margin-bottom: 40px; }
+
+  .page-head .kicker {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--r-pill);
+    margin-bottom: 16px;
+  }
+
+  .page-head h1 {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .page-head p {
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    max-width: 720px;
+    margin: 0 0 8px;
+  }
+
+  section { margin-bottom: 56px; }
+
+  h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .section-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+
+  /* ---------- Flow steps ---------- */
+  .flow-steps {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    padding: 16px 14px;
+    position: relative;
+    box-shadow: var(--shadow-panel);
+  }
+
+  .flow-step .num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-size: 11.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .flow-step.is-key .num {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .flow-step h3 {
+    font-size: 13px;
+    font-weight: 650;
+    margin: 0 0 6px;
+    line-height: 1.4;
+  }
+
+  .flow-step p {
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .flow-step .tag {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--success);
+    background: var(--success-soft);
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+  }
+
+  .flow-arrow {
+    display: none;
+  }
+
+  @media (max-width: 920px) {
+    .flow-steps { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- Demo section ---------- */
+  .demo-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .demo-toolbar-left {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .btn {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--r-control);
+    padding: 7px 14px;
+    transition: transform 0.15s, background 0.15s, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--ink-soft);
+    border: 1px solid var(--line-strong);
+  }
+  .btn-ghost:hover { background: var(--surface-tinted); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .mock-window {
+    display: flex;
+    background: var(--paper);
+    border-radius: var(--r-panel);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-overlay);
+    overflow: hidden;
+    height: 620px;
+  }
+
+  .mock-rail {
+    width: 56px;
+    background: var(--canvas);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    flex-shrink: 0;
+  }
+
+  .rail-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-control);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .rail-icon svg { width: 18px; height: 18px; }
+  .rail-icon.is-active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .rail-spacer { flex: 1; }
+
+  .mock-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .mock-header {
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mock-header .title {
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .mock-header .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 8px;
+  }
+
+  .mock-header .agent-pill {
+    font-size: 11px;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    border-radius: var(--r-pill);
+    padding: 3px 10px;
+    font-weight: 600;
+  }
+
+  .mock-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px 24px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .msg-row { display: flex; }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.assistant { justify-content: flex-start; }
+
+  .msg-block { max-width: 74%; display: flex; flex-direction: column; gap: 8px; }
+
+  .bubble {
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 10px 14px;
+    border-radius: 14px;
+  }
+
+  .msg-row.user .bubble {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border-radius: 14px 14px 4px 14px;
+  }
+
+  .msg-row.assistant .bubble {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 14px 14px 14px 4px;
+  }
+
+  .typing-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 2px;
+  }
+  .typing-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--faint);
+    animation: bounce 1.1s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+
+  /* Detection banner */
+  .wiki-banner {
+    max-width: 100%;
+    background: var(--surface-tinted);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-control);
+    padding: 12px 14px 12px 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    position: relative;
+    animation: slideDown 0.28s cubic-bezier(.22,.61,.36,1);
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .wiki-banner .icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .wiki-banner .icon svg { width: 14px; height: 14px; }
+
+  .wiki-banner .content { flex: 1; min-width: 0; }
+
+  .wiki-banner .content .title-line {
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  .wiki-banner .content .desc-line {
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .wiki-banner .actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .wiki-banner .actions .btn { padding: 6px 12px; font-size: 12px; }
+
+  .wiki-banner .dismiss {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+  }
+  .wiki-banner .dismiss:hover { background: rgba(22,35,58,0.06); color: var(--ink-soft); }
+  .wiki-banner .dismiss svg { width: 12px; height: 12px; }
+
+  .hint-note {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-left: 2px;
+  }
+  .hint-note.hidden { display: none; }
+
+  /* Composer */
+  .mock-composer {
+    border-top: 1px solid var(--line);
+    padding: 12px 20px 16px;
+    flex-shrink: 0;
+    background: var(--paper);
+  }
+
+  .persist-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-height: 30px;
+  }
+
+  .wiki-persist-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px 6px 10px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--accent-ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+    pointer-events: none;
+  }
+
+  .wiki-persist-btn.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .wiki-persist-btn:hover { background: var(--accent-soft); }
+
+  .wiki-persist-btn .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(10,124,255,0.45);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(10,124,255,0.45); }
+    70% { box-shadow: 0 0 0 6px rgba(10,124,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(10,124,255,0); }
+  }
+
+  .wiki-persist-btn.state-building {
+    color: var(--ink-soft);
+    border-color: var(--line);
+  }
+  .wiki-persist-btn.state-building .dot { display: none; }
+
+  .spinner {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line-strong);
+    border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .wiki-persist-btn.state-done {
+    color: var(--success);
+    border-color: var(--success-soft);
+    background: var(--success-soft);
+  }
+  .wiki-persist-btn.state-done svg { width: 12px; height: 12px; }
+
+  .persist-hint {
+    font-size: 11px;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .persist-hint.is-visible { opacity: 1; }
+
+  .composer-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    padding: 4px 6px 4px 14px;
+  }
+
+  .composer-input-row input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13.5px;
+    font-family: var(--font-ui);
+    color: var(--ink);
+    outline: none;
+    padding: 8px 0;
+  }
+  .composer-input-row input::placeholder { color: var(--faint); }
+
+  .send-btn {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: var(--accent-hover); }
+  .send-btn svg { width: 14px; height: 14px; }
+
+  /* Toast */
+  .toast-holder {
+    position: relative;
+    height: 0;
+  }
+  .toast {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 12.5px;
+    padding: 10px 14px;
+    border-radius: var(--r-control);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-overlay);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s cubic-bezier(.22,.61,.36,1);
+    z-index: 20;
+  }
+  .toast.is-visible { opacity: 1; transform: translateY(0); }
+  .toast a { color: var(--accent-soft); font-weight: 600; text-decoration: none; }
+  .toast .toast-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--success);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .toast .toast-icon svg { width: 10px; height: 10px; }
+
+  /* ---------- States grid ---------- */
+  .states-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 920px) {
+    .states-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .state-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    overflow: hidden;
+    box-shadow: var(--shadow-panel);
+  }
+
+  .state-card .state-label {
+    font-size: 12px;
+    font-weight: 650;
+    padding: 12px 14px 4px;
+  }
+  .state-card .state-desc {
+    font-size: 11.5px;
+    color: var(--muted);
+    padding: 0 14px 12px;
+    line-height: 1.5;
+  }
+
+  .state-preview {
+    background: var(--canvas);
+    margin: 0 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 14px;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .mini-bubble {
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 6px 9px;
+    border-radius: 10px 10px 10px 3px;
+    max-width: 90%;
+  }
+
+  .mini-banner {
+    background: var(--surface-tinted);
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    padding: 8px 8px 8px 8px;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 6px;
+    position: relative;
+  }
+  .mini-banner .mini-dot {
+    width: 16px; height: 16px; border-radius: 6px;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .mini-banner .mini-actions { display: flex; gap: 4px; margin-top: 6px; }
+  .mini-banner .mini-actions span {
+    font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+  }
+  .mini-banner .mini-actions .a1 { background: var(--accent); color: #fff; }
+  .mini-banner .mini-actions .a2 { background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); }
+
+  .mini-persist {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 5px 9px 5px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--accent-ink);
+  }
+  .mini-persist .mini-pulse {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  }
+  .mini-persist.building { color: var(--ink-soft); }
+  .mini-persist.done { color: var(--success); background: var(--success-soft); border-color: var(--success-soft); }
+
+  .mini-toast {
+    align-self: flex-end;
+    background: var(--ink);
+    color: #fff;
+    font-size: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+
+  /* ---------- Rules ---------- */
+  .rules-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 720px) {
+    .rules-list { grid-template-columns: 1fr; }
+  }
+  .rule-item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .rule-item .rule-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .rule-item p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+  .rule-item p b { color: var(--ink); font-weight: 650; }
+
+  .footer-note {
+    font-size: 11.5px;
+    color: var(--faint);
+    text-align: center;
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="kicker">交互提案 · 对话 → Wiki 写入</div>
+    <h1>把 Wiki 写入从「自动阻塞」改为「后台可选」</h1>
+    <p>当前链路会在判断出需要写入 Wiki 时同步执行构建，导致纯聊天场景也被拖慢，中断感明显。以下方案把「判断」与「写入」拆开：判断只产生一个可关闭的轻提示，写入永远是用户主动点击、后台异步完成，聊天本身的响应速度不再受影响。</p>
+    <p>下面依次是：核心流程说明、可点击的交互演示、四个关键状态的静态参照，以及落地时需要遵守的设计原则。</p>
+  </div>
+
+  <section>
+    <h2>核心流程</h2>
+    <p class="section-sub">检测与写入解耦，写入永远是异步、可选、不阻塞的动作</p>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="num">1</div>
+        <h3>正常对话</h3>
+        <p>模型按聊天模式即时回复，不做任何 Wiki 相关的同步判断，响应速度和纯聊天一致。</p>
+      </div>
+      <div class="flow-step">
+        <div class="num">2</div>
+        <h3>后台判断</h3>
+        <p>回复生成后，异步判断这段对话是否包含值得沉淀的耐久信息，不影响已经返回的回复。</p>
+      </div>
+      <div class="flow-step is-key">
+        <div class="num">3</div>
+        <h3>出现轻提示</h3>
+        <p>命中判断时，在该条回复下方插入一条可关闭的提示条：说明可以写入什么、写入到哪个页面。</p>
+        <span class="tag">可关闭</span>
+      </div>
+      <div class="flow-step">
+        <div class="num">4</div>
+        <h3>常驻小按钮</h3>
+        <p>只要本轮对话出现过一次可写入判断，输入框上方就会一直保留一个小按钮，用户随时可点。</p>
+      </div>
+      <div class="flow-step is-key">
+        <div class="num">5</div>
+        <h3>异步写入</h3>
+        <p>点击后立即返回，构建任务丢进后台队列执行，输入框和对话不锁定，可以继续聊别的。</p>
+        <span class="tag">不阻塞</span>
+      </div>
+      <div class="flow-step">
+        <div class="num">6</div>
+        <h3>完成通知</h3>
+        <p>写入完成后用一条轻量 toast 告知结果并提供查看入口，不打断当前正在进行的对话。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>交互演示</h2>
+    <p class="section-sub">按顺序点击体验：先看普通聊天不受打扰，再看提示条与常驻按钮如何配合异步写入</p>
+
+    <div class="demo-toolbar">
+      <div class="demo-toolbar-left" id="stepHint">第 1 步：点击「继续」体验一段普通聊天</div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="replayBtn">重新播放</button>
+        <button class="btn btn-primary" id="nextBtn">继续</button>
+      </div>
+    </div>
+
+    <div class="mock-window">
+      <div class="mock-rail">
+        <div class="rail-icon is-active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="rail-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </div>
+        <div class="rail-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <div class="rail-spacer"></div>
+        <div class="rail-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+      </div>
+
+      <div class="mock-main">
+        <div class="mock-header">
+          <div>
+            <span class="title">贵州出行计划</span>
+            <span class="subtitle">个人知识库 · 值得聊聊</span>
+          </div>
+          <div class="agent-pill">Agent · 已连接 Wiki</div>
+        </div>
+
+        <div class="mock-messages" id="messages"></div>
+
+        <div class="toast-holder">
+          <div class="toast" id="toast">
+            <span class="toast-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span>Wiki 已更新：<b>贵州行程</b></span>
+            <a href="#">查看改动</a>
+          </div>
+        </div>
+
+        <div class="mock-composer">
+          <div class="persist-row">
+            <button class="wiki-persist-btn" id="persistBtn">
+              <span class="dot"></span>
+              <span id="persistLabel">写入 Wiki</span>
+            </button>
+            <span class="persist-hint" id="persistHint">本轮对话已检测到可沉淀内容，随时可写入</span>
+          </div>
+          <div class="composer-input-row">
+            <input type="text" placeholder="继续和 Agent 聊聊…" disabled />
+            <button class="send-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>关键状态一览</h2>
+    <p class="section-sub">静态参照，方便直接对照每个状态的界面细节</p>
+    <div class="states-grid">
+
+      <div class="state-card">
+        <div class="state-label">A · 普通聊天</div>
+        <div class="state-desc">未检测到可写入内容，界面和纯聊天完全一致，无任何 Wiki 相关元素。</div>
+        <div class="state-preview">
+          <div class="mini-bubble">贵州的路线大概是这样安排的，你看看合不合理～</div>
+        </div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-label">B · 出现轻提示</div>
+        <div class="state-desc">回复下方出现可关闭的提示条，说明检测到的内容，用户可选择立即写入或忽略。</div>
+        <div class="state-preview">
+          <div class="mini-bubble">好的，那我们就按这个顺序走：贵阳 → 西江 → 荔波。</div>
+          <div class="mini-banner">
+            <div class="mini-dot"></div>
+            <div>
+              检测到可沉淀信息：贵州行程草案
+              <div class="mini-actions">
+                <span class="a1">构建写入</span>
+                <span class="a2">暂不</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-label">C · 常驻按钮 + 后台构建</div>
+        <div class="state-desc">提示条被关闭或写入被触发后，输入框上方始终保留小按钮；点击后立即变为「后台构建中」，聊天不受影响。</div>
+        <div class="state-preview">
+          <div class="mini-bubble">对了，帮我把西江那天的午饭地点也定一下。</div>
+          <div class="mini-persist building">
+            <span class="spinner" style="width:9px;height:9px;"></span>
+            后台构建中…
+          </div>
+        </div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-label">D · 写入完成</div>
+        <div class="state-desc">后台任务完成后，按钮切换为完成态，同时用一条不打断当前对话的 toast 提示结果。</div>
+        <div class="state-preview">
+          <div class="mini-persist done">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;"><polyline points="20 6 9 17 4 12"/></svg>
+            已写入 · 再次写入
+          </div>
+          <div class="mini-toast">Wiki 已更新：贵州行程 · 查看改动</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>设计原则</h2>
+    <p class="section-sub">落地时的硬约束，避免又退回到「自动同步写入」的老问题</p>
+    <div class="rules-list">
+      <div class="rule-item">
+        <span class="rule-num">01</span>
+        <p><b>判断永远异步。</b>是否可写入 Wiki 的判断不能拖慢正常回复，判断结果到达之前，聊天体验和没有这个功能时完全一样。</p>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">02</span>
+        <p><b>提示条只管「提示」，不管「执行」。</b>关闭提示条只是隐藏这一条信息，不代表放弃写入能力，常驻按钮依然保留。</p>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">03</span>
+        <p><b>写入永远由用户触发。</b>没有任何自动写入路径；只有用户点击「构建写入」，任务才会真正开始。</p>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">04</span>
+        <p><b>写入永远不阻塞。</b>点击后立刻返回并转入后台队列，输入框、发送按钮和已有对话都保持可用。</p>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">05</span>
+        <p><b>结果用非阻塞方式告知。</b>完成或失败都通过 toast + 按钮态变化呈现，不弹强制弹窗，不打断正在进行的输入。</p>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">06</span>
+        <p><b>能力状态跟随对话，不跟随消息。</b>只要本轮对话里出现过一次「可写入」判断，常驻按钮就一直存在，即使后续消息本身没有新的可写入内容。</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="footer-note">The Way Here · Wiki 写入体验提案 · 静态 HTML 演示，交互逻辑用于说明设计意图，非最终实现</p>
+</div>
+
+<script>
+(function () {
+  var messagesEl = document.getElementById('messages');
+  var persistBtn = document.getElementById('persistBtn');
+  var persistLabel = document.getElementById('persistLabel');
+  var persistHint = document.getElementById('persistHint');
+  var toast = document.getElementById('toast');
+  var stepHint = document.getElementById('stepHint');
+  var nextBtn = document.getElementById('nextBtn');
+  var replayBtn = document.getElementById('replayBtn');
+
+  var step = 0;
+  var busy = false;
+
+  function addMessage(role, text, opts) {
+    opts = opts || {};
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + role;
+    var block = document.createElement('div');
+    block.className = 'msg-block';
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    block.appendChild(bubble);
+    row.appendChild(block);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return block;
+  }
+
+  function addTyping() {
+    var row = document.createElement('div');
+    row.className = 'msg-row assistant';
+    row.id = 'typingRow';
+    var block = document.createElement('div');
+    block.className = 'msg-block';
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+    block.appendChild(bubble);
+    row.appendChild(block);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeTyping() {
+    var el = document.getElementById('typingRow');
+    if (el) el.remove();
+  }
+
+  function addBanner(afterBlock) {
+    var banner = document.createElement('div');
+    banner.className = 'wiki-banner';
+    banner.innerHTML =
+      '<div class="icon">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' +
+      '</div>' +
+      '<div class="content">' +
+        '<div class="title-line">检测到可沉淀的新信息</div>' +
+        '<div class="desc-line">这段对话里的行程安排可以写入「贵州行程」页面，也可以先不处理，稍后仍能通过下方按钮写入。</div>' +
+        '<div class="actions">' +
+          '<button class="btn btn-primary" id="bannerBuild">构建写入 Wiki</button>' +
+          '<button class="btn btn-ghost" id="bannerLater">暂不</button>' +
+        '</div>' +
+      '</div>' +
+      '<button class="dismiss" id="bannerDismiss" aria-label="关闭提示">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>' +
+      '</button>';
+    afterBlock.appendChild(banner);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    document.getElementById('bannerDismiss').onclick = function () {
+      banner.style.display = 'none';
+      showPersistButton();
+    };
+    document.getElementById('bannerLater').onclick = function () {
+      banner.style.display = 'none';
+      showPersistButton();
+    };
+    document.getElementById('bannerBuild').onclick = function () {
+      banner.style.display = 'none';
+      showPersistButton();
+      startBuilding();
+    };
+  }
+
+  function showPersistButton() {
+    persistBtn.classList.add('is-visible');
+    persistHint.classList.add('is-visible');
+  }
+
+  function startBuilding() {
+    if (persistBtn.classList.contains('state-building')) return;
+    persistBtn.classList.add('state-building');
+    persistBtn.classList.remove('state-done');
+    persistBtn.innerHTML = '<span class="spinner"></span><span>后台构建中…</span>';
+    persistHint.textContent = '写入在后台进行，你可以继续聊别的';
+
+    setTimeout(function () {
+      persistBtn.classList.remove('state-building');
+      persistBtn.classList.add('state-done');
+      persistBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>已写入 · 再次写入</span>';
+      persistHint.textContent = '已写入「贵州行程」，欢迎随时补充新内容';
+      toast.classList.add('is-visible');
+      setTimeout(function () { toast.classList.remove('is-visible'); }, 3600);
+    }, 2600);
+  }
+
+  persistBtn.addEventListener('click', function () {
+    if (persistBtn.classList.contains('state-building')) return;
+    startBuilding();
+  });
+
+  var script = [
+    {
+      hint: '第 1 步：普通聊天，Agent 立即回复，没有任何 Wiki 相关提示',
+      run: function (done) {
+        addMessage('user', '帮我规划一下国庆去贵州玩 5 天的路线。');
+        addTyping();
+        setTimeout(function () {
+          removeTyping();
+          addMessage('assistant', '可以，先说下你从哪个城市出发，以及更想看喀斯特地貌还是苗侗村寨？');
+          done();
+        }, 900);
+      }
+    },
+    {
+      hint: '第 2 步：用户给出关键信息，回复正常返回，随后异步出现轻提示（不阻塞刚才的回复）',
+      run: function (done) {
+        addMessage('user', '从广州出发，想两者都看一点，最后定了贵阳-西江千户苗寨-荔波小七孔这个顺序。');
+        addTyping();
+        setTimeout(function () {
+          removeTyping();
+          var block = addMessage('assistant', '这个顺序很合理，路线也顺，我先按这个给你排一下每天的行程。');
+          setTimeout(function () {
+            addBanner(block);
+            done();
+          }, 700);
+        }, 900);
+      }
+    },
+    {
+      hint: '第 3 步：点击「构建写入 Wiki」或直接使用常驻按钮，观察写入过程中聊天依然可继续',
+      run: function (done) {
+        stepHint.textContent = '试试点击上面横幅里的「构建写入 Wiki」，或稍后直接点常驻的「写入 Wiki」按钮';
+        done();
+      },
+      manual: true
+    },
+    {
+      hint: '演示结束，可点击「重新播放」从头体验',
+      run: function (done) { done(); },
+      manual: true
+    }
+  ];
+
+  function goNext() {
+    if (busy) return;
+    if (step >= script.length) return;
+    busy = true;
+    var cur = script[step];
+    stepHint.textContent = cur.hint;
+    cur.run(function () {
+      busy = false;
+    });
+    if (cur.manual) {
+      nextBtn.disabled = true;
+      nextBtn.style.opacity = 0.5;
+    }
+    step++;
+    if (step >= script.length - 1) {
+      nextBtn.textContent = '演示完成';
+      nextBtn.disabled = true;
+      nextBtn.style.opacity = 0.5;
+    }
+  }
+
+  function reset() {
+    step = 0;
+    busy = false;
+    messagesEl.innerHTML = '';
+    persistBtn.className = 'wiki-persist-btn';
+    persistBtn.innerHTML = '<span class="dot"></span><span>写入 Wiki</span>';
+    persistHint.classList.remove('is-visible');
+    persistHint.textContent = '本轮对话已检测到可沉淀内容，随时可写入';
+    toast.classList.remove('is-visible');
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = 1;
+    nextBtn.textContent = '继续';
+    stepHint.textContent = script[0].hint;
+  }
+
+  nextBtn.addEventListener('click', goNext);
+  replayBtn.addEventListener('click', reset);
+
+  reset();
+})();
+</script>
+</body>
+</html>
