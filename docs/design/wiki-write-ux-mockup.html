@@ -407,78 +407,155 @@
   .wiki-banner .dismiss:hover { background: rgba(22,35,58,0.06); color: var(--ink-soft); }
   .wiki-banner .dismiss svg { width: 12px; height: 12px; }
 
-  .hint-note {
-    font-size: 11px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding-left: 2px;
-  }
-  .hint-note.hidden { display: none; }
-
-  /* Composer */
+  /* ---------- Composer: Codex 式布局 — 上方纯输入，下方一整排工具按钮，整体一个圆角容器 ---------- */
   .mock-composer {
     border-top: 1px solid var(--line);
-    padding: 12px 20px 16px;
+    padding: 14px 20px 18px;
     flex-shrink: 0;
     background: var(--paper);
   }
 
-  .persist-row {
+  .composer-shell {
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: var(--canvas);
+    padding: 12px 10px 8px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .composer-shell:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(10,124,255,0.12);
+  }
+
+  .composer-textarea {
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    resize: none;
+    outline: none;
+    font-family: var(--font-ui);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    padding: 2px 6px 10px;
+    min-height: 22px;
+  }
+  .composer-textarea::placeholder { color: var(--faint); }
+
+  .composer-toolbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    margin-bottom: 10px;
-    min-height: 30px;
   }
 
-  .wiki-persist-btn {
+  .composer-toolbar-left, .composer-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .composer-icon-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .composer-icon-btn:hover { background: rgba(22,35,58,0.07); }
+  .composer-icon-btn svg { width: 16px; height: 16px; }
+
+  .composer-mode-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 5px;
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 6px 12px 6px 10px;
-    border-radius: var(--r-pill);
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
     color: var(--accent-ink);
+    background: var(--accent-soft);
+    padding: 5px 10px;
+    border-radius: var(--r-pill);
+    margin-left: 2px;
+  }
+  .composer-mode-chip svg { width: 11px; height: 11px; }
+
+  .composer-model-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    padding: 6px 8px;
+    border-radius: var(--r-control);
     cursor: pointer;
-    transition: all 0.18s ease;
-    opacity: 0;
-    transform: translateY(4px) scale(0.96);
-    pointer-events: none;
+    white-space: nowrap;
   }
+  .composer-model-chip:hover { background: rgba(22,35,58,0.07); }
+  .composer-model-chip svg { width: 12px; height: 12px; color: var(--faint); }
 
-  .wiki-persist-btn.is-visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-  }
+  /* 写入 Wiki：与其他工具按钮同一个位置的图标态切换，不再单独占一行 */
+  .wiki-build-btn { color: var(--faint); cursor: not-allowed; }
+  .wiki-build-btn .wiki-build-icon svg { width: 16px; height: 16px; }
+  .wiki-build-btn .wiki-build-icon .spinner-icon,
+  .wiki-build-btn .wiki-build-icon .done-icon { display: none; }
 
-  .wiki-persist-btn:hover { background: var(--accent-soft); }
-
-  .wiki-persist-btn .dot {
-    width: 6px; height: 6px; border-radius: 50%;
+  .wiki-build-btn .wiki-build-dot {
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 0 0 rgba(10,124,255,0.45);
+    opacity: 0;
+  }
+
+  .wiki-build-btn.is-ready {
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    cursor: pointer;
+  }
+  .wiki-build-btn.is-ready:hover { filter: brightness(0.97); }
+  .wiki-build-btn.is-ready .wiki-build-dot {
+    opacity: 1;
     animation: pulse 1.8s infinite;
   }
+
+  .wiki-build-btn.is-building {
+    color: var(--ink-soft);
+    background: var(--surface-tinted);
+    cursor: default;
+  }
+  .wiki-build-btn.is-building .default-icon,
+  .wiki-build-btn.is-building .done-icon { display: none; }
+  .wiki-build-btn.is-building .spinner-icon { display: block; }
+  .wiki-build-btn.is-building .wiki-build-dot { display: none; }
+
+  .wiki-build-btn.is-done {
+    color: var(--success);
+    background: var(--success-soft);
+  }
+  .wiki-build-btn.is-done .default-icon,
+  .wiki-build-btn.is-done .spinner-icon { display: none; }
+  .wiki-build-btn.is-done .done-icon { display: block; }
+  .wiki-build-btn.is-done .wiki-build-dot { display: none; }
+
   @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(10,124,255,0.45); }
     70% { box-shadow: 0 0 0 6px rgba(10,124,255,0); }
     100% { box-shadow: 0 0 0 0 rgba(10,124,255,0); }
   }
 
-  .wiki-persist-btn.state-building {
-    color: var(--ink-soft);
-    border-color: var(--line);
-  }
-  .wiki-persist-btn.state-building .dot { display: none; }
-
   .spinner {
-    width: 11px; height: 11px;
+    width: 13px; height: 13px;
     border-radius: 50%;
     border: 1.5px solid var(--line-strong);
     border-top-color: var(--accent);
@@ -486,46 +563,42 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .wiki-persist-btn.state-done {
-    color: var(--success);
-    border-color: var(--success-soft);
-    background: var(--success-soft);
-  }
-  .wiki-persist-btn.state-done svg { width: 12px; height: 12px; }
-
-  .persist-hint {
+  /* 悬浮在工具按钮上方的提示文案，态改变时文字随之更新 */
+  .tooltip-bubble {
+    position: absolute;
+    bottom: calc(100% + 9px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--ink);
+    color: #fff;
     font-size: 11px;
-    color: var(--muted);
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 6px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
     opacity: 0;
-    transition: opacity 0.2s;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 5;
   }
-  .persist-hint.is-visible { opacity: 1; }
-
-  .composer-input-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--canvas);
-    border: 1px solid var(--line);
-    border-radius: var(--r-control);
-    padding: 4px 6px 4px 14px;
+  .tooltip-bubble::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--ink);
   }
-
-  .composer-input-row input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-size: 13.5px;
-    font-family: var(--font-ui);
-    color: var(--ink);
-    outline: none;
-    padding: 8px 0;
+  .composer-icon-btn:hover .tooltip-bubble {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
-  .composer-input-row input::placeholder { color: var(--faint); }
 
   .send-btn {
     width: 32px; height: 32px;
-    border-radius: 9px;
+    border-radius: 50%;
     background: var(--accent);
     color: #fff;
     display: flex;
@@ -536,6 +609,7 @@
     flex-shrink: 0;
   }
   .send-btn:hover { background: var(--accent-hover); }
+  .send-btn:disabled { background: var(--faint); cursor: not-allowed; }
   .send-btn svg { width: 14px; height: 14px; }
 
   /* Toast */
@@ -648,24 +722,46 @@
   .mini-banner .mini-actions .a1 { background: var(--accent); color: #fff; }
   .mini-banner .mini-actions .a2 { background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); }
 
+  /* 状态卡里缩小版的输入框工具条，用来对照真实的图标态切换 */
+  .mini-toolbar {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 6px 8px;
+  }
+  .mini-toolbar .mini-toolbar-left { display: flex; gap: 4px; align-items: center; }
+  .mini-toolbar .mini-plain-icon {
+    width: 16px; height: 16px; border-radius: 50%;
+    color: var(--faint);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mini-toolbar .mini-plain-icon svg { width: 10px; height: 10px; }
+  .mini-toolbar .mini-mode {
+    font-size: 9.5px; font-weight: 600; color: var(--accent-ink);
+    background: var(--accent-soft); padding: 2px 6px; border-radius: 999px;
+  }
   .mini-persist {
-    align-self: flex-start;
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 600;
-    padding: 5px 9px 5px 7px;
+    padding: 5px 8px;
     border-radius: 999px;
-    border: 1px solid var(--line-strong);
-    background: var(--surface);
-    color: var(--accent-ink);
+    color: var(--faint);
+    position: relative;
   }
   .mini-persist .mini-pulse {
     width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+    position: absolute; top: 2px; right: 2px;
   }
-  .mini-persist.building { color: var(--ink-soft); }
-  .mini-persist.done { color: var(--success); background: var(--success-soft); border-color: var(--success-soft); }
+  .mini-persist.ready { color: var(--accent-ink); background: var(--accent-soft); }
+  .mini-persist.building { color: var(--ink-soft); background: var(--surface-tinted); }
+  .mini-persist.done { color: var(--success); background: var(--success-soft); }
 
   .mini-toast {
     align-self: flex-end;
@@ -752,8 +848,8 @@
       </div>
       <div class="flow-step">
         <div class="num">4</div>
-        <h3>常驻小按钮</h3>
-        <p>只要本轮对话出现过一次可写入判断，输入框上方就会一直保留一个小按钮，用户随时可点。</p>
+        <h3>工具栏图标常亮</h3>
+        <p>只要本轮对话出现过一次可写入判断，输入框下方工具栏里的图标按钮就一直保持点亮，hover 显示「整理成日记并构建 Wiki」，用户随时可点。</p>
       </div>
       <div class="flow-step is-key">
         <div class="num">5</div>
@@ -771,7 +867,7 @@
 
   <section>
     <h2>交互演示</h2>
-    <p class="section-sub">按顺序点击体验：先看普通聊天不受打扰，再看提示条与常驻按钮如何配合异步写入</p>
+    <p class="section-sub">按顺序点击体验：先看普通聊天不受打扰，再看提示条与工具栏图标按钮如何配合异步写入</p>
 
     <div class="demo-toolbar">
       <div class="demo-toolbar-left" id="stepHint">第 1 步：点击「继续」体验一段普通聊天</div>
@@ -820,18 +916,34 @@
         </div>
 
         <div class="mock-composer">
-          <div class="persist-row">
-            <button class="wiki-persist-btn" id="persistBtn">
-              <span class="dot"></span>
-              <span id="persistLabel">写入 Wiki</span>
-            </button>
-            <span class="persist-hint" id="persistHint">本轮对话已检测到可沉淀内容，随时可写入</span>
-          </div>
-          <div class="composer-input-row">
-            <input type="text" placeholder="继续和 Agent 聊聊…" disabled />
-            <button class="send-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
-            </button>
+          <div class="composer-shell">
+            <textarea class="composer-textarea" rows="1" placeholder="继续和 Agent 聊聊…" disabled></textarea>
+            <div class="composer-toolbar">
+              <div class="composer-toolbar-left">
+                <button type="button" class="composer-icon-btn" aria-label="添加上下文">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <span class="composer-mode-chip">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                  自动模式
+                </span>
+              </div>
+              <div class="composer-toolbar-right">
+                <button type="button" class="composer-icon-btn wiki-build-btn" id="wikiBuildBtn" aria-label="整理成日记并构建 Wiki">
+                  <span class="wiki-build-icon">
+                    <svg class="default-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <span class="spinner-icon spinner"></span>
+                    <svg class="done-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span class="wiki-build-dot"></span>
+                  <span class="tooltip-bubble" id="wikiBuildTooltip">还没有可以整理的内容</span>
+                </button>
+                <span class="composer-model-chip">GPT-5.6-Sol · 深入 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+                <button type="button" class="send-btn" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -853,7 +965,7 @@
 
       <div class="state-card">
         <div class="state-label">B · 出现轻提示</div>
-        <div class="state-desc">回复下方出现可关闭的提示条，说明检测到的内容，用户可选择立即写入或忽略。</div>
+        <div class="state-desc">回复下方出现可关闭的提示条，说明检测到的内容；关掉它不影响下方工具栏里的图标按钮，那个按钮已经悄悄亮起来了。</div>
         <div class="state-preview">
           <div class="mini-bubble">好的，那我们就按这个顺序走：贵阳 → 西江 → 荔波。</div>
           <div class="mini-banner">
@@ -861,33 +973,46 @@
             <div>
               检测到可沉淀信息：贵州行程草案
               <div class="mini-actions">
-                <span class="a1">构建写入</span>
+                <span class="a1">整理成日记并构建 Wiki</span>
                 <span class="a2">暂不</span>
               </div>
             </div>
+          </div>
+          <div class="mini-toolbar">
+            <div class="mini-toolbar-left">
+              <span class="mini-plain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+              <span class="mini-mode">自动模式</span>
+            </div>
+            <div class="mini-persist ready"><span class="mini-pulse"></span>整理成日记</div>
           </div>
         </div>
       </div>
 
       <div class="state-card">
         <div class="state-label">C · 常驻按钮 + 后台构建</div>
-        <div class="state-desc">提示条被关闭或写入被触发后，输入框上方始终保留小按钮；点击后立即变为「后台构建中」，聊天不受影响。</div>
+        <div class="state-desc">提示条关掉后，工具栏里的图标按钮一直保持点亮；点击后立即切成「后台构建中」，聊天和输入完全不受影响。</div>
         <div class="state-preview">
           <div class="mini-bubble">对了，帮我把西江那天的午饭地点也定一下。</div>
-          <div class="mini-persist building">
-            <span class="spinner" style="width:9px;height:9px;"></span>
-            后台构建中…
+          <div class="mini-toolbar">
+            <div class="mini-toolbar-left">
+              <span class="mini-plain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+              <span class="mini-mode">自动模式</span>
+            </div>
+            <div class="mini-persist building"><span class="spinner" style="width:9px;height:9px;"></span>后台构建中…</div>
           </div>
         </div>
       </div>
 
       <div class="state-card">
         <div class="state-label">D · 写入完成</div>
-        <div class="state-desc">后台任务完成后，按钮切换为完成态，同时用一条不打断当前对话的 toast 提示结果。</div>
+        <div class="state-desc">后台任务完成后，图标切换为完成态并短暂停留，同时用一条不打断当前对话的 toast 提示结果，随后回到「可再次整理」的亮起状态。</div>
         <div class="state-preview">
-          <div class="mini-persist done">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;"><polyline points="20 6 9 17 4 12"/></svg>
-            已写入 · 再次写入
+          <div class="mini-toolbar">
+            <div class="mini-toolbar-left">
+              <span class="mini-plain-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+              <span class="mini-mode">自动模式</span>
+            </div>
+            <div class="mini-persist done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px;"><polyline points="20 6 9 17 4 12"/></svg>已写入</div>
           </div>
           <div class="mini-toast">Wiki 已更新：贵州行程 · 查看改动</div>
         </div>
@@ -906,11 +1031,11 @@
       </div>
       <div class="rule-item">
         <span class="rule-num">02</span>
-        <p><b>提示条只管「提示」，不管「执行」。</b>关闭提示条只是隐藏这一条信息，不代表放弃写入能力，常驻按钮依然保留。</p>
+        <p><b>提示条只管「提示」，不管「执行」。</b>关闭提示条只是隐藏这一条信息，不代表放弃写入能力，工具栏里的图标按钮依然点亮。</p>
       </div>
       <div class="rule-item">
         <span class="rule-num">03</span>
-        <p><b>写入永远由用户触发。</b>没有任何自动写入路径；只有用户点击「构建写入」，任务才会真正开始。</p>
+        <p><b>写入永远由用户触发。</b>没有任何自动写入路径；只有用户点击「整理成日记并构建 Wiki」，任务才会真正开始。</p>
       </div>
       <div class="rule-item">
         <span class="rule-num">04</span>
@@ -922,7 +1047,11 @@
       </div>
       <div class="rule-item">
         <span class="rule-num">06</span>
-        <p><b>能力状态跟随对话，不跟随消息。</b>只要本轮对话里出现过一次「可写入」判断，常驻按钮就一直存在，即使后续消息本身没有新的可写入内容。</p>
+        <p><b>能力状态跟随对话，不跟随消息。</b>只要本轮对话里出现过一次「可写入」判断，工具栏图标按钮的点亮态就一直保留，即使后续消息本身没有新的可写入内容。</p>
+      </div>
+      <div class="rule-item">
+        <span class="rule-num">07</span>
+        <p><b>输入框只做一件事。</b>上半区始终是纯文本输入，所有功能（附加上下文、模式、模型、写入 Wiki、发送）统一收进下方一整排工具栏，避免按钮到处堆积；写入按钮只是一个图标位，完整话术「整理成日记并构建 Wiki」通过 hover 提示呈现。</p>
       </div>
     </div>
   </section>
@@ -933,9 +1062,8 @@
 <script>
 (function () {
   var messagesEl = document.getElementById('messages');
-  var persistBtn = document.getElementById('persistBtn');
-  var persistLabel = document.getElementById('persistLabel');
-  var persistHint = document.getElementById('persistHint');
+  var wikiBuildBtn = document.getElementById('wikiBuildBtn');
+  var wikiBuildTooltip = document.getElementById('wikiBuildTooltip');
   var toast = document.getElementById('toast');
   var stepHint = document.getElementById('stepHint');
   var nextBtn = document.getElementById('nextBtn');
@@ -989,9 +1117,9 @@
       '</div>' +
       '<div class="content">' +
         '<div class="title-line">检测到可沉淀的新信息</div>' +
-        '<div class="desc-line">这段对话里的行程安排可以写入「贵州行程」页面，也可以先不处理，稍后仍能通过下方按钮写入。</div>' +
+        '<div class="desc-line">这段对话里的行程安排可以整理成日记并写入「贵州行程」页面，也可以先不处理，稍后仍能通过下方工具栏里的按钮写入。</div>' +
         '<div class="actions">' +
-          '<button class="btn btn-primary" id="bannerBuild">构建写入 Wiki</button>' +
+          '<button class="btn btn-primary" id="bannerBuild">整理成日记并构建 Wiki</button>' +
           '<button class="btn btn-ghost" id="bannerLater">暂不</button>' +
         '</div>' +
       '</div>' +
@@ -1003,44 +1131,48 @@
 
     document.getElementById('bannerDismiss').onclick = function () {
       banner.style.display = 'none';
-      showPersistButton();
+      activateWikiButton();
     };
     document.getElementById('bannerLater').onclick = function () {
       banner.style.display = 'none';
-      showPersistButton();
+      activateWikiButton();
     };
     document.getElementById('bannerBuild').onclick = function () {
       banner.style.display = 'none';
-      showPersistButton();
+      activateWikiButton();
       startBuilding();
     };
   }
 
-  function showPersistButton() {
-    persistBtn.classList.add('is-visible');
-    persistHint.classList.add('is-visible');
+  // 命中判断后，工具栏图标按钮从「不可用」切到「点亮」，并且这个点亮态会一直保留，
+  // 不会因为提示条被关闭、或用户继续聊别的话题而消失（对应设计原则 06）。
+  function activateWikiButton() {
+    wikiBuildBtn.classList.add('is-ready');
+    wikiBuildTooltip.textContent = '整理成日记并构建 Wiki';
   }
 
   function startBuilding() {
-    if (persistBtn.classList.contains('state-building')) return;
-    persistBtn.classList.add('state-building');
-    persistBtn.classList.remove('state-done');
-    persistBtn.innerHTML = '<span class="spinner"></span><span>后台构建中…</span>';
-    persistHint.textContent = '写入在后台进行，你可以继续聊别的';
+    if (wikiBuildBtn.classList.contains('is-building')) return;
+    wikiBuildBtn.classList.add('is-building');
+    wikiBuildBtn.classList.remove('is-done');
+    wikiBuildTooltip.textContent = '后台构建中…可以继续聊别的';
 
     setTimeout(function () {
-      persistBtn.classList.remove('state-building');
-      persistBtn.classList.add('state-done');
-      persistBtn.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>已写入 · 再次写入</span>';
-      persistHint.textContent = '已写入「贵州行程」，欢迎随时补充新内容';
+      wikiBuildBtn.classList.remove('is-building');
+      wikiBuildBtn.classList.add('is-done');
+      wikiBuildTooltip.textContent = '已写入「贵州行程」，欢迎随时补充';
       toast.classList.add('is-visible');
       setTimeout(function () { toast.classList.remove('is-visible'); }, 3600);
+      // 完成态短暂停留后回到「可再次整理」的点亮态，图标位置始终不变。
+      setTimeout(function () {
+        wikiBuildBtn.classList.remove('is-done');
+        wikiBuildTooltip.textContent = '整理成日记并构建 Wiki';
+      }, 3200);
     }, 2600);
   }
 
-  persistBtn.addEventListener('click', function () {
-    if (persistBtn.classList.contains('state-building')) return;
+  wikiBuildBtn.addEventListener('click', function () {
+    if (!wikiBuildBtn.classList.contains('is-ready') || wikiBuildBtn.classList.contains('is-building')) return;
     startBuilding();
   });
 
@@ -1073,9 +1205,9 @@
       }
     },
     {
-      hint: '第 3 步：点击「构建写入 Wiki」或直接使用常驻按钮，观察写入过程中聊天依然可继续',
+      hint: '第 3 步：点击「整理成日记并构建 Wiki」，或直接点输入框工具栏里已经点亮的图标按钮，观察写入过程中聊天依然可继续',
       run: function (done) {
-        stepHint.textContent = '试试点击上面横幅里的「构建写入 Wiki」，或稍后直接点常驻的「写入 Wiki」按钮';
+        stepHint.textContent = '试试点击上面横幅里的「整理成日记并构建 Wiki」，或稍后直接点输入框下方工具栏里已经点亮的图标按钮（hover 可看到完整话术）';
         done();
       },
       manual: true
@@ -1112,10 +1244,8 @@
     step = 0;
     busy = false;
     messagesEl.innerHTML = '';
-    persistBtn.className = 'wiki-persist-btn';
-    persistBtn.innerHTML = '<span class="dot"></span><span>写入 Wiki</span>';
-    persistHint.classList.remove('is-visible');
-    persistHint.textContent = '本轮对话已检测到可沉淀内容，随时可写入';
+    wikiBuildBtn.className = 'composer-icon-btn wiki-build-btn';
+    wikiBuildTooltip.textContent = '还没有可以整理的内容';
     toast.classList.remove('is-visible');
     nextBtn.disabled = false;
     nextBtn.style.opacity = 1;
