@@ -191,8 +191,8 @@ export const collaborationModes: Record<WikiRun["mode"], {
   auto: {
     short: "自动判断",
     title: "告诉我你想聊什么，或者想留下什么",
-    description: "我会根据你的话判断是陪你理解、整理记录，还是更新已经形成的理解。",
-    boundary: "我会判断是继续聊清，还是把值得留下的新理解放回 Wiki",
+    description: "平时直接聊；需要时再查已有理解，确有价值的新认识才更新。",
+    boundary: "平时直接聊；确有价值的新认识才更新 Wiki",
     placeholder: "问一个问题，或说说希望补充、整理、更新什么…",
     action: "从这里开始",
   },
@@ -291,13 +291,12 @@ export function contextPrompt(context: AgentContext, request: string): string {
     `- 对应知识页面：${context.pageId || "当前类目（请按仓库规则定位具体页面）"}`,
     context.summary ? `- 当前摘要：${context.summary}` : "",
     "",
-    "请把以上上下文作为本次任务的起点，并继续遵守仓库 AGENTS.md、相关 Skill、证据追溯、原始笔记保护和变更范围边界。不要只依据摘要作判断；需要时读取对应页面与来源。",
+    "以上是界面背景，不代表用户请求检索或写入。闲聊时直接回应；需要处理知识任务时，遵守仓库 AGENTS.md、相关 Skill、证据追溯、原始笔记保护和变更范围边界，并按需读取对应页面与来源，不只依据摘要作判断。",
     "",
     "用户请求：",
     request.trim(),
   ].filter(Boolean).join("\n");
 }
-
 
 export function continuationModelSelection(run: WikiRun, selection: AgentSelection): AgentSelection {
   if (run.runtimeId && selection.runtimeId !== run.runtimeId) {

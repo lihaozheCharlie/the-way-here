@@ -47,13 +47,13 @@ describe("run policy", () => {
     expect(prompt).toContain("vault/demo/wiki");
   });
 
-  it("lets the agent decide whether durable conversation should update the wiki", () => {
+  it("answers casual conversation before considering knowledge work", () => {
     const prompt = buildRunPrompt("auto", "帮我处理这段经历", config);
-    expect(prompt).toContain("Agent 判断处理方式");
-    expect(prompt).toContain("自行判断只查询还是更新 Wiki");
-    expect(prompt).toContain("不要求用户使用特殊命令或固定措辞");
-    expect(prompt).toContain("范围较大、难以撤销或会改变规则与结构时先询问");
-    expect(prompt).not.toContain("只有用户在本次请求中明确要求");
+    expect(prompt).toContain("寒暄、分享近况、表达感受或随意聊天时，直接自然回应");
+    expect(prompt).toContain("不要为判断是否写入而读取文件");
+    expect(prompt).toContain("明确受影响的页面和保留价值");
+    expect(prompt).toContain("实际变更由界面详情展示");
+    expect(prompt).toContain("规则、目录、批量修改或难以撤销的操作先确认范围");
   });
 
   it("accepts only complete letter-version output targets", () => {

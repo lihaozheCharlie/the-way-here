@@ -1,5 +1,7 @@
 import type { AgentApprovalDecision, AgentModelOption, AgentRuntimeEvent } from "@the-way-here/shared";
 import { CodexAppServer, type CodexServerRequest } from "@the-way-here/codex-bridge";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AgentExecutionRef, AgentRecoveryState, AgentRuntime, StartAgentExecution } from "./types.js";
 import { RuntimeEventSource } from "./types.js";
 
@@ -43,13 +45,15 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
 
   async start(input: StartAgentExecution): Promise<AgentExecutionRef> {
     const sessionId = input.sessionId || await this.codex.startThread(input.cwd, input.model);
+    const searchCommand = `ELECTRON_RUN_AS_NODE=1 ${shellQuote(process.execPath)} ${shellQuote(path.join(path.dirname(fileURLToPath(import.meta.url)), "search-wiki.js"))} --root ${shellQuote(input.cwd)} --knowledge-base ${shellQuote(input.config.knowledgeBaseId)} --query '检索短语'`;
+    const prompt = input.knowledgeEvidence ? input.prompt : `${input.prompt}\n\n需要检索当前 Wiki 时，先自行把用户问题改写为 1–3 个具体实体、别名或短语，再运行本地检索命令：${searchCommand}。多个检索短语可重复 --query。不要直接用整句用户原话搜索；闲聊不运行检索。检索结果是候选片段，重要结论仍需回读对应页面或来源。`;
     let turnId: string;
     try {
-      turnId = await this.codex.startTurn(sessionId, input.prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || Boolean(input.config.sourceConnections?.length && input.mode === "read"), workspaceWrite: Boolean(input.config.sourceConnections?.length) });
+      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || Boolean(input.config.sourceConnections?.length && input.mode === "read"), workspaceWrite: Boolean(input.config.sourceConnections?.length) });
     } catch (error) {
       if (!input.sessionId) throw error;
       await this.codex.resumeThread(sessionId, input.cwd);
-      turnId = await this.codex.startTurn(sessionId, input.prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || Boolean(input.config.sourceConnections?.length && input.mode === "read"), workspaceWrite: Boolean(input.config.sourceConnections?.length) });
+      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || Boolean(input.config.sourceConnections?.length && input.mode === "read"), workspaceWrite: Boolean(input.config.sourceConnections?.length) });
     }
     const ref = { runtimeId: this.id, sessionId, turnId } satisfies AgentExecutionRef;
     this.activeBySession.set(sessionId, ref);
@@ -129,6 +133,10 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
 
 function finalAnswerOf(turn: any): string | undefined {
   return turn?.items?.slice?.().reverse().find((item: any) => item?.type === "agentMessage" && item?.phase === "final_answer")?.text;
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function codexEvents(method: string, params: any): AgentRuntimeEvent[] {

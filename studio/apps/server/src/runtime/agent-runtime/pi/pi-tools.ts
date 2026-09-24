@@ -9,6 +9,8 @@ import path from "node:path";
 import { Type } from "@earendil-works/pi-ai";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { VaultConfig, WikiRun } from "@the-way-here/shared";
+import type { WikiIndex } from "@the-way-here/wiki-core";
+import { searchWiki } from "../../../services/wiki-search.js";
 
 const maxReadBytes = 1_000_000;
 const maxListedFiles = 500;
@@ -17,10 +19,14 @@ const maxSearchMatches = 200;
 
 export function createPiTools(options: {
   knowledgeEvidence?: StartAgentExecution["knowledgeEvidence"];
+  knowledgeIndex?: WikiIndex;
   cwd: string;
   config: VaultConfig;
   mode: Exclude<WikiRun["mode"], "validate">;
 }): AgentTool[] {
+  if (options.knowledgeIndex && options.knowledgeIndex.config.knowledgeBaseId !== options.config.knowledgeBaseId) {
+    throw new Error("检索索引与本轮绑定的知识库不一致");
+  }
   if (options.knowledgeEvidence) {
     const bound = options.knowledgeEvidence;
     // Host supplies paths and identity. Model parameters cannot change the snapshot or executable.
@@ -47,6 +53,17 @@ export function createPiTools(options: {
   }
   const access = new WorkspaceAccess(options.cwd, options.config);
   const tools: AgentTool[] = [
+    ...(options.knowledgeIndex ? [{
+      name: "search_wiki",
+      label: "检索当前知识库",
+      description: "需要用已有知识回答时，先把用户的问题改写成 1–3 个具体的实体、别名或短语，再传入 queries。不要直接传入整句用户原话。返回少量候选页面和命中片段；片段只用于定位，回答重要结论前用 read_file 核对原文。闲聊不要调用。",
+      parameters: Type.Object({ queries: Type.Array(Type.String({ minLength: 1, maxLength: 100 }), { minItems: 1, maxItems: 3 }) }),
+      execute: async (_callId: string, params: unknown) => {
+        const { queries } = params as { queries: string[] };
+        const hits = searchWiki(options.knowledgeIndex!, queries);
+        return textResult(JSON.stringify(hits), { count: hits.length, queries });
+      },
+    } satisfies AgentTool] : []),
     {
       name: "list_files",
       label: "列出知识文件",
@@ -59,8 +76,8 @@ export function createPiTools(options: {
     },
     {
       name: "search_text",
-      label: "搜索知识",
-      description: "在当前知识库、来源、Skills、Tools 与根协议中搜索文本。",
+      label: "全文兜底搜索",
+      description: "用于查找 Skills、Tools、根协议，或在 search_wiki 未命中后做精确全文兜底。查询 Wiki 优先将问题改写为短语后调用 search_wiki。",
       parameters: Type.Object({ query: Type.String({ minLength: 1, maxLength: 300 }) }),
       execute: async (_callId, params) => {
         const { query } = params as { query: string };

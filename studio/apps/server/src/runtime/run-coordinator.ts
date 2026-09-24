@@ -168,6 +168,7 @@ export class RunCoordinator {
         effort: selection.effort,
         mode,
         config: taskConfig,
+        knowledgeIndex: resolvedKnowledge.index,
         sessionId: previous?.runtimeSessionId,
       });
       if (!buffersEarlyEvents) this.runByExecution.set(executionKey(ref), run.id);

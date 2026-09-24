@@ -131,6 +131,7 @@ describe("Studio dependency boundaries", () => {
     }
     visit("apps/web/src/main.tsx");
     visit("apps/server/src/index.ts");
+    visit("apps/server/src/cli/search-wiki.ts");
     expect(files.filter((file) => !reached.has(file))).toEqual([]);
   });
 });

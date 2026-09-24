@@ -57,10 +57,10 @@ export class PiRuntimeAdapter extends RuntimeEventSource implements AgentRuntime
     const restored = input.sessionId ? await this.sessions.load(sessionId) : undefined;
     const turnId = randomUUID();
     const ref = { runtimeId: this.id, sessionId, turnId } satisfies AgentExecutionRef;
-    const tools = createPiTools({ cwd: input.cwd, config: input.config, mode: input.mode, knowledgeEvidence: input.knowledgeEvidence });
+    const tools = createPiTools({ cwd: input.cwd, config: input.config, mode: input.mode, knowledgeEvidence: input.knowledgeEvidence, knowledgeIndex: input.knowledgeIndex });
     const agent = new Agent({
       initialState: {
-        systemPrompt: "你是 The Way Here 的知识 Agent。严格遵守用户 prompt 中绑定的知识库、AGENTS.md、Skills、证据追溯、原始笔记保护和变更范围边界。只使用当前提供的工具。read_file 的文本结果是包含 path、content、sha256 的 JSON；修改已有文件时将 sha256 原样填入 write_file.expectedSha256。当前环境不提供 shell。AGENTS.md 和 Skills 要求的写入后质量门由 Studio 服务端在本轮结束后、按本次绑定的知识库运行；无需自行运行命令，不要因缺少 shell 放弃已授权写入。你的答复应区分已写入与尚待服务端验证，不得提前宣称质量门通过。",
+        systemPrompt: "你是 The Way Here 的知识 Agent。优先自然、简短地回应用户。严格遵守用户 prompt 中绑定的知识库、AGENTS.md、Skills、证据追溯、原始笔记保护和变更范围边界。只使用当前提供的工具。read_file 的文本结果是包含 path、content、sha256 的 JSON；修改已有文件时将 sha256 原样填入 write_file.expectedSha256。当前环境不提供 shell。写入后质量门由 Studio 服务端在本轮结束后运行；无需自行运行命令，不要因缺少 shell 放弃已授权写入，也不得提前宣称检查通过。过程和写入清单留给界面详情；除非用户询问或检查失败，不要在对话答复中汇报。",
         model,
         thinkingLevel: piThinkingLevel(input.effort),
         tools,

@@ -12,6 +12,7 @@ import type {
   VaultConfig,
   WikiRun,
 } from "@the-way-here/shared";
+import type { WikiIndex } from "@the-way-here/wiki-core";
 
 export interface AgentExecutionRef {
   runtimeId: AgentRuntimeId;
@@ -22,6 +23,7 @@ export interface AgentExecutionRef {
 export interface StartAgentExecution {
   strictReadOnly?: boolean;
   knowledgeEvidence?: {file:string; reader:string; knowledgeBaseId:string; inputHash:string};
+  knowledgeIndex?: WikiIndex;
   images?: Array<{ path: string; mimeType: "image/jpeg" }>;
   cwd: string;
   prompt: string;

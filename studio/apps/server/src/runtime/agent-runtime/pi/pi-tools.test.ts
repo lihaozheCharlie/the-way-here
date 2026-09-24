@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { VaultConfig } from "@the-way-here/shared";
+import { WikiIndex } from "@the-way-here/wiki-core";
 import { createPiTools } from "./pi-tools.js";
 
 const temporaryRoots: string[] = [];
@@ -50,6 +51,21 @@ async function workspaceFixture(): Promise<string> {
 }
 
 describe("Pi workspace tools", () => {
+  it("lets the agent search the bound index with rewritten phrases before reading a page", async () => {
+    const root = await workspaceFixture();
+    await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 3\ndefaultKnowledgeBase: demo\nknowledgeBases:\n  demo:\n    paths:\n      wiki: vault/demo/wiki\n      sources: vault/demo/sources\n`, "utf8");
+    await writeFile(path.join(root, config.paths.wiki, "overview.md"), "# Anonymous Demo\n\n## 出行\n在海边散步之后重新考虑了旅行安排。\n", "utf8");
+    const index = new WikiIndex(root, "demo");
+    await index.rebuild();
+    const tools = createPiTools({ cwd: root, config, mode: "read", knowledgeIndex: index });
+    const search = tools.find((tool) => tool.name === "search_wiki")!;
+    const result = await search.execute("search", { queries: ["海边散步", "旅行安排"] } as any);
+    const hits = JSON.parse(result.content.filter((part) => part.type === "text").map((part) => part.text).join("\n"));
+    expect(hits[0]).toMatchObject({ path: "vault/demo/wiki/overview.md", matchedQueries: ["海边散步", "旅行安排"] });
+    expect(hits[0].snippets[0]).toContain("海边散步");
+    expect(tools.map((tool) => tool.name)).not.toContain("write_file");
+  });
+
   it("keeps read runs read-only and exposes only scoped knowledge files", async () => {
     const root = await workspaceFixture();
     const tools = createPiTools({ cwd: root, config, mode: "read" });
