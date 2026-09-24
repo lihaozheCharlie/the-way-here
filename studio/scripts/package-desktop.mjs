@@ -12,4 +12,5 @@ await mkdir(path.join(studio,'apps/desktop/dist'),{recursive:true});
 run(process.execPath,['scripts/build-desktop-native.mjs']);
 await packageServer(studio,destination);
 await packageKnowledge(studio);
-run(process.execPath,['node_modules/electron-builder/out/cli/cli.js','--config','electron-builder.yml','--mac','dir','--publish','never']);
+run(process.execPath,['node_modules/electron-builder/out/cli/cli.js','--config','electron-builder.yml','--mac','dmg','--publish','never']);
+run(process.execPath,['scripts/verify-package-links.mjs',path.join(studio,'.runtime/releases',process.arch === 'arm64' ? 'mac-arm64' : 'mac','The Way Here.app')]);

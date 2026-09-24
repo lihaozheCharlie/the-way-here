@@ -1,0 +1,178 @@
+{
+  "id": "demo-hangzhou-bills-2022",
+  "createdAt": "2026-09-24T07:47:24.840Z",
+  "channel": "alipay",
+  "targetFolder": "账单记忆",
+  "fileCount": 2,
+  "totalBytes": 4210,
+  "files": [
+    {
+      "originalName": "南京到杭州的周末-虚构账单.csv",
+      "storedPath": "vault/demo/sources/账单记忆/支付宝消费旅程 2022-03-11 至 2022-03-12.md",
+      "bytes": 3492,
+      "buildKind": "dialogue",
+      "buildStatus": "built",
+      "clueCount": 2,
+      "buildUpdatedAt": "2026-09-24T07:47:24.840Z",
+      "builtRefs": [
+        {
+          "pageId": "wiki/07 人物与城市/生活过的城市/杭州",
+          "path": "vault/demo/wiki/07 人物与城市/生活过的城市/杭州.md",
+          "title": "杭州"
+        },
+        {
+          "pageId": "wiki/07 人物与城市/人物/认识的人/家人/阿宁",
+          "path": "vault/demo/wiki/07 人物与城市/人物/认识的人/家人/阿宁.md",
+          "title": "阿宁"
+        },
+        {
+          "pageId": "wiki/03 关键事件与决策/演示场景：搬到杭州后的周末",
+          "path": "vault/demo/wiki/03 关键事件与决策/演示场景：搬到杭州后的周末.md",
+          "title": "演示场景：搬到杭州后的周末"
+        }
+      ]
+    },
+    {
+      "originalName": "南京到杭州的周末-虚构账单.csv",
+      "storedPath": "vault/demo/sources/账单记忆/支付宝消费旅程 2022-03-11 至 2022-03-12 · 原始记录.csv",
+      "bytes": 718
+    }
+  ],
+  "journey": {
+    "provider": "alipay",
+    "title": "从车票到两只杯子 · 虚构消费旅程",
+    "reportPath": "vault/demo/sources/账单记忆/支付宝消费旅程 2022-03-11 至 2022-03-12.md",
+    "period": {
+      "start": "2022-03-11",
+      "end": "2022-03-12"
+    },
+    "transactionCount": 5,
+    "activeDays": 2,
+    "netExpense": 234,
+    "refundCount": 0,
+    "clusters": [
+      {
+        "id": "journey-t001",
+        "kind": "journey",
+        "title": "从南京到杭州的一张车票",
+        "summary": "两笔交通记录跨越南京与杭州，像一次城市转场。",
+        "question": "这次移动对你意味着什么？",
+        "startDate": "2022-03-11",
+        "endDate": "2022-03-12",
+        "entryCount": 2,
+        "categories": [
+          "出行"
+        ],
+        "evidence": [
+          "T001 · 2022-03-11 18:45:00 · 演示铁路 · 南京至杭州车票（虚构）",
+          "T002 · 2022-03-12 09:20:00 · 演示地铁 · 杭州地铁乘车（虚构）"
+        ],
+        "transactions": [
+          {
+            "id": "T001",
+            "createdAt": "2022-03-11 18:45:00",
+            "merchant": "演示铁路",
+            "product": "南京至杭州车票（虚构）",
+            "amount": 126,
+            "direction": "支出",
+            "status": "交易成功",
+            "refund": 0,
+            "category": "出行"
+          },
+          {
+            "id": "T002",
+            "createdAt": "2022-03-12 09:20:00",
+            "merchant": "演示地铁",
+            "product": "杭州地铁乘车（虚构）",
+            "amount": 4,
+            "direction": "支出",
+            "status": "交易成功",
+            "refund": 0,
+            "category": "出行"
+          }
+        ],
+        "proposedMemory": "【虚构演示讲述】车票和地铁是一次城市转场的消费线索。演示故事设定为我和阿宁来到杭州；交易本身只说明有人付过交通费，不能证明同行者或搬家的原因。",
+        "confidence": "high",
+        "relatedClusterIds": []
+      },
+      {
+        "id": "day-story-t003",
+        "kind": "day-story",
+        "title": "两只杯子和一顿面",
+        "summary": "同一天的三笔日常消费，指向新住处开始运转。",
+        "question": "这一天最想留下哪个小片段？",
+        "startDate": "2022-03-12",
+        "endDate": "2022-03-12",
+        "entryCount": 3,
+        "categories": [
+          "购物",
+          "餐饮",
+          "居家"
+        ],
+        "evidence": [
+          "T003 · 2022-03-12 11:08:00 · 小路家居（虚构） · 陶瓷杯两只",
+          "T004 · 2022-03-12 12:33:00 · 街角面馆（虚构） · 两份面",
+          "T005 · 2022-03-12 16:02:00 · 邻里杂货（虚构） · 洗洁精与挂钩"
+        ],
+        "transactions": [
+          {
+            "id": "T003",
+            "createdAt": "2022-03-12 11:08:00",
+            "merchant": "小路家居（虚构）",
+            "product": "陶瓷杯两只",
+            "amount": 39,
+            "direction": "支出",
+            "status": "交易成功",
+            "refund": 0,
+            "category": "购物"
+          },
+          {
+            "id": "T004",
+            "createdAt": "2022-03-12 12:33:00",
+            "merchant": "街角面馆（虚构）",
+            "product": "两份面",
+            "amount": 42,
+            "direction": "支出",
+            "status": "交易成功",
+            "refund": 0,
+            "category": "餐饮"
+          },
+          {
+            "id": "T005",
+            "createdAt": "2022-03-12 16:02:00",
+            "merchant": "邻里杂货（虚构）",
+            "product": "洗洁精与挂钩",
+            "amount": 23,
+            "direction": "支出",
+            "status": "交易成功",
+            "refund": 0,
+            "category": "居家"
+          }
+        ],
+        "proposedMemory": "【虚构演示讲述】两只杯子、一顿面和几件日用品，让新住处第一次有了可以一起坐下来的样子。照片里的纸箱和地图来自另一份虚构素材；流水不能证明当时的心情。",
+        "confidence": "high",
+        "relatedClusterIds": []
+      }
+    ],
+    "agentPrompt": "这是一份完全虚构的演示账单，报告位于 vault/demo/sources/账单记忆/支付宝消费旅程 2022-03-11 至 2022-03-12.md。交易、人物和日期均不是用户真实记录。请把它当作产品演示素材，帮助参观者理解“账单只能给出回忆线索，关系与感受要由讲述补充”。不要把这些交易写入真实用户的个人档案，也不要从金额推断情绪、关系或人生意义。\n\n可从“从南京到杭州的一张车票”或“两只杯子和一顿面”任选一个轻问题展开；简短回答即可，不连续追问。",
+    "revision": 3,
+    "clueStates": [
+      {
+        "clusterId": "journey-t001",
+        "status": "brief",
+        "note": "【虚构演示讲述】车票和地铁是一次城市转场的消费线索。演示故事设定为我和阿宁来到杭州；交易本身只说明有人付过交通费，不能证明同行者或搬家的原因。",
+        "resultText": "【虚构演示讲述】车票和地铁是一次城市转场的消费线索。演示故事设定为我和阿宁来到杭州；交易本身只说明有人付过交通费，不能证明同行者或搬家的原因。",
+        "updatedAt": "2026-09-24T07:47:24.840Z"
+      },
+      {
+        "clusterId": "day-story-t003",
+        "status": "brief",
+        "note": "【虚构演示讲述】两只杯子、一顿面和几件日用品，让新住处第一次有了可以一起坐下来的样子。照片里的纸箱和地图来自另一份虚构素材；流水不能证明当时的心情。",
+        "resultText": "【虚构演示讲述】两只杯子、一顿面和几件日用品，让新住处第一次有了可以一起坐下来的样子。照片里的纸箱和地图来自另一份虚构素材；流水不能证明当时的心情。",
+        "updatedAt": "2026-09-24T07:47:24.840Z"
+      }
+    ]
+  },
+  "demo": true,
+  "fictional": true
+}

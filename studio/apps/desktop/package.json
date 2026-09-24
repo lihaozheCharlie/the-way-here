@@ -1,6 +1,6 @@
 {
   "name": "@the-way-here/desktop",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "productName": "The Way Here",
   "type": "module",

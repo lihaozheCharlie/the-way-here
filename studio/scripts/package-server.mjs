@@ -21,7 +21,11 @@ export async function packageServer(studio, destination) {
     const key=createHash('sha256').update(source).digest('hex').slice(0,16);
     const target=path.join(dependencyRoot,key);
     seen.set(source,target);
-    await cp(source,target,{recursive:true,filter:(file) => !path.relative(source,file).split(path.sep).includes('node_modules')});
+    await cp(source,target,{recursive:true,filter:(file) => {
+      const relative = path.relative(source,file);
+      if (relative.split(path.sep).includes('node_modules')) return false;
+      return !(/\.map$|\.d\.(?:ts|mts|cts)$/.test(relative));
+    }});
     for (const name of new Set([...Object.keys(manifest.dependencies || {}),...Object.keys(manifest.optionalDependencies || {}),...Object.keys(manifest.peerDependencies || {})])) {
       const resolved=await resolve(name,source); if (!resolved) {
         if (manifest.dependencies?.[name] && !manifest.optionalDependencies?.[name]) throw new Error(`Missing runtime dependency ${manifest.name}: ${name}`);

@@ -4,7 +4,6 @@ import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { PaneShelf } from "../../shared/PaneShelf";
 import { QuietScroll } from "../../shared/QuietScroll";
 import { FileMenu } from "../../shared/FileMenu";
-import { SourceConnectionsPopover } from "./SourceConnectionsPanel";
 import { SearchField, SelectInput, TextInput } from "../../shared/form-controls";
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -21,14 +20,13 @@ import { documentIdentity } from "../../shared/markdown";
 import { pageHref } from "../../shared/routing";
 import { ConfirmDeleteDialog } from "../../shared/ConfirmDeleteDialog";
 import { Empty, Icon, Loading } from "../../shared/ui";
-import { TimelineFilter } from "../../shared/TimelineFilter";
 import { ImportMaterialsModal, RecordImportTrigger, type ImportRoute } from "./ImportMaterialsModal";
 import { PhotoMemoryPanel } from "./PhotoMemoryPanel";
 import { BillMemoryPanel } from "./BillMemoryPanel";
 import { SourceMemoryCards, SourceMemoryDialog } from "./SourceMemories";
 import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords, resolveOpenedMemoryRecord } from "./source-memory-model";
 import { sourceFolderOptions, useSourceFolders } from "./source-folders";
-import { buildableSourceRecordForPage, cleanSourcePath, countRecentSources, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
+import { buildableSourceRecordForPage, cleanSourcePath, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
 
 function sourceBuildTitle(record: SourceBuildRecord): string {
   return cleanSourcePath(record.file.storedPath).split("/").at(-1)?.replace(/\.md$/i, "") || record.file.originalName;
@@ -315,8 +313,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const folderPaths = sourceFolderOptions(sourceFolders, folder);
   const folders = (sourceFolders ? folderPaths : [...folderCounts.keys()].sort((left, right) => left.localeCompare(right, "zh-CN"))).map((name) => [name, folderCounts.get(name) || 0] as const);
   const months = sourceMonthOptions(pages);
-  const recentCount = countRecentSources(pages);
-  const latestUpdate = pages.reduce((latest, page) => Math.max(latest, Date.parse(page.modifiedAt) || 0), 0);
   const filtered = pages.filter((page) => {
     const sourcePath = cleanSourcePath(page.relativePath);
     return (!folder || sourcePath.startsWith(`${folder}/`))
@@ -514,7 +510,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     }
   }
   return <div className="organized-sources-page" ref={workspaceRef}>
-    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); setMemoryRecord(importedMemoryRecord(batch)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onJourney={setRecentJourney} /> : null}
+    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); setMemoryRecord(importedMemoryRecord(batch)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
     {deleteTarget ? <ConfirmDeleteDialog
       title={deleteTarget.kind === "folder" ? "删除这个文件夹？" : "删除这份生活记录？"}
       description={deleteTarget.kind === "folder" ? "文件夹内的记录和所有子文件夹都会一起删除。" : "文件会从生活记录中永久移除。"}
@@ -535,13 +531,9 @@ export function OrganizedSources({ revision }: { revision: number }) {
     <section className="source-discovery-tools" aria-label="筛选生活记录">
       <div className="source-type-filter" role="group" aria-label="按来源类型筛选">{sourceRecordTypes.map((item) => <button type="button" key={item.id} className={type === item.id ? "active" : ""} aria-pressed={type === item.id} onClick={() => { setCreatedPageId(undefined); update({ type: item.id === "all" ? undefined : item.id, file: undefined, limit: undefined }); }}><Icon name={item.id === "all" ? "library" : item.id === "notes" ? "journal" : item.id === "ai" ? "message" : item.id === "photos" ? "image" : "receipt"} size={14} />{item.label}</button>)}{pendingBuilds.length ? <button type="button" className={`source-pending-filter${type === "pending" ? " active" : ""}`} aria-pressed={type === "pending"} onClick={() => { setCreatedPageId(undefined); update({ type: type === "pending" ? undefined : "pending", file: undefined, limit: undefined }); }}><Icon name="spark" size={14} />待构建 <b>{pendingBuilds.length}</b></button> : null}</div>
       <div className="source-toolbar-right">
-        <details className="source-extra-filters"><summary>排序与日期</summary><div><p>{pages.length} 份记录 · 近七天更新 {recentCount} 份{latestUpdate ? ` · 最近更新 ${new Date(latestUpdate).toLocaleDateString("zh-CN")}` : ""}</p><TimelineFilter label="按月份浏览记录" allLabel="全部月份" value={month} total={pages.length}
-          periods={months.map((item) => ({ value: item.id, label: `${item.id.slice(0, 4)} 年 ${Number(item.id.slice(5))} 月`, count: item.count }))}
-          onChange={(value) => { setCreatedPageId(undefined); update({ month: value || undefined, file: undefined, limit: undefined }); }} />
-        <button type="button" className="source-sort-toggle" onClick={() => { setCreatedPageId(undefined); update({ sort: oldestFirst ? undefined : "oldest", limit: undefined }); }} aria-label={`当前${oldestFirst ? "从旧到新" : "从新到旧"}，点击切换排序`}><Icon name={oldestFirst ? "up" : "down"} size={14} />{oldestFirst ? "从旧到新" : "从新到旧"}</button></div></details>
       <SearchField className="source-global-search" name="organized-source-search" autoComplete="off" aria-label="搜索生活记录标题或内容" value={query} onChange={(event) => { setCreatedPageId(undefined); update({ q: event.target.value || undefined, file: undefined, limit: undefined }); }} placeholder="搜索标题或内容…" />
       </div>
-      <div className="source-toolbar-actions"><SourceConnectionsPopover /><RecordImportTrigger onClick={() => { setImportRoute(undefined); setImportOpen(true); }} label="导入资料" /><button className="desktop-primary" type="button" onClick={() => setCreatingSource(true)}><Icon name="plus" size={14} />新建记录</button></div>
+      <div className="source-toolbar-actions"><RecordImportTrigger onClick={() => { setImportRoute(undefined); setImportOpen(true); }} label="导入资料" /><button className="desktop-primary" type="button" onClick={() => setCreatingSource(true)}><Icon name="plus" size={14} />新建记录</button></div>
     </section>
     {type !== "pending" && selectableBuildRecords.length > 1 ? <section className="source-batch-banner" aria-label="可批量构建的记录">
       <p>有 <b>{selectableBuildRecords.length} 份</b>新记录语境完整，可以直接批量构建；其余记录仍会留在列表里逐条查看。</p>
@@ -569,7 +561,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
           finally { setFolderBusy(false); }
         }}><TextInput autoFocus aria-label="新文件夹名称" placeholder="文件夹名称" value={folderName} disabled={folderBusy} onChange={(event) => setFolderName(event.target.value)} /><div><button type="submit" disabled={folderBusy || !folderName.trim()}>{folderBusy ? "创建中…" : "创建"}</button><button type="button" disabled={folderBusy} onClick={() => setCreatingFolder(false)}>取消</button></div>{folderError && <p role="alert">{folderError}</p>}</form> : <button type="button" onClick={() => { setCreatingFolder(true); setFolderError(""); }}><Icon name="plus" size={13} />新建文件夹</button>}</div>}</aside>
       </div>
-      <FileBrowserPane label={folder ? folder.split("/").at(-1)! : "全部记录"} count={`${filtered.length} 份`} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)} order={oldestFirst ? "按时间从旧到新" : "按记录时间从新到旧"} toolbar={
+      <FileBrowserPane label={folder ? folder.split("/").at(-1)! : "全部记录"} count={`${filtered.length} 份`} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)} order={oldestFirst ? "按时间从旧到新" : "按记录时间从新到旧"} headerAction={<details className="source-extra-filters"><summary aria-label={`日期和排序：${month ? `${month.slice(0, 4)} 年 ${Number(month.slice(5))} 月` : "全部月份"}，${oldestFirst ? "旧到新" : "新到旧"}`}>{month ? `${month.slice(0, 4)} 年 ${Number(month.slice(5))} 月` : "全部月份"} · {oldestFirst ? "旧→新" : "新→旧"}<Icon name="down" size={12} /></summary><div><p className="source-filter-label">月份</p><div className="source-filter-months" role="group" aria-label="按月份浏览记录"><button type="button" className={!month ? "active" : ""} aria-pressed={!month} onClick={() => { setCreatedPageId(undefined); update({ month: undefined, file: undefined, limit: undefined }); }}>全部月份 <small>{pages.length}</small></button>{months.map((item) => <button type="button" key={item.id} className={month === item.id ? "active" : ""} aria-pressed={month === item.id} onClick={() => { setCreatedPageId(undefined); update({ month: item.id, file: undefined, limit: undefined }); }}>{item.id.slice(0, 4)} 年 {Number(item.id.slice(5))} 月 <small>{item.count}</small></button>)}</div><p className="source-filter-label">排序</p><div className="source-filter-order" role="group" aria-label="记录排序"><button type="button" className={!oldestFirst ? "active" : ""} aria-pressed={!oldestFirst} onClick={() => { setCreatedPageId(undefined); update({ sort: undefined, limit: undefined }); }}>新→旧</button><button type="button" className={oldestFirst ? "active" : ""} aria-pressed={oldestFirst} onClick={() => { setCreatedPageId(undefined); update({ sort: "oldest", limit: undefined }); }}>旧→新</button></div></div></details>} toolbar={
             type === "pending" && selectableBuildRecords.length > 0 ? <div className="source-batch-toolbar">
               <label><input type="checkbox" checked={allSelectableBuildsSelected} ref={(node) => { if (node) node.indeterminate = anySelectableBuildsSelected && !allSelectableBuildsSelected; }} onChange={(event) => setSelectedBuildPaths(event.target.checked ? new Set(selectableBuildPaths) : new Set())} />全选可直接构建 <small>（{selectableBuildRecords.length} 份）</small></label>
               <button type="button" disabled={!selectedBuildRecords.length || Boolean(busyBuildPath)} onClick={() => beginSelectedBuild(selectedBuildRecords)}><Icon name="build" size={13} />{selectedBuildRecords.length > 1 ? `批量构建 ${selectedBuildRecords.length} 份` : selectedBuildRecords.length === 1 ? "构建这份记录" : "选择记录"}</button>

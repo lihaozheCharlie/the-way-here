@@ -1,0 +1,10 @@
+{
+  "demo": true,
+  "fictional": true,
+  "tool": "image_gen.imagegen",
+  "mode": "built-in",
+  "prompt": "Use case: photorealistic-natural\nAsset type: fictional demo photo memory for a personal-life wiki product\nPrimary request: A candid smartphone photo of the first quiet evening after moving to a new apartment in Hangzhou, China. Two ordinary adults seen only from behind at a small wooden table beside a window, with two mismatched ceramic mugs, one half-open moving box and a folded city map. Outside the window are leafy trees after rain, no recognizable landmark. The image should feel like a real, imperfect personal snapshot that invites a story about moving from Nanjing to Hangzhou and learning to make a life in a new city.\nStyle/medium: natural documentary photograph, subtle grain, plausible everyday details, no commercial styling.\nComposition/framing: landscape 4:3, photographed from the room doorway at standing height, faces and identifying features not visible.\nLighting/mood: soft overcast late afternoon, warm interior, reflective but hopeful.\nConstraints: entirely fictional people and place; no readable text, signs, logos, watermarks, receipts, dates, documents, or identifiable private information.",
+  "original": "photo-1.original",
+  "preview": "photo-1.jpg",
+  "identitySource": "演示作者指定化名；未从背影识别人物"
+}

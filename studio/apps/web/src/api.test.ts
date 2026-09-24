@@ -32,3 +32,14 @@ describe("api request headers", () => {
     expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
   });
 });
+
+it("reopens model setup when a model action has no usable runtime", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "Codex 当前不可用，请先完成全局 AI 设置" }), { status: 500 })));
+  const browserWindow = new EventTarget();
+  const required = vi.fn();
+  browserWindow.addEventListener("model-configuration-required", required);
+  vi.stubGlobal("window", browserWindow);
+
+  await expect(api("/api/runs", { method: "POST" })).rejects.toThrow("请先完成全局 AI 设置");
+  expect(required).toHaveBeenCalledOnce();
+});

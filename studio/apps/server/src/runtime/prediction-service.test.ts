@@ -48,14 +48,20 @@ async function fixture() {
   return { root, knowledge, provider, app, service, start, finish, runtime };
 }
 describe("prediction lifecycle", () => {
-  it("opens the shipped anonymous demo without local runtime or model calls", async () => {
+  it("opens the shipped demo with five distinct future paths", async () => {
     const {root,service,start}=await fixture();
     await cp(fileURLToPath(new URL("../../../../../vault/demo/predictions/state.json", import.meta.url)),path.join(root,"demo/predictions/state.json"));
     const view=await service.view("demo");
     expect(view.status).toBe("ready");
     expect(view.report?.scenarios).toHaveLength(5);
-    expect(view.report?.scenarios.reduce((sum,s)=>sum+(s.probability||0),0)).toBe(100);
-    expect(view.report?.scenarios.find(s=>s.title.includes("新加坡"))?.pathway).toBe("wildcard");
+    expect(view.report?.scenarios.map(s=>s.pathway)).toEqual(["inertia", "willed", "willed", "willed", "wildcard"]);
+    expect(view.report?.scenarios.map(s=>s.title)).toEqual([
+      "继续在杭州互联网大厂工作",
+      "换到杭州更合拍的团队",
+      "搬到小城降低工作强度",
+      "赴新加坡工作并探索定居",
+      "受邀加入创业公司做产品",
+    ]);
     expect(start).not.toHaveBeenCalled();
   });
 

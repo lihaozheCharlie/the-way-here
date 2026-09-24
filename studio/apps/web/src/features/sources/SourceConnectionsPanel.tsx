@@ -1,14 +1,12 @@
-import { useDismissLayer } from "../../shared/use-dismiss-layer";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { SourceConnection, VaultInfo } from "@the-way-here/shared";
-import { Icon } from "../../shared/ui";
 import { api } from "../../api";
 import { useApi } from "../../shared/use-api";
 import { TextInput } from "../../shared/form-controls";
 import "./source-connections.css";
 
 type ConnectionInfo = SourceConnection & { fileCount: number; pendingCount: number; runId?: string; error?: string; scannedAt?: string };
-export function SourceConnectionsPanel({ compact = false }: { compact?: boolean }) {
+export function SourceConnectionsPanel({ compact = false, manageOnly = false }: { compact?: boolean; manageOnly?: boolean }) {
   const [revision, setRevision] = useState(0);
   const { data: vault } = useApi<VaultInfo>("/api/vault");
   const { data: connections, error: loadError } = useApi<ConnectionInfo[]>("/api/source-connections", revision);
@@ -31,10 +29,12 @@ export function SourceConnectionsPanel({ compact = false }: { compact?: boolean 
     await perform(() => api("/api/source-connections", { method: "POST", body: JSON.stringify({ knowledgeBaseId: vault?.knowledgeBaseId, path: selected, autoBuild }) }));
   }
   const content = <div className="source-connections">
-    <p>原文件留在原目录，改动后自动同步。Wiki 保存在应用管理目录；这里只保存来源引用，不复制正文。</p>
-    {!window.desktop ? <label>本机原目录<TextInput value={directory} onChange={(event) => setDirectory(event.target.value)} placeholder="输入本地服务所在电脑的目录绝对路径" /></label> : null}
-    <div className="source-connection-add"><button type="button" disabled={busy || !vault || (!window.desktop && !directory.trim())} onClick={() => void connect()}>连接原始目录</button><label><input type="checkbox" checked={autoBuild} onChange={(event) => setAutoBuild(event.target.checked)} />变化后自动更新 Wiki</label></div>
-    <small>支持 Markdown、TXT，保留子目录。自动更新使用已配置的 AI；可随时关闭。照片、账单和聊天导出包仍可单独导入。</small>
+    {manageOnly ? null : <>
+      <p>原文件留在原目录，改动后自动同步。Wiki 保存在应用管理目录；这里只保存来源引用，不复制正文。</p>
+      {!window.desktop ? <label>本机原目录<TextInput value={directory} onChange={(event) => setDirectory(event.target.value)} placeholder="输入本地服务所在电脑的目录绝对路径" /></label> : null}
+      <div className="source-connection-add"><button type="button" disabled={busy || !vault || (!window.desktop && !directory.trim())} onClick={() => void connect()}>连接原始目录</button><label><input type="checkbox" checked={autoBuild} onChange={(event) => setAutoBuild(event.target.checked)} />变化后自动更新 Wiki</label></div>
+      <small>支持 Markdown、TXT，保留子目录。自动更新使用已配置的 AI；可随时关闭。照片、账单和聊天导出包仍可单独导入。</small>
+    </>}
     {error || loadError ? <p role="alert">{error || loadError}</p> : null}
     {connections?.map((connection) => <article key={connection.id}>
       <strong>{connection.name}</strong><p className="source-connection-path">{connection.path}</p>
@@ -48,21 +48,6 @@ export function SourceConnectionsPanel({ compact = false }: { compact?: boolean 
       {disconnecting === connection.id ? <div className="source-connection-confirm"><p>断开后停止同步，原文件和已生成的 Wiki 都会保留。</p><button type="button" disabled={busy} onClick={() => void perform(async () => { await api(`/api/source-connections/${connection.id}`, { method: "DELETE", body: JSON.stringify({ knowledgeBaseId: vault?.knowledgeBaseId }) }); setDisconnecting(undefined); })}>确认断开</button><button type="button" onClick={() => setDisconnecting(undefined)}>取消</button></div> : null}
     </article>)}
   </div>;
-  return compact ? <details className="source-connections-disclosure"><summary>原目录连接{connections?.length ? ` · ${connections.length}` : ""}</summary>{content}</details> : content;
-}
-
-/** A disclosure keeps connection management available without taking reading space. */
-export function SourceConnectionsPopover() {
-  const root = useRef<HTMLDetailsElement>(null);
-  const [open, setOpen] = useState(false);
-  useDismissLayer(open, () => { setOpen(false); root.current?.querySelector("summary")?.focus(); });
-  useEffect(() => {
-    const closeOutside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
-    document.addEventListener("pointerdown", closeOutside);
-    return () => { document.removeEventListener("pointerdown", closeOutside); };
-  }, []);
-  return <details className="source-connections-popover" ref={root} open={open}>
-    <summary aria-label="连接来源目录" title="连接来源目录" onClick={event => { event.preventDefault(); setOpen(value => !value); }}><Icon name="link" size={16} /></summary>
-    <section aria-label="原目录连接"><h2>原目录连接</h2><SourceConnectionsPanel /></section>
-  </details>;
+  if (manageOnly && !connections?.length && !loadError) return null;
+  return compact ? <details className="source-connections-disclosure"><summary>{manageOnly ? "已连接的文件夹" : "原目录连接"}{connections?.length ? ` · ${connections.length}` : ""}</summary>{content}</details> : content;
 }

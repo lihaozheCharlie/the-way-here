@@ -4,6 +4,7 @@ import { ConversationWindow } from "../features/desktop/ConversationWindow";
 import { useDesktopNotifications } from "../features/desktop/use-desktop-notifications";
 import { CommandPalette } from "../features/desktop/CommandPalette";
 import { Preferences } from "../features/desktop/Preferences";
+import { ModelOnboarding } from "../features/desktop/ModelOnboarding";
 import { QuickCapture } from "../features/desktop/QuickCapture";
 import { useInspector } from "../features/desktop/InspectorContext";
 import { AgentDock } from "../features/collaboration/Collaboration";
@@ -259,6 +260,7 @@ export function AppShell({ revision }: { revision: number }) {
         {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />正在打开「{switchingKnowledgeBaseName}」…</div> : null}
         {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{knowledgeBaseError}</div> : null}
         <div className="page-frame">
+          {!utilityWindow && !detached ? <ModelOnboarding revision={revision} initialOpen={location.pathname === "/"} onOpenPreferences={openPreferences} /> : null}
           {!utilityWindow && vault?.knowledgeBaseId.toLowerCase() === "demo" ? <DemoKnowledgeBaseNotice
             hasPersonalKnowledgeBase={Boolean(personalKnowledgeBase)}
             onCreate={() => setCreateKnowledgeBaseOpen(true)}

@@ -1,7 +1,7 @@
 import YAML from 'yaml';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { prepareWorkspace, saveWorkspace } from './workspace.mjs';
@@ -17,11 +17,17 @@ test('fresh installation creates a usable library and upgrades preserve records 
     await writeFile(path.join(resources,'AGENTS.md'),'Public instructions');
     await writeFile(path.join(resources,'knowledge-engine/tools/version'),'one');
     const root = await prepareWorkspace({userData, resources});
-    assert.match(await readFile(path.join(root,'the-way-here.config.yaml'),'utf8'),/wiki: app\/personal\/wiki/);
-    await writeFile(path.join(root,'app/personal/wiki/记忆.md'),'keep this record');
     const configPath = path.join(root,'the-way-here.config.yaml');
-    const original = await readFile(configPath,'utf8');
-    const custom = original + '\n# keep custom settings\n';
+    const initial = YAML.parse(await readFile(configPath,'utf8'));
+    assert.equal(initial.defaultKnowledgeBase,'demo');
+    assert.deepEqual(Object.keys(initial.knowledgeBases),['demo']);
+    await assert.rejects(access(path.join(root,'app/personal')));
+    await mkdir(path.join(root,'app/personal/wiki'),{recursive:true});
+    await mkdir(path.join(root,'app/personal/sources'),{recursive:true});
+    await writeFile(path.join(root,'app/personal/wiki/记忆.md'),'keep this record');
+    initial.defaultKnowledgeBase='personal';
+    initial.knowledgeBases.personal={name:'我的知识库',paths:{wiki:'app/personal/wiki',sources:'app/personal/sources'}};
+    const custom = YAML.stringify(initial) + '\n# keep custom settings\n';
     await writeFile(configPath,custom);
     assert.equal(await readFile(path.join(root,'vault/demo/wiki/旧演示.md'),'utf8'),'Original Web demo');
     await mkdir(path.join(resources,'demo/predictions'),{recursive:true});
@@ -54,5 +60,32 @@ test('fresh installation creates a usable library and upgrades preserve records 
     assert.equal(JSON.parse(await readFile(path.join(userData,'workspace.json'),'utf8')).root,external);
     await writeFile(path.join(userData,'workspace.json'),'bad json');
     await assert.rejects(prepareWorkspace({userData,resources}),/无法读取上次/);
+  } finally { await rm(temp,{recursive:true,force:true}); }
+});
+
+test('upgrade removes only the empty legacy personal library and selects demo', async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(),'twh-empty-personal-'));
+  try {
+    const userData = path.join(temp,'user');
+    const resources = path.join(temp,'resources');
+    await mkdir(path.join(resources,'knowledge-engine'),{recursive:true});
+    await mkdir(path.join(resources,'demo/wiki'),{recursive:true});
+    await mkdir(path.join(resources,'demo/sources'),{recursive:true});
+    await writeFile(path.join(resources,'demo/wiki/演示.md'),'Anonymous demo');
+    await writeFile(path.join(resources,'AGENTS.md'),'Public instructions');
+    const root = await prepareWorkspace({userData,resources});
+    const configPath = path.join(root,'the-way-here.config.yaml');
+    const config = YAML.parse(await readFile(configPath,'utf8'));
+    config.defaultKnowledgeBase='personal';
+    config.knowledgeBases.personal={name:'我的知识库',paths:{wiki:'app/personal/wiki',sources:'app/personal/sources'}};
+    await writeFile(configPath,YAML.stringify(config));
+    await mkdir(path.join(root,'app/personal/wiki'),{recursive:true});
+    await mkdir(path.join(root,'app/personal/sources'),{recursive:true});
+    await prepareWorkspace({userData,resources});
+    const upgraded=YAML.parse(await readFile(configPath,'utf8'));
+    assert.equal(upgraded.defaultKnowledgeBase,'demo');
+    assert.deepEqual(Object.keys(upgraded.knowledgeBases),['demo']);
+    await assert.rejects(access(path.join(root,'app/personal')));
+    assert.equal(await readFile(path.join(root,'vault/demo/wiki/演示.md'),'utf8'),'Anonymous demo');
   } finally { await rm(temp,{recursive:true,force:true}); }
 });

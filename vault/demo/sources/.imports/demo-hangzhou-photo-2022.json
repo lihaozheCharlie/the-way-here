@@ -1,0 +1,36 @@
+{
+  "id": "demo-hangzhou-photo-2022",
+  "channel": "photos",
+  "createdAt": "2026-09-24T07:47:24.840Z",
+  "targetFolder": "照片记忆",
+  "fileCount": 1,
+  "totalBytes": 2079815,
+  "files": [
+    {
+      "originalName": "一张新城市餐桌的照片 · 虚构演示",
+      "storedPath": "vault/demo/sources/照片记忆/一张新城市餐桌的照片.md",
+      "bytes": 1583,
+      "buildKind": "dialogue",
+      "buildStatus": "built",
+      "builtRefs": [
+        {
+          "pageId": "wiki/07 人物与城市/人物/认识的人/家人/阿宁",
+          "path": "vault/demo/wiki/07 人物与城市/人物/认识的人/家人/阿宁.md",
+          "title": "阿宁"
+        },
+        {
+          "pageId": "wiki/07 人物与城市/生活过的城市/杭州",
+          "path": "vault/demo/wiki/07 人物与城市/生活过的城市/杭州.md",
+          "title": "杭州"
+        },
+        {
+          "pageId": "wiki/03 关键事件与决策/演示场景：搬到杭州后的周末",
+          "path": "vault/demo/wiki/03 关键事件与决策/演示场景：搬到杭州后的周末.md",
+          "title": "演示场景：搬到杭州后的周末"
+        }
+      ]
+    }
+  ],
+  "demo": true,
+  "fictional": true
+}

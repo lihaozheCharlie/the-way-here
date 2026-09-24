@@ -157,10 +157,6 @@ function normalizeUpdate(input: UpdateAgentGlobalSettings, current: StoredAgentS
   if (thirdParty.clearApiKey) delete nextKeys[selection.providerId];
   const nextKey = secret(thirdParty.apiKey);
   if (nextKey) nextKeys[selection.providerId] = nextKey;
-  if (runtimeId === "pi" && !nextKeys[selection.providerId]) {
-    const providerName = findThirdPartySelection(selection.providerId, selection.model)?.provider.displayName || "模型厂商";
-    throw new AgentSettingsValidationError(`请填写 ${providerName} API Key`);
-  }
   return {
     version: settingsVersion,
     runtimeId,

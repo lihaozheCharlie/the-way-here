@@ -8,7 +8,11 @@ export async function api<T>(url: string, init?: RequestInit): Promise<T> {
     headers,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `请求失败：${response.status}`);
+  if (!response.ok) {
+    const message = data.error || `请求失败：${response.status}`;
+    if (typeof message === "string" && message.includes("请先完成全局 AI 设置")) window.dispatchEvent(new Event("model-configuration-required"));
+    throw new Error(message);
+  }
   if (url === "/api/vault" && !init?.method && typeof data.knowledgeBaseId === "string" && !windowKnowledgeBaseId) windowKnowledgeBaseId = data.knowledgeBaseId;
   return data as T;
 }

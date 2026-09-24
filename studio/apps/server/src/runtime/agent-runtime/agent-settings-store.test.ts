@@ -56,12 +56,26 @@ describe("AgentSettingsStore", () => {
     expect(deepseek.provider?.apiKey).toBe("deepseek-key");
   });
 
-  it("rejects unknown models, unsupported effort, and missing vendor keys", async () => {
+  it("removes the active vendor key and persists its unconfigured state", async () => {
+    const { store, stateRoot } = await fixture();
+    await store.update(update({ apiKey: "key-to-remove" }));
+
+    const removed = await store.update(update({ clearApiKey: true }));
+    const reloaded = await new AgentSettingsStore(config, "/anonymous/workspace", stateRoot).load();
+
+    expect(removed.public.runtimeId).toBe("pi");
+    expect(removed.public.thirdParty).toMatchObject({ apiKeyConfigured: false, apiKeyConfiguredProviders: [], ready: false });
+    expect(removed.provider).toBeUndefined();
+    expect(reloaded.public).toEqual(removed.public);
+    expect(await readFile(path.join(stateRoot, "agent-settings.json"), "utf8")).not.toContain("key-to-remove");
+  });
+
+  it("rejects unknown models and unsupported effort while allowing an unconfigured vendor", async () => {
     const { store } = await fixture();
 
     await expect(store.update(update({ model: "made-up-model", apiKey: "key" }))).rejects.toThrow(AgentSettingsValidationError);
     await expect(store.update(update({ model: "deepseek-v4-pro", effort: "ultra", apiKey: "key" }))).rejects.toThrow("不支持所选思考深度");
-    await expect(store.update(update())).rejects.toThrow("请填写 DeepSeek API Key");
+    expect((await store.update(update())).public.thirdParty.ready).toBe(false);
   });
 
   it("migrates the previous endpoint-based format to a vendor preset", async () => {

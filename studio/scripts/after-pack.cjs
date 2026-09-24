@@ -6,5 +6,5 @@ module.exports = async function afterPack(context) {
   const resources = context.electronPlatformName === 'darwin'
     ? path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, 'Contents', 'Resources')
     : path.join(context.appOutDir, 'resources');
-  await fs.cp(path.join(context.packager.projectDir, '.runtime/package/server/node_modules'), path.join(resources, 'server/node_modules'), { recursive:true });
+  await fs.cp(path.join(context.packager.projectDir, '.runtime/package/server/node_modules'), path.join(resources, 'server/node_modules'), { recursive:true, verbatimSymlinks:true });
 };

@@ -1,22 +1,17 @@
 import YAML from 'yaml';
 import path from 'node:path';
-import { access, cp, mkdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
+import { access, cp, mkdir, readFile, readdir, writeFile, rename, rm, rmdir } from 'node:fs/promises';
 
 const configName = 'the-way-here.config.yaml';
 const initialConfig = `version: 3
 name: The Way Here
 adapter: personal-growth
-defaultKnowledgeBase: personal
+defaultKnowledgeBase: demo
 paths:
   skills: knowledge-engine/skills
   tools: knowledge-engine/tools
   agentInstructions: AGENTS.md
-knowledgeBases:
-  personal:
-    name: 我的知识库
-    paths:
-      wiki: app/personal/wiki
-      sources: app/personal/sources
+knowledgeBases: {}
 agents:
   defaultRuntime: auto
   runtimes:
@@ -68,6 +63,32 @@ async function ensureWebDemo(root, resources) {
   await rename(target + '.tmp', target);
 }
 
+async function removeOldEmptyPersonal(root) {
+  const target = path.join(root, configName);
+  const document = YAML.parseDocument(await readFile(target, 'utf8'));
+  if (document.errors.length || !YAML.isMap(document.get('knowledgeBases'))) return;
+  const personal = document.getIn(['knowledgeBases', 'personal'], true);
+  const paths = document.getIn(['knowledgeBases', 'personal', 'paths'], true);
+  if (!YAML.isMap(personal) || !YAML.isMap(paths)
+    || personal.items.map(({key}) => key.value).sort().join(',') !== 'name,paths'
+    || paths.items.map(({key}) => key.value).sort().join(',') !== 'sources,wiki'
+    || document.getIn(['knowledgeBases', 'personal', 'name']) !== '我的知识库'
+    || document.getIn(['knowledgeBases', 'personal', 'paths', 'wiki']) !== 'app/personal/wiki'
+    || document.getIn(['knowledgeBases', 'personal', 'paths', 'sources']) !== 'app/personal/sources') return;
+  const personalRoot = path.join(root, 'app/personal');
+  let entries, exists = true;
+  try { entries = await readdir(personalRoot, {withFileTypes:true}); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; entries = []; exists = false; }
+  if (entries.some((entry) => !entry.isDirectory() || !['wiki', 'sources'].includes(entry.name))) return;
+  for (const entry of entries) if ((await readdir(path.join(personalRoot, entry.name))).length) return;
+  document.deleteIn(['knowledgeBases', 'personal']);
+  if (document.get('defaultKnowledgeBase') === 'personal') document.set('defaultKnowledgeBase', 'demo');
+  await writeFile(target + '.tmp', String(document), {mode:0o600});
+  await rename(target + '.tmp', target);
+  for (const entry of entries) await rmdir(path.join(personalRoot, entry.name));
+  if (exists) await rmdir(personalRoot);
+}
+
 export async function saveWorkspace(userData, root) {
   await mkdir(userData, { recursive: true });
   const target = path.join(userData, 'workspace.json');
@@ -94,8 +115,6 @@ export async function prepareWorkspace({ userData, resources }) {
     if (root !== managedRoot) return root;
   }
   await mkdir(root, { recursive: true });
-  await mkdir(path.join(root, 'app/personal/wiki'), { recursive: true });
-  await mkdir(path.join(root, 'app/personal/sources'), { recursive: true });
   // Stage before replacement so interrupted copies cannot leave a partially updated engine.
   const staged = path.join(root, '.knowledge-engine-next');
   await rm(staged, { recursive: true, force: true });
@@ -110,6 +129,7 @@ export async function prepareWorkspace({ userData, resources }) {
   try { await writeFile(path.join(root, configName), initialConfig, { flag: 'wx', mode: 0o600 }); }
   catch (error) { if (error.code !== 'EEXIST') throw error; }
   await ensureWebDemo(root, resources);
+  await removeOldEmptyPersonal(root);
   await saveWorkspace(userData, root);
   return root;
 }

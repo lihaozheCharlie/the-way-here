@@ -27,7 +27,7 @@ extraResources:
 mac:
   icon: apps/desktop/dist/app.icns
   category: public.app-category.lifestyle
-  target: dir
+  target: dmg
   identity: null
   extendInfo:
     NSMicrophoneUsageDescription: 将你主动录制的生活片段转成文字，确认后才保存。
