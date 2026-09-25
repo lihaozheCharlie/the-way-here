@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { VoiceInputSlot } from "./voice-input";
-import type { ComponentProps, FormEventHandler, ReactNode } from "react";
+import type { ComponentProps, FormEventHandler, ReactNode, RefObject } from "react";
 import { Icon } from "./ui";
 
 /** Native controls keep their refs, labels and events; focus styling lives in form-controls.css. */
@@ -10,8 +10,12 @@ export function TextInput({ className = "", ...props }: ComponentProps<"input">)
 
 export function TextArea({ className = "", voice = true, ...props }: ComponentProps<"textarea"> & { voice?: boolean }) {
   const control = useRef<HTMLTextAreaElement | null>(null);
-  return <><textarea {...props} ref={(node) => { control.current = node; if (typeof props.ref === "function") props.ref(node); else if (props.ref) props.ref.current = node; }} className={`text-control ${className}`.trim()} />{voice && props.onChange && !props.readOnly && !props.disabled ? <VoiceInputSlot onConfirm={(text) => {
-    const node = control.current;
+  return <><textarea {...props} ref={(node) => { control.current = node; if (typeof props.ref === "function") props.ref(node); else if (props.ref) props.ref.current = node; }} className={`text-control ${className}`.trim()} />{voice && props.onChange && !props.readOnly && !props.disabled ? <VoiceInputForTextArea textareaRef={control} /> : null}</>;
+}
+
+export function VoiceInputForTextArea({ textareaRef }: { textareaRef: RefObject<HTMLTextAreaElement | null> }) {
+  return <VoiceInputSlot onConfirm={(text) => {
+    const node = textareaRef.current;
     if (!node) return;
     const start = node.selectionStart, end = node.selectionEnd;
     const next = `${node.value.slice(0, start)}${text}${node.value.slice(end)}`;
@@ -19,7 +23,7 @@ export function TextArea({ className = "", voice = true, ...props }: ComponentPr
     node.dispatchEvent(new Event("input", { bubbles: true }));
     node.focus();
     requestAnimationFrame(() => node.setSelectionRange(start + text.length, start + text.length));
-  }} /> : null}</>;
+  }} />;
 }
 
 export function SelectInput({ className = "", ...props }: ComponentProps<"select">) {

@@ -7,7 +7,13 @@ describe("collaboration model", () => {
     const target = { kind: "photo-memory" as const, importId: "batch", storedPath: "sources/photo.md", label: "照片", phase: "enrich" as const };
     expect(visibleAgentAnswer('你想从哪里讲起？<photo-memory>{"photos":[]}</photo-memory>', target)).toBe("你想从哪里讲起？");
     expect(visibleAgentAnswer('看看这里。<photo-memory>{"photos":', target)).toBe("看看这里。");
+    expect(visibleAgentAnswer("看看这里。<photo-mem", target)).toBe("看看这里。");
     expect(resolveComposerMode("write", target)).toBe("read");
+  });
+  it("hides journey report content before the closing tag arrives", () => {
+    const target = { kind: "journey-report" as const, importId: "batch", storedPath: "sources/report.md", label: "旅程" };
+    expect(visibleAgentAnswer("我理解了。<journey-rep", target)).toBe("我理解了。");
+    expect(visibleAgentAnswer("我理解了。<journey-report>\n私人报告", target)).toBe("我理解了。");
   });
   it("extracts the final answer from Codex events", () => {
     const run = { events: [{ payload: { item: { type: "agentMessage", phase: "final_answer", text: "最终判断" } } }] } as unknown as WikiRun;

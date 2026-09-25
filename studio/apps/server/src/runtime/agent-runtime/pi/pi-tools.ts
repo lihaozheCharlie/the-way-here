@@ -97,7 +97,7 @@ export function createPiTools(options: {
       },
     },
   ];
-  if (options.mode !== "read") {
+  if (options.mode === "write") {
     tools.push({
       name: "write_file",
       label: "写入知识文件",

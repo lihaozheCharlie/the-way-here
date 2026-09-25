@@ -49,11 +49,10 @@ describe("run policy", () => {
 
   it("answers casual conversation before considering knowledge work", () => {
     const prompt = buildRunPrompt("auto", "帮我处理这段经历", config);
-    expect(prompt).toContain("寒暄、分享近况、表达感受或随意聊天时，直接自然回应");
-    expect(prompt).toContain("不要为判断是否写入而读取文件");
-    expect(prompt).toContain("明确受影响的页面和保留价值");
-    expect(prompt).toContain("实际变更由界面详情展示");
-    expect(prompt).toContain("规则、目录、批量修改或难以撤销的操作先确认范围");
+    expect(prompt).toContain("寒暄、分享近况、表达感受或随意聊天时直接自然回应");
+    expect(prompt).toContain("不要为了判断是否值得写入而读取文件");
+    expect(prompt).toContain("绝不修改任何文件");
+    expect(prompt).toContain("回复后由独立判断任务处理");
   });
 
   it("accepts only complete letter-version output targets", () => {

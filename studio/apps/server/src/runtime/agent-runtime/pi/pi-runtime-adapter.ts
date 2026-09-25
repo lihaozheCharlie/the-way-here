@@ -15,6 +15,7 @@ type ActivePiExecution = {
   model: string;
   finalAnswer?: string;
   interrupted: boolean;
+  messageIndex: number;
 };
 
 export class PiRuntimeAdapter extends RuntimeEventSource implements AgentRuntime {
@@ -70,7 +71,7 @@ export class PiRuntimeAdapter extends RuntimeEventSource implements AgentRuntime
       sessionId,
       toolExecution: "sequential",
     });
-    const execution: ActivePiExecution = { ref, agent, model: input.model, interrupted: false };
+    const execution: ActivePiExecution = { ref, agent, model: input.model, interrupted: false, messageIndex: 0 };
     this.active.set(sessionId, execution);
     agent.subscribe((event) => this.onAgentEvent(execution, event));
     await this.sessions.save({ id: sessionId, model: input.model, messages: agent.state.messages, status: "running" });
@@ -127,9 +128,13 @@ export class PiRuntimeAdapter extends RuntimeEventSource implements AgentRuntime
   }
 
   private async onAgentEvent(execution: ActivePiExecution, event: AgentEvent): Promise<void> {
+    if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta" && event.assistantMessageEvent.delta) {
+      this.emit({ ref: execution.ref, event: { type: "assistant.delta", messageId: `${execution.ref.turnId}:${execution.messageIndex}`, text: event.assistantMessageEvent.delta } });
+    }
     const normalized = normalizePiEvent(event);
     if (normalized) this.emit({ ref: execution.ref, event: normalized });
     if (event.type === "message_end") {
+      execution.messageIndex += 1;
       const text = assistantText(event.message);
       if (text) execution.finalAnswer = text;
       await this.sessions.save({ id: execution.ref.sessionId, model: execution.model, messages: execution.agent.state.messages, finalAnswer: execution.finalAnswer, status: "running" });

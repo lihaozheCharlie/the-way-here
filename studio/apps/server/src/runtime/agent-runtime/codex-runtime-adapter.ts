@@ -49,11 +49,11 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
     const prompt = input.knowledgeEvidence ? input.prompt : `${input.prompt}\n\n需要检索当前 Wiki 时，先自行把用户问题改写为 1–3 个具体实体、别名或短语，再运行本地检索命令：${searchCommand}。多个检索短语可重复 --query。不要直接用整句用户原话搜索；闲聊不运行检索。检索结果是候选片段，重要结论仍需回读对应页面或来源。`;
     let turnId: string;
     try {
-      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || Boolean(input.config.sourceConnections?.length && input.mode === "read"), workspaceWrite: Boolean(input.config.sourceConnections?.length) });
+      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || input.mode !== "write", workspaceWrite: input.mode === "write" && Boolean(input.config.sourceConnections?.length) });
     } catch (error) {
       if (!input.sessionId) throw error;
       await this.codex.resumeThread(sessionId, input.cwd);
-      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || Boolean(input.config.sourceConnections?.length && input.mode === "read"), workspaceWrite: Boolean(input.config.sourceConnections?.length) });
+      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || input.mode !== "write", workspaceWrite: input.mode === "write" && Boolean(input.config.sourceConnections?.length) });
     }
     const ref = { runtimeId: this.id, sessionId, turnId } satisfies AgentExecutionRef;
     this.activeBySession.set(sessionId, ref);
@@ -100,7 +100,12 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
   private onNotification(method: string, params: any): void {
     const sessionId = String(params?.threadId || params?.thread?.id || params?.turn?.threadId || "");
     const ref = this.activeBySession.get(sessionId);
-    if (!ref || method.endsWith("/delta")) return;
+    if (!ref || (params?.turnId && params.turnId !== ref.turnId)) return;
+    if (method === "item/agentMessage/delta") {
+      if (typeof params?.delta === "string" && params.delta) this.emit({ ref, event: { type: "assistant.delta", messageId: String(params.itemId), text: params.delta } });
+      return;
+    }
+    if (method.endsWith("/delta")) return;
     for (const event of codexEvents(method, params)) this.emit({ ref, event });
     if (method === "turn/completed") this.activeBySession.delete(sessionId);
   }

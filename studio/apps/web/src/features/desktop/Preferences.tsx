@@ -30,7 +30,7 @@ export function Preferences({ revision }: { revision: number }) {
         </section>
         <p className="preferences-footnote"><Icon name="info" size={15} /><span>{window.desktop ? "生活记录保留在本机。关闭主窗口后，仍可通过菜单栏随手记。" : "生活记录保存在本地服务所在的电脑上。"}</span></p>
       </> : <section className="preferences-ai" aria-labelledby="ai-heading">
-        <AiConfiguration id="desktop-agent" agent={agent} heading={<PreferenceHeading kind="ai" id="ai-heading" title="模型与连接" description="选择 AI 服务与思考深度，应用后对所有 AI 对话生效。" />} />
+        <AiConfiguration id="desktop-agent" agent={agent} heading={<PreferenceHeading kind="ai" id="ai-heading" title="模型与连接" description="选择 AI 服务与思考深度，修改会自动保存并应用到所有 AI 对话。" />} />
       </section>}
     </div>
   </section>;

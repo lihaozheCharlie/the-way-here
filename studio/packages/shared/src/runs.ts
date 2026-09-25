@@ -76,6 +76,8 @@ export type AgentOutputTarget = LetterVersionOutputTarget | JourneyReportOutputT
 
 export interface WikiRun {
   id: string;
+  /** Ephemeral current assistant segment for reconnecting clients; never persisted. */
+  liveDraft?: { messageId: string; text: string };
   knowledgeBaseId: string;
   configSnapshot: VaultConfig;
   title: string;
@@ -95,6 +97,10 @@ export interface WikiRun {
   contextTopicId?: string;
   recoveredFromLegacyWorkspace?: boolean;
   mode: "auto" | "read" | "write" | "validate";
+  /** Internal read-only pass made after an automatic conversation reply. */
+  suggestionForRunId?: string;
+  wikiSuggestion?: { summary: string; page?: string };
+  chatOnly?: boolean;
   status: RunStatus;
   createdAt: string;
   updatedAt: string;

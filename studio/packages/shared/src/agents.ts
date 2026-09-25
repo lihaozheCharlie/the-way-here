@@ -118,6 +118,7 @@ export interface ApprovalRequest {
 
 export type AgentRuntimeEvent =
   | { type: "turn.started"; sessionId: string; turnId: string }
+  | { type: "assistant.delta"; messageId: string; text: string }
   | { type: "assistant.message"; text: string; final: boolean }
   | { type: "tool.started"; callId: string; toolName: string; summary?: string }
   | { type: "tool.completed"; callId: string; toolName: string; success: boolean; summary?: string }

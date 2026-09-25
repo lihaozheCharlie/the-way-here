@@ -242,12 +242,21 @@ export function runFinalAnswer(run: WikiRun): string | undefined {
 }
 
 export function visibleAgentAnswer(answer: string, target?: AgentOutputTarget): string {
-  if (target?.kind === "photo-memory") return answer.replace(/<photo-memory>[\s\S]*?(?:<\/photo-memory>|$)/g, "").trim();
-  if (target?.kind !== "journey-report") return answer.trim();
-  const start = answer.lastIndexOf(JOURNEY_REPORT_OUTPUT_START);
-  const end = answer.indexOf(JOURNEY_REPORT_OUTPUT_END, start + JOURNEY_REPORT_OUTPUT_START.length);
-  if (start < 0 || end < 0) return answer.trim();
-  return `${answer.slice(0, start)}${answer.slice(end + JOURNEY_REPORT_OUTPUT_END.length)}`.trim();
+  const marker = target?.kind === "photo-memory" ? "<photo-memory>" : target?.kind === "journey-report" ? JOURNEY_REPORT_OUTPUT_START : undefined;
+  if (!marker) return answer.trim();
+  const endMarker = target?.kind === "photo-memory" ? "</photo-memory>" : JOURNEY_REPORT_OUTPUT_END;
+  let visible = answer;
+  let start = visible.indexOf(marker);
+  while (start >= 0) {
+    const end = visible.indexOf(endMarker, start + marker.length);
+    visible = end < 0 ? visible.slice(0, start) : visible.slice(0, start) + visible.slice(end + endMarker.length);
+    start = visible.indexOf(marker);
+  }
+  // A stream may stop halfway through the opening tag. Keep the marker out of the conversation.
+  for (let length = marker.length - 1; length > 0; length--) {
+    if (visible.endsWith(marker.slice(0, length))) { visible = visible.slice(0, -length); break; }
+  }
+  return visible.trim();
 }
 
 export function runConversation(run: WikiRun) {

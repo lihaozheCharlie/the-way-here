@@ -124,10 +124,12 @@ describe("RunStore", () => {
     const personal = await store.create("个人库写入", "测试", "write", "personal", config("personal"));
     const demo = await store.create("演示库写入", "测试", "write", "demo", config("demo"));
     await expect(store.create("重复个人库写入", "测试", "write", "personal", config("personal"))).rejects.toThrow("personal");
-    await expect(store.create("自动识别任务", "测试", "auto", "personal", config("personal"))).rejects.toThrow("personal");
+    await expect(store.create("自动识别任务", "测试", "auto", "personal", config("personal"))).resolves.toMatchObject({ mode: "auto" });
     await store.setStatus(personal.id, "completed");
     const automatic = await store.create("后续自动任务", "测试", "auto", "personal", config("personal"));
-    await expect(store.create("自动任务期间写入", "测试", "write", "personal", config("personal"))).rejects.toThrow("personal");
+    const writing = await store.create("自动任务期间写入", "测试", "write", "personal", config("personal"));
+    await expect(store.create("并发写入", "测试", "write", "personal", config("personal"))).rejects.toThrow("personal");
+    await store.setStatus(writing.id, "completed");
     await store.setStatus(automatic.id, "completed");
     await expect(store.create("后续个人库写入", "测试", "write", "personal", config("personal"))).resolves.toMatchObject({ knowledgeBaseId: "personal" });
     await store.setStatus(demo.id, "completed");

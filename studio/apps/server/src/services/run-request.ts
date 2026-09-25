@@ -5,6 +5,7 @@ export type StartRunInput = {
   prompt?: string;
   displayPrompt?: string;
   mode?: WikiRun["mode"];
+  chatOnly?: boolean;
   knowledgeBaseId?: string;
   runtimeId?: AgentRuntimePreference;
   sessionId?: string;

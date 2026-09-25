@@ -29,11 +29,11 @@ export class RunStore {
     mode: WikiRun["mode"],
     knowledgeBaseId: string,
     configSnapshot: VaultConfig,
-    options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "contextTopicId">> = {},
+    options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "contextTopicId" | "suggestionForRunId" | "chatOnly">> = {},
   ): Promise<WikiRun> {
-    const mayWrite = mode === "write" || mode === "auto";
+    const mayWrite = mode === "write";
     if (mayWrite && !this.activeWriteRuns.has(knowledgeBaseId)) {
-      const active = (await this.list()).find((run) => (run.mode === "write" || run.mode === "auto")
+      const active = (await this.list()).find((run) => run.mode === "write"
         && run.knowledgeBaseId === knowledgeBaseId
         && !isTerminalRunStatus(run.status));
       if (active) this.activeWriteRuns.set(knowledgeBaseId, active.id);

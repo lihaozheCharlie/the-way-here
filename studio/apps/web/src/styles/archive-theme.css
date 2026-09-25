@@ -222,10 +222,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .editable-document.editing.has-outline > .document-outline { display: none; }
 .editable-document-properties { background: var(--canvas); border-bottom-color: var(--line); }
 .document-outline { background: var(--surface-subtle); border-color: var(--line); }
-.ai-configuration { background: var(--surface-subtle); border-color: var(--line); border-radius: var(--radius-control); }
-.ai-configuration select, .ai-configuration input { border-color: var(--line); border-radius: var(--radius-control); }
-.ai-model-bundle { border-radius: var(--radius-control); }
-.ai-runtime-choices > button, .ai-config-footer > button, .ai-key-field > div > button { border-radius: var(--radius-control); }
 .pane-collapse-button { color:var(--ink-soft); background: var(--paper); border-color: var(--line); border-radius: var(--radius-control); }
 
 /* Floating Agent dialog — compact conversation first, controls second. */
@@ -321,7 +317,6 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .context-thread .context-run-working .working-mark { width: auto; height: auto; gap: 3px; color: var(--accent-primary); background: transparent; border-radius: 0; box-shadow: none; }
 .context-thread .context-run-working .working-mark i { width: 5px; height: 5px; background: var(--accent-primary); }
 .context-thread .context-run-working b { font-size: 12px; font-weight: 600; }
-.context-thread .context-run-working p { margin: 3px 0 0; color:var(--ink-soft); font-size:14px; line-height: 1.55;  font-weight:450; }
 .context-run-missing { padding: 12px 13px; background: var(--surface-subtle); border: 0; border-radius: var(--radius-control); }
 .context-run-missing b { font-size: 12px; }
 .context-run-missing p { margin: 5px 0 0; color:var(--ink-soft); font-size:14px; line-height: 1.6;  font-weight:450; }

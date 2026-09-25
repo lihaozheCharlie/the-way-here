@@ -318,18 +318,19 @@ describe("prediction lifecycle", () => {
     const {service,provider,knowledge,app,finish,root,start} = await fixture();
     const coordinator = new RunCoordinator(knowledge,provider,app.log);
     const run = await coordinator.start({knowledgeBaseId:"demo",mode,prompt:"构建匿名 Wiki"});
-    if (mode !== "read") await writeFile(path.join(root,"demo/wiki/new-build.md"), "# 构建的新内容\n新增的匿名理解。");
+    if (mode === "write") await writeFile(path.join(root,"demo/wiki/new-build.md"), "# 构建的新内容\n新增的匿名理解。");
     finish(1,"构建完成");
     await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("completed"));
-    expect(start).toHaveBeenCalledTimes(1);
+    const suggestionRuns = mode === "auto" ? 1 : 0;
+    await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(1 + suggestionRuns));
     expect((await service.view("demo")).status).toBe("idle");
     // Merely visiting the unlocked page must not start a prediction either.
     expect((await app.inject({method:"GET",url:"/api/predictions?knowledgeBaseId=demo"})).statusCode).toBe(200);
-    expect(start).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledTimes(1 + suggestionRuns);
     const response = await app.inject({method:"POST",url:"/api/predictions/refresh",payload:{knowledgeBaseId:"demo"}});
     expect(response.statusCode).toBe(202);
-    await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(2));
-    finish(2);
+    await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(2 + suggestionRuns));
+    finish(2 + suggestionRuns);
     await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("ready"));
     coordinator.close();
   });

@@ -94,7 +94,8 @@ describe("Pi workspace tools", () => {
 
   it("rejects traversal and writes outside the selected knowledge base", async () => {
     const root = await workspaceFixture();
-    const writer = createPiTools({ cwd: root, config, mode: "auto" }).find((tool) => tool.name === "write_file")!;
+    expect(createPiTools({ cwd: root, config, mode: "auto" }).some((tool) => tool.name === "write_file")).toBe(false);
+    const writer = createPiTools({ cwd: root, config, mode: "write" }).find((tool) => tool.name === "write_file")!;
     await expect(writer.execute("traversal", { path: "../outside.md", content: "unsafe" } as any)).rejects.toThrow("超出工作区");
     await expect(writer.execute("product", { path: "apps/server/injected.ts", content: "unsafe" } as any)).rejects.toThrow("允许目录");
   });
