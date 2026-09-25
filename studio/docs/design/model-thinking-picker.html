@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>模型 · 思考深度选择器 — 轻量化设计稿</title>
+<style>
+  :root{
+    --canvas:#f3f7fd; --paper:#ffffff; --surface-tinted:#eaf2ff;
+    --ink:#16233a; --ink-soft:#4c5c74; --muted:#8493a8; --faint:#b4c2d6;
+    --line:#e2eaf5; --line-strong:#c9d6ea;
+    --accent:#0a7cff; --accent-hover:#0868d6; --accent-soft:#e6f1ff; --accent-ink:#08529e;
+    --warm:#ff7a45; --warm-soft:#fff0e8; --warm-ink:#c65021;
+    --good:#16a870; --good-soft:#e5f8ef; --good-ink:#107950;
+    --watch:#f0a326; --watch-soft:#fef3e1; --watch-ink:#92600c;
+    --danger:#c43c43; --danger-soft:#fff0f1; --danger-line:#f0c8cb;
+    --shadow-ink:#162e54;
+    --radius-control:11px; --radius-card-small:12px; --radius-card:18px; --radius-pill:999px;
+    --shadow-card:0 1px 2px rgb(22 46 84 / 4%), 0 14px 34px rgb(22 46 84 / 7%);
+    --shadow-pop:0 12px 32px rgb(22 46 84 / 16%);
+    --font-ui:"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif;
+    --font-display:"Songti SC","Noto Serif SC",Georgia,serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--canvas); color:var(--ink); font-family:var(--font-ui);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+  }
+  .page{max-width:1180px; margin:0 auto; padding:40px 32px 96px;}
+
+  /* ---------- Header ---------- */
+  .doc-header{margin-bottom:36px;}
+  .doc-kicker{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:var(--radius-pill); background:var(--accent-soft); color:var(--accent-ink); font-size:12px; font-weight:600; letter-spacing:.02em;}
+  .doc-header h1{font-family:var(--font-display); font-size:30px; font-weight:500; letter-spacing:-.02em; margin:14px 0 8px;}
+  .doc-header p{max-width:720px; margin:0; color:var(--ink-soft); font-size:14.5px;}
+  .doc-meta{display:flex; gap:18px; margin-top:16px; font-size:12.5px; color:var(--muted);}
+  .doc-meta span{display:flex; align-items:center; gap:6px;}
+
+  section.block{margin-bottom:48px;}
+  .block-title{display:flex; align-items:baseline; gap:10px; margin-bottom:6px;}
+  .block-title h2{font-size:17px; font-weight:650; margin:0; letter-spacing:-.01em;}
+  .block-title .index{display:grid; place-items:center; width:22px; height:22px; border-radius:7px; background:var(--ink); color:var(--paper); font-size:12px; font-weight:700;}
+  .block-lede{color:var(--ink-soft); font-size:13.5px; max-width:720px; margin:0 0 20px;}
+
+  /* ---------- Compare grid (before/after) ---------- */
+  .compare{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:920px){.compare{grid-template-columns:1fr;}}
+  .compare-card{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); overflow:hidden; display:flex; flex-direction:column;}
+  .compare-card-head{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line);}
+  .compare-card-head b{font-size:13.5px; font-weight:650;}
+  .tag{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:650; padding:3px 9px; border-radius:var(--radius-pill);}
+  .tag.bad{background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger-line);}
+  .tag.good{background:var(--good-soft); color:var(--good-ink); border:1px solid color-mix(in srgb, var(--good) 30%, transparent);}
+  .compare-stage{padding:26px 18px; display:grid; place-items:center; background:
+    radial-gradient(circle at 20% 0%, rgba(10,124,255,.05), transparent 60%), var(--surface-tinted);
+    min-height:360px;}
+
+  /* ===== OLD dialog recreation ===== */
+  .old-dialog{width:320px; background:var(--paper); border-radius:var(--radius-card-small); box-shadow:var(--shadow-pop); border:1px solid var(--line); overflow:hidden; font-size:12.5px;}
+  .old-dialog header{display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line);}
+  .old-dialog header .back{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; color:var(--ink-soft); background:var(--surface-tinted);}
+  .old-dialog header h3{margin:0; font-size:14px; font-weight:650;}
+  .old-body{padding:14px; display:flex; flex-direction:column; gap:12px; max-height:420px; overflow:auto;}
+  .old-section-title{font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:2px 0 0;}
+  .old-runtime{display:flex; flex-direction:column; gap:7px;}
+  .old-runtime .opt{display:flex; align-items:center; gap:9px; padding:9px 10px; border:1px solid var(--line); border-radius:9px; background:var(--paper);}
+  .old-runtime .opt.active{border-color:var(--accent); background:var(--accent-soft);}
+  .old-runtime .opt .mark{width:24px; height:24px; border-radius:7px; background:var(--surface-tinted); display:grid; place-items:center; color:var(--accent-ink); flex:none;}
+  .old-runtime .opt b{display:block; font-size:12.5px;}
+  .old-runtime .opt small{display:block; color:var(--muted); font-size:11px; margin-top:1px;}
+  .old-runtime .opt i{margin-left:auto; font-style:normal; font-size:10.5px; padding:2px 7px; border-radius:var(--radius-pill); background:var(--good-soft); color:var(--good-ink); font-weight:650;}
+  .old-field{display:flex; flex-direction:column; gap:5px;}
+  .old-field span{font-size:11.5px; color:var(--ink-soft); font-weight:600;}
+  .old-select{display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border:1px solid var(--line-strong); border-radius:8px; background:var(--paper); color:var(--ink);}
+  .old-two-col{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .old-key-row{display:flex; align-items:center; gap:8px; padding:9px 10px; background:var(--surface-tinted); border-radius:9px;}
+  .old-key-row span:first-child{font-weight:650; flex:1;}
+  .old-key-row .state{font-size:10.5px; padding:2px 6px; border-radius:var(--radius-pill); background:var(--watch-soft); color:var(--watch-ink); font-weight:650;}
+  .old-key-row button{border:1px solid var(--line-strong); background:var(--paper); border-radius:7px; padding:4px 8px; font-size:11px; color:var(--ink-soft);}
+  .old-annot{margin-top:2px; font-size:11px; color:var(--danger); display:flex; gap:6px; align-items:flex-start; background:var(--danger-soft); border:1px solid var(--danger-line); border-radius:9px; padding:8px 9px;}
+
+  /* ===== NEW composer + popover ===== */
+  .stage-inner{position:relative; width:340px;}
+  .composer{background:var(--paper); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow-card); padding:12px;}
+  .composer-text{color:var(--faint); font-size:13.5px; padding:2px 4px 12px;}
+  .composer-toolbar{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .mode-chip{display:inline-flex; align-items:center; gap:6px; padding:7px 11px 7px 9px; border-radius:var(--radius-pill); background:var(--accent-soft); color:var(--accent-ink); font-size:12.5px; font-weight:600; border:1px solid transparent; cursor:default;}
+  .toolbar-right{display:flex; align-items:center; gap:6px; position:relative;}
+  .icon-btn{display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:transparent; color:var(--ink-soft); border:0; cursor:default;}
+  .model-trigger{display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border-radius:var(--radius-pill); background:transparent; color:var(--ink); font-size:12.5px; font-weight:600; border:1px solid var(--line-strong); cursor:pointer; transition:background .15s, border-color .15s;}
+  .model-trigger:hover{background:var(--surface-tinted);}
+  .model-trigger.is-open{background:var(--surface-tinted); border-color:var(--accent);}
+  .send-btn{width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center; border:0;}
+
+  .model-popover{
+    position:absolute; right:0; bottom:calc(100% + 10px); z-index:20;
+    width:272px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-card-small);
+    box-shadow:var(--shadow-pop); padding:6px; opacity:0; transform:translateY(4px) scale(.98); pointer-events:none;
+    transition:opacity .14s ease, transform .14s ease;
+  }
+  .model-popover.open{opacity:1; transform:translateY(0) scale(1); pointer-events:auto;}
+  .model-popover::after{content:""; position:absolute; right:22px; bottom:-6px; width:12px; height:12px; background:var(--paper); border:1px solid var(--line); border-top:0; border-left:0; transform:rotate(45deg); clip-path:polygon(100% 0,0 100%,100% 100%);}
+
+  .mp-group-label{padding:8px 9px 4px; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .mp-list{display:flex; flex-direction:column; gap:1px;}
+  .mp-row{display:flex; align-items:flex-start; gap:9px; width:100%; padding:8px 9px; border:0; background:transparent; border-radius:8px; text-align:left; cursor:pointer; font-family:inherit;}
+  .mp-row:hover{background:var(--surface-tinted);}
+  .mp-row.selected{background:var(--accent-soft);}
+  .mp-row .radio{width:16px; height:16px; border-radius:50%; border:1.5px solid var(--line-strong); flex:none; margin-top:2px; display:grid; place-items:center; transition:border-color .15s;}
+  .mp-row.selected .radio{border-color:var(--accent); background:var(--accent);}
+  .mp-row.selected .radio svg{width:9px; height:9px; stroke:#fff;}
+  .mp-row .txt b{display:block; font-size:12.5px; font-weight:650; color:var(--ink);}
+  .mp-row .txt span{display:block; font-size:11px; color:var(--muted); margin-top:1px;}
+  .mp-row.selected .txt b{color:var(--accent-ink);}
+
+  .mp-divider{height:1px; background:var(--line); margin:6px 4px;}
+
+  .mp-effort-label{display:flex; align-items:center; gap:5px; padding:6px 9px 8px; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .mp-effort-label .info{width:13px; height:13px; color:var(--faint);}
+  .mp-effort-row{display:flex; gap:5px; padding:0 9px 8px;}
+  .mp-pill{flex:1; text-align:center; padding:7px 4px; border-radius:9px; border:1px solid var(--line-strong); background:var(--paper); font-size:12px; font-weight:600; color:var(--ink-soft); cursor:pointer; transition:all .12s;}
+  .mp-pill:hover:not(.disabled){border-color:var(--accent); color:var(--accent-ink);}
+  .mp-pill.selected{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .mp-pill.disabled{color:var(--faint); background:var(--surface-tinted); cursor:not-allowed; border-color:var(--line);}
+
+  .mp-footer{display:flex; align-items:center; gap:6px; padding:9px 10px 5px; margin-top:2px; border-top:1px solid var(--line); font-size:11.5px; color:var(--muted); cursor:default;}
+  .mp-footer svg{width:13px; height:13px; flex:none;}
+  .mp-footer b{color:var(--ink-soft); font-weight:600;}
+
+  /* ---------- Annotation callouts ---------- */
+  .annot-wrap{position:relative;}
+  .callout{position:absolute; display:flex; align-items:flex-start; gap:8px; max-width:230px; font-size:11.5px; color:var(--ink-soft); z-index:30;}
+  .callout .num{width:18px; height:18px; border-radius:50%; background:var(--ink); color:#fff; font-size:10.5px; font-weight:700; display:grid; place-items:center; flex:none;}
+  .callout .txt{background:var(--paper); border:1px solid var(--line-strong); border-radius:8px; padding:6px 9px; box-shadow:var(--shadow-card);}
+  .c1{top:-10px; left:-190px;}
+  .c2{top:78px; left:-198px;}
+  .c3{top:150px; left:-198px;}
+  .c4{bottom:76px; left:-198px;}
+  .c5{bottom:-6px; left:-186px;}
+
+  /* ---------- Comparison table ---------- */
+  table.diff{width:100%; border-collapse:collapse; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-card); overflow:hidden; box-shadow:var(--shadow-card); font-size:13px;}
+  table.diff th, table.diff td{padding:12px 16px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top;}
+  table.diff th{background:var(--surface-tinted); font-size:12px; color:var(--ink-soft); font-weight:650;}
+  table.diff td:first-child{width:180px; font-weight:650; color:var(--ink); background:#fbfdff;}
+  table.diff tr:last-child td{border-bottom:0;}
+  table.diff .neg{color:var(--danger);}
+  table.diff .pos{color:var(--good-ink); font-weight:600;}
+
+  /* ---------- Implementation notes ---------- */
+  .notes{background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:20px 22px;}
+  .notes ul{margin:0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:10px;}
+  .notes li{display:flex; gap:10px; font-size:13.5px; color:var(--ink-soft); align-items:flex-start;}
+  .notes li b{color:var(--ink);}
+  .notes code{background:var(--surface-tinted); color:var(--accent-ink); padding:1px 6px; border-radius:5px; font-size:12.5px; font-family:ui-monospace,SF Mono,Menlo,monospace;}
+  .notes li .dot{width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:7px; flex:none;}
+
+  .footer-note{margin-top:56px; text-align:center; color:var(--faint); font-size:12px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <span class="doc-kicker">✦ UX 设计稿 · 交互重构</span>
+    <h1>模型 · 思考深度选择器 — 轻量化设计</h1>
+    <p>当前在 Agent 对话框中点击「模型」按钮，会弹出与偏好设置「AI 设置」完全相同的完整弹窗（运行方式、模型厂商、模型、思考深度、API Key 管理），对于「接着说」这样的轻量场景过重。本设计稿提出：厂商固定，仅在对话框内提供「切换模型」与「调整思考深度」两项能力，交互形态参考 Codex CLI 的 <code style="background:var(--surface-tinted);padding:1px 5px;border-radius:5px;">/model</code> 选择器。</p>
+    <div class="doc-meta">
+      <span>📄 涉及文件：AgentSettings.tsx · Collaboration.tsx</span>
+      <span>🎯 目标：把「厂商级配置」和「单轮对话可调项」分层</span>
+    </div>
+  </header>
+
+  <!-- ============ BEFORE / AFTER ============ -->
+  <section class="block">
+    <div class="block-title"><span class="index">1</span><h2>现状 vs 新方案</h2></div>
+    <p class="block-lede">左侧为现状：点击模型气泡直接打开全量「AI 设置」弹窗。右侧为新方案：点击后仅展开一个锚定在按钮旁的轻量菜单，可实时点击体验（选模型 / 调思考深度）。</p>
+
+    <div class="compare">
+      <!-- OLD -->
+      <div class="compare-card">
+        <div class="compare-card-head"><b>现状：完整 AI 设置弹窗</b><span class="tag bad">⚠ 过重</span></div>
+        <div class="compare-stage">
+          <div class="old-dialog">
+            <header><span class="back">←</span><h3>AI 设置</h3></header>
+            <div class="old-body">
+              <div class="old-annot">⚠ 覆盖全部厂商级配置，和「接着说一句话」的量级不匹配</div>
+              <p class="old-section-title">运行方式</p>
+              <div class="old-runtime">
+                <div class="opt active"><span class="mark">✦</span><span><b>Codex</b><small>使用本机 Codex 登录与模型能力</small></span><i>已就绪</i></div>
+                <div class="opt"><span class="mark">⚙</span><span><b>第三方模型</b><small>使用你选择的模型服务和密钥</small></span><i style="background:var(--watch-soft);color:var(--watch-ink);">待配置</i></div>
+              </div>
+              <p class="old-section-title">模型厂商</p>
+              <div class="old-field"><div class="old-select"><span>DeepSeek · 深度求索官方 API</span><span>⌄</span></div></div>
+              <p class="old-section-title">模型与思考</p>
+              <div class="old-two-col">
+                <div class="old-field"><span>模型</span><div class="old-select"><span>DeepSeek V4 Flash</span><span>⌄</span></div></div>
+                <div class="old-field"><span>思考深度</span><div class="old-select"><span>标准</span><span>⌄</span></div></div>
+              </div>
+              <div class="old-key-row"><span>DeepSeek API Key</span><span class="state">未配置</span><button>添加</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW -->
+      <div class="compare-card">
+        <div class="compare-card-head"><b>新方案：锚定轻量菜单</b><span class="tag good">✓ 轻量 · 就地</span></div>
+        <div class="compare-stage">
+          <div class="annot-wrap">
+            <div class="stage-inner">
+              <div class="model-popover open" id="demoPopoverStatic">
+                <div class="mp-group-label">切换模型 · DeepSeek</div>
+                <div class="mp-list">
+                  <div class="mp-row"><span class="radio"></span><span class="txt"><b>DeepSeek V4 Pro</b><span>旗舰推理与 Agent</span></span></div>
+                  <div class="mp-row selected"><span class="radio"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="txt"><b>DeepSeek V4 Flash</b><span>均衡速度与质量</span></span></div>
+                  <div class="mp-row"><span class="radio"></span><span class="txt"><b>DeepSeek V4 Flash Lite</b><span>最快响应，轻量任务</span></span></div>
+                </div>
+                <div class="mp-divider"></div>
+                <div class="mp-effort-label">思考深度</div>
+                <div class="mp-effort-row">
+                  <div class="mp-pill">快速</div>
+                  <div class="mp-pill selected">标准</div>
+                  <div class="mp-pill">深入</div>
+                  <div class="mp-pill">极致</div>
+                </div>
+                <div class="mp-footer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <b>模型服务与 API Key</b>，在偏好设置中管理 →</div>
+              </div>
+              <div class="composer">
+                <div class="composer-text">接着说，或者提出新的要求</div>
+                <div class="composer-toolbar">
+                  <span class="mode-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.8L20 9.5l-6.1 1.7L12 17l-1.9-5.8L4 9.5l6.1-1.7z"/></svg> 自动模式 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span>
+                  <div class="toolbar-right">
+                    <span class="icon-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5V4.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg></span>
+                    <button class="model-trigger is-open" id="demoTrigger">DeepSeek V4 Flash <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></button>
+                    <span class="icon-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19v3"/><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/></svg></span>
+                    <span class="send-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="callout c1"><span class="num">1</span><span class="txt">厂商固定不出现在此处 —— 标题只写「切换模型 · DeepSeek」，不再提供运行方式 / 厂商切换</span></div>
+            <div class="callout c2"><span class="num">2</span><span class="txt">单选列表 + 勾选态，和 Codex CLI 的 <code>/model</code> 一致，比下拉框更快扫视</span></div>
+            <div class="callout c3"><span class="num">3</span><span class="txt">思考深度做成分段按钮，一步点选，不需要二次进入下拉框</span></div>
+            <div class="callout c4"><span class="num">4</span><span class="txt">锚定在触发按钮旁的浮层，不遮挡对话内容，点击外部或 Esc 即关闭</span></div>
+            <div class="callout c5"><span class="num">5</span><span class="txt">API Key / 厂商配置收进次要入口，跳转偏好设置，不混进这个轻量菜单</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LIVE DEMO ============ -->
+  <section class="block">
+    <div class="block-title"><span class="index">2</span><h2>可交互演示</h2></div>
+    <p class="block-lede">点击下方「DeepSeek V4 Flash」按钮打开菜单；切换模型会看到思考深度的可选项随之变化（Flash Lite 不支持「极致」，会置灰而不是隐藏，帮助理解模型能力边界）。点击菜单外部或按 Esc 可关闭。</p>
+    <div class="compare-stage" style="border-radius:var(--radius-card); border:1px solid var(--line); box-shadow:var(--shadow-card);">
+      <div class="stage-inner">
+        <div class="model-popover" id="livePopover">
+          <div class="mp-group-label">切换模型 · DeepSeek</div>
+          <div class="mp-list" id="modelList">
+            <button type="button" class="mp-row" data-model="pro"><span class="radio"></span><span class="txt"><b>DeepSeek V4 Pro</b><span>旗舰推理与 Agent</span></span></button>
+            <button type="button" class="mp-row selected" data-model="flash"><span class="radio"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="txt"><b>DeepSeek V4 Flash</b><span>均衡速度与质量</span></span></button>
+            <button type="button" class="mp-row" data-model="lite"><span class="radio"></span><span class="txt"><b>DeepSeek V4 Flash Lite</b><span>最快响应，轻量任务</span></span></button>
+          </div>
+          <div class="mp-divider"></div>
+          <div class="mp-effort-label">思考深度</div>
+          <div class="mp-effort-row" id="effortRow">
+            <button type="button" class="mp-pill" data-effort="fast">快速</button>
+            <button type="button" class="mp-pill selected" data-effort="standard">标准</button>
+            <button type="button" class="mp-pill" data-effort="deep">深入</button>
+            <button type="button" class="mp-pill" data-effort="max">极致</button>
+          </div>
+          <div class="mp-footer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> <b>模型服务与 API Key</b>，在偏好设置中管理 →</div>
+        </div>
+        <div class="composer">
+          <div class="composer-text">接着说，或者提出新的要求</div>
+          <div class="composer-toolbar">
+            <span class="mode-chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.8L20 9.5l-6.1 1.7L12 17l-1.9-5.8L4 9.5l6.1-1.7z"/></svg> 自动模式 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span>
+            <div class="toolbar-right">
+              <span class="icon-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5V4.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg></span>
+              <button type="button" class="model-trigger" id="liveTrigger">DeepSeek V4 Flash <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></button>
+              <span class="icon-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19v3"/><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/></svg></span>
+              <span class="send-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIFF TABLE ============ -->
+  <section class="block">
+    <div class="block-title"><span class="index">3</span><h2>关键差异</h2></div>
+    <table class="diff">
+      <thead><tr><th>维度</th><th>现状</th><th>新方案</th></tr></thead>
+      <tbody>
+        <tr><td>触发方式</td><td class="neg">打开全屏 / 大尺寸 &lt;dialog&gt;，遮挡对话历史</td><td class="pos">锚定在按钮旁展开的小浮层，不遮挡对话</td></tr>
+        <tr><td>可调整内容</td><td class="neg">运行方式、模型厂商、模型、思考深度、API Key，共 5 类</td><td class="pos">只有模型、思考深度，共 2 类，其余归入偏好设置</td></tr>
+        <tr><td>模型选择</td><td class="neg">&lt;select&gt; 下拉框，需要点开才能看到全部选项</td><td class="pos">展开即可见的单选列表，附一行简介</td></tr>
+        <tr><td>思考深度</td><td class="neg">&lt;select&gt; 下拉框，和模型是两个割裂的控件</td><td class="pos">分段按钮，一步点选；不支持的深度置灰而非隐藏</td></tr>
+        <tr><td>关闭方式</td><td class="neg">点击左上角返回箭头 / 关闭按钮</td><td class="pos">点击外部区域或 Esc，符合菜单类交互预期</td></tr>
+        <tr><td>厌商与密钥</td><td class="neg">和模型选择在同一层级，容易误触</td><td class="pos">收进底部次要链接，跳去偏好设置单独处理</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ IMPLEMENTATION NOTES ============ -->
+  <section class="block">
+    <div class="block-title"><span class="index">4</span><h2>实现建议</h2></div>
+    <div class="notes">
+      <ul>
+        <li><span class="dot"></span><span><b>复用现有浮层模式：</b>直接参考 <code>ModePicker</code>（<code>Collaboration.tsx</code>）用 <code>&lt;details&gt;/&lt;summary&gt;</code> + 绝对定位菜单实现的写法（<code>agent-mode-menu</code> 已有样式基底），不需要再用 <code>&lt;dialog&gt;</code>。</span></li>
+        <li><span class="dot"></span><span><b>新增一个精简组件：</b>在 <code>AgentSettings.tsx</code> 旁新增 <code>AgentModelPicker</code>，只暴露 <code>selectThirdPartyModel</code> / <code>setThirdPartyEffort</code>（或 Codex 对应的 <code>selectCodexModel</code> / <code>setCodexEffort</code>），不引入 <code>selectRuntime</code>、<code>selectProvider</code>、API Key 相关状态。</span></li>
+        <li><span class="dot"></span><span><b>厂商固定的读取来源：</b>厂商 / 运行方式仍来自 <code>useAgentSelection</code> 的已保存设置（<code>draft.runtimeId</code>），选择器只读取当前厂商下的 <code>models</code> 列表，不提供切换厂商的 UI。</span></li>
+        <li><span class="dot"></span><span><b>思考深度可用性：</b>按所选模型的 <code>supportedReasoningEfforts</code> 渲染分段按钮，不支持的档位渲染为 <code>disabled</code>（视觉置灰 + <code>title</code> 提示），而不是从列表中移除，帮助用户理解「换个模型就能解锁更深思考」。</span></li>
+        <li><span class="dot"></span><span><b>底部次要入口：</b>保留一条「模型服务与 API Key，在偏好设置中管理」的链接，点击后跳转 <code>Preferences.tsx</code> 里现有的 <code>AiConfiguration</code>（同一份逻辑，只是从「弹窗」变成「设置页」承载），避免重复实现厂商 / 密钥表单。</span></li>
+        <li><span class="dot"></span><span><b>保存时机不变：</b>沿用现有的自动保存（<code>save(false)</code> debounce）逻辑，选择模型 / 思考深度后依旧是「下一轮生效」，不需要新的确认按钮。</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="footer-note">The Way Here · Studio 设计稿 · 仅用于评审，不含真实数据</p>
+</div>
+
+<script>
+  (function () {
+    var trigger = document.getElementById('liveTrigger');
+    var popover = document.getElementById('livePopover');
+    var modelList = document.getElementById('modelList');
+    var effortRow = document.getElementById('effortRow');
+
+    var models = {
+      pro:   { label: 'DeepSeek V4 Pro',        efforts: ['fast', 'standard', 'deep', 'max'] },
+      flash: { label: 'DeepSeek V4 Flash',      efforts: ['fast', 'standard', 'deep', 'max'] },
+      lite:  { label: 'DeepSeek V4 Flash Lite', efforts: ['fast', 'standard'] }
+    };
+    var currentModel = 'flash';
+    var currentEffort = 'standard';
+
+    function render() {
+      Array.prototype.forEach.call(modelList.querySelectorAll('.mp-row'), function (row) {
+        var isSelected = row.dataset.model === currentModel;
+        row.classList.toggle('selected', isSelected);
+        row.querySelector('.radio').innerHTML = isSelected
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+          : '';
+      });
+      var supported = models[currentModel].efforts;
+      Array.prototype.forEach.call(effortRow.querySelectorAll('.mp-pill'), function (pill) {
+        var effort = pill.dataset.effort;
+        var isSupported = supported.indexOf(effort) !== -1;
+        pill.classList.toggle('disabled', !isSupported);
+        pill.classList.toggle('selected', isSupported && effort === currentEffort);
+        pill.title = isSupported ? '' : '该模型不支持此思考深度';
+      });
+      trigger.innerHTML = models[currentModel].label + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>';
+    }
+
+    trigger.addEventListener('click', function (event) {
+      event.stopPropagation();
+      var willOpen = !popover.classList.contains('open');
+      popover.classList.toggle('open', willOpen);
+      trigger.classList.toggle('is-open', willOpen);
+    });
+
+    modelList.addEventListener('click', function (event) {
+      var row = event.target.closest('.mp-row');
+      if (!row) return;
+      currentModel = row.dataset.model;
+      if (models[currentModel].efforts.indexOf(currentEffort) === -1) {
+        currentEffort = models[currentModel].efforts[models[currentModel].efforts.length - 1];
+      }
+      render();
+    });
+
+    effortRow.addEventListener('click', function (event) {
+      var pill = event.target.closest('.mp-pill');
+      if (!pill || pill.classList.contains('disabled')) return;
+      currentEffort = pill.dataset.effort;
+      render();
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!popover.contains(event.target) && event.target !== trigger && !trigger.contains(event.target)) {
+        popover.classList.remove('open');
+        trigger.classList.remove('is-open');
+      }
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        popover.classList.remove('open');
+        trigger.classList.remove('is-open');
+      }
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>
