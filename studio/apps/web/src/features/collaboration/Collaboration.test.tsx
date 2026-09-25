@@ -45,7 +45,7 @@ describe("shared conversation model settings", () => {
     expect(html).not.toContain("正在沿着你的来路慢慢梳理");
   });
   it("uses the same settings control for new chats without a runtime restriction", () => {
-    const html = renderToStaticMarkup(<AgentComposerSettings id="new-chat" agent={agent} />);
+    const html = renderToStaticMarkup(<MemoryRouter><AgentComposerSettings id="new-chat" agent={agent} /></MemoryRouter>);
     expect(html).toContain('aria-label="AI 设置"');
     expect(html).toContain('new-chat-codex-model');
     expect(html).not.toContain('role="radio" disabled');

@@ -12,6 +12,8 @@ import type {
 import { api } from "../../api";
 import { useApi } from "../../shared/use-api";
 import { Icon } from "../../shared/ui";
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
+import { useRememberedWindow } from "../../shared/use-remembered-preview";
 import "./agent-settings.css";
 
 export const reasoningLabels: Record<AgentReasoningEffort, string> = {
@@ -251,10 +253,13 @@ export function useAgentSelection(revision: number) {
 
 export function AgentComposerSettings({ id, agent, runtimeId, label }: { id: string; agent: AgentSettingsController; runtimeId?: AgentRuntimeId; label?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const windowState = useRememberedWindow(`agent-settings:${id}`);
+  useDismissLayer(windowState.open, windowState.hide, { priority: 2, element: dialogRef, outside: true });
+  useEffect(() => { if (windowState.open) { if (!dialogRef.current?.open) dialogRef.current?.show(); } else dialogRef.current?.close(); }, [windowState.open]);
   return <>
-    <button type="button" className={`agent-settings-trigger${label ? " is-model-chip" : ""}`} aria-label="AI 设置" title="切换模型与思考深度" onClick={() => dialogRef.current?.showModal()}>{label ? <><span>{label}</span><Icon name="down" size={13} /></> : <Icon name="controls" size={16} />}</button>
-    <dialog ref={dialogRef} className="agent-settings-dialog" aria-labelledby={`${id}-heading`} onKeyDown={(event) => { if (event.key === "Escape" || event.key === "Tab") event.stopPropagation(); }}>
-      <header className="agent-settings-header"><button type="button" aria-label="返回对话" onClick={() => dialogRef.current?.close()}><Icon name="back" size={18} /></button><h2 id={`${id}-heading`}>AI 设置</h2></header>
+    <button type="button" className={`agent-settings-trigger${label ? " is-model-chip" : ""}`} aria-label="AI 设置" title="切换模型与思考深度" onClick={windowState.show}>{label ? <><span>{label}</span><Icon name="down" size={13} /></> : <Icon name="controls" size={16} />}</button>
+    <dialog ref={dialogRef} className="agent-settings-dialog" aria-labelledby={`${id}-heading`} onCancel={event => { event.preventDefault(); windowState.hide(); }} onKeyDown={(event) => { if (event.key === "Tab") event.stopPropagation(); }}>
+      <header className="agent-settings-header"><button type="button" aria-label="返回对话" onClick={windowState.hide}><Icon name="back" size={18} /></button><h2 id={`${id}-heading`}>AI 设置</h2></header>
       <AiConfiguration id={id} agent={agent} runtimeId={runtimeId} />
     </dialog>
   </>;

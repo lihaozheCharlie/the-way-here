@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { photoAssetUrl, type PhotoMemory, type VaultInfo } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { Icon } from "../../shared/ui";
+import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { cleanSourcePath, sourceBuildPresentation, type SourceBuildRecord } from "./source-model";
 import "./source-memories.css";
 
@@ -31,20 +32,22 @@ export function SourceMemoryDialog({ title, onClose, children }: { title: string
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const titleId = useId();
+  useDismissLayer(true, onClose, { priority: 2, element: dialogRef, outside: true });
   useEffect(() => {
     const dialog = dialogRef.current!;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
-    dialog.showModal();
+    if (!dialog.open) dialog.show();
     document.body.style.overflow = "hidden";
     // A deliberate conversation action hands focus to the Agent without stacking modals.
     const handoff = () => closeRef.current();
     window.addEventListener("open-context-agent", handoff);
     return () => {
       window.removeEventListener("open-context-agent", handoff);
+      const restoreFocus = dialog.contains(document.activeElement);
       dialog.close();
       document.body.style.overflow = previousOverflow;
-      if (opener?.isConnected) opener.focus();
+      if (opener?.isConnected && restoreFocus) opener.focus();
     };
   }, []);
   return createPortal(<dialog ref={dialogRef} className="source-memory-dialog organized-sources-page" aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose(); }}>

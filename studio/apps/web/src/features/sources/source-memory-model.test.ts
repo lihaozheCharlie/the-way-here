@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SourceImportBatch } from "@the-way-here/shared";
-import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords, resolveOpenedMemoryRecord } from "./source-memory-model";
+import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords } from "./source-memory-model";
 
 function batch(id: string, channel: SourceImportBatch["channel"], status: SourceImportBatch["files"][number]["buildStatus"]): SourceImportBatch {
   return { id, channel, createdAt: "2026-09-04T00:00:00Z", fileCount: 2, totalBytes: 20, files: [{ originalName: id, storedPath: `sources/${id}.md`, bytes: 20, buildKind: channel === "files" ? "direct" : "dialogue", buildStatus: status }] };
@@ -35,13 +35,6 @@ describe("memory inbox", () => {
     expect(importedMemoryRecord(batch("built", "photos", "built"))).toBeUndefined();
   });
 
-  it("keeps the just-imported memory open while the refreshed import list catches up", () => {
-    const requested = importedMemoryRecord(batch("photo", "photos", "needs-dialogue"))!;
-    expect(resolveOpenedMemoryRecord(requested, [])).toBe(requested);
-    const refreshed = batch("photo", "photos", "in-dialogue");
-    expect(resolveOpenedMemoryRecord(requested, [refreshed])?.file.buildStatus).toBe("in-dialogue");
-    expect(resolveOpenedMemoryRecord(undefined, [refreshed])).toBeUndefined();
-  });
 });
 
 it("does not resurrect a deleted batch from an acknowledged recent import", () => {

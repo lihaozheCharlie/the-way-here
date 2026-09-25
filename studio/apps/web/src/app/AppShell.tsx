@@ -1,4 +1,5 @@
 import { useDismissLayer } from "../shared/use-dismiss-layer";
+import { useRememberedWindow } from "../shared/use-remembered-preview";
 import { FloatingAgentPanel } from "../features/desktop/FloatingAgentPanel";
 import { ConversationWindow } from "../features/desktop/ConversationWindow";
 import { useDesktopNotifications } from "../features/desktop/use-desktop-notifications";
@@ -100,10 +101,10 @@ export function AppShell({ revision }: { revision: number }) {
   useDesktopNotifications(location.pathname);
   const readerReturnContext = location.state as ReturnContext | null;
   const isSourceReader = location.pathname.startsWith("/page/") && readerReturnContext?.returnTo.startsWith("/sources");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [inspectorVisible, setInspectorVisible] = useState(false);
-  const inspectorOpen = inspectorVisible;
-  const toggleInspector = () => setInspectorVisible(value => !value);
+  const searchWindow = useRememberedWindow("command-palette");
+  const [inspectorByMenu, setInspectorByMenu] = useState<Record<string, boolean>>({});
+  const [suspendedInspectorMenu, setSuspendedInspectorMenu] = useState<string>();
+  const agentToggleRef = useRef<HTMLButtonElement>(null);
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
   const inspector = useInspector()!;
   const utilityWindow = location.pathname === "/preferences" || location.pathname === "/capture";
@@ -111,12 +112,6 @@ export function AppShell({ revision }: { revision: number }) {
   const detached = new URLSearchParams(location.search).has("detached");
   const openCapture = () => window.desktop ? void openDesktopWindow("/capture", "capture") : navigate("/capture");
   const openPreferences = () => window.desktop ? void openDesktopWindow("/preferences", "settings") : navigate("/preferences");
-  useEffect(() => {
-    const show = () => { setInspectorVisible(true); };
-    const hide = () => { setInspectorVisible(false); };
-    window.addEventListener("show-inspector", show); window.addEventListener("hide-inspector", hide);
-    return () => { window.removeEventListener("show-inspector", show); window.removeEventListener("hide-inspector", hide); };
-  }, []);
   const [knowledgeBaseSwitching, setKnowledgeBaseSwitching] = useState(false);
   const [switchingKnowledgeBaseName, setSwitchingKnowledgeBaseName] = useState("");
   const [knowledgeBaseError, setKnowledgeBaseError] = useState("");
@@ -137,6 +132,19 @@ export function AppShell({ revision }: { revision: number }) {
   }
 
   const activeSection = navigation.find((item) => mainItemActive(item));
+  const activeMenu = activeSection?.children.find(childItemActive)?.to || activeSection?.to || location.pathname;
+  const inspectorOpen = Boolean(inspectorByMenu[activeMenu]) && suspendedInspectorMenu !== activeMenu;
+  const toggleInspector = () => {
+    if (suspendedInspectorMenu === activeMenu) { setSuspendedInspectorMenu(undefined); return; }
+    setInspectorByMenu(previous => ({ ...previous, [activeMenu]: !previous[activeMenu] }));
+  };
+  useEffect(() => setSuspendedInspectorMenu(undefined), [activeMenu]);
+  useEffect(() => {
+    const show = () => { setSuspendedInspectorMenu(undefined); setInspectorByMenu(previous => ({ ...previous, [activeMenu]: true })); };
+    const hide = () => setInspectorByMenu(previous => ({ ...previous, [activeMenu]: false }));
+    window.addEventListener("show-inspector", show); window.addEventListener("hide-inspector", hide);
+    return () => { window.removeEventListener("show-inspector", show); window.removeEventListener("hide-inspector", hide); };
+  }, [activeMenu]);
   useEffect(() => {
     if (navigationType !== "POP") document.getElementById("main-content")?.scrollTo({ top: 0 });
     document.getElementById("main-content")?.focus({ preventScroll: true });
@@ -192,7 +200,7 @@ export function AppShell({ revision }: { revision: number }) {
 
   useEffect(() => {
     function command(value: DesktopCommand) {
-      if (value === "search") setSearchOpen(true);
+      if (value === "search") searchWindow.show();
       else if (value === "inspector") { if(localConversation) document.querySelector(".context-agent-panel")?.scrollIntoView({block:"nearest"}); else toggleInspector(); }
       else if (value === "capture") openCapture();
       else if (value === "settings") openPreferences();
@@ -242,13 +250,13 @@ export function AppShell({ revision }: { revision: number }) {
       <header className="desktop-titlebar">
         <div className="desktop-window-space" aria-hidden="true" />
         <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
-        {!utilityWindow ? <><button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={() => setSearchOpen(true)}><Icon name="search" size={17} /></button>
-        {!localConversation && !detached ? <button className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
+        {!utilityWindow ? <><button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={searchWindow.show}><Icon name="search" size={17} /></button>
+        {!localConversation && !detached ? <button ref={agentToggleRef} className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
       </header>
       <aside className="desktop-sidebar" aria-label="侧边栏">
         <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=app-icon-5" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
         {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
-        <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航">
+        <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航" onClickCapture={event => { if ((event.target as Element).closest("a")) { setSuspendedInspectorMenu(activeMenu); window.dispatchEvent(new Event("suspend-floating-windows")); } }}>
           {navigation.map((item) => <React.Fragment key={item.to}>
             <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{item.label}</span></NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? "收起已有理解" : "展开已有理解"} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
             {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{child.label}</NavLink>)}</div> : null}
@@ -291,8 +299,8 @@ export function AppShell({ revision }: { revision: number }) {
           </Routes>
         </div>
       </main>
-      {!utilityWindow && !detached && !localConversation ? <FloatingAgentPanel open={inspectorOpen}><AgentDock revision={revision} context={inspector.context} /></FloatingAgentPanel> : null}
-      {searchOpen ? <CommandPalette routes={navigation.flatMap(item => [{ title: item.label, to: item.to }, ...item.children.map(child => ({ title: child.label, to: child.to }))])} onClose={() => setSearchOpen(false)} onCapture={openCapture} onSettings={openPreferences} /> : null}
+      {!utilityWindow && !detached && !localConversation ? <FloatingAgentPanel open={inspectorOpen} triggerRef={agentToggleRef}><AgentDock revision={revision} context={inspector.context} /></FloatingAgentPanel> : null}
+      {searchWindow.open ? <CommandPalette routes={navigation.flatMap(item => [{ title: item.label, to: item.to }, ...item.children.map(child => ({ title: child.label, to: child.to }))])} onClose={searchWindow.hide} onCapture={openCapture} onSettings={openPreferences} /> : null}
       {createKnowledgeBaseOpen ? <CreateKnowledgeBaseDialog onClose={() => setCreateKnowledgeBaseOpen(false)} onSubmit={createKnowledgeBase} /> : null}
       {deleteKnowledgeBaseTarget ? <ConfirmDeleteDialog
         title="删除这个知识库？"

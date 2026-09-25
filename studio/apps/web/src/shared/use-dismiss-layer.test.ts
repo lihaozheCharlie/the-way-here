@@ -60,3 +60,31 @@ describe("shared Escape dismissal", () => {
     expect(outer).not.toHaveBeenCalled();
   });
 });
+
+describe("outside pointer dismissal", () => {
+  it("closes nested floating windows outside both, but keeps the parent when clicked inside it", () => {
+    const stack = new DismissLayerStack();
+    const panel = {} as HTMLElement;
+    const preview = {} as HTMLElement;
+    const outside = {} as EventTarget;
+    const closePanel = vi.fn(), closePreview = vi.fn();
+    stack.add({ close: closePanel, canClose: () => true, priority: 0, element: () => panel, outside: true });
+    stack.add({ close: closePreview, canClose: () => true, priority: 2, element: () => preview, outside: true });
+    stack.handlePointer(Object.assign(new Event("pointerdown"), { composedPath: () => [panel] }) as unknown as PointerEvent);
+    expect(closePreview).toHaveBeenCalledOnce();
+    expect(closePanel).not.toHaveBeenCalled();
+    stack.handlePointer(Object.assign(new Event("pointerdown"), { composedPath: () => [outside] }) as unknown as PointerEvent);
+    expect(closePanel).toHaveBeenCalledOnce();
+  });
+  it("keeps menu-owned windows for a later return and ignores their toggle", () => {
+    const stack = new DismissLayerStack();
+    const panel = {} as HTMLElement;
+    const trigger = {} as HTMLElement;
+    const menu = { matches: () => true } as unknown as HTMLElement;
+    const close = vi.fn();
+    stack.add({ close, canClose: () => true, priority: 0, element: () => panel, outside: true, ignore: () => trigger });
+    stack.handlePointer(Object.assign(new Event("pointerdown"), { composedPath: () => [trigger] }) as unknown as PointerEvent);
+    stack.handlePointer(Object.assign(new Event("pointerdown"), { composedPath: () => [menu] }) as unknown as PointerEvent);
+    expect(close).not.toHaveBeenCalled();
+  });
+});

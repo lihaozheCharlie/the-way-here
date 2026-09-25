@@ -1,5 +1,6 @@
 import { GraphViewport } from "../../shared/GraphViewport";
 import { useState } from "react";
+import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import type { LifeStageView, WikiPageSummary } from "@the-way-here/shared";
 import { FileListRow } from "../../shared/FileMenu";
 import { Icon } from "../../shared/ui";
@@ -7,7 +8,7 @@ import { ReadOnlyPageDialog } from "./ReadOnlyPageDialog";
 import "./stage-focus.css";
 
 export function StageFocus({ stage, revision }: { stage: LifeStageView; revision: number }) {
-  const [preview, setPreview] = useState<string>();
+  const preview = useRememberedPreview(`stage:${stage.page.id}`);
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const groups = [
     { label: "相关的人", pages: stage.relatedPeople, angle: 210, tone: "people" },
@@ -26,7 +27,7 @@ export function StageFocus({ stage, revision }: { stage: LifeStageView; revision
   const height = Math.max(400, cursor);
   const centerY = height / 2;
   const curve = (x1: number, y1: number, x2: number, y2: number) => `M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`;
-  const open = (page: WikiPageSummary) => setPreview(page.id);
+  const open = (page: WikiPageSummary) => preview.open(page.id);
   const sparse = stage.relatedEvents.length <= 2;
   return <>
     <section className="stage-focus stage-focus-network" aria-label="阶段关系与关键事件">
@@ -52,6 +53,6 @@ export function StageFocus({ stage, revision }: { stage: LifeStageView; revision
         <div className="stage-event-list" tabIndex={0}>{stage.relatedEvents.length ? stage.relatedEvents.map(event => <FileListRow key={event.id} page={event}><button type="button" className="stage-event" onClick={() => open(event)}><time>{event.start || "日期待补"}</time><b>{event.title.replace(/^\d+\s*/, "")}</b>{sparse && event.excerpt && <p>{event.excerpt}</p>}<Icon name="arrow" size={16} /></button></FileListRow>) : <p className="stage-events-empty">这个阶段还没有关联的关键事件。</p>}</div>
       </aside>
     </section>
-    {preview && <ReadOnlyPageDialog key={preview} pageId={preview} revision={revision} onClose={() => setPreview(undefined)} />}
+    {preview.pageId && <ReadOnlyPageDialog key={preview.pageId} pageId={preview.pageId} revision={revision} onClose={preview.close} />}
   </>;
 }

@@ -6,7 +6,8 @@ import { api } from "../../api";
 import { pageDestination } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
 export function CommandPalette({ onClose, onCapture, onSettings, routes }: { routes: Array<{ title: string; to: string }>; onClose: () => void; onCapture: () => void; onSettings: () => void }) {
-  useDismissLayer(true, onClose, { priority: 1 });
+  const panel = useRef<HTMLElement>(null);
+  useDismissLayer(true, onClose, { priority: 1, element: panel, outside: true });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<WikiPageSummary[]>([]);
   const [error, setError] = useState("");
@@ -27,8 +28,8 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
   const commands = [ ...routes.filter((item) => !query || item.title.includes(query)).map((item) => ({ title: item.title, detail: "前往栏目", action: () => navigate(item.to) })), ...[{ title: "新建随手记", detail: "⌘N", action: onCapture }, { title: "打开偏好设置", detail: "⌘,", action: onSettings }].filter(item => !query || item.title.includes(query)), ...results.slice(0, 12).map((page) => ({ title: page.title, detail: page.isSource ? "生活记录" : "已有理解", action: () => navigate(pageDestination(page)) })) ];
   useEffect(() => { document.getElementById(`command-${selected}`)?.scrollIntoView({ block:"nearest" }); }, [selected]);
   function choose(index: number) { commands[index]?.action(); onClose(); }
-  return <div className="desktop-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <section className="command-palette" role="dialog" aria-modal="true" aria-label="搜索与命令" onKeyDown={(e) => {
+  return <div className="desktop-modal-backdrop command-palette-layer">
+    <section ref={panel} className="command-palette" role="dialog" aria-label="搜索与命令" onKeyDown={(e) => {
       if (e.key === "Tab") { e.preventDefault(); input.current?.focus(); }
       if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setSelected((value) => Math.max(0, Math.min(commands.length - 1, value + (e.key === "ArrowDown" ? 1 : -1)))); }
       if (e.key === "Enter" && !e.nativeEvent.isComposing && commands.length) { e.preventDefault(); choose(selected); }

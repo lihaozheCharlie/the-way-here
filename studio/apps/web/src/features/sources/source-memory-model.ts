@@ -1,5 +1,5 @@
 import type { SourceImportBatch } from "@the-way-here/shared";
-import { sourceBuildRecords, type SourceBuildRecord } from "./source-model";
+import { sourceBuildRecords } from "./source-model";
 
 // A just-imported batch fills the gap before refresh; live server status wins afterward.
 export function mergeSourceBatches(batches: SourceImportBatch[], recent?: SourceImportBatch, acknowledged = false): SourceImportBatch[] {
@@ -14,11 +14,6 @@ export function pendingMemoryRecords(batches: SourceImportBatch[]) {
 
 export function importedMemoryRecord(batch: SourceImportBatch) {
   return pendingMemoryRecords([batch])[0];
-}
-
-export function resolveOpenedMemoryRecord(requested: SourceBuildRecord | undefined, batches: SourceImportBatch[]) {
-  if (!requested) return undefined;
-  return sourceBuildRecords(batches).find((record) => record.batch.id === requested.batch.id && record.file.storedPath === requested.file.storedPath) || requested;
 }
 
 // Hide successful deletions immediately, including from a not-yet-refreshed import snapshot.

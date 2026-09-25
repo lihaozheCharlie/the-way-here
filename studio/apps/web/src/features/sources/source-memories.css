@@ -11,8 +11,7 @@
 .source-memory-card-copy > b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink); font-size: 14px; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
 .source-memory-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .source-memory-card > svg { flex-shrink: 0; }
-.source-memory-dialog { position: fixed; inset: 0; width: min(1400px, calc(100vw - 64px)); max-width: none; max-height: calc(100dvh - 64px); margin: auto; padding: 0; overflow: auto; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius:var(--radius-control); }
-.source-memory-dialog::backdrop { background: color-mix(in srgb, var(--shadow-ink) 32%, transparent); }
+.source-memory-dialog { position: fixed; inset: 0 16px 0 calc(var(--desktop-sidebar) + 16px); z-index: 1200; width: min(1400px, calc(100vw - var(--desktop-sidebar) - 32px)); max-width: none; max-height: calc(100dvh - 64px); margin: auto; padding: 0; overflow: auto; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius:var(--radius-control); box-shadow: var(--shadow-float); }
 .source-memory-dialog-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; border-bottom: 1px solid var(--line); background: var(--paper); }
 .source-memory-dialog-header h2 { margin: 0; font: 500 20px/1.4 var(--font-display); }
 .source-memory-dialog-body { padding: 28px; }

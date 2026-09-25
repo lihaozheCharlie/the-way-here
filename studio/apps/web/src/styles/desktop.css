@@ -85,6 +85,8 @@ input,textarea { caret-color:var(--accent-primary); }
 .desktop-shell .source-pane-shell,.desktop-shell .document-outline { top:0; }
 .desktop-shell .knowledge-base-transition { position:fixed; inset:44px 0 0; z-index:120; }
 .desktop-modal-backdrop { position:fixed; inset:0; background:color-mix(in srgb, var(--shadow-ink) 20%, transparent); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; }
+.command-palette-layer { background:transparent; pointer-events:none; }
+.command-palette-layer .command-palette { pointer-events:auto; }
 .command-palette { max-height:70vh; background:var(--paper); overflow:hidden; }
 .command-input { display:flex; align-items:center; gap:12px; padding:16px; border-bottom:1px solid var(--line); }
 .command-input input { flex:1; min-width:0; border:0; background:transparent; outline:none; font-size:15px; }

@@ -1,6 +1,7 @@
 import { FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
 import { DocumentPreview } from "../../shared/DocumentPreview";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
+import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { PaneShelf } from "../../shared/PaneShelf";
 import { QuietScroll } from "../../shared/QuietScroll";
 import { FileMenu } from "../../shared/FileMenu";
@@ -24,13 +25,14 @@ import { ImportMaterialsModal, RecordImportTrigger, type ImportRoute } from "./I
 import { PhotoMemoryPanel } from "./PhotoMemoryPanel";
 import { BillMemoryPanel } from "./BillMemoryPanel";
 import { SourceMemoryCards, SourceMemoryDialog } from "./SourceMemories";
-import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords, resolveOpenedMemoryRecord } from "./source-memory-model";
+import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords } from "./source-memory-model";
 import { sourceFolderOptions, useSourceFolders } from "./source-folders";
 import { buildableSourceRecordForPage, cleanSourcePath, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
 
 function sourceBuildTitle(record: SourceBuildRecord): string {
   return cleanSourcePath(record.file.storedPath).split("/").at(-1)?.replace(/\.md$/i, "") || record.file.originalName;
 }
+function memoryRecordKey(record: SourceBuildRecord): string { return `${record.batch.id}\u0000${record.file.storedPath}`; }
 
 type SourceItemAction = {
   label: string;
@@ -282,7 +284,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     const pending = new Set([...deletedSourcePaths].filter((path) => stillVisible.has(path)));
     if (pending.size !== deletedSourcePaths.size) setDeletedSourcePaths(pending);
   }, [data, importBatches, deletedSourcePaths]);
-  const [memoryRecord, setMemoryRecord] = useState<SourceBuildRecord>();
+  const memoryWindow = useRememberedPreview("source-memory");
   const [busyBuildPath, setBusyBuildPath] = useState<string>();
   const [buildError, setBuildError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "file"; page: WikiPageSummary } | { kind: "folder"; folder: string; count: number }>();
@@ -291,10 +293,11 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const pages = (data || []).filter((page) => !deletedSourcePaths.has(page.relativePath));
   const batches = excludeDeletedSources(mergeSourceBatches(importBatches || [], recentBatch, recentBatchAcknowledged), deletedSourcePaths);
   const buildRecords = sourceBuildRecords(batches);
+  const memoryRecord = buildRecords.find((record) => memoryRecordKey(record) === memoryWindow.pageId);
   const pendingBuilds = pendingSourceBuildRecords(batches);
   const memoryCards = pendingMemoryRecords(batches);
   const shownBatch = batches.find((batch) => batch.id === (recentBatch?.id || params.get("batch")));
-  const openedMemory = resolveOpenedMemoryRecord(memoryRecord, batches);
+  const openedMemory = memoryRecord;
   const memoryPage = openedMemory ? pages.find((page) => cleanSourcePath(page.relativePath) === cleanSourcePath(openedMemory.file.storedPath)) : undefined;
   const query = params.get("q") || "";
   const folder = params.get("folder") || "";
@@ -381,7 +384,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     setDeletedSourcePaths((current) => new Set([...current, ...paths]));
     setRecentBatch((batch) => batch ? excludeDeletedSources([batch], removed)[0] : undefined);
     if (recentJourney && removed.has(recentJourney.reportPath)) setRecentJourney(undefined);
-    if (memoryRecord && removed.has(memoryRecord.file.storedPath)) setMemoryRecord(undefined);
+    if (memoryRecord && removed.has(memoryRecord.file.storedPath)) memoryWindow.close();
   }
   async function deleteSelectedTarget() {
     if (!deleteTarget) return;
@@ -403,7 +406,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
   }
   async function beginBuild(record: SourceBuildRecord, intent?: SourceBuildIntent) {
     if (record.batch.channel === "photos" || intent === "open") {
-      setMemoryRecord(record);
+      memoryWindow.open(memoryRecordKey(record));
       const page = pages.find((p) => p.relativePath === record.file.storedPath);
       update({ file: page?.id });
       return;
@@ -495,7 +498,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     setCreatedPageId(undefined);
     setRenameRequest({ pageId: page.id, token: Date.now() });
     const record = sourceBuildRecordForPage(page, buildRecords);
-    if (record?.batch.channel === "alipay") setMemoryRecord(record);
+    if (record?.batch.channel === "alipay") memoryWindow.open(memoryRecordKey(record));
     update({ file: page.id });
   }
   async function deferBuilds(records: SourceBuildRecord[]) {
@@ -510,7 +513,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     }
   }
   return <div className="organized-sources-page" ref={workspaceRef}>
-    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); setMemoryRecord(importedMemoryRecord(batch)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
+    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); const record = importedMemoryRecord(batch); if (record) memoryWindow.open(memoryRecordKey(record)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
     {deleteTarget ? <ConfirmDeleteDialog
       title={deleteTarget.kind === "folder" ? "删除这个文件夹？" : "删除这份生活记录？"}
       description={deleteTarget.kind === "folder" ? "文件夹内的记录和所有子文件夹都会一起删除。" : "文件会从生活记录中永久移除。"}
@@ -522,7 +525,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     /> : null}
     {creatingSource ? <div className="source-compose-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreatingSource(false); }}><div className="source-compose-dialog" role="dialog" aria-modal="true" aria-label="写一条生活记录"><NewSourceForm folder={folder} folders={folderPaths} foldersLoading={sourceFoldersLoading} foldersError={sourceFoldersError} onCancel={() => setCreatingSource(false)} onCreated={(page) => { const nextFolder = cleanSourcePath(page.relativePath).split("/").slice(0, -1).join("/"); setCreatingSource(false); setCreatedPageId(page.id); update({ q: undefined, type: undefined, month: undefined, folder: nextFolder || undefined, file: page.id, limit: undefined }); }} /></div></div> : null}
     {memoryCards.length ? <details className="source-memories-disclosure"><summary>照片与账单记忆 · {memoryCards.length}</summary><SourceMemoryCards records={memoryCards} revision={revision} onOpen={(record) => void beginBuild(record, "open")} /></details> : null}
-    {openedMemory ? <SourceMemoryDialog title={openedMemory.batch.channel === "photos" ? "照片记忆" : "账单记忆"} onClose={() => setMemoryRecord(undefined)}>
+    {openedMemory ? <SourceMemoryDialog title={openedMemory.batch.channel === "photos" ? "照片记忆" : "账单记忆"} onClose={memoryWindow.close}>
       {openedMemory.batch.channel === "photos" ? <PhotoMemoryPanel key={openedMemory.batch.id} batch={openedMemory.batch} revision={revision} /> : openedMemory.batch.journey ? <BillMemoryPanel key={openedMemory.batch.id} record={openedMemory} busy={busyBuildPath === openedMemory.file.storedPath} onBuild={(batch) => void beginBuild({ ...openedMemory, batch }, "build")} onDeep={(batch, cluster, state) => beginJourneyDeep(openedMemory, batch, cluster, state)} /> : memoryPage ? <SourcePreview page={memoryPage} revision={revision} fileNameFocusToken={renameRequest?.pageId === memoryPage.id ? renameRequest.token : 0} buildRecord={openedMemory} buildBusy={busyBuildPath === openedMemory.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => update({ file: renamed.id })} /> : <Empty>正在等待记录进入列表，请稍后重新打开。</Empty>}
     </SourceMemoryDialog> : null}
     {shownBatch && !["photos", "alipay"].includes(shownBatch.channel || "") ? <ImportedBatchGuide batch={shownBatch} busyPath={busyBuildPath} onStart={beginBuild} onStartAll={beginBatchBuild} onDefer={deferBuilds} /> : null}

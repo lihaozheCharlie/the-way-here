@@ -2,6 +2,7 @@ import { GraphViewport } from "../../shared/GraphViewport";
 import { ReadOnlyPageDialog } from "../knowledge/ReadOnlyPageDialog";
 import { ConversationWorkspace } from "../../shared/ConversationWorkspace";
 import { useState } from "react";
+import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { AuxPanel } from "../../shared/AuxPanel";
 import { AgentDock } from "../collaboration/Collaboration";
 import { NavLink, useParams } from "react-router-dom";
@@ -16,7 +17,7 @@ import { signalConversationPrompt } from "./talking-questions";
 const evidenceKindLabels = { source: "原始证据", letter: "回信回应", event: "事件记录", wiki: "已有判断" } as const;
 
 function ContextGraph({ data, revision }: { data: GraphData; revision: number }) {
-  const [preview, setPreview] = useState<string>();
+  const preview = useRememberedPreview("focus-graph");
   const returnContext = useReturnContext();
   const focus = data.nodes.find((node) => node.id === data.focusId) || data.nodes[0];
   const others = data.nodes.filter((node) => node.id !== focus?.id).slice(0, 28);
@@ -41,13 +42,13 @@ function ContextGraph({ data, revision }: { data: GraphData; revision: number })
       <g>{[focus, ...others].filter(Boolean).map((node) => {
         const position = positions.get(node!.id)!;
         const isFocus = node!.id === focus?.id;
-        return <g role="button" tabIndex={0} aria-label={`预览 ${node!.title}`} onClick={() => setPreview(node!.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPreview(node!.id); } }} key={node!.id} className={`context-graph-node ${isFocus ? "focus" : ""}`} transform={`translate(${position.x} ${position.y})`}>
+        return <g role="button" tabIndex={0} aria-label={`预览 ${node!.title}`} onClick={() => preview.open(node!.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); preview.open(node!.id); } }} key={node!.id} className={`context-graph-node ${isFocus ? "focus" : ""}`} transform={`translate(${position.x} ${position.y})`}>
           <circle r={isFocus ? 27 : 8} />
           <text textAnchor="middle" y={isFocus ? 45 : 22}>{node!.title.slice(0, isFocus ? 12 : 8)}</text>
         </g>;
       })}</g>
     </GraphViewport>
-    {preview && <ReadOnlyPageDialog pageId={preview} revision={revision} onClose={() => setPreview(undefined)} />}
+    {preview.pageId && <ReadOnlyPageDialog pageId={preview.pageId} revision={revision} onClose={preview.close} />}
     <div className="context-graph-list" aria-label="局部关系的可访问列表">{others.slice(0, 12).map((node) => <NavLink key={node.id} to={pageHref(node.id)} state={returnContext}><span>{graphCategoryNames[node.category] || node.category}</span><b>{node.title}</b></NavLink>)}</div>
   </div>;
 }

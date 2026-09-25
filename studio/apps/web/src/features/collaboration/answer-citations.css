@@ -1,0 +1,7 @@
+.agent-citation-button { position:relative; display:inline-flex; align-items:center; gap:4px; min-height:24px; margin:0 2px; padding:2px 7px; vertical-align:middle; border:1px solid var(--line); border-radius:var(--radius-pill); background:var(--surface-tinted); color:var(--accent-ink); font:600 11px/1.4 var(--font-ui); white-space:nowrap; cursor:pointer; }
+.agent-citation-button:hover { border-color:var(--accent); background:var(--accent-soft); }
+.agent-citation-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.agent-citation-tooltip { position:absolute; bottom:calc(100% + 8px); left:50%; z-index:10; width:max-content; max-width:min(320px,calc(100vw - 32px)); padding:6px 9px; border-radius:8px; background:var(--ink); color:var(--paper); font:500 11px/1.5 var(--font-ui); white-space:normal; overflow-wrap:anywhere; opacity:0; visibility:hidden; pointer-events:none; transform:translateX(-50%) translateY(4px); transition:opacity .15s,transform .15s,visibility .15s; }
+.agent-citation-tooltip::after { content:""; position:absolute; top:100%; left:50%; border:5px solid transparent; border-top-color:var(--ink); transform:translateX(-50%); }
+.agent-citation-button:hover .agent-citation-tooltip,.agent-citation-button:focus-visible .agent-citation-tooltip { opacity:1; visibility:visible; transform:translateX(-50%) translateY(0); }
+@media (prefers-reduced-motion:reduce) { .agent-citation-tooltip { transition:none; } }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { NavLink } from "react-router-dom";
 import type { SourceImportBatch, TodayView } from "@the-way-here/shared";
 import { TextArea } from "../../shared/form-controls";
@@ -29,7 +30,7 @@ export function QuestionsHub({ revision }: { revision: number }) {
   const [directionDraft, setDirectionDraft] = useState("");
   const [generatedDirection, setGeneratedDirection] = useState("");
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
-  const [evidencePageId, setEvidencePageId] = useState<string>();
+  const evidencePreview = useRememberedPreview("questions-evidence");
   const [chatDraft, setChatDraft] = useState("");
   const { data, loading, error } = useApi<TodayView>("/api/views/today", revision);
   const { data: importBatches } = useApi<SourceImportBatch[]>("/api/imports", revision);
@@ -59,7 +60,7 @@ export function QuestionsHub({ revision }: { revision: number }) {
   };
 
   return <div className="questions-hub">
-    {evidencePageId ? <ReadOnlyPageDialog key={evidencePageId} pageId={evidencePageId} revision={revision} onClose={() => setEvidencePageId(undefined)} /> : null}
+    {evidencePreview.pageId ? <ReadOnlyPageDialog key={evidencePreview.pageId} pageId={evidencePreview.pageId} revision={revision} onClose={evidencePreview.close} /> : null}
     <header className="questions-intro">
       <h1>这段时间你说的话，我都还记得。</h1>
       <p>从你现在想说的开始，或者看看我留意到的几条还没说完的线索。</p>
@@ -108,7 +109,7 @@ export function QuestionsHub({ revision }: { revision: number }) {
             <footer>
               <button type="button" onClick={() => { setSelectedQuestionId(question.id); openLifeConversation(question); }}>聊聊这个 <Icon name="arrow" size={15} /></button>
               {question.kind === "understanding" && question.pageId
-                ? <button type="button" className="questions-evidence-button" onClick={() => setEvidencePageId(question.pageId)}>{question.sourceLabel || "查看依据"}</button>
+                ? <button type="button" className="questions-evidence-button" onClick={() => { if (question.pageId) evidencePreview.open(question.pageId); }}>{question.sourceLabel || "查看依据"}</button>
                 : question.sourceHref ? <NavLink to={question.sourceHref} state={{ returnTo: "/questions", returnLabel: "返回值得聊聊" }}>{question.sourceLabel || "查看依据"}</NavLink> : null}
             </footer>
           </article>;
