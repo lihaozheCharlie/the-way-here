@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>生活记录 · 重设计稿</title>
+<style>
+  :root {
+    --bg: #f4f5f3;
+    --panel: #ffffff;
+    --line: #e4e6e1;
+    --line-strong: #d4d7cf;
+    --ink: #20241f;
+    --ink-soft: #666b61;
+    --ink-faint: #9a9f93;
+    --accent: #2f6e60;
+    --accent-ink: #ffffff;
+    --accent-soft: #e4efe9;
+    --warn: #b4552f;
+    --radius: 10px;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { padding: 28px clamp(16px, 4vw, 48px) 80px; }
+
+  h1, h2, h3 { font-family: "Source Serif Pro", Georgia, serif; font-weight: 600; margin: 0; }
+
+  /* ---------- 说明条 ---------- */
+  .brief {
+    max-width: 1180px;
+    margin: 0 auto 22px;
+  }
+  .brief h1 { font-size: 22px; color: var(--ink); margin-bottom: 4px; }
+  .brief p.lede { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 16px; }
+  .brief-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .brief-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .brief-card b {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 13px; color: var(--ink); margin-bottom: 5px; font-family: inherit; font-weight: 600;
+  }
+  .brief-card .tag {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 11px; font-weight: 700; flex: none;
+  }
+  .brief-card .was { color: var(--warn); }
+  .brief-card .was::before { content: "改前："; color: var(--ink-faint); font-weight: 600; }
+  .brief-card .now { color: var(--accent); display: block; margin-top: 3px; }
+  .brief-card .now::before { content: "改后："; color: var(--ink-faint); font-weight: 600; }
+
+  /* ---------- 顶部工具条 ---------- */
+  .page-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: transparent;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .type-filter {
+    display: flex; gap: 6px; background: var(--panel); padding: 4px;
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  .type-filter button {
+    border: 0; background: transparent; color: var(--ink-soft);
+    font-size: 12.5px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  }
+  .type-filter button.active { background: var(--accent); color: var(--accent-ink); }
+  .type-filter button:hover:not(.active) { background: var(--bg); color: var(--ink); }
+
+  .search-box {
+    flex: 1; min-width: 160px; max-width: 320px;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 14px; font-size: 12.5px; color: var(--ink-faint);
+  }
+  .search-box svg { flex: none; }
+
+  .toolbar-spacer { flex: 1; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line-strong); background: var(--panel);
+    color: var(--ink); font-size: 12.5px; font-weight: 500;
+    padding: 8px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--ink-faint); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--ink-soft); }
+
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 7px;
+    border: 1px solid transparent; background: transparent; color: var(--ink-soft);
+    cursor: pointer; flex: none;
+  }
+  .icon-btn:hover { background: var(--bg); color: var(--ink); }
+  .icon-btn.primary {
+    background: var(--accent-soft); color: var(--accent); border-color: transparent;
+  }
+  .icon-btn.primary:hover { background: var(--accent); color: var(--accent-ink); }
+
+  /* ---------- annotation badge ---------- */
+  .tag-badge {
+    position: absolute; top: -8px; right: -8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--warn); color: #fff; font-size: 10.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px var(--bg);
+    z-index: 5;
+  }
+  .anno-wrap { position: relative; display: inline-flex; }
+
+  /* ---------- workspace ---------- */
+  .workspace {
+    display: grid;
+    grid-template-columns: 220px 320px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    transition: grid-template-columns .22s ease;
+  }
+  .workspace.folder-collapsed { grid-template-columns: 56px 320px minmax(0, 1fr); }
+  .workspace.file-collapsed { grid-template-columns: 220px 56px minmax(0, 1fr); }
+  .workspace.folder-collapsed.file-collapsed { grid-template-columns: 56px 56px minmax(0, 1fr); }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(20, 24, 19, .03);
+  }
+
+  /* --- panel header shared --- */
+  .panel-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 10px 10px 14px;
+    border-bottom: 1px solid var(--line);
+    min-height: 46px;
+  }
+  .panel-head .title {
+    display: flex; align-items: baseline; gap: 7px; min-width: 0; flex: 1;
+  }
+  .panel-head .title b {
+    font-family: inherit; font-weight: 600; font-size: 13px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .panel-head .title .count {
+    font-size: 11px; color: var(--ink-faint); background: var(--bg);
+    padding: 1px 7px; border-radius: 999px; flex: none;
+  }
+  .panel-head .actions { display: flex; align-items: center; gap: 3px; flex: none; }
+
+  /* --- folder list --- */
+  .folder-body { padding: 6px 8px 10px; max-height: 560px; overflow: auto; }
+  .folder-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 12.5px; color: var(--ink-soft);
+  }
+  .folder-row:hover { background: var(--bg); }
+  .folder-row.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .folder-row svg { flex: none; opacity: .75; }
+  .folder-row span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-row small { color: var(--ink-faint); font-size: 11px; flex: none; }
+  .folder-row.active small { color: var(--accent); }
+  .folder-row.nested { padding-left: 26px; }
+
+  .inline-create {
+    margin: 4px 4px 2px; padding: 8px; border-radius: 8px;
+    background: var(--bg); border: 1px dashed var(--line-strong);
+    display: none; gap: 6px; flex-direction: column;
+  }
+  .inline-create.open { display: flex; }
+  .inline-create input {
+    border: 1px solid var(--line-strong); border-radius: 7px; padding: 6px 9px; font-size: 12.5px;
+    font-family: inherit; outline-color: var(--accent);
+  }
+  .inline-create .row { display: flex; gap: 6px; justify-content: flex-end; }
+  .inline-create button {
+    font-size: 11.5px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line-strong);
+    background: #fff; cursor: pointer;
+  }
+  .inline-create button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* --- collapsed rail: fix for issue 3 --- */
+  .panel.collapsed .panel-head { display: none; }
+  .panel.collapsed .folder-body,
+  .panel.collapsed .file-toolbar,
+  .panel.collapsed .file-list { display: none; }
+  .panel.collapsed {
+    align-self: start;
+    height: auto;
+    border-radius: 14px;
+  }
+  .collapsed-rail {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0 16px;
+  }
+  .panel.collapsed .collapsed-rail { display: flex; }
+  .collapsed-rail .rail-expand {
+    width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink-soft); display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .collapsed-rail .rail-expand:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .collapsed-rail .rail-label {
+    writing-mode: vertical-rl; text-orientation: mixed;
+    font-size: 12px; font-weight: 600; color: var(--ink); letter-spacing: .5px;
+  }
+  .collapsed-rail .rail-count {
+    font-size: 10.5px; color: var(--ink-faint); background: var(--bg);
+    padding: 2px 5px; border-radius: 999px;
+    writing-mode: horizontal-tb;
+  }
+  .collapsed-rail .rail-add {
+    width: 26px; height: 26px; border-radius: 7px; border: 1px solid transparent;
+    background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .collapsed-rail .rail-add:hover { background: var(--accent); color: #fff; }
+
+  /* --- file list --- */
+  .file-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--bg);
+    font-size: 11.5px; color: var(--ink-faint);
+  }
+  .file-toolbar .sort-pop { position: relative; }
+  .more-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft);
+    font-size: 11.5px; padding: 4px 9px; border-radius: 999px; cursor: pointer;
+  }
+  .more-btn:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .sort-menu {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px);
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(20,24,19,.12); padding: 10px; width: 210px; z-index: 20;
+  }
+  .sort-menu.open { display: block; }
+  .sort-menu p { margin: 0 0 6px; font-size: 11px; color: var(--ink-faint); font-weight: 600; }
+  .sort-menu .opts { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .sort-menu button.opt {
+    font-size: 11.5px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line-strong);
+    background: #fff; color: var(--ink-soft); cursor: pointer;
+  }
+  .sort-menu button.opt.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .file-list { max-height: 560px; overflow: auto; padding: 4px 8px 10px; }
+  .file-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 8px; border-radius: 10px; cursor: pointer; position: relative;
+  }
+  .file-row:hover { background: var(--bg); }
+  .file-row.active { background: var(--accent-soft); }
+  .file-row .ico {
+    width: 28px; height: 28px; border-radius: 8px; background: var(--bg); color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;
+  }
+  .file-row.active .ico { background: #fff; color: var(--accent); }
+  .file-row .meta { flex: 1; min-width: 0; }
+  .file-row .meta time { font-size: 10.5px; color: var(--ink-faint); }
+  .file-row .meta b {
+    display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin: 2px 0 2px;
+    font-family: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .file-row .meta small {
+    display: block; font-size: 11.5px; color: var(--ink-soft); line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .file-row .row-menu {
+    opacity: 0; width: 22px; height: 22px; border-radius: 6px; border: 0; background: transparent;
+    color: var(--ink-faint); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none;
+  }
+  .file-row:hover .row-menu { opacity: 1; }
+  .file-row .row-menu:hover { background: #fff; color: var(--ink); }
+
+  /* --- preview --- */
+  .preview-panel { padding: 26px 34px; min-height: 560px; }
+  .preview-panel .doc-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 11.5px; color: var(--ink-faint); }
+  .preview-panel h2 { font-size: 21px; margin-bottom: 14px; }
+  .preview-panel p { font-size: 13.5px; line-height: 1.75; color: var(--ink-soft); margin: 0 0 12px; }
+  .preview-panel .chip {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 9px;
+    border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  }
+
+  @media (max-width: 920px) {
+    .brief-cards { grid-template-columns: 1fr; }
+    .workspace, .workspace.folder-collapsed, .workspace.file-collapsed, .workspace.folder-collapsed.file-collapsed {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="brief">
+  <h1>生活记录页面重设计</h1>
+  <p class="lede">针对反馈的三个问题逐一处理，可直接点击下方原型里的折叠按钮 / “+”按钮体验效果。</p>
+  <div class="brief-cards">
+    <div class="brief-card">
+      <b><span class="tag">1</span>新建入口割裂</b>
+      <span class="was">新建记录按钮放在页面最右上角，和左侧文件夹 / 文件列表不在一起，容易找不到。</span>
+      <span class="now">文件夹栏、文件列表栏的标题行各放一个小“+”按钮，就近新建文件夹 / 新建记录；去掉右上角的主按钮和列表底部的虚线按钮。</span>
+    </div>
+    <div class="brief-card">
+      <b><span class="tag">2</span>文件列表信息冗余</b>
+      <span class="was">文件夹已经显示了份数，文件列表头部又重复显示一遍；排序 / 月份用单独一行文字 + 一个下拉，占地方还分散。</span>
+      <span class="now">文件列表头部的份数只保留“当前筛选后的份数”这一处；排序和月份合并进一个“⋯ 更多”按钮里，点开才展示。</span>
+    </div>
+    <div class="brief-card">
+      <b><span class="tag">3</span>收起后是难看的长白条</b>
+      <span class="was">文件夹 / 文件列表收起时，变成一条铺满整列高度的空白竖条，很突兀。</span>
+      <span class="now">收起后变成一个高度随内容自适应的小“标签条”，竖排文字 + 图标 + 份数 + 展开按钮，贴在顶部，不再拉满整列。</span>
+    </div>
+  </div>
+</div>
+
+<div class="page-shell">
+  <div class="toolbar">
+    <div class="type-filter">
+      <button class="active">全部</button>
+      <button>笔记</button>
+      <button>AI 对话</button>
+      <button>照片</button>
+      <button>账单</button>
+    </div>
+    <div class="search-box">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      搜索标题或内容…
+    </div>
+    <div class="toolbar-spacer"></div>
+    <button class="btn ghost">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+      导入资料
+    </button>
+  </div>
+
+  <div class="workspace" id="workspace">
+
+    <!-- 文件夹栏 -->
+    <aside class="panel" id="folderPanel">
+      <div class="panel-head">
+        <div class="title"><b>文件夹</b><span class="count">18</span></div>
+        <div class="actions">
+          <span class="anno-wrap">
+            <button class="icon-btn primary" title="新建文件夹" onclick="toggleCreate('folderCreate')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <span class="tag-badge">1</span>
+          </span>
+          <button class="icon-btn" title="收起文件夹栏" onclick="toggleCollapse('folderPanel')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="folder-body">
+        <div class="inline-create" id="folderCreate">
+          <input type="text" placeholder="文件夹名称" autofocus />
+          <div class="row"><button onclick="toggleCreate('folderCreate')">取消</button><button class="primary">创建</button></div>
+        </div>
+        <div class="folder-row active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+          <span>全部材料</span><small>284</small>
+        </div>
+        <div class="folder-row"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg><span>随手记</span><small>96</small></div>
+        <div class="folder-row"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg><span>旅行日记</span><small>41</small></div>
+        <div class="folder-row nested"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg><span>云南</span><small>12</small></div>
+        <div class="folder-row nested"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg><span>日本</span><small>29</small></div>
+        <div class="folder-row"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg><span>AI 对话整理</span><small>58</small></div>
+        <div class="folder-row"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg><span>照片记忆</span><small>47</small></div>
+        <div class="folder-row"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M6 7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg><span>账单来源</span><small>42</small></div>
+      </div>
+
+      <!-- 收起态：高度自适应的小标签条，替代长白条 -->
+      <div class="collapsed-rail">
+        <button class="rail-expand" title="展开文件夹栏" onclick="toggleCollapse('folderPanel')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <span class="rail-label">文件夹</span>
+        <span class="rail-count">18</span>
+        <button class="rail-add" title="新建文件夹" onclick="toggleCollapse('folderPanel')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 文件列表栏 -->
+    <section class="panel" id="filePanel">
+      <div class="panel-head">
+        <div class="title"><b>旅行日记 · 云南</b><span class="count">12 份</span></div>
+        <div class="actions">
+          <span class="anno-wrap">
+            <button class="icon-btn primary" title="在当前文件夹新建记录" onclick="toggleCreate('fileCreate')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <span class="tag-badge">1</span>
+          </span>
+          <button class="icon-btn" title="收起文件列表" onclick="toggleCollapse('filePanel')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="inline-create" id="fileCreate" style="margin:10px 12px 0;">
+        <input type="text" placeholder="文件名，例如：今天的观察…" autofocus />
+        <div class="row"><button onclick="toggleCreate('fileCreate')">取消</button><button class="primary">创建文件</button></div>
+      </div>
+
+      <div class="file-toolbar">
+        <span>按记录时间排序</span>
+        <span class="anno-wrap sort-pop">
+          <button class="more-btn" onclick="toggleSort()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+            更多
+          </button>
+          <span class="tag-badge">2</span>
+          <div class="sort-menu" id="sortMenu">
+            <p>月份</p>
+            <div class="opts">
+              <button class="opt active">全部月份 12</button>
+              <button class="opt">2025-10 5</button>
+              <button class="opt">2025-09 7</button>
+            </div>
+            <p>排序</p>
+            <div class="opts">
+              <button class="opt active">新 → 旧</button>
+              <button class="opt">旧 → 新</button>
+            </div>
+          </div>
+        </span>
+      </div>
+
+      <div class="file-list">
+        <div class="file-row active">
+          <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg></span>
+          <div class="meta"><time>2025.10.03</time><b>洱海边的黄昏</b><small>骑车绕到环海西路，风很大，有人在岸边放风筝……</small></div>
+          <button class="row-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+        </div>
+        <div class="file-row">
+          <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span>
+          <div class="meta"><time>2025.10.02</time><b>束河古镇小吃</b><small>糖油粑粑和烤乳扇，巷子里排了很长的队……</small></div>
+          <button class="row-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+        </div>
+        <div class="file-row">
+          <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v9"/></svg></span>
+          <div class="meta"><time>2025.09.29</time><b>雨崩徒步第二天</b><small>翻过垂直的山路后，终于看到了神瀑……</small></div>
+          <button class="row-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+        </div>
+        <div class="file-row">
+          <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M6 7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span>
+          <div class="meta"><time>2025.09.28</time><b>大理古城消费小记</b><small>客栈、咖啡馆与一次冲动购物的账单复盘……</small></div>
+          <button class="row-menu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg></button>
+        </div>
+      </div>
+
+      <div class="collapsed-rail">
+        <button class="rail-expand" title="展开文件列表" onclick="toggleCollapse('filePanel')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <span class="rail-label">云南 · 12 份</span>
+        <button class="rail-add" title="新建记录" onclick="toggleCollapse('filePanel')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- 预览区（示意） -->
+    <article class="preview-panel">
+      <div class="doc-meta"><span class="chip">随手记 · 直接可读</span><time>2025年10月3日 18:42</time></div>
+      <h2>洱海边的黄昏</h2>
+      <p>骑车绕到环海西路的时候，光线已经开始偏橙色。路边有人在放风筝，风很大，吹得人站不稳，但特别舒服。坐在石头堤岸上看了很久的水，什么都没想，只是觉得这一刻值得记下来。</p>
+      <p>晚上回客栈路上买了烤饵块，摊主说这个季节游客比暑假少很多，路更好走。打算明天再往北边骑一段，去看看传说中那片芦苇荡。</p>
+    </article>
+
+  </div>
+</div>
+
+<script>
+  function toggleCollapse(id) {
+    const panel = document.getElementById(id);
+    const collapsed = panel.classList.toggle('collapsed');
+    const workspace = document.getElementById('workspace');
+    const cls = id === 'folderPanel' ? 'folder-collapsed' : 'file-collapsed';
+    workspace.classList.toggle(cls, collapsed);
+  }
+  function toggleCreate(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+  function toggleSort() {
+    document.getElementById('sortMenu').classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('sortMenu');
+    if (!menu.contains(e.target) && !e.target.closest('.sort-pop')) menu.classList.remove('open');
+  });
+</script>
+</body>
+</html>
