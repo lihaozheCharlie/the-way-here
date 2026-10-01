@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>生活记录 · 交互设计稿 v2</title>
+<style>
+  :root {
+    --canvas: #eceeea;
+    --panel: #fbfbf9;
+    --rail: #e3e7e1;
+    --line: #dde1da;
+    --ink: #1d2421;
+    --ink-2: #5b655f;
+    --ink-3: #8b948e;
+    --accent: #2c6e62;
+    --accent-soft: #dcebe6;
+    --warn: #b4472f;
+    --radius: 14px;
+    --shadow: 0 12px 40px rgba(20, 30, 26, .18);
+    font-family: "PingFang SC", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--canvas); }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .app { height: 100vh; min-height: 640px; display: flex; flex-direction: column; padding: 14px; gap: 12px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .02em; }
+  .topbar .hint { font-size: 12px; color: var(--ink-3); }
+
+  .shell {
+    flex: 1; min-height: 0; display: grid; gap: 12px;
+    grid-template-columns: var(--c1) var(--c2) minmax(0, 1fr);
+    transition: grid-template-columns .28s cubic-bezier(.4, 0, .2, 1);
+    --c1: 248px; --c2: 330px;
+  }
+  .shell.f1 { --c1: 60px; }
+  .shell.f2 { --c2: 52px; }
+
+  .panel { background: var(--panel); border-radius: var(--radius); border: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+
+  .panel-head { display: flex; align-items: center; gap: 4px; padding: 12px 10px 8px 16px; }
+  .panel-head h2 { flex: 1; margin: 0; font-size: 14px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ib { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-2); flex: none; transition: background .15s, color .15s; }
+  .ib:hover { background: var(--accent-soft); color: var(--accent); }
+  .ib svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .ib.primary { background: var(--accent); color: #fff; }
+  .ib.primary:hover { background: #245b51; color: #fff; }
+
+  .list { flex: 1; overflow-y: auto; padding: 4px 8px 12px; }
+
+  /* folders */
+  .folder { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; text-align: left; }
+  .folder:hover { background: #f0f2ee; }
+  .folder.on { background: var(--accent-soft); }
+  .chip { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; font-weight: 650; color: #fff; flex: none; }
+  .folder .name { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .folder .n { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* files */
+  .group { font-size: 12px; color: var(--ink-3); padding: 12px 10px 4px; }
+  .file { width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; display: block; }
+  .file:hover { background: #f0f2ee; }
+  .file.on { background: var(--accent-soft); }
+  .file .row { display: flex; gap: 8px; align-items: baseline; }
+  .file .t { flex: 1; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file .d { font-size: 12px; color: var(--ink-3); flex: none; font-variant-numeric: tabular-nums; }
+  .file .s { margin-top: 3px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { text-align: center; color: var(--ink-3); font-size: 13px; padding: 48px 16px; line-height: 1.8; }
+  .empty button { margin-top: 8px; color: var(--accent); font-weight: 600; }
+
+  /* collapsed rails: tinted, content-bearing, not a blank bar */
+  .rail { background: var(--rail); border-color: transparent; align-items: center; padding: 10px 0; gap: 6px; }
+  .rail[hidden] { display: none; }
+  .rail .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; overflow-y: auto; padding: 2px; }
+  .rail .chips .chip { width: 34px; height: 34px; border-radius: 10px; opacity: .72; transition: opacity .15s, transform .15s; }
+  .rail .chips button:hover .chip { opacity: 1; }
+  .rail .chips button.on .chip { opacity: 1; box-shadow: 0 0 0 2px var(--rail), 0 0 0 4px var(--ink); }
+  .rail .vlabel { writing-mode: vertical-rl; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--ink-2); letter-spacing: .12em; }
+  .rail .vcount { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+
+  /* reader */
+  .reader { padding: 28px 36px; overflow-y: auto; }
+  .reader .meta { font-size: 12.5px; color: var(--ink-3); display: flex; gap: 10px; align-items: center; }
+  .reader .crumb { background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+  .reader h3 { font-size: 24px; margin: 12px 0 16px; line-height: 1.4; }
+  .reader p { font-size: 15px; line-height: 1.9; color: #2c3531; white-space: pre-wrap; max-width: 62ch; margin: 0; }
+
+  /* popover menu */
+  .menu { position: fixed; z-index: 30; min-width: 212px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; }
+  .menu[hidden] { display: none; }
+  .menu .lbl { font-size: 11.5px; color: var(--ink-3); padding: 8px 10px 4px; }
+  .mi { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; text-align: left; }
+  .mi:hover { background: #f0f2ee; }
+  .mi .ck { width: 14px; color: var(--accent); font-weight: 700; }
+  .mi.danger { color: var(--warn); }
+  .menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+  .sw { margin-left: auto; width: 30px; height: 18px; border-radius: 9px; background: #cfd5ce; position: relative; transition: background .15s; }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .sw.on { background: var(--accent); }
+  .sw.on::after { transform: translateX(12px); }
+
+  /* dialog */
+  .scrim { position: fixed; inset: 0; background: rgba(20, 28, 24, .42); display: grid; place-items: center; z-index: 40; padding: 16px; }
+  .scrim[hidden] { display: none; }
+  .dialog { width: min(560px, 100%); background: var(--panel); border-radius: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; max-height: calc(100vh - 32px); animation: pop .18s ease-out; }
+  .dialog.sm { width: min(400px, 100%); }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+  .dialog header { display: flex; align-items: center; padding: 16px 16px 4px 22px; }
+  .dialog header h4 { flex: 1; margin: 0; font-size: 16px; }
+  .dialog .body { padding: 10px 22px 6px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  .dialog footer { display: flex; align-items: center; gap: 8px; padding: 14px 22px 18px; }
+  .dialog footer .where { flex: 1; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dialog footer .where b { color: var(--ink-2); }
+  .btn { padding: 8px 16px; border-radius: 9px; font-size: 14px; font-weight: 600; }
+  .btn.ghost:hover { background: #eceeea; }
+  .btn.solid { background: var(--accent); color: #fff; }
+  .btn.solid:hover { background: #245b51; }
+  .btn.solid:disabled { background: #b8c4be; cursor: not-allowed; }
+
+  .field label { display: block; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; font-weight: 600; }
+  .field .opt { color: var(--ink-3); font-weight: 400; }
+  .inp { width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 9px 12px; font-size: 14px; }
+  .inp:focus { border-color: var(--accent); outline: 2px solid var(--accent-soft); }
+  textarea.inp { min-height: 140px; resize: vertical; line-height: 1.7; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* folder picker */
+  .picker { position: relative; }
+  .picker-btn { width: 100%; display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 7px 12px; text-align: left; font-size: 14px; }
+  .picker-btn .chip { width: 22px; height: 22px; font-size: 11px; border-radius: 6px; }
+  .picker-btn .nm { flex: 1; }
+  .picker-btn .tag { font-size: 11.5px; color: var(--accent); background: var(--accent-soft); padding: 1px 7px; border-radius: 5px; }
+  .picker-pop { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; }
+  .picker-pop[hidden] { display: none; }
+  .picker-pop .opts { max-height: 190px; overflow-y: auto; }
+  .picker-pop .newrow { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+  .picker-pop .newrow .inp { padding: 7px 10px; }
+
+  .swatches { display: flex; gap: 10px; }
+  .swatches button { width: 28px; height: 28px; border-radius: 50%; }
+  .swatches button.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--ink); }
+
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13.5px; z-index: 60; box-shadow: var(--shadow); display: flex; gap: 14px; align-items: center; }
+  .toast[hidden] { display: none; }
+  .toast button { color: #9fd5c8; font-weight: 600; }
+
+  @media (max-width: 900px) { .shell { --c1: 60px; --c2: 300px; } .reader { display: none; } .shell { grid-template-columns: var(--c1) 1fr; } .shell > .reader { display: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <h1>生活记录</h1>
+    <span class="hint">交互设计稿 v2 · 所有按钮均可点击体验(Esc 关闭弹层,Cmd/Ctrl + Enter 保存)</span>
+  </div>
+
+  <div class="shell" id="shell">
+    <!-- 文件夹栏 -->
+    <section class="panel" id="foldersPanel" aria-label="文件夹">
+      <div class="panel-head">
+        <h2>文件夹</h2>
+        <button class="ib primary" id="addFolder" title="新建文件夹" aria-label="新建文件夹"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="ib" id="collapse1" title="收起" aria-label="收起文件夹栏"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>
+      <div class="list" id="folderList"></div>
+    </section>
+    <section class="panel rail" id="foldersRail" aria-label="文件夹(已收起)" hidden>
+      <button class="ib" id="expand1" title="展开文件夹栏" aria-label="展开文件夹栏"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="ib primary" id="addFolder2" title="新建文件夹" aria-label="新建文件夹"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="chips" id="folderChips"></div>
+    </section>
+
+    <!-- 文件列表栏 -->
+    <section class="panel" id="filesPanel" aria-label="记录列表">
+      <div class="panel-head">
+        <h2 id="filesTitle"></h2>
+        <button class="ib primary" id="addRecord" title="在此文件夹新建记录" aria-label="新建记录"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="ib" id="moreBtn" title="更多" aria-label="更多" aria-haspopup="menu"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg></button>
+        <button class="ib" id="collapse2" title="收起" aria-label="收起记录列表"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>
+      <div class="list" id="fileList"></div>
+    </section>
+    <section class="panel rail" id="filesRail" aria-label="记录列表(已收起)" hidden>
+      <button class="ib" id="expand2" title="展开记录列表" aria-label="展开记录列表"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="ib primary" id="addRecord2" title="在此文件夹新建记录" aria-label="新建记录"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="vlabel" id="railLabel"></div>
+      <div class="vcount" id="railCount"></div>
+    </section>
+
+    <article class="panel reader" id="reader" aria-live="polite"></article>
+  </div>
+</div>
+
+<div class="menu" id="menu" role="menu" hidden></div>
+
+<!-- 新建记录 -->
+<div class="scrim" id="recordScrim" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="recTitle">
+    <header><h4 id="recTitle">新建记录</h4><button class="ib" data-close aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="body">
+      <div class="field">
+        <label>保存到</label>
+        <div class="picker" id="picker">
+          <button class="picker-btn" id="pickerBtn" type="button" aria-haspopup="listbox"></button>
+          <div class="picker-pop" id="pickerPop" hidden>
+            <div class="opts" id="pickerOpts" role="listbox"></div>
+            <div class="newrow">
+              <button class="mi" id="pickerNewBtn" type="button"><span class="ck">+</span>新建文件夹…</button>
+              <div id="pickerNewForm" hidden style="display:flex;gap:6px;padding:2px">
+                <input class="inp" id="pickerNewName" placeholder="新文件夹名称" maxlength="20" />
+                <button class="btn solid" id="pickerNewOk" type="button">创建</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label for="recTitleInp">标题 <span class="opt">(可空,默认取正文第一行)</span></label><input class="inp" id="recTitleInp" maxlength="60" /></div>
+      <div class="field"><label for="recBody">正文</label><textarea class="inp" id="recBody" placeholder="今天发生了什么、想到了什么…"></textarea></div>
+      <div class="field" style="max-width:260px"><label for="recDate">记录时间</label><input class="inp" id="recDate" type="datetime-local" /></div>
+    </div>
+    <footer>
+      <span class="where" id="recWhere"></span>
+      <button class="btn ghost" data-close>取消</button>
+      <button class="btn solid" id="recSave" disabled>保存</button>
+    </footer>
+  </div>
+</div>
+
+<!-- 新建文件夹 -->
+<div class="scrim" id="folderScrim" hidden>
+  <div class="dialog sm" role="dialog" aria-modal="true" aria-labelledby="fdTitle">
+    <header><h4 id="fdTitle">新建文件夹</h4><button class="ib" data-close aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="body">
+      <div class="field"><label for="fdName">名称</label><input class="inp" id="fdName" maxlength="20" placeholder="例如:旅行、读书、家" /></div>
+      <div class="field"><label>颜色</label><div class="swatches" id="swatches"></div></div>
+    </div>
+    <footer><span class="where"></span><button class="btn ghost" data-close>取消</button><button class="btn solid" id="fdSave" disabled>创建</button></footer>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const COLORS = ['#2c6e62', '#c0703a', '#4f6fa8', '#9a5b8c', '#7a8a3c'];
+const state = {
+  folders: [
+    { id: 'f1', name: '日常', color: COLORS[0] },
+    { id: 'f2', name: '旅行', color: COLORS[1] },
+    { id: 'f3', name: '读书', color: COLORS[2] },
+    { id: 'f4', name: '家人', color: COLORS[3] },
+  ],
+  records: [
+    { id: 'r1', folder: 'f1', title: '周三的早餐', body: '楼下新开了一家豆浆店,油条很脆。决定以后每周三都去一次,算是给自己的小仪式。', at: new Date(2026, 1, 4, 8, 20) },
+    { id: 'r2', folder: 'f1', title: '加班后走回家', body: '夜里十一点,街上很安静。路过便利店买了热牛奶,突然觉得这样的日子也不坏。', at: new Date(2026, 1, 9, 23, 5) },
+    { id: 'r3', folder: 'f1', title: '整理书桌', body: '把用不到的线材都收进抽屉,桌面空出一大块。', at: new Date(2026, 0, 28, 19, 40) },
+    { id: 'r4', folder: 'f2', title: '京都第二天', body: '清晨去了伏见稻荷,人很少。台阶比想象中长,爬到一半就想折返,还是坚持到了山顶。', at: new Date(2026, 0, 15, 7, 10) },
+    { id: 'r5', folder: 'f3', title: '《额尔古纳河右岸》', body: '读到鄂温克人迁徙的一章,忽然理解了"家"可以是一种移动的状态。', at: new Date(2026, 1, 2, 21, 30) },
+  ],
+  folder: 'f1', record: 'r1',
+  sort: 'new', byMonth: true, c1: false, c2: false,
+};
+const $ = (s) => document.querySelector(s);
+const fid = (id) => state.folders.find((f) => f.id === id);
+const pad = (n) => String(n).padStart(2, '0');
+const fmtShort = (d) => `${d.getMonth() + 1}月${d.getDate()}日`;
+const fmtFull = (d) => `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const inputVal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const count = (id) => state.records.filter((r) => r.folder === id).length;
+const chip = (f) => `<span class="chip" style="background:${f.color}">${esc(f.name.slice(0, 1))}</span>`;
+
+function currentRecords() {
+  const list = state.records.filter((r) => r.folder === state.folder);
+  list.sort((a, b) => state.sort === 'title' ? a.title.localeCompare(b.title, 'zh') : state.sort === 'old' ? a.at - b.at : b.at - a.at);
+  return list;
+}
+
+function render() {
+  const sh = $('#shell');
+  sh.classList.toggle('f1', state.c1);
+  sh.classList.toggle('f2', state.c2);
+  $('#foldersPanel').hidden = state.c1; $('#foldersRail').hidden = !state.c1;
+  $('#filesPanel').hidden = state.c2; $('#filesRail').hidden = !state.c2;
+
+  $('#folderList').innerHTML = state.folders.map((f) =>
+    `<button class="folder ${f.id === state.folder ? 'on' : ''}" data-folder="${f.id}">${chip(f)}<span class="name">${esc(f.name)}</span><span class="n">${count(f.id)}</span></button>`).join('');
+  $('#folderChips').innerHTML = state.folders.map((f) =>
+    `<button class="${f.id === state.folder ? 'on' : ''}" data-folder="${f.id}" title="${esc(f.name)}" aria-label="${esc(f.name)}">${chip(f)}</button>`).join('');
+
+  const folder = fid(state.folder);
+  $('#filesTitle').textContent = folder.name;
+  $('#railLabel').textContent = folder.name;
+  $('#railCount').textContent = count(folder.id);
+
+  const recs = currentRecords();
+  if (!recs.length) {
+    $('#fileList').innerHTML = `<div class="empty">「${esc(folder.name)}」里还没有记录<br><button id="emptyAdd">写下第一条</button></div>`;
+  } else {
+    let html = '', last = '';
+    recs.forEach((r) => {
+      const g = `${r.at.getFullYear()}年${r.at.getMonth() + 1}月`;
+      if (state.byMonth && state.sort !== 'title' && g !== last) { html += `<div class="group">${g}</div>`; last = g; }
+      html += `<button class="file ${r.id === state.record ? 'on' : ''}" data-record="${r.id}"><div class="row"><span class="t">${esc(r.title)}</span><span class="d">${fmtShort(r.at)}</span></div><div class="s">${esc(r.body.replace(/\n/g, ' '))}</div></button>`;
+    });
+    $('#fileList').innerHTML = html;
+  }
+
+  const rec = state.records.find((r) => r.id === state.record && r.folder === state.folder);
+  $('#reader').innerHTML = rec
+    ? `<div class="meta"><span class="crumb">${esc(folder.name)}</span><span>${fmtFull(rec.at)}</span></div><h3>${esc(rec.title)}</h3><p>${esc(rec.body)}</p>`
+    : `<div class="empty">选择一条记录查看<br>或点击列表右上角 + 新建</div>`;
+}
+
+/* ---------- 收起 / 展开 ---------- */
+$('#collapse1').onclick = () => { state.c1 = true; render(); };
+$('#expand1').onclick = () => { state.c1 = false; render(); };
+$('#collapse2').onclick = () => { state.c2 = true; render(); };
+$('#expand2').onclick = () => { state.c2 = false; render(); };
+
+/* ---------- 选择 ---------- */
+document.addEventListener('click', (e) => {
+  const f = e.target.closest('[data-folder]');
+  if (f && !f.closest('.picker')) { state.folder = f.dataset.folder; const first = currentRecords()[0]; state.record = first ? first.id : null; render(); return; }
+  const r = e.target.closest('[data-record]');
+  if (r) { state.record = r.dataset.record; render(); }
+  if (e.target.id === 'emptyAdd') openRecord();
+  if (!e.target.closest('#menu') && !e.target.closest('#moreBtn')) closeMenu();
+});
+
+/* ---------- 更多菜单 ---------- */
+const menu = $('#menu');
+function closeMenu() { menu.hidden = true; }
+function openMenu() {
+  const sortItem = (k, t) => `<button class="mi" role="menuitemradio" data-sort="${k}"><span class="ck">${state.sort === k ? '✓' : ''}</span>${t}</button>`;
+  menu.innerHTML = `
+    <div class="lbl">排序</div>
+    ${sortItem('new', '按记录时间 · 新到旧')}${sortItem('old', '按记录时间 · 旧到新')}${sortItem('title', '按标题')}
+    <hr>
+    <button class="mi" data-act="month"><span class="ck"></span>按月份分组<span class="sw ${state.byMonth ? 'on' : ''}"></span></button>
+    <hr>
+    <button class="mi" data-act="rename"><span class="ck"></span>重命名文件夹</button>
+    <button class="mi danger" data-act="delete"><span class="ck"></span>删除文件夹</button>`;
+  const b = $('#moreBtn').getBoundingClientRect();
+  menu.style.top = b.bottom + 6 + 'px';
+  menu.style.left = Math.min(b.right - 220, innerWidth - 232) + 'px';
+  menu.hidden = false;
+}
+$('#moreBtn').onclick = (e) => { e.stopPropagation(); menu.hidden ? openMenu() : closeMenu(); };
+menu.onclick = (e) => {
+  const s = e.target.closest('[data-sort]');
+  if (s) { state.sort = s.dataset.sort; render(); openMenu(); return; }
+  const a = e.target.closest('[data-act]');
+  if (!a) return;
+  if (a.dataset.act === 'month') { state.byMonth = !state.byMonth; render(); openMenu(); return; }
+  closeMenu();
+  if (a.dataset.act === 'rename') {
+    const n = prompt('重命名文件夹', fid(state.folder).name);
+    if (n && n.trim()) { fid(state.folder).name = n.trim(); render(); }
+  } else if (a.dataset.act === 'delete') {
+    const n = count(state.folder);
+    if (state.folders.length === 1) return toast('至少保留一个文件夹');
+    if (confirm(`删除「${fid(state.folder).name}」及其中 ${n} 条记录?`)) {
+      state.records = state.records.filter((r) => r.folder !== state.folder);
+      state.folders = state.folders.filter((x) => x.id !== state.folder);
+      state.folder = state.folders[0].id; state.record = null; render(); toast('文件夹已删除');
+    }
+  }
+};
+
+/* ---------- 弹层通用 ---------- */
+function show(scrim) { scrim.hidden = false; }
+function hide(scrim) { scrim.hidden = true; }
+document.querySelectorAll('.scrim').forEach((s) => {
+  s.addEventListener('mousedown', (e) => { if (e.target === s) hide(s); });
+  s.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => hide(s)));
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!$('#pickerPop').hidden) { $('#pickerPop').hidden = true; return; }
+    document.querySelectorAll('.scrim').forEach(hide); closeMenu();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (!$('#recordScrim').hidden) $('#recSave').click();
+    if (!$('#folderScrim').hidden) $('#fdSave').click();
+  }
+});
+
+/* ---------- 新建记录 ---------- */
+let draftFolder = null;
+function renderPicker() {
+  const f = fid(draftFolder);
+  $('#pickerBtn').innerHTML = `${chip(f)}<span class="nm">${esc(f.name)}</span>${f.id === state.folder ? '<span class="tag">当前</span>' : ''}<span style="color:var(--ink-3)">▾</span>`;
+  $('#pickerOpts').innerHTML = state.folders.map((x) =>
+    `<button class="mi" type="button" role="option" data-pick="${x.id}"><span class="ck">${x.id === draftFolder ? '✓' : ''}</span><span class="chip" style="background:${x.color};width:20px;height:20px;font-size:10px;border-radius:6px">${esc(x.name.slice(0, 1))}</span>${esc(x.name)}<span style="margin-left:auto;color:var(--ink-3);font-size:12px">${count(x.id)}</span></button>`).join('');
+  $('#recWhere').innerHTML = `将保存到 <b>${esc(f.name)}</b>`;
+}
+function validateRecord() { $('#recSave').disabled = !($('#recBody').value.trim() || $('#recTitleInp').value.trim()); }
+function openRecord() {
+  draftFolder = state.folder;
+  $('#recTitleInp').value = ''; $('#recBody').value = '';
+  $('#recDate').value = inputVal(new Date());
+  $('#pickerPop').hidden = true; $('#pickerNewForm').hidden = true; $('#pickerNewBtn').hidden = false;
+  renderPicker(); validateRecord(); show($('#recordScrim'));
+  setTimeout(() => $('#recBody').focus(), 30);
+}
+$('#addRecord').onclick = openRecord;
+$('#addRecord2').onclick = openRecord;
+$('#recTitleInp').oninput = validateRecord;
+$('#recBody').oninput = validateRecord;
+$('#pickerBtn').onclick = () => { $('#pickerPop').hidden = !$('#pickerPop').hidden; };
+$('#pickerOpts').onclick = (e) => {
+  const p = e.target.closest('[data-pick]'); if (!p) return;
+  draftFolder = p.dataset.pick; $('#pickerPop').hidden = true; renderPicker();
+};
+$('#pickerNewBtn').onclick = () => { $('#pickerNewBtn').hidden = true; $('#pickerNewForm').hidden = false; $('#pickerNewName').focus(); };
+function createInlineFolder() {
+  const n = $('#pickerNewName').value.trim(); if (!n) return;
+  const f = { id: 'f' + Date.now(), name: n, color: COLORS[state.folders.length % COLORS.length] };
+  state.folders.push(f); draftFolder = f.id; $('#pickerNewName').value = '';
+  $('#pickerNewForm').hidden = true; $('#pickerNewBtn').hidden = false; $('#pickerPop').hidden = true; renderPicker(); render();
+}
+$('#pickerNewOk').onclick = createInlineFolder;
+$('#pickerNewName').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); createInlineFolder(); } };
+$('#recSave').onclick = () => {
+  const body = $('#recBody').value.trim();
+  const title = $('#recTitleInp').value.trim() || body.split('\n')[0].slice(0, 24) || '未命名记录';
+  const at = $('#recDate').value ? new Date($('#recDate').value) : new Date();
+  const r = { id: 'r' + Date.now(), folder: draftFolder, title, body, at };
+  state.records.push(r);
+  const moved = draftFolder !== state.folder;
+  state.folder = draftFolder; state.record = r.id;
+  hide($('#recordScrim')); render();
+  toast(`已保存到「${fid(draftFolder).name}」`, moved ? '' : '');
+};
+
+/* ---------- 新建文件夹 ---------- */
+let swatch = COLORS[0];
+function renderSwatches() {
+  $('#swatches').innerHTML = COLORS.map((c) => `<button type="button" class="${c === swatch ? 'on' : ''}" style="background:${c}" data-c="${c}" aria-label="颜色 ${c}"></button>`).join('');
+}
+function openFolder() { $('#fdName').value = ''; swatch = COLORS[state.folders.length % COLORS.length]; renderSwatches(); $('#fdSave').disabled = true; show($('#folderScrim')); setTimeout(() => $('#fdName').focus(), 30); }
+$('#addFolder').onclick = openFolder;
+$('#addFolder2').onclick = openFolder;
+$('#fdName').oninput = () => { $('#fdSave').disabled = !$('#fdName').value.trim(); };
+$('#fdName').onkeydown = (e) => { if (e.key === 'Enter' && !$('#fdSave').disabled) $('#fdSave').click(); };
+$('#swatches').onclick = (e) => { const b = e.target.closest('[data-c]'); if (b) { swatch = b.dataset.c; renderSwatches(); } };
+$('#fdSave').onclick = () => {
+  const f = { id: 'f' + Date.now(), name: $('#fdName').value.trim(), color: swatch };
+  state.folders.push(f); state.folder = f.id; state.record = null;
+  hide($('#folderScrim')); render(); toast(`已创建「${f.name}」`);
+};
+
+/* ---------- toast ---------- */
+let tt;
+function toast(msg) { const t = $('#toast'); t.innerHTML = esc(msg); t.hidden = false; clearTimeout(tt); tt = setTimeout(() => (t.hidden = true), 2400); }
+
+render();
+</script>
+</body>
+</html>
