@@ -182,22 +182,30 @@
   .folder-row.active small { color: var(--accent); }
   .folder-row.nested { padding-left: 26px; }
 
-  .inline-create {
-    margin: 4px 4px 2px; padding: 8px; border-radius: 8px;
-    background: var(--bg); border: 1px dashed var(--line-strong);
-    display: none; gap: 6px; flex-direction: column;
+  /* ---------- 新建弹窗 ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20, 24, 19, .4);
+    display: none; align-items: center; justify-content: center; z-index: 60;
   }
-  .inline-create.open { display: flex; }
-  .inline-create input {
-    border: 1px solid var(--line-strong); border-radius: 7px; padding: 6px 9px; font-size: 12.5px;
-    font-family: inherit; outline-color: var(--accent);
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    background: #fff; border-radius: 14px; padding: 20px 22px; width: 320px;
+    box-shadow: 0 24px 60px rgba(20, 24, 19, .25);
   }
-  .inline-create .row { display: flex; gap: 6px; justify-content: flex-end; }
-  .inline-create button {
-    font-size: 11.5px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line-strong);
+  .modal-card h4 {
+    font-family: inherit; font-weight: 600; font-size: 14.5px; color: var(--ink); margin: 0 0 4px;
+  }
+  .modal-card .modal-sub { font-size: 12px; color: var(--ink-faint); margin: 0 0 14px; }
+  .modal-card input {
+    width: 100%; border: 1px solid var(--line-strong); border-radius: 8px;
+    padding: 9px 12px; font-size: 13px; font-family: inherit; outline-color: var(--accent);
+  }
+  .modal-card .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal-card .row button {
+    font-size: 12.5px; padding: 7px 15px; border-radius: 7px; border: 1px solid var(--line-strong);
     background: #fff; cursor: pointer;
   }
-  .inline-create button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .modal-card .row button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* --- collapsed rail: fix for issue 3 --- */
   .panel.collapsed .panel-head { display: none; }
@@ -240,20 +248,9 @@
   .collapsed-rail .rail-add:hover { background: var(--accent); color: #fff; }
 
   /* --- file list --- */
-  .file-toolbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--bg);
-    font-size: 11.5px; color: var(--ink-faint);
-  }
-  .file-toolbar .sort-pop { position: relative; }
-  .more-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft);
-    font-size: 11.5px; padding: 4px 9px; border-radius: 999px; cursor: pointer;
-  }
-  .more-btn:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .sort-pop { position: relative; }
   .sort-menu {
-    display: none; position: absolute; right: 0; top: calc(100% + 6px);
+    display: none; position: absolute; right: 0; top: calc(100% + 8px);
     background: #fff; border: 1px solid var(--line); border-radius: 10px;
     box-shadow: 0 10px 28px rgba(20,24,19,.12); padding: 10px; width: 210px; z-index: 20;
   }
@@ -322,12 +319,12 @@
     <div class="brief-card">
       <b><span class="tag">1</span>新建入口割裂</b>
       <span class="was">新建记录按钮放在页面最右上角，和左侧文件夹 / 文件列表不在一起，容易找不到。</span>
-      <span class="now">文件夹栏、文件列表栏的标题行各放一个小“+”按钮，就近新建文件夹 / 新建记录；去掉右上角的主按钮和列表底部的虚线按钮。</span>
+      <span class="now">文件夹栏、文件列表栏的标题行各放一个小“+”按钮，就近触发；点击后弹出居中的新建弹窗（符合常见交互习惯），填完名称确认即可，不做就地展开的输入框。去掉右上角的主按钮和列表底部的虚线按钮。</span>
     </div>
     <div class="brief-card">
       <b><span class="tag">2</span>文件列表信息冗余</b>
-      <span class="was">文件夹已经显示了份数，文件列表头部又重复显示一遍；排序 / 月份用单独一行文字 + 一个下拉，占地方还分散。</span>
-      <span class="now">文件列表头部的份数只保留“当前筛选后的份数”这一处；排序和月份合并进一个“⋯ 更多”按钮里，点开才展示。</span>
+      <span class="was">文件夹已经显示了份数，文件列表头部又重复显示一遍；排序单独占一整行文字“按记录时间排序”，还搭配一个下拉，占地方又分散。</span>
+      <span class="now">文件列表头部份数只保留一处；去掉单独的排序文字行，在标题行“+”新建按钮旁加一个小“⋯”更多按钮，点开弹层里合并展示月份筛选和排序选项。</span>
     </div>
     <div class="brief-card">
       <b><span class="tag">3</span>收起后是难看的长白条</b>
@@ -365,7 +362,7 @@
         <div class="title"><b>文件夹</b><span class="count">18</span></div>
         <div class="actions">
           <span class="anno-wrap">
-            <button class="icon-btn primary" title="新建文件夹" onclick="toggleCreate('folderCreate')">
+            <button class="icon-btn primary" title="新建文件夹" onclick="openModal('folderModal')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
             </button>
             <span class="tag-badge">1</span>
@@ -376,10 +373,6 @@
         </div>
       </div>
       <div class="folder-body">
-        <div class="inline-create" id="folderCreate">
-          <input type="text" placeholder="文件夹名称" autofocus />
-          <div class="row"><button onclick="toggleCreate('folderCreate')">取消</button><button class="primary">创建</button></div>
-        </div>
         <div class="folder-row active">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
           <span>全部材料</span><small>284</small>
@@ -400,7 +393,7 @@
         </button>
         <span class="rail-label">文件夹</span>
         <span class="rail-count">18</span>
-        <button class="rail-add" title="新建文件夹" onclick="toggleCollapse('folderPanel')">
+        <button class="rail-add" title="新建文件夹" onclick="openModal('folderModal')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
@@ -411,8 +404,27 @@
       <div class="panel-head">
         <div class="title"><b>旅行日记 · 云南</b><span class="count">12 份</span></div>
         <div class="actions">
+          <span class="anno-wrap sort-pop">
+            <button class="icon-btn" title="排序与月份筛选" onclick="toggleSort(event)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+            </button>
+            <span class="tag-badge">2</span>
+            <div class="sort-menu" id="sortMenu">
+              <p>月份</p>
+              <div class="opts">
+                <button class="opt active">全部月份 12</button>
+                <button class="opt">2025-10 5</button>
+                <button class="opt">2025-09 7</button>
+              </div>
+              <p>排序</p>
+              <div class="opts">
+                <button class="opt active">按记录时间 新 → 旧</button>
+                <button class="opt">按记录时间 旧 → 新</button>
+              </div>
+            </div>
+          </span>
           <span class="anno-wrap">
-            <button class="icon-btn primary" title="在当前文件夹新建记录" onclick="toggleCreate('fileCreate')">
+            <button class="icon-btn primary" title="在当前文件夹新建记录" onclick="openModal('fileModal')">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
             </button>
             <span class="tag-badge">1</span>
@@ -421,35 +433,6 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
         </div>
-      </div>
-
-      <div class="inline-create" id="fileCreate" style="margin:10px 12px 0;">
-        <input type="text" placeholder="文件名，例如：今天的观察…" autofocus />
-        <div class="row"><button onclick="toggleCreate('fileCreate')">取消</button><button class="primary">创建文件</button></div>
-      </div>
-
-      <div class="file-toolbar">
-        <span>按记录时间排序</span>
-        <span class="anno-wrap sort-pop">
-          <button class="more-btn" onclick="toggleSort()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-            更多
-          </button>
-          <span class="tag-badge">2</span>
-          <div class="sort-menu" id="sortMenu">
-            <p>月份</p>
-            <div class="opts">
-              <button class="opt active">全部月份 12</button>
-              <button class="opt">2025-10 5</button>
-              <button class="opt">2025-09 7</button>
-            </div>
-            <p>排序</p>
-            <div class="opts">
-              <button class="opt active">新 → 旧</button>
-              <button class="opt">旧 → 新</button>
-            </div>
-          </div>
-        </span>
       </div>
 
       <div class="file-list">
@@ -480,7 +463,7 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 6l6 6-6 6"/></svg>
         </button>
         <span class="rail-label">云南 · 12 份</span>
-        <button class="rail-add" title="新建记录" onclick="toggleCollapse('filePanel')">
+        <button class="rail-add" title="新建记录" onclick="openModal('fileModal')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
@@ -497,6 +480,32 @@
   </div>
 </div>
 
+<!-- 新建文件夹弹窗 -->
+<div class="modal-overlay" id="folderModal" onclick="closeModalOnBg(event, 'folderModal')">
+  <div class="modal-card">
+    <h4>新建文件夹</h4>
+    <p class="modal-sub">在「文件夹」栏创建一个新的分类</p>
+    <input type="text" placeholder="文件夹名称" autofocus />
+    <div class="row">
+      <button onclick="closeModal('folderModal')">取消</button>
+      <button class="primary" onclick="closeModal('folderModal')">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建记录弹窗 -->
+<div class="modal-overlay" id="fileModal" onclick="closeModalOnBg(event, 'fileModal')">
+  <div class="modal-card">
+    <h4>新建记录</h4>
+    <p class="modal-sub">将记录保存到「旅行日记 · 云南」</p>
+    <input type="text" placeholder="文件名，例如：今天的观察…" autofocus />
+    <div class="row">
+      <button onclick="closeModal('fileModal')">取消</button>
+      <button class="primary" onclick="closeModal('fileModal')">创建文件</button>
+    </div>
+  </div>
+</div>
+
 <script>
   function toggleCollapse(id) {
     const panel = document.getElementById(id);
@@ -505,15 +514,28 @@
     const cls = id === 'folderPanel' ? 'folder-collapsed' : 'file-collapsed';
     workspace.classList.toggle(cls, collapsed);
   }
-  function toggleCreate(id) {
-    document.getElementById(id).classList.toggle('open');
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
   }
-  function toggleSort() {
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  function closeModalOnBg(e, id) {
+    if (e.target.id === id) closeModal(id);
+  }
+  function toggleSort(e) {
+    e.stopPropagation();
     document.getElementById('sortMenu').classList.toggle('open');
   }
   document.addEventListener('click', (e) => {
     const menu = document.getElementById('sortMenu');
     if (!menu.contains(e.target) && !e.target.closest('.sort-pop')) menu.classList.remove('open');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('folderModal');
+      closeModal('fileModal');
+    }
   });
 </script>
 </body>
