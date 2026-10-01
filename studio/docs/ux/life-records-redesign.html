@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>生活记录页 · UX 重设计稿</title>
+<style>
+  :root{
+    --bg:#f4f2ee; --surface:#fffdf9; --rail:#e9e6df; --line:#e3dfd6;
+    --ink:#22262a; --muted:#8a8d88; --accent:#2f6f5e; --accent-soft:#e1efea;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--ink);line-height:1.6;padding:32px 24px 80px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:24px} h2{font-size:17px;margin:44px 0 6px}
+  .lead{color:var(--muted);font-size:14px;margin-top:4px}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 对照表 */
+  .issues{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+  .issue{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13px}
+  .issue b{display:block;font-size:14px;margin-bottom:4px}
+  .issue s{color:var(--muted)} .issue em{font-style:normal;color:var(--accent);font-weight:600}
+
+  /* 应用框 */
+  .stage{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(40,35,20,.07)}
+  .topbar{display:flex;align-items:center;gap:12px;height:48px;padding:0 18px;border-bottom:1px solid var(--line)}
+  .topbar strong{font-size:15px}
+  .topbar .sp{flex:1}
+  .ghost{height:30px;padding:0 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--muted)}
+  .panes{display:flex;height:540px}
+  .pane{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line);transition:width .22s ease}
+  .pane.folders{width:210px} .pane.files{width:310px} .pane.preview{flex:1;border-right:0}
+  .pane.folders.collapsed,.pane.files.collapsed{width:44px}
+
+  /* 栏头：标题 + 新增 + 更多/收起，全部放在同一行 */
+  .phead{display:flex;align-items:center;gap:2px;height:44px;padding:0 8px 0 14px;flex:none}
+  .phead h3{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ib{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--muted);position:relative}
+  .ib:hover{background:var(--rail);color:var(--ink)}
+  .ib.add{color:var(--accent)} .ib.add:hover{background:var(--accent-soft)}
+  svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  [data-tip]:hover::after{content:attr(data-tip);position:absolute;top:32px;right:0;background:var(--ink);color:#fff;font-size:12px;padding:3px 8px;border-radius:6px;white-space:nowrap;z-index:5}
+
+  .list{flex:1;overflow:auto;padding:2px 8px 12px}
+  .row{display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border-radius:8px;font-size:13.5px;cursor:pointer}
+  .row:hover{background:#f1eee8}
+  .row.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .row svg{flex:none;opacity:.7}
+  .row span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .more{opacity:0;width:24px;height:24px}
+  .row:hover .more,.row.on .more{opacity:1}
+  .row small{color:var(--muted);font-size:12px;font-weight:400}
+
+  /* 文件行：只有标题 + 日期 */
+  .file{display:flex;flex-direction:column;gap:1px;padding:9px 10px;border-radius:8px;cursor:pointer}
+  .file:hover{background:#f1eee8}
+  .file.on{background:var(--accent-soft)}
+  .file b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file.on b{color:var(--accent)}
+  .file small{font-size:12px;color:var(--muted)}
+  .group{font-size:12px;color:var(--muted);padding:10px 10px 4px}
+
+  /* 更多菜单 */
+  .menu{position:absolute;top:40px;right:8px;width:210px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(40,35,20,.15);padding:6px;z-index:10;display:none}
+  .menu.open{display:block}
+  .menu .lbl{font-size:12px;color:var(--muted);padding:6px 10px 2px}
+  .menu button{display:flex;width:100%;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:7px;font-size:13px;text-align:left}
+  .menu button:hover{background:var(--rail)}
+  .menu button.sel::after{content:"✓";color:var(--accent)}
+  .menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+  .menu .danger{color:#b4452f}
+  .pane.files{position:relative}
+
+  /* 收起态：窄轨，不再是白条 */
+  .rail{display:none;flex:1;flex-direction:column;align-items:center;gap:6px;padding:8px 0;background:var(--rail)}
+  .collapsed .rail{display:flex}
+  .collapsed .phead,.collapsed .list{display:none}
+  .rail .ib{background:var(--surface);box-shadow:0 1px 0 var(--line)}
+  .rail .ib.add{background:var(--accent);color:#fff}
+  .rail .ib.add:hover{background:#285e4f}
+  .vlabel{writing-mode:vertical-rl;margin-top:10px;font-size:12.5px;color:#5c605c;letter-spacing:.12em;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .vlabel i{font-style:normal;background:var(--surface);border-radius:999px;padding:1px 0;font-size:11px;color:var(--muted);width:18px;text-align:center;writing-mode:horizontal-tb}
+
+  /* 预览 */
+  .preview .doc{padding:28px 40px;max-width:640px}
+  .preview h4{font-size:22px;margin-bottom:6px}
+  .preview .meta{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+  .preview p{font-size:14.5px;margin-bottom:12px;color:#3a3f43}
+  .skel{height:10px;border-radius:5px;background:#eeebe4;margin-bottom:10px}
+
+  /* 内联新建 */
+  .inline-new{display:none;margin:2px 8px 6px;padding:4px 8px;border:1.5px solid var(--accent);border-radius:8px;font-size:13px;background:#fff;align-items:center;gap:8px;height:34px}
+  .inline-new.open{display:flex}
+  .inline-new input{border:0;outline:0;font:inherit;flex:1;background:none;min-width:0}
+  .inline-new kbd{font-size:11px;color:var(--muted)}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+  .chip{padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13px}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .notes{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+  .note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13px}
+  .note b{display:block;margin-bottom:4px;font-size:14px}
+  .note li{margin:3px 0 3px 16px}
+  @media(max-width:860px){.issues,.notes{grid-template-columns:1fr}.panes{overflow:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>生活记录页 · UX 重设计稿</h1>
+  <p class="lead">下方是可交互原型：点击「+」「⋯」「收起」按钮，或用下面的状态切换，查看每个改动的效果。</p>
+
+  <div class="issues">
+    <div class="issue"><b>1 · 新建入口就近</b><s>右上角「新建记录」+ 文件夹底部虚线按钮</s><br><em>改为：每一栏标题行右侧各有一个「+」</em>，所见即所得，在哪一栏点就新建什么。</div>
+    <div class="issue"><b>2 · 去掉冗余信息</b><s>栏头重复文件数、排序方式平铺展示</s><br><em>改为：栏头只留标题；日期筛选与排序收进「⋯」菜单</em>，文件行只保留标题和日期。</div>
+    <div class="issue"><b>3 · 收起态不再是白条</b><s>整栏变成一根空白长条</s><br><em>改为：44px 灰底窄轨</em>，含展开按钮、新增按钮和竖排栏名，信息不丢、视觉也退后。</div>
+  </div>
+
+  <h2>交互原型</h2>
+  <div class="controls" role="group" aria-label="切换状态">
+    <button class="chip on" data-state="default">默认</button>
+    <button class="chip" data-state="menu">打开「⋯」菜单</button>
+    <button class="chip" data-state="newfile">点击文件栏「+」</button>
+    <button class="chip" data-state="newfolder">点击文件夹栏「+」</button>
+    <button class="chip" data-state="collapseFiles">收起文件列表</button>
+    <button class="chip" data-state="collapseBoth">两栏都收起</button>
+  </div>
+
+  <div class="stage">
+    <div class="topbar">
+      <strong>生活记录</strong>
+      <span class="sp"></span>
+      <button class="ghost">导入资料</button>
+    </div>
+
+    <div class="panes">
+      <!-- 文件夹栏 -->
+      <section class="pane folders" id="folders" aria-label="文件夹">
+        <div class="phead">
+          <h3>文件夹</h3>
+          <button class="ib add" data-tip="新建文件夹" id="addFolder" aria-label="新建文件夹"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="ib" data-tip="收起" data-toggle="folders" aria-label="收起文件夹栏"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        </div>
+        <div class="inline-new" id="newFolderBox"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><input placeholder="文件夹名称" aria-label="文件夹名称" /><kbd>↵</kbd></div>
+        <div class="list">
+          <div class="row"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>全部记录</span><small>128</small></div>
+          <div class="row on"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>日记</span><small>46</small><button class="ib more" aria-label="更多文件夹操作"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
+          <div class="row"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>旅行</span><small>21</small><button class="ib more" aria-label="更多文件夹操作"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
+          <div class="row"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>消费账单</span><small>12</small><button class="ib more" aria-label="更多文件夹操作"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
+          <div class="row"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>外部来源</span><small>49</small></div>
+        </div>
+        <div class="rail">
+          <button class="ib" data-toggle="folders" data-tip="展开文件夹" aria-label="展开文件夹栏"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button class="ib add" data-tip="新建文件夹" aria-label="新建文件夹"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="vlabel" data-toggle="folders">文件夹</button>
+        </div>
+      </section>
+
+      <!-- 文件栏 -->
+      <section class="pane files" id="files" aria-label="文件列表">
+        <div class="phead">
+          <h3>日记</h3>
+          <button class="ib add" data-tip="新建记录" id="addFile" aria-label="新建记录"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="ib" data-tip="更多" id="moreBtn" aria-label="更多：筛选与排序" aria-haspopup="menu"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+          <button class="ib" data-tip="收起" data-toggle="files" aria-label="收起文件列表"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        </div>
+        <div class="menu" id="menu" role="menu">
+          <div class="lbl">排序</div>
+          <button class="sel" role="menuitemradio">最新在前</button>
+          <button role="menuitemradio">最早在前</button>
+          <hr />
+          <div class="lbl">按月份</div>
+          <button role="menuitem">全部月份 <span style="color:var(--muted)">›</span></button>
+          <hr />
+          <button role="menuitem">批量选择…</button>
+        </div>
+        <div class="inline-new" id="newFileBox"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/></svg><input placeholder="记录标题（可稍后修改）" aria-label="记录标题" /><kbd>↵</kbd></div>
+        <div class="list">
+          <div class="group">2026 年 2 月</div>
+          <div class="file on"><b>春节回家的第三天</b><small>2 月 9 日</small></div>
+          <div class="file"><b>和老朋友吃火锅</b><small>2 月 6 日</small></div>
+          <div class="file"><b>周末读完了《额尔古纳河右岸》</b><small>2 月 2 日</small></div>
+          <div class="group">2026 年 1 月</div>
+          <div class="file"><b>新年计划：少刷手机</b><small>1 月 28 日</small></div>
+          <div class="file"><b>雪后的清晨散步</b><small>1 月 19 日</small></div>
+          <div class="file"><b>年终复盘</b><small>1 月 2 日</small></div>
+        </div>
+        <div class="rail">
+          <button class="ib" data-toggle="files" data-tip="展开文件列表" aria-label="展开文件列表"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          <button class="ib add" data-tip="新建记录" aria-label="新建记录"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="vlabel" data-toggle="files">日记<i>46</i></button>
+        </div>
+      </section>
+
+      <!-- 预览 -->
+      <section class="pane preview" aria-label="记录预览">
+        <div class="doc">
+          <h4>春节回家的第三天</h4>
+          <div class="meta">2026 年 2 月 9 日 · 日记</div>
+          <p>早上被厨房的声音叫醒，妈妈在煮汤圆。下午陪爸爸去了老街，路过小时候常去的那家文具店，已经变成了奶茶铺。</p>
+          <div class="skel" style="width:92%"></div><div class="skel" style="width:78%"></div><div class="skel" style="width:85%"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <h2>设计说明</h2>
+  <div class="notes">
+    <div class="note"><b>1 · 新增按钮就近放在栏头</b>
+      <ul>
+        <li>文件夹栏、文件栏栏头右侧各一个绿色「+」，是整页唯一的强调色，颜色一致，认得出来。</li>
+        <li>点击后在列表顶部出现内联输入框，回车创建，Esc 取消，不再跳到别处。</li>
+        <li>顶部右上角的「新建记录」移除；「导入资料」保留，因为它是另一类低频操作。</li>
+        <li>去掉文件夹列表底部的虚线按钮。</li>
+      </ul></div>
+    <div class="note"><b>2 · 文件列表只留必要信息</b>
+      <ul>
+        <li>栏头只显示当前文件夹名；数量已在左侧文件夹行展示，不再重复。</li>
+        <li>排序、月份筛选、批量选择收进栏头「⋯」菜单，当前排序用 ✓ 标识。</li>
+        <li>文件行：标题 + 日期两行，按月份分组小标题，取代每行重复写月份。</li>
+        <li>文件夹行的「⋯」仅在悬停或选中时出现，减少视觉噪点。</li>
+      </ul></div>
+    <div class="note"><b>3 · 收起态是一条有内容的窄轨</b>
+      <ul>
+        <li>宽度 44px，用比主背景略深的灰底，视觉上退到背景里，而不是一块白板。</li>
+        <li>顶部依次是「展开」「+」，下方竖排显示栏名（文件列表栏附带文件数）。</li>
+        <li>点击竖排栏名或展开按钮即可展开；收起后依然可直接新建。</li>
+        <li>宽度变化带 0.22s 过渡，避免突兀闪动。</li>
+      </ul></div>
+    <div class="note"><b>无障碍与细节</b>
+      <ul>
+        <li>所有图标按钮带 aria-label 与悬停提示；「⋯」带 aria-haspopup。</li>
+        <li>菜单用 radio 语义表示排序当前值，键盘可达。</li>
+        <li>仅使用一个强调色（墨绿），其余为纸感中性色。</li>
+      </ul></div>
+  </div>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const folders = $('#folders'), files = $('#files'), menu = $('#menu');
+  const nf = $('#newFileBox'), nd = $('#newFolderBox');
+
+  function reset(){
+    folders.classList.remove('collapsed'); files.classList.remove('collapsed');
+    menu.classList.remove('open'); nf.classList.remove('open'); nd.classList.remove('open');
+  }
+  function setChip(name){
+    document.querySelectorAll('[data-state]').forEach(c => c.classList.toggle('on', c.dataset.state === name));
+  }
+  const states = {
+    default: reset,
+    menu(){ reset(); menu.classList.add('open'); },
+    newfile(){ reset(); nf.classList.add('open'); nf.querySelector('input').focus(); },
+    newfolder(){ reset(); nd.classList.add('open'); nd.querySelector('input').focus(); },
+    collapseFiles(){ reset(); files.classList.add('collapsed'); },
+    collapseBoth(){ reset(); files.classList.add('collapsed'); folders.classList.add('collapsed'); }
+  };
+  document.querySelectorAll('[data-state]').forEach(c =>
+    c.addEventListener('click', () => { states[c.dataset.state](); setChip(c.dataset.state); }));
+
+  document.querySelectorAll('[data-toggle]').forEach(b => b.addEventListener('click', () => {
+    (b.dataset.toggle === 'folders' ? folders : files).classList.toggle('collapsed'); setChip('');
+  }));
+  $('#moreBtn').addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('open'); });
+  document.addEventListener('click', (e) => { if (!menu.contains(e.target)) menu.classList.remove('open'); });
+  $('#addFile').addEventListener('click', () => { nf.classList.add('open'); nf.querySelector('input').focus(); });
+  $('#addFolder').addEventListener('click', () => { nd.classList.add('open'); nd.querySelector('input').focus(); });
+  document.querySelectorAll('.inline-new input').forEach(i => i.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || (e.key === 'Enter' && !e.isComposing)) { i.value = ''; i.parentElement.classList.remove('open'); }
+  }));
+  menu.querySelectorAll('[role=menuitemradio]').forEach(b => b.addEventListener('click', () => {
+    menu.querySelectorAll('[role=menuitemradio]').forEach(x => x.classList.remove('sel')); b.classList.add('sel');
+  }));
+</script>
+</body>
+</html>
