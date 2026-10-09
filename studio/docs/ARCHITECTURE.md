@@ -211,7 +211,7 @@ flowchart LR
 
 - `packages/shared/src/`：按 `content`、`config`、`sources`、`photos`、`skills`、`views`、`agents`、`runs` 组织契约。`isTerminalRunStatus` 统一运行锁、来源状态与前端对话的结束状态判断。
 - `packages/wiki-core/src/config.ts`：工作区注册表、路径边界及模型供应商配置的运行时校验；`page-paths.ts`：页面身份和分类；`markdown.ts`：正文、元数据、章节和链接解析；`wiki-index.ts`：文件索引、链接解析、查询和搜索。不把配置校验混进索引构建。
-- `packages/life-views/src/`：`today.ts` 负责当前状态与证据工作区，`life-map.ts` 负责阶段及事件归属，`collections.ts` 负责卡片、模型、金句与回信，`relationships.ts` 负责人物及图关系。日期、表格和页面链接工具统一在 `page-utils.ts`。阶段关联在事件归属确定后只计算一次。
+- `packages/life-views/src/`：`today.ts` 负责当前状态与证据工作区，`life-map.ts` 负责阶段及事件归属，`collections.ts` 负责卡片、模型、金句与回信；回信视图只从元数据提供原始来源线索，供独立人物视角写信使用，不传入旧回信正文。`relationships.ts` 负责人物及图关系。日期、表格和页面链接工具统一在 `page-utils.ts`。阶段关联在事件归属确定后只计算一次。
 - `packages/run-manager/src/run-store.ts`：运行记录、按知识库隔离的写锁、审批、串行更新与旧运行记录迁移；`snapshots.ts`：快照及差异；`run-record.ts`：记录编码和兼容读取；`state-paths.ts`：操作系统状态目录。
 - `packages/codex-bridge`：只封装 Codex app-server 协议，不引入产品流程。
 

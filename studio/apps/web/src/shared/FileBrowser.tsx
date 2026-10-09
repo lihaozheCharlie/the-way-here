@@ -18,14 +18,14 @@ export function FileBrowserPane({ label, count, open, onToggle, order, toolbar, 
   </div>;
 }
 
-export function FileBrowserItem({ title, label = title, date, dateLabel, excerpt, active, onSelect, icon, selection, actions, children }: {
-  title: string; label?: string; date: string; dateLabel: string; excerpt: string; active: boolean; onSelect: () => void;
-  icon?: ReactNode; selection?: ReactNode; actions?: ReactNode; children?: ReactNode;
+export function FileBrowserItem({ title, label = title, date, dateLabel, excerpt, active, onSelect, icon, selection, actions, children, titleOnly = false }: {
+  title: string; label?: string; date?: string; dateLabel?: string; excerpt?: string; active: boolean; onSelect: () => void;
+  icon?: ReactNode; selection?: ReactNode; actions?: ReactNode; children?: ReactNode; titleOnly?: boolean;
 }) {
-  return <article className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""}`}>
+  return <article className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""}${titleOnly ? " is-title-only" : ""}`}>
     {selection}
     <button type="button" className="source-file-select" aria-label={label} aria-current={active ? "true" : undefined} onClick={onSelect}>
-      {icon}<span className="source-record-copy"><time dateTime={date}>{dateLabel}</time><b>{title}</b><small data-overflow-tooltip="off">{excerpt}</small></span>
+      {!titleOnly && icon}<span className="source-record-copy">{!titleOnly && <time dateTime={date}>{dateLabel}</time>}<b>{title}</b>{!titleOnly && <small data-overflow-tooltip="off">{excerpt}</small>}</span>
     </button>
     {actions}{children}
   </article>;

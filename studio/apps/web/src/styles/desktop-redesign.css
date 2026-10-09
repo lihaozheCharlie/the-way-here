@@ -103,6 +103,8 @@
 .desktop-shell .source-record-copy > b { order:-1; font-size:13px; }
 .desktop-shell .source-record-copy > small { -webkit-line-clamp:1; font-size:13px; }
 .desktop-shell .source-record-copy > time { font-size:13px; }
+.desktop-shell .organized-sources-page .source-file-row.is-title-only .source-file-select { min-height:42px; align-items:center; padding:10px 36px 10px 12px; }
+.desktop-shell .organized-sources-page .source-file-row.is-title-only .source-record-copy > b { font-size:13px; line-height:1.5; }
 .desktop-shell .understanding-overview-foot { background:var(--surface); border:0; border-radius:var(--radius-panel); padding:16px 18px; margin-top:18px; }
 .desktop-shell .understanding-overview-foot h2 { font-size:13px; }
 .desktop-shell .understanding-overview-foot button { background:var(--accent-primary); }

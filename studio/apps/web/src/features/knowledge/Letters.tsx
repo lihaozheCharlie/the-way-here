@@ -3,7 +3,7 @@ import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { LetterHistory } from "./LetterHistory";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { LettersView, LifeMapView, ReasoningLens, WikiPageSummary, WikiRun } from "@the-way-here/shared";
+import type { LetterViewItem, LettersView, LifeMapView, ReasoningLens, WikiPageSummary, WikiRun } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { letterRunVersions, openContextAgent, type AgentContext } from "../collaboration/model";
@@ -34,7 +34,6 @@ export function requestPrompt(request: LetterRequest): { prompt: string; label: 
     ["关联人物", related.people],
     ["关联地点", related.places],
     ["关联现实系统", related.systems],
-    ["关联旧回信（仅用于检查重复，不作为独立事实证据）", related.letters],
   ] : [];
   const startingPoints = groups.map(([label, pages]) => `- ${label}：${pages.length ? pages.map(page => `${page.title} [${page.id}]`).join("；") : "暂无"}`).join("\n");
   const intent = request.description
@@ -43,6 +42,20 @@ export function requestPrompt(request: LetterRequest): { prompt: string; label: 
   return {
     label: request.stage?.title || request.description?.slice(0, 24) || "自由描述",
     prompt: `请为我主动写一封近况回信。${intent}${startingPoints ? `\n所选阶段已有的关联页面，作为检索起点（不是已核实的写信证据；先读页面，再追溯原始来源，按相关性取舍）：\n${startingPoints}` : ""}\n请使用知识库注册的 build-companion-reflection 流程，检索这段经历的原始材料和必要的已有理解；如指定视角，使用其注意力和推理方式，否则按 Skill 结合材料自动选择合适视角。不模仿人物口头禅。只依据有来源的事实，不虚构经历或心理。若该段经历没有足够的具体材料，请说明并停止，不创建空泛回信。完成后按该 Skill 的归档与质量门保存到当前知识库，并说明保存位置。`,
+  };
+}
+
+export function perspectiveLetterRequest(letter: LetterViewItem, lens: ReasoningLens): { prompt: string; context: AgentContext } {
+  const sources = [...new Set([...(letter.evidenceSources || []), ...letter.page.sources].filter(source => source && source !== "wiki synthesis"))];
+  const period = [letter.evidenceFrom, letter.evidenceTo].filter(Boolean).join(" 至 ") || letter.letterDate;
+  const clues = [
+    `材料时间：${period}`,
+    sources.length ? `原始来源线索：${sources.join("；")}` : "原始来源线索：请按材料时间和主题检索，无法定位到具体原始材料时停止。",
+    letter.themes.length ? `主题检索线索：${letter.themes.map(theme => theme.title).join("；")}` : "",
+  ].filter(Boolean).join("\n");
+  return {
+    context: { scope: "近况回信 · 独立人物视角", title: "从原始材料写信", summary: clues, suggestions: [] },
+    prompt: `请依据以下线索找到原始材料，以「${lens.displayName}」的视角写一封完整的近况回信。\n${clues}\n读取人物视角文件 ${lens.relativePath} 的完整推理协议，并使用 build-companion-reflection 的朋友式成文要求。先从原始材料建立中性证据，再由此人物的推理起点、路径、洞见标准和停止位置独立形成这封信；不要借用其他人物的分析框架。不要读取或参考原回信、近况对话总览、任何已有视角版本，也不要比较新旧内容或检查重复。不要虚构事实、模仿口头禅或替我下结论。最终只输出可直接阅读的完整回信正文，并在末尾用“依据”列出实际引用的原始材料；不要修改任何文件，系统会把回答保留为「${lens.displayName}视角回信」。`,
   };
 }
 
@@ -110,7 +123,7 @@ export function Letters({ revision }: { revision: number }) {
           snapshot={activeVersion && activeVersion.id !== "original" ? { id: `letter-version-${activeVersion.id}`, markdown: activeVersion.markdown } : undefined}
           headerActions={<div className="letter-version-actions">
             {generatedVersions.length > 0 && <LetterHistory key={selected.page.id} versions={versions} activeId={activeVersion?.id} onSelect={selectVersion} />}
-            <LetterLensPicker key={selected.page.id} lenses={lenses || []} onSelect={(lens) => { selectVersion(); openContextAgent({ mode: "read", outputTarget: { kind: "letter-version", pageId: selected.page.id, lensId: lens.id, lensName: lens.displayName, label: `${lens.displayName}视角回信` }, prompt: `请用「${lens.displayName}」的思考方式，重新写一版完整的近况回信《${selected.page.title}》，并重读它所依据的材料。这个视角特别关注：${lens.attention}。保持一位了解我来路的朋友口吻，只依据知识库里的原始材料和已有判断，不虚构事实、不模仿人物口头禅，也不要替我下结论。最终只输出可直接阅读的完整回信正文，并在末尾用“依据”列出引用的材料；不要修改任何文件，系统会把回答保留为「${lens.displayName}视角回信」。` }); }} />
+            <LetterLensPicker key={selected.page.id} lenses={lenses || []} onSelect={(lens) => { const request = perspectiveLetterRequest(selected, lens); selectVersion(); openContextAgent({ mode: "read", contextOverride: request.context, outputTarget: { kind: "letter-version", pageId: selected.page.id, lensId: lens.id, lensName: lens.displayName, label: `${lens.displayName}视角回信` }, prompt: request.prompt }); }} />
           </div>}
           controls={<><div className="letter-provenance" aria-label="这封信的来历">
           <span>写于 <time dateTime={selected.letterDate.slice(0, 10)}>{selected.letterDate.slice(0, 10)}</time></span>

@@ -115,13 +115,13 @@ describe("personal growth views", () => {
     const letter = { ...summary("wiki/10/2026-08-18", "2026-08-18 写给最近的你", "letters"), start: "2026-06-28", end: "2026-08-18" };
     const theme = summary("wiki/01/主线", "行动主线", "personal-lines");
     const pages: Record<string, any> = {
-      [letter.id]: { ...letter, outgoingLinks: [{ target: theme.id, resolvedId: theme.id }] },
+      [letter.id]: { ...letter, properties: { evidence_sources: ["sources/2026-08-18.md"] }, outgoingLinks: [{ target: theme.id, resolvedId: theme.id }] },
       [theme.id]: { ...theme, outgoingLinks: [] },
     };
     const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), get: (id: string) => pages[id] } as any;
     const view = buildLetters(index);
     expect(semanticDate(letter as any)).toBe("2026-08-18");
-    expect(view.letters[0]).toMatchObject({ letterDate: "2026-08-18", evidenceFrom: "2026-06-28", evidenceTo: "2026-08-18" });
+    expect(view.letters[0]).toMatchObject({ letterDate: "2026-08-18", evidenceFrom: "2026-06-28", evidenceTo: "2026-08-18", evidenceSources: ["sources/2026-08-18.md"] });
     expect(view.threads[0]!.title).toBe("行动主线");
   });
 

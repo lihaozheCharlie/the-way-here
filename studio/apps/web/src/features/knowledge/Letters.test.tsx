@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LettersView, WikiPage, WikiPageSummary, WikiRun } from "@the-way-here/shared";
-import { Letters, letterRequestContext, requestPrompt } from "./Letters";
+import { Letters, letterRequestContext, perspectiveLetterRequest, requestPrompt } from "./Letters";
 import { LetterLensChoices } from "./LetterLensPicker";
 
 const mocks = vi.hoisted(() => ({ useApi: vi.fn() }));
@@ -69,11 +69,27 @@ describe("letter reader", () => {
       },
     };
     const prompt = requestPrompt({ stage }).prompt;
-    for (const id of ["wiki/event", "wiki/person", "wiki/place", "wiki/system", "wiki/letter"]) expect(prompt).toContain(`[${id}]`);
+    for (const id of ["wiki/event", "wiki/person", "wiki/place", "wiki/system"]) expect(prompt).toContain(`[${id}]`);
     expect(prompt).toContain("不是已核实的写信证据");
-    expect(prompt).toContain("仅用于检查重复，不作为独立事实证据");
+    expect(prompt).not.toContain("wiki/letter");
     expect(letterRequestContext({ stage })).toMatchObject({ scope: "近况回信 · 主动写信", title: "匿名阶段", pageId: "wiki/stage", summary: "阶段摘要" });
     expect(letterRequestContext({ description: "匿名经历" }).pageId).toBeUndefined();
+  });
+
+  it("starts a perspective letter from source clues without passing the previous letter as context", () => {
+    const lens = { id: "yanni", displayName: "雅尼", attention: "感受", signals: [], helperUse: "", relativePath: "knowledge-engine/skills/common/reasoning-lenses/references/figures/yanni.md" };
+    const selected = { ...data.letters[1]!, evidenceSources: ["sources/2026-02-20.md"], page: { ...page, sources: ["原始知识库/日记/2026.02.20", "wiki synthesis"] } };
+    const request = perspectiveLetterRequest(selected, lens);
+    expect(request.context.pageId).toBeUndefined();
+    expect(request.context.summary).toContain("原始知识库/日记/2026.02.20");
+    expect(request.prompt).toContain(lens.relativePath);
+    expect(request.prompt).toContain("原始知识库/日记/2026.02.20");
+    expect(request.prompt).toContain("sources/2026-02-20.md");
+    expect(request.prompt).not.toContain(page.id);
+    expect(request.prompt).not.toContain(page.title);
+    expect(request.prompt).not.toContain("wiki synthesis");
+    expect(request.prompt).not.toContain("重新写");
+    expect(request.prompt).toContain("不要比较新旧内容或检查重复");
   });
 
   it("shares the reread lens cards with the active letter composer", () => {

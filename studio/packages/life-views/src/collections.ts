@@ -81,11 +81,14 @@ export function buildLetters(index: WikiIndex): LettersView {
   const themeCategories: PageCategory[] = ["personal-lines", "cycles", "systems", "mental-models", "life-stages", "relationship-roles", "entities"];
   const letters = pages.map((page) => {
     const full = index.get(page.id);
+    const rawEvidenceSources = full?.properties.evidence_sources;
+    const evidenceSources = Array.isArray(rawEvidenceSources) ? rawEvidenceSources.filter((value): value is string => typeof value === "string" && Boolean(value.trim())) : typeof rawEvidenceSources === "string" && rawEvidenceSources.trim() ? [rawEvidenceSources] : [];
     return {
       page,
       letterDate: semanticDate(page),
       evidenceFrom: page.start,
       evidenceTo: page.end,
+      evidenceSources,
       themes: uniquePages((full?.outgoingLinks || []).map((link) => resolveLink(index, link))).filter((linked) => themeCategories.includes(linked.category)).slice(0, 10),
     };
   });

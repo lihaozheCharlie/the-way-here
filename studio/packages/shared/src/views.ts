@@ -157,6 +157,7 @@ export interface LetterViewItem {
   letterDate: string;
   evidenceFrom?: string;
   evidenceTo?: string;
+  evidenceSources?: string[];
   themes: WikiPageSummary[];
 }
 
