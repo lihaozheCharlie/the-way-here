@@ -24,7 +24,12 @@ export function cleanSourcePath(relativePath: string): string {
   const parts = relativePath.replace(/\\/g, "/").split("/").filter(Boolean);
   const sourceRoot = parts.findIndex((part) => /^(原始知识库|sources?)$/i.test(part));
   const logical = sourceRoot >= 0 ? parts.slice(sourceRoot + 1) : parts;
-  return logical.map((part) => part === "imported" ? "待整理" : part).join("/");
+  return logical.join("/");
+}
+
+export function sourcePagePath(page: Pick<WikiPageSummary, "relativePath" | "externalSource">): string {
+  const external = page.externalSource;
+  return external?.originalRelativePath ? `外部来源/${external.connectionId}/${external.originalRelativePath}` : cleanSourcePath(page.relativePath);
 }
 
 export function importedFolderForBatch(batch: Pick<SourceImportBatch, "files" | "targetFolder">): string {

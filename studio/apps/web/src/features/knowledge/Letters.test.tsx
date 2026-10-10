@@ -9,13 +9,13 @@ const mocks = vi.hoisted(() => ({ useApi: vi.fn() }));
 vi.mock("../../shared/use-api", () => ({ useApi: mocks.useApi }));
 vi.mock("../desktop/InspectorContext", () => ({ PageAgentContext: () => null }));
 
-const page: WikiPageSummary = { id: "letter-new", title: "2026-02-20 给自己的信", relativePath: "wiki/letters/new.md", excerpt: "回信列表摘要", tags: [], aliases: [], category: "letters", locations: [], sources: [], modifiedAt: "2026-02-20T00:00:00Z", isSource: false };
+const page: WikiPageSummary = { id: "letter-new", title: "2026-02-20 给自己的信", relativePath: "wiki/letters/2026-02-20 给自己的信.md", excerpt: "回信列表摘要", tags: [], aliases: [], category: "letters", locations: [], sources: [], modifiedAt: "2026-02-20T00:00:00Z", isSource: false };
 const markdown = "# 给自己的信\n\n## 这段时间\n\n原始回信正文。\n\n## 往后\n\n继续记录。";
 const document: WikiPage = { ...page, type: "letter", markdown, renderedMarkdown: markdown, properties: {}, sections: [], outgoingLinks: [], incomingLinks: [] };
 const themes = ["工作", "家庭", "创作", "关系"].map((title, index) => ({ ...page, id: `theme-${index}`, title, category: "personal-lines" as const }));
 const data: LettersView = {
   letters: [
-    { page: { ...page, id: "letter-old", title: "较早的回信" }, letterDate: "2024-01-01", themes: [] },
+    { page: { ...page, id: "letter-old", title: "较早的回信", relativePath: "wiki/letters/2024-01-01 较早的回信.md" }, letterDate: "2024-01-01", themes: [] },
     { page, letterDate: "2026-02-20", themes, evidenceFrom: "2026-01-01", evidenceTo: "2026-02-18" },
   ],
   years: ["2024", "2026"],
@@ -110,12 +110,14 @@ describe("letter reader", () => {
     expect(html).toContain("由你请求");
     expect(html).not.toContain("正在写信：转折阶段");
   });
-  it("uses the shared record list with title, date and excerpt in descending order", () => {
+  it("uses the shared file list with complete filenames and excerpts in descending order", () => {
     const html = render();
     const index = html.slice(html.indexOf('<section class="source-file-pane"'), html.indexOf("</section>"));
     expect(html).toContain('class="timeline-filter"');
     expect(index.indexOf("给自己的信")).toBeLessThan(index.indexOf("较早的回信"));
+    expect(index).toContain("2026-02-20 给自己的信.md");
     expect(index).toContain(page.excerpt);
+    expect(index).not.toContain("<time");
     expect(index).not.toContain("家庭");
     expect(html).not.toContain("letter-origin-facts");
     expect(html).not.toContain("letter-version-switcher");
@@ -141,13 +143,14 @@ describe("letter reader", () => {
     expect(render("?letter=letter-new&version=original")).toContain("原始回信正文。");
   });
 
-  it("puts title and provenance before version controls and keeps one tab per perspective", () => {
+  it("keeps history as the only version selector and retains the historical version banner", () => {
     runs = [version, { ...version, id: "version-2", createdAt: "2026-02-22T10:00:00Z", result: { ...version.result!, finalAnswer: "最新正文。" } }];
     const html = render();
-    expect(html.indexOf('class="editable-document-identity"')).toBeLessThan(html.indexOf('class="letter-version-bar"'));
-    expect(html.indexOf('class="letter-provenance"')).toBeLessThan(html.indexOf('class="letter-version-bar"'));
-    expect(html.match(/role="tab"/g)).toHaveLength(1);
-    expect(html).toContain("示例视角回信");
+    expect(html).toContain('aria-label="历史版本"');
+    expect(html).toContain('class="letter-provenance"');
+    expect(html).not.toContain("letter-version-bar");
+    expect(html).not.toContain('aria-label="切换回信视角"');
+    expect(html).not.toContain('role="tab"');
     expect(html).not.toContain("你正在查看历史版本");
     const history = render("?letter=letter-new&version=version-1");
     expect(history).toContain("你正在查看历史版本");
@@ -164,19 +167,20 @@ describe("letter reader", () => {
   it("uses the standard editor order instead of a letter-only compact layout", () => {
     const html = render();
     expect(html).not.toContain("editable-document-properties-disclosure");
-    expect(html).toContain('class="editable-document editable-document--preview has-outline"');
+    expect(html).toMatch(/class="editable-document [^"]*editable-document--preview[^"]*has-outline/);
     expect(html.indexOf('class="editable-document-identity')).toBeLessThan(html.indexOf('class="editable-document-body'));
     expect(html).not.toContain('class="document-meta-row"');
     expect(html).not.toContain('class="editable-document-properties"');
     expect(html).toContain("正文，双击后编辑");
     expect(html).not.toContain("展开全部属性");
-    expect(html).toContain('role="status"></span>');
+    expect(html).not.toContain('aria-label="文档模式"');
+    expect(html).not.toContain('class="document-mode-switch"');
   });
 
   it("uses the file identity and editor shared with life records", () => {
     const html = render();
     expect(html).toContain('class="source-preview"');
-    expect(html).toContain('class="source-file-row active"');
+    expect(html).toContain('class="source-file-row active file-browser-item"');
     expect(html).toContain('class="document-file-name"');
     expect(html).not.toContain('letter-index');
     expect(html).not.toContain('letter-reading');
@@ -186,7 +190,7 @@ describe("letter reader", () => {
   it("uses the shared document layout and outline for immutable generated versions", () => {
     runs = [{ ...version, result: { ...version.result!, finalAnswer: "# 新视角\n\n## 这段时间\n\n回信内容。\n\n## 往后\n\n后续想法。" } }];
     const html = render();
-    expect(html).toContain('class="editable-document editable-document--preview has-outline"');
+    expect(html).toMatch(/class="editable-document [^"]*editable-document--preview[^"]*has-outline/);
     expect(html).toContain('class="document-outline');
     expect(html).not.toContain("editable-document-activate");
     expect(html).not.toContain("<textarea");

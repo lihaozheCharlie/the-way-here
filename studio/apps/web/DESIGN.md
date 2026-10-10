@@ -207,7 +207,7 @@ Questions 在页面内放置（6:4）对话和证据，间距（16px），高度
 
 ### Reading / Editing
 
-阅读与编辑共用宋体正文；文件标题为无衬线，属性摘要保持轻量，保存反馈靠近标题且成功后淡出。外部连接来源与独立阅读保持只读，不能以视觉统一为由放开修改权限。
+阅读与编辑共用宋体正文；文件标题为无衬线，属性摘要保持轻量，保存反馈靠近标题且成功后淡出。已授权本地目录支持原地编辑，独立阅读窗口保持只读。正文双击或按 Enter 编辑，离开正文保存；不提供阅读/编辑切换按钮。
 
 ### Quick Capture / Preferences
 
@@ -232,7 +232,7 @@ Questions 在页面内放置（6:4）对话和证据，间距（16px），高度
 - Do 对正文与编辑器使用同一阅读字号和行高，保留完整原文入口。
 - Do 折叠辅助栏时保留挂载内容，避免丢失草稿、上下文和运行状态。
 - Do 让对话消息与证据分别滚动，并保持输入区可见。
-- Do 保留键盘焦点、可访问名称、减少动态效果以及外部来源只读边界。
+- Do 保留键盘焦点、可访问名称、减少动态效果以及本地目录授权边界。
 
 ### Don’t:
 
@@ -251,7 +251,7 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 
 - 此刻：一句话输入后展开右侧对话；三个紧凑入口提供话题、随手记与已有理解。保留导入、近期线索与理解，后者默认折叠。
 - 值得聊聊：两列卡片、真实类型筛选、每次显示四条；点击高亮并恢复该话题的历史对话。全窗口只有一个对话面板。
-- 生活记录：筛选、搜索、目录连接、导入和新建集中到工具栏；日期与排序通过展开入口访问。目录连接为浮层，全文后的关联理解默认折叠。照片与账单记忆、批量构建、编辑和原目录只读约束保留。
+- 生活记录：筛选、搜索、打开文件夹、导入和新建集中到工具栏；日期与排序通过展开入口访问。打开文件夹使用原生目录选择器，全文后的关联理解默认折叠。照片与账单记忆、批量构建、编辑和真实磁盘目录层级保留。
 - 已有理解：四个分类入口各自包含计数与最近更新的真实页面摘要；循环展开与模型校准仍在可展开的摘要区内。
 - Agent：每次窗口加载默认折叠，展开后保留当前对话／历史切换、模型设置、任务与审批能力。折叠不卸载组件，不丢失输入或中止任务。
 - 导入：620px 弹窗，四类材料两列排列，默认显示材料选择与拖放；连接原目录为附加选项。第二步确认文件夹和摘要，保留照片、账单、聊天平台解析及错误处理。
@@ -293,3 +293,11 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 侧栏底部仅保留偏好设置入口，去除随手记和本机知识库状态文字。偏好设置只保留通用 / AI 助手；通用按通知与快捷键分组，AI 助手沿用全局模型配置、应用与错误反馈。移除没有功能消费者的对话提示和每日话头开关。设置页面使用独立作用域样式，避免通用按钮规则覆盖模型选择和保存操作。值得聊聊页导入标签使用 10px 间距、6px × 12px 内边距，并与正文保持 12px 间距。
 
 主窗口左侧导航始终展开，不提供标题栏收缩按钮。偏好设置和独立阅读窗口继续使用各自的无侧栏布局。
+
+### Shared document continuity
+
+Markdown reading, editing, embedded previews, immutable versions and detached readers share `DocumentFrame` and `document.css`. The content column owns its 720px maximum text measure and 24px gutters; document identity, metadata and body align to that column. Body reading and editing use the same 17px/1.85 serif typography, color and padding. Business pages must not override prose geometry or fonts.
+
+Editable documents expose a fixed reading/editing switch with inline save feedback. Double-click and F2/Enter remain editing shortcuts; blur saves without leaving editing, and Escape returns to reading without reverting autosaved changes. Source block positions restore the corresponding paragraph instead of reusing a scroll pixel offset. Plain Markdown syntax, images and headings can still differ in height between modes.
+
+The shared document auxiliary panel owns outline and optional evidence/relations. Outline links remain usable while editing and navigate to source headings. It starts folded, retains its state across mode changes, uses 220px when open and a 44px folded rail. Below 980px of document width it overlays the content instead of squeezing the text column. Read-only contexts share the paper and navigation without acquiring save behavior.

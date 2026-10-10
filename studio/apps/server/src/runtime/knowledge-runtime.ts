@@ -5,6 +5,7 @@ import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase, renamePersona
 import { StudioEvents } from "./studio-events.js";
 
 export class KnowledgeRuntime {
+  refreshSources?: (knowledgeBaseId?: string) => Promise<void>;
   private activeIndex: WikiIndex;
   private watcher?: FSWatcher;
   private rebuildTimer?: NodeJS.Timeout;

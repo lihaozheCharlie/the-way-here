@@ -46,14 +46,16 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
   async start(input: StartAgentExecution): Promise<AgentExecutionRef> {
     const sessionId = input.sessionId || await this.codex.startThread(input.cwd, input.model);
     const searchCommand = `ELECTRON_RUN_AS_NODE=1 ${shellQuote(process.execPath)} ${shellQuote(path.join(path.dirname(fileURLToPath(import.meta.url)), "search-wiki.js"))} --root ${shellQuote(input.cwd)} --knowledge-base ${shellQuote(input.config.knowledgeBaseId)} --query '检索短语'`;
-    const prompt = input.knowledgeEvidence ? input.prompt : `${input.prompt}\n\n需要检索当前 Wiki 时，先自行把用户问题改写为 1–3 个具体实体、别名或短语，再运行本地检索命令：${searchCommand}。多个检索短语可重复 --query。不要直接用整句用户原话搜索；闲聊不运行检索。检索结果是候选片段，重要结论仍需回读对应页面或来源。`;
+    const directoryPermission = (input.config.sourceConnections || []).filter(item => item.aiWritable).map(item => item.path);
+    const authorizedPrompt = directoryPermission.length ? `${input.prompt}\n\n用户已授权 AI 修改以下本地目录（含子目录），用户要求修改原文时可以直接操作真实文件；此授权仅在写入模式生效。来源引用文件为系统元数据，不能修改。目录：${JSON.stringify(directoryPermission)}` : input.prompt;
+    const prompt = input.knowledgeEvidence ? input.prompt : `${authorizedPrompt}\n\n需要检索当前 Wiki 时，先自行把用户问题改写为 1–3 个具体实体、别名或短语，再运行本地检索命令：${searchCommand}。多个检索短语可重复 --query。不要直接用整句用户原话搜索；闲聊不运行检索。检索结果是候选片段，重要结论仍需回读对应页面或来源。`;
     let turnId: string;
     try {
-      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || input.mode !== "write", workspaceWrite: input.mode === "write" && Boolean(input.config.sourceConnections?.length) });
+      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || input.mode !== "write", workspaceWrite: input.mode === "write" && Boolean(input.config.sourceConnections?.length), writableRoots: input.config.sourceConnections?.filter(item => item.aiWritable).map(item => item.path) });
     } catch (error) {
       if (!input.sessionId) throw error;
       await this.codex.resumeThread(sessionId, input.cwd);
-      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || input.mode !== "write", workspaceWrite: input.mode === "write" && Boolean(input.config.sourceConnections?.length) });
+      turnId = await this.codex.startTurn(sessionId, prompt, input.cwd, { model: input.model, effort: input.effort, imagePaths: input.images?.map((image) => image.path), readOnly: input.strictReadOnly || input.mode !== "write", workspaceWrite: input.mode === "write" && Boolean(input.config.sourceConnections?.length), writableRoots: input.config.sourceConnections?.filter(item => item.aiWritable).map(item => item.path) });
     }
     const ref = { runtimeId: this.id, sessionId, turnId } satisfies AgentExecutionRef;
     this.activeBySession.set(sessionId, ref);

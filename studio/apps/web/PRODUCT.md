@@ -28,9 +28,9 @@ The friend framing is an experience promise, not a claim of consciousness, emoti
 
 - The user opens the native desktop client, which starts its local service, and returns when something happens that they want to say out loud, during a difficult decision, when a familiar pattern repeats, or when they simply do not want to start the story from the beginning again.
 - The product reads an existing Vault with separate Knowledge Sources and My Knowledge layers.
-- The import path accepts local Markdown, TXT, folders, and supported payment statements; future connectors must never appear as working actions before they exist.
+- Diaries and notes open local directories with recursive read/write access and one AI modification authorization. Chat exports, photos and payment statements import into user-selected real application directories; future connectors must never appear as working actions before they exist.
 - Reading, searching, following knowledge links, inspecting sources, and asking Codex are core recurring workflows.
-- Internal Markdown records and constructed knowledge can be edited in the main client or an external editor. External directory connections and detached reading windows remain read-only. Editing preserves original metadata and protected source relations.
+- Internal Markdown records and constructed knowledge can be edited in the main client or an external editor. Authorized local directories support in-place editing and AI writes; detached reading windows remain read-only. Editing preserves original metadata and protected source relations.
 
 ## Capabilities and Constraints
 

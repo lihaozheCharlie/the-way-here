@@ -1,17 +1,15 @@
+import { ContentRequestError } from "./content-error.js";
+import { sourceDestination, sourceFile, assertSourcePath } from "./source-access.js";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pageIdForPath, isExternalSourcePath } from "@the-way-here/wiki-core";
+import { pageIdForPath } from "@the-way-here/wiki-core";
 import type { WikiPage } from "@the-way-here/shared";
 import { isPathInside, markdownFileName, normalizeSourceFolder } from "../../path-policy.js";
 import type { ContentWorkspace } from "./content-workspace.js";
 
-export class ContentRequestError extends Error {
-  constructor(readonly statusCode: number, message: string) {
-    super(message);
-  }
-}
+export { ContentRequestError } from "./content-error.js";
 
 export class PageWriter {
   constructor(
@@ -25,8 +23,9 @@ export class PageWriter {
     try { folder = normalizeSourceFolder(folderValue); }
     catch { throw new ContentRequestError(400, "文件夹名称无效"); }
     if (!folder || folder.split(/[\\/]/).some((part) => part.startsWith(".") || part.endsWith(".assert"))) throw new ContentRequestError(400, "请使用普通文件夹名称");
-    const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
-    const target = path.resolve(sourceRoot, folder);
+    const destination = await sourceDestination(this.knowledge.vaultRoot, this.knowledge.index.config, folder);
+    const sourceRoot = destination.root;
+    const target = destination.target;
     if (!isPathInside(sourceRoot, target)) throw new ContentRequestError(403, "文件夹超出生活记录目录");
     try {
       const [root, parent] = await Promise.all([realpath(sourceRoot), realpath(path.dirname(target))]);
@@ -42,16 +41,13 @@ export class PageWriter {
   }
 
   async createSource(titleValue: string | undefined, folderValue: string | undefined, initialMarkdown = ""): Promise<WikiPage | undefined> {
-    if (!titleValue?.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");
-    const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
+    if (typeof titleValue !== "string" || !titleValue.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");
+    const destination = await sourceDestination(this.knowledge.vaultRoot, this.knowledge.index.config, folderValue || "");
+    const sourceRoot = destination.root;
     let target: string;
-    try {
-      target = path.resolve(sourceRoot, normalizeSourceFolder(folderValue || ""), markdownFileName(titleValue));
-    } catch (error: any) {
-      throw new ContentRequestError(400, error.message);
-    }
-    if (isExternalSourcePath(path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"), this.knowledge.index.config) || folderValue === "外部来源") throw new ContentRequestError(403, "连接目录由系统管理，请在原目录中操作");
-    if (!isPathInside(sourceRoot, target)) throw new ContentRequestError(403, "路径超出知识源目录");
+    try { target = path.join(destination.target, markdownFileName(titleValue)); }
+    catch (error: any) { throw new ContentRequestError(400, error.message); }
+    await assertSourcePath(sourceRoot, target);
     await mkdir(path.dirname(target), { recursive: true });
     try {
       await writeFile(target, initialMarkdown, { encoding: "utf8", flag: "wx" });
@@ -59,9 +55,9 @@ export class PageWriter {
       if (error?.code === "EEXIST") throw new ContentRequestError(409, "同名文件已经存在，请修改文件名后重试");
       throw error;
     }
-    await this.knowledge.index.rebuild();
+    await this.refresh();
     const id = pageIdForPath(path.relative(this.knowledge.vaultRoot, target), this.knowledge.index.config);
-    const page = this.knowledge.index.get(id);
+    const page = destination.connection ? this.knowledge.index.list({ sources: true }).map(item => this.knowledge.index.get(item.id)!).find(item => item.externalSource?.originalPath === target) : this.knowledge.index.get(id);
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, path: page?.relativePath });
     return page;
   }
@@ -70,16 +66,17 @@ export class PageWriter {
     const page = pageId ? this.knowledge.index.get(pageId) : undefined;
     if (!page) throw new ContentRequestError(404, "页面不存在，请刷新后重试");
     if (!fileName?.trim()) throw new ContentRequestError(400, "请输入文件名后再保存");
-    const absolutePath = this.editablePath(page.relativePath, "路径超出可编辑目录，请检查知识库配置");
-    if (page.externalSource) throw new ContentRequestError(403, "这是连接的原始文件，请在原目录中编辑；应用会自动同步");
+    const absolutePath = page.externalSource ? await sourceFile(this.knowledge.vaultRoot, this.knowledge.index.config, page) : this.editablePath(page.relativePath, "路径超出可编辑目录，请检查知识库配置");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     let target: string;
     try {
-      target = path.resolve(path.dirname(absolutePath), markdownFileName(fileName));
+      const name = markdownFileName(fileName);
+      target = path.resolve(path.dirname(absolutePath), /\.txt$/i.test(absolutePath) ? name.replace(/\.md$/i, ".txt") : name);
     } catch (error: any) {
       throw new ContentRequestError(400, error.message);
     }
-    this.assertEditable(target, "新文件名超出可编辑目录，请换一个名称");
+    if (page.externalSource) await assertSourcePath(this.knowledge.index.config.sourceConnections!.find(item => item.id === page.externalSource!.connectionId)!.path, target);
+    else this.assertEditable(target, "新文件名超出可编辑目录，请换一个名称");
     if (target === absolutePath) return page;
     try {
       await stat(target);
@@ -90,14 +87,14 @@ export class PageWriter {
     }
     await rename(absolutePath, target);
     try {
-      if (page.isSource) await this.onSourceRenamed?.(page.relativePath, path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"));
+      if (page.isSource && !page.externalSource) await this.onSourceRenamed?.(page.relativePath, path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"));
     } catch (error) {
       await rename(target, absolutePath);
       throw error;
     }
-    await this.knowledge.index.rebuild();
+    await this.refresh();
     const id = pageIdForPath(path.relative(this.knowledge.vaultRoot, target), this.knowledge.index.config);
-    const updated = this.knowledge.index.get(id);
+    const updated = page.externalSource ? this.knowledge.index.get(page.id) : this.knowledge.index.get(id);
     if (!updated) throw new Error("重命名后无法重新读取页面");
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, path: updated.relativePath, previousPath: page.relativePath });
     return updated;
@@ -107,12 +104,11 @@ export class PageWriter {
     const page = pageId ? this.knowledge.index.get(pageId) : undefined;
     if (!page || !page.isSource) throw new ContentRequestError(404, "生活记录不存在，请刷新后重试");
     const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
-    const absolutePath = path.resolve(this.knowledge.vaultRoot, page.relativePath);
-    if (!isPathInside(sourceRoot, absolutePath)) throw new ContentRequestError(403, "只能删除生活记录中的文件");
-    if (page.externalSource) throw new ContentRequestError(403, "这是连接的原始文件，请在原目录中编辑；应用会自动同步");
+    const absolutePath = await sourceFile(this.knowledge.vaultRoot, this.knowledge.index.config, page);
+    if (!page.externalSource && !isPathInside(sourceRoot, absolutePath)) throw new ContentRequestError(403, "只能删除生活记录中的文件");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     await rm(absolutePath);
-    await this.knowledge.index.rebuild();
+    await this.refresh();
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, deletedPath: page.relativePath });
     return { ok: true, pageId: page.id };
   }
@@ -128,7 +124,7 @@ export class PageWriter {
     if (!isPathInside(root, resolved) || !info.isFile() || info.isSymbolicLink()) throw new ContentRequestError(403, "所选文件不在可删除的 Wiki 目录中");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     await rm(absolutePath);
-    await this.knowledge.index.rebuild();
+    await this.refresh();
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, deletedPath: page.relativePath });
     return { ok: true, pageId };
   }
@@ -142,13 +138,13 @@ export class PageWriter {
     }
     if (!folder) throw new ContentRequestError(400, "生活记录根目录不能删除");
     if (folder.split(path.sep).some((part) => part.startsWith("."))) throw new ContentRequestError(403, "系统目录不能删除");
-    const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
-    const target = path.resolve(sourceRoot, folder);
-    if (isExternalSourcePath(path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"), this.knowledge.index.config) || folderValue === "外部来源") throw new ContentRequestError(403, "连接目录由系统管理，请在原目录中操作");
+    const destination = await sourceDestination(this.knowledge.vaultRoot, this.knowledge.index.config, folder);
+    const sourceRoot = destination.root;
+    const target = destination.target;
     if (!isPathInside(sourceRoot, target)) throw new ContentRequestError(403, "文件夹超出生活记录目录");
     if (expectedFileCount !== undefined && (!Number.isInteger(expectedFileCount) || Number(expectedFileCount) < 0)) throw new ContentRequestError(400, "文件夹记录数量无效");
-    const relativeFolder = path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/");
-    const currentFileCount = this.knowledge.index.list({ sources: true }).filter((page) => page.relativePath.startsWith(`${relativeFolder}/`)).length;
+    const relativeFolder = `${this.knowledge.index.config.paths.sources}/${folder}`;
+    const currentFileCount = this.knowledge.index.list({ sources: true }).filter((page) => (destination.connection ? page.externalSource?.status === "available" && page.externalSource.originalPath.startsWith(`${target}${path.sep}`) : page.relativePath.startsWith(`${relativeFolder}/`))).length;
     if (expectedFileCount !== undefined && currentFileCount !== expectedFileCount) throw new ContentRequestError(409, "文件夹内容已经变化，请刷新后重新确认");
     try {
       const info = await lstat(target);
@@ -159,7 +155,7 @@ export class PageWriter {
       throw error;
     }
     await rm(target, { recursive: true });
-    await this.knowledge.index.rebuild();
+    await this.refresh();
     const normalizedFolder = folder.split(path.sep).join("/");
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, deletedFolder: normalizedFolder });
     return { ok: true, folder: normalizedFolder };
@@ -169,13 +165,12 @@ export class PageWriter {
     const page = this.knowledge.index.get(pageId);
     if (!page) throw new ContentRequestError(404, "页面不存在");
     if (typeof markdown !== "string") throw new ContentRequestError(400, "缺少 Markdown 内容");
-    const absolutePath = this.editablePath(page.relativePath, "路径超出可编辑目录");
-    if (page.externalSource) throw new ContentRequestError(403, "这是连接的原始文件，请在原目录中编辑；应用会自动同步");
+    const absolutePath = page.externalSource ? await sourceFile(this.knowledge.vaultRoot, this.knowledge.index.config, page) : this.editablePath(page.relativePath, "路径超出可编辑目录");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
     const temporary = `${absolutePath}.${process.pid}.tmp`;
     await writeFile(temporary, markdown, "utf8");
     await rename(temporary, absolutePath);
-    await this.knowledge.index.rebuild();
+    await this.refresh();
     const updated = this.knowledge.index.get(page.id);
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, path: page.relativePath });
     return { ok: true, modifiedAt: updated?.modifiedAt, sha256: createHash("sha256").update(markdown).digest("hex") };
@@ -199,6 +194,11 @@ export class PageWriter {
     if (!launched) throw new ContentRequestError(503, "未找到可用编辑器，请设置 THE_WAY_HERE_EDITOR");
     child.unref();
     return { ok: true };
+  }
+
+  private async refresh(): Promise<void> {
+    await this.knowledge.refreshSources?.(this.knowledge.index.config.knowledgeBaseId);
+    await this.knowledge.index.rebuild();
   }
 
   private allowedRoots(): string[] {

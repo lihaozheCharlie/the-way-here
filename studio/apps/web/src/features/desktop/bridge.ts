@@ -1,6 +1,7 @@
 export type DesktopCommand = "search" | "inspector" | "capture" | "settings" | "detach" | "focus" | "import" | "back" | "forward" | `knowledge-base:${number}`;
 export interface DesktopBridge {
   platform: string;
+  requestFolderAccess?: () => Promise<void>;
   chooseSourceDirectory: () => Promise<string | null>;
   startSpeech: () => Promise<void>;
   stopSpeech: () => Promise<string>;

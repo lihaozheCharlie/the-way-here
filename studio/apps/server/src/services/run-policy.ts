@@ -83,13 +83,14 @@ export function buildRunPrompt(mode: Exclude<WikiRun["mode"], "validate">, promp
     `本次任务绑定知识库 ID：${config.knowledgeBaseId}`,
     `Wiki 路径：${config.paths.wiki}`,
     `来源路径：${config.paths.sources}`,
-    "来源目录中的外部来源是系统维护的引用文件，不是原文副本。读取其 twh_external 元数据后只读访问原始路径；使用 Pi read_file 时已自动解引用。引用 Wiki 时链接引用文件，保留追溯关系。不得修改外部原文或这些引用文件；不可用的来源不得当作当前有效证据。",
+    "来源目录中的外部来源是系统维护的引用文件，不是原文副本。读取其 twh_external 元数据后访问原始路径；使用 Pi read_file 时已自动解引用。引用 Wiki 时链接引用文件，保留追溯关系。不得修改这些引用文件；外部原文仅在本轮写入模式、对应目录已授权 AI 修改且用户要求修改原文时可修改；不可用的来源不得当作当前有效证据。",
+    `已授权 AI 修改的本地目录（含子目录）：${JSON.stringify((config.sourceConnections || []).filter(item => item.aiWritable).map(item => item.path))}。此授权允许用户交办的原文编辑，优先于通用的原始笔记保护约定；普通 Wiki 构建仍保留原文。`,
     `运行维护命令时必须显式设置 THE_WAY_HERE_KNOWLEDGE_BASE=${config.knowledgeBaseId}。`,
   ].join("\n");
   const boundary = mode === "read"
     ? `这是严格只读任务。请先读取并遵守 ${config.paths.agentInstructions}，只查询、解释或诊断，不要修改任何文件。`
     : mode === "write"
-      ? `这是以沉淀知识为目标的任务。请先读取并严格遵守 ${config.paths.agentInstructions} 与所路由的 Skills，只修改真正受影响的内容，保留原始笔记正文，并完成规定的质量检查。`
+      ? `这是以沉淀知识为目标的任务。请先读取并严格遵守 ${config.paths.agentInstructions} 与所路由的 Skills，只修改真正受影响的内容，除用户明确要求编辑已授权原文外，保留原始笔记正文，并完成规定的质量检查。`
       : `这是对话任务，绝不修改任何文件。寒暄、分享近况、表达感受或随意聊天时直接自然回应，不要为了判断是否值得写入而读取文件或调用工具。用户询问已有知识时可以只读检索，并清楚区分来源、推断和未知。即使用户提出整理或写入，也先回应其内容，并说明可以通过对话框下方的「整理成日记并构建 Wiki」主动发起；不要在本轮执行写入。是否值得沉淀会在回复后由独立判断任务处理，不要在回复里附加判断标记或技术过程。`;
   return `${boundary}\n\n${context}\n\n用户请求：\n${prompt}`;
 }

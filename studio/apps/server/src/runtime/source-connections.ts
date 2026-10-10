@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, realpath, readdir, rename, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, lstat, mkdir, readFile, realpath, readdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
 import chokidar, { type FSWatcher } from "chokidar";
@@ -20,8 +21,16 @@ export class SourceConnections {
   private queue: Promise<unknown> = Promise.resolve();
   private timer?: NodeJS.Timeout;
   private closed = false;
-  constructor(private knowledge: KnowledgeRuntime, private runs: Pick<RunCoordinator, "get" | "start" | "hasActiveKnowledgeBaseRun">) {}
+  constructor(private knowledge: KnowledgeRuntime, private runs: Pick<RunCoordinator, "get" | "start" | "hasActiveKnowledgeBaseRun">) {
+    knowledge.refreshSources = id => this.rescan(id || knowledge.index.config.knowledgeBaseId);
+  }
 
+  async rescan(id: string): Promise<void> {
+    await this.serial(async () => {
+      const config = await loadVaultConfig(this.knowledge.vaultRoot, id);
+      for (const connection of config.sourceConnections || []) await this.scan(config, connection);
+    });
+  }
   private serial<T>(fn: () => Promise<T>): Promise<T> {
     const next = this.queue.then(fn);
     this.queue = next.catch(() => undefined);
@@ -53,19 +62,21 @@ export class SourceConnections {
       return { ...connection, fileCount: state.files.filter((file) => !file.missing).length, pendingCount: Object.keys(state.pending).length, runId: state.runId, error: state.error, scannedAt: state.scannedAt };
     }));
   }
-  connect(id: string, requestedPath: unknown, autoBuild: unknown) {
+  connect(id: string, requestedPath: unknown, autoBuild: unknown, aiWritable: unknown = false) {
     return this.serial(async () => {
-      if (typeof requestedPath !== "string" || !path.isAbsolute(requestedPath) || requestedPath.length > 4096 || typeof autoBuild !== "boolean") throw new KnowledgeBaseRequestError(400, "请选择本机的原始资料文件夹");
+      if (typeof requestedPath !== "string" || !path.isAbsolute(requestedPath) || requestedPath.length > 4096 || typeof autoBuild !== "boolean" || typeof aiWritable !== "boolean") throw new KnowledgeBaseRequestError(400, "请选择本机的原始资料文件夹");
       let directory: string;
       try { directory = await realpath(requestedPath); if (!(await lstat(directory)).isDirectory()) throw new Error(); }
       catch { throw new KnowledgeBaseRequestError(400, "目录不可用，请确认路径和读取权限"); }
+      try { await access(directory, constants.R_OK | (aiWritable ? constants.W_OK : 0)); }
+      catch { throw new KnowledgeBaseRequestError(403, "需要文件夹读写权限，请重新选择并授权"); }
       const workspace = await realpath(this.knowledge.vaultRoot);
       // Keep generated data and private sibling knowledge bases out of a source connection.
       if (directory === workspace || inside(directory, workspace) || inside(workspace, directory)) throw new KnowledgeBaseRequestError(400, "请选择工作区外的原始资料目录，避免把生成内容或其他知识库重新收录");
       if (directory === path.parse(directory).root) throw new KnowledgeBaseRequestError(400, "不能连接整个磁盘");
       const config = await loadVaultConfig(this.knowledge.vaultRoot, id);
       if (config.sourceConnections?.some((entry) => entry.path === directory || inside(entry.path, directory) || inside(directory, entry.path))) throw new KnowledgeBaseRequestError(409, "这个目录或它的父子目录已经连接");
-      const connection: SourceConnection = { id: randomUUID(), name: path.basename(directory), path: directory, autoBuild };
+      const connection: SourceConnection = { id: randomUUID(), name: path.basename(directory), path: directory, autoBuild, aiWritable };
       await this.changeConfig(id, (connections) => [...connections, connection]);
       await this.refresh();
       return this.list(id);
@@ -190,7 +201,7 @@ export class SourceConnections {
     for (const file of found) {
       const previous = remaining.get(file.relativePath) || [...remaining.values()].find((candidate) => !seenPaths.has(candidate.relativePath) && candidate.hash === file.hash);
       if (previous) remaining.delete(previous.relativePath);
-      const current: FileVersion = { ...file, ref: previous?.ref || `${config.paths.sources}/${EXTERNAL_SOURCE_FOLDER}/${connection.id}/${file.relativePath}.source.md` };
+      const current: FileVersion = { ...file, ref: previous?.ref || `${config.paths.sources}/${EXTERNAL_SOURCE_FOLDER}/${connection.id}/${randomUUID()}.source.md` };
       if (!previous || previous.hash !== current.hash || previous.missing || previous.relativePath !== current.relativePath) {
         await this.reference(config, connection, current);
         state.pending[current.ref] = digest(JSON.stringify(current));
@@ -215,7 +226,7 @@ export class SourceConnections {
   }
   private async reference(config: VaultConfig, connection: SourceConnection, file: FileVersion) {
     const metadata = { connectionId: connection.id, relativePath: file.relativePath, sha256: file.hash, status: file.missing ? "missing" : "available" };
-    const body = `---\n${YAML.stringify({ twh_external: metadata })}---\n# ${path.basename(file.relativePath)}\n\n此文件只记录来源引用，不保存原文副本。\n\n原始文件：${path.join(connection.path, file.relativePath)}\n\n状态：${file.missing ? "原文件已移走或删除。不得根据此引用补写原文。" : "只读连接；请读取原文件获取内容。"}\n`;
+    const body = `---\n${YAML.stringify({ twh_external: metadata })}---\n# ${path.basename(file.relativePath)}\n\n此文件只记录来源引用，不保存原文副本。\n\n原始文件：${path.join(connection.path, file.relativePath)}\n\n状态：${file.missing ? "原文件已移走或删除。不得根据此引用补写原文。" : "请读取原文件获取内容；修改原文时直接写入原始路径。"}\n`;
     const target = path.resolve(this.knowledge.vaultRoot, file.ref);
     if (!inside(path.resolve(this.knowledge.vaultRoot, config.paths.sources, EXTERNAL_SOURCE_FOLDER, connection.id), target)) throw new Error("来源引用路径越界");
     await atomic(target, body, this.knowledge.vaultRoot);

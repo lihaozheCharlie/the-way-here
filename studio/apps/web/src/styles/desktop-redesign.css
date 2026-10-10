@@ -103,8 +103,6 @@
 .desktop-shell .source-record-copy > b { order:-1; font-size:13px; }
 .desktop-shell .source-record-copy > small { -webkit-line-clamp:1; font-size:13px; }
 .desktop-shell .source-record-copy > time { font-size:13px; }
-.desktop-shell .organized-sources-page .source-file-row.is-title-only .source-file-select { min-height:42px; align-items:center; padding:10px 36px 10px 12px; }
-.desktop-shell .organized-sources-page .source-file-row.is-title-only .source-record-copy > b { font-size:13px; line-height:1.5; }
 .desktop-shell .understanding-overview-foot { background:var(--surface); border:0; border-radius:var(--radius-panel); padding:16px 18px; margin-top:18px; }
 .desktop-shell .understanding-overview-foot h2 { font-size:13px; }
 .desktop-shell .understanding-overview-foot button { background:var(--accent-primary); }
@@ -161,31 +159,12 @@
 .desktop-shell .questions-topic-card.is-casual .questions-topic-kind { color:var(--warm-ink); background:var(--warm-soft); }
 .desktop-shell .today-simple .friend-mark { color:var(--warm-ink); background:var(--warm-soft); }
 
-/* Life records: keep the global toolbar for frequent actions and place date/order beside the list. */
-.desktop-shell .organized-sources-page .source-file-shell { overflow:visible; }
-.desktop-shell .organized-sources-page .source-file-shell:has(.source-extra-filters[open]) { z-index:5; }
-.desktop-shell .organized-sources-page .source-vault .source-file-shell > .source-file-pane { overflow:visible; }
-.desktop-shell .organized-sources-page .source-file-pane > header.pane-shelf { position:relative; z-index:2; }
-.desktop-shell .organized-sources-page .source-file-pane .pane-shelf-label,
-.desktop-shell .organized-sources-page .source-file-pane .pane-shelf-count { display:none; }
-.desktop-shell .organized-sources-page .source-file-pane .pane-shelf-actions { gap:5px; margin-left:auto; }
-.desktop-shell .organized-sources-page .source-file-order { display:none; }
-.desktop-shell .organized-sources-page .source-extra-filters { order:initial; }
-.desktop-shell .organized-sources-page .source-extra-filters > summary { display:flex; align-items:center; gap:3px; padding:5px 7px; color:var(--ink-soft); border:1px solid var(--line); border-radius:var(--radius-control); background:var(--paper); font-size:11px; font-weight:600; list-style:none; }
-.desktop-shell .organized-sources-page .source-extra-filters > summary::-webkit-details-marker { display:none; }
-.desktop-shell .organized-sources-page .source-extra-filters > summary:hover,
-.desktop-shell .organized-sources-page .source-extra-filters[open] > summary { color:var(--accent-ink); border-color:var(--accent); background:var(--accent-soft); }
-.desktop-shell .organized-sources-page .source-extra-filters > div { left:auto; right:0; top:calc(100% + 6px); width:218px; max-height:330px; padding:10px; border-radius:12px; }
-.desktop-shell .organized-sources-page .source-filter-label { margin:0 0 5px; color:var(--ink-soft); font-size:11px; font-weight:700; }
-.source-filter-months { display:grid; gap:2px; max-height:170px; overflow:auto; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid var(--line); }
-.source-filter-months button { display:flex; justify-content:space-between; gap:8px; width:100%; padding:6px 8px; border:0; border-radius:7px; color:var(--ink-soft); background:transparent; text-align:left; font-size:12px; }
-.source-filter-months button:hover { background:var(--surface-tinted); }
-.source-filter-months button.active { color:var(--accent-ink); background:var(--accent-soft); font-weight:650; }
-.source-filter-months small { color:var(--ink-soft); font-size:11px; }
-.source-filter-order { display:flex; overflow:hidden; border:1px solid var(--line-strong); border-radius:8px; }
-.source-filter-order button { flex:1; padding:6px; border:0; color:var(--ink-soft); background:var(--paper); font-size:12px; font-weight:600; }
-.source-filter-order button + button { border-left:1px solid var(--line-strong); }
-.source-filter-order button.active { color:var(--accent-ink); background:var(--accent-soft); }
+/* Column sizing uses the same folded rail for records and letters. */
+.desktop-shell .organized-sources-page .source-vault.folder-pane-collapsed { --folders:44px; }
+.desktop-shell .organized-sources-page .source-vault.file-pane-collapsed { --files:44px; }
+.desktop-shell .organized-sources-page .source-file-shell:has(.source-list-options-menu) { overflow:visible; z-index:5; }
+.desktop-shell .organized-sources-page .source-file-shell:has(.source-list-options-menu) > .source-file-pane { overflow:visible; }
+.desktop-shell .organized-sources-page .source-folder-row.active > .source-item-menu .source-item-menu-trigger { opacity:1; }
 
 /* Import: one compact type rail and one full-width material area. */
 .import-modal .import-step-panel { padding:0; border:0; }

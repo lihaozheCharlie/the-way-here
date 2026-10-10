@@ -25,3 +25,16 @@ describe("shared Markdown reading behavior", () => {
     expect(editableMarkdownDocument("开场\n\n# 正文章节\n", true).body).toBe("开场\n\n# 正文章节\n");
   });
 });
+
+// CRLF, blank lines and CJK positions must survive source/render transitions.
+describe("document source positions", () => {
+  it("maps line starts without losing carriage returns or empty paragraphs", async () => {
+    const { lineOffset, offsetLine } = await import("./document-position");
+    const text = "开场\r\n\r\n## 同名标题\r\n正文\r\n## 同名标题";
+    for (const line of [1, 2, 3, 4, 5]) {
+      expect(offsetLine(text, lineOffset(text, line))).toBe(line);
+    }
+    expect(text.slice(lineOffset(text, 5))).toBe("## 同名标题");
+    expect(lineOffset(text, 50)).toBe(text.length);
+  });
+});

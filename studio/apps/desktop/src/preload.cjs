@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
+  requestFolderAccess: () => ipcRenderer.invoke('desktop:folder-permission'),
   chooseSourceDirectory: () => ipcRenderer.invoke('desktop:choose-source-directory'),
   openWindow: (route, kind) => ipcRenderer.invoke('desktop:window', route, kind),
   onCommand: (callback) => { const listener = (_event, command) => callback(command); ipcRenderer.on('desktop:command', listener); return () => ipcRenderer.removeListener('desktop:command', listener); },

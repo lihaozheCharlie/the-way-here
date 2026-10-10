@@ -26,7 +26,7 @@ export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: stri
       const id = url.pathname.startsWith('/page/') ? decodeURIComponent(url.pathname.slice(6)) : url.pathname === '/letters' ? url.searchParams.get('letter') : undefined;
       if (id) { event.preventDefault(); event.stopPropagation(); setCurrentId(id); event.currentTarget.scrollTop = 0; }
     }}>
-      {loading ? <Loading label="正在读取文件" /> : error || !data ? <Empty>{error || "文件暂时无法读取"}</Empty> : <ReadOnlyDocument key={data.id} id={data.id} page={data} markdown={data.renderedMarkdown} showOutline={false} />}
+      {loading ? <Loading label="正在读取文件" /> : error || !data ? <Empty>{error || "文件暂时无法读取"}</Empty> : <ReadOnlyDocument key={data.id} id={data.id} page={data} markdown={data.renderedMarkdown} />}
     </div>
   </dialog>, document.body);
 }

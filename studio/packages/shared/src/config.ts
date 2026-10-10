@@ -7,6 +7,7 @@ export interface SourceConnection {
   name: string;
   path: string;
   autoBuild: boolean;
+  aiWritable?: boolean;
 }
 
 export interface VaultConfig {

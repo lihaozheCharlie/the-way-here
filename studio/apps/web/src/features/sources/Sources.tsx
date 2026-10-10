@@ -1,11 +1,15 @@
+import { SourceConnectionsPanel } from "./SourceConnectionsPanel";
+import { sourcePagePath } from "./source-model";
 import { FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
+import { InlineNameForm } from "../../shared/InlineNameForm";
+import { SourceListOptions } from "./SourceListOptions";
 import { DocumentPreview } from "../../shared/DocumentPreview";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { PaneShelf } from "../../shared/PaneShelf";
 import { QuietScroll } from "../../shared/QuietScroll";
 import { FileMenu } from "../../shared/FileMenu";
-import { SearchField, SelectInput, TextInput } from "../../shared/form-controls";
+import { SearchField } from "../../shared/form-controls";
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
@@ -210,49 +214,12 @@ function SourcePreview({ page, revision, startEditing = false, fileNameFocusToke
     afterContent={data => <SourceKnowledgeConnections key={data.id} page={data} />} />;
 }
 
-function NewSourceForm({ folder, folders, foldersLoading, foldersError, onCancel, onCreated }: { folder: string; folders: string[]; foldersLoading: boolean; foldersError?: string; onCancel: () => void; onCreated: (page: WikiPage) => void }) {
-  const [title, setTitle] = useState("");
-  const [targetFolder, setTargetFolder] = useState(folder);
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState("");
-
-  useDismissLayer(true, onCancel, { dismissible: !creating, priority: 1 });
-
-  async function create(event: React.FormEvent) {
-    event.preventDefault();
-    if (!title.trim()) {
-      setError("输入文件名后再创建。");
-      return;
-    }
-    setCreating(true);
-    setError("");
-    try {
-      const page = await api<WikiPage>("/api/sources", { method: "POST", body: JSON.stringify({ title: title.trim(), folder: targetFolder.trim() }) });
-      onCreated(page);
-    } catch (reason: any) {
-      setError(reason.message);
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  return <form className="new-source-form" onSubmit={create}>
-    <header><div><span>写一条生活记录</span><b>创建 Markdown 文件</b></div><button type="button" onClick={onCancel} aria-label="关闭新建文件">×</button></header>
-    <label>文件名<TextInput name="new-source-title" autoComplete="off" autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：今天的观察…" /></label>
-    <label>保存到<SelectInput name="new-source-folder" value={targetFolder} onChange={(event) => setTargetFolder(event.target.value)} aria-busy={foldersLoading}><option value="">生活记录根目录</option>{folders.map((folderOption) => <option value={folderOption} key={folderOption}>{folderOption}</option>)}</SelectInput>{foldersLoading ? <small>正在读取文件夹…</small> : foldersError ? <small role="status">文件夹列表暂时无法刷新，仍可保存到当前显示的位置。</small> : null}</label>
-    <footer><span aria-live="polite">{error || "创建后会直接进入编辑，内容自动保存。"}</span><button disabled={creating}>{creating ? "正在创建…" : "创建文件"}</button></footer>
-  </form>;
-}
-
 export function OrganizedSources({ revision }: { revision: number }) {
   const { data, loading } = useApi<WikiPageSummary[]>("/api/pages?sources=true", revision);
   const { data: importBatches } = useApi<SourceImportBatch[]>("/api/imports", revision);
   const [folderRevision, setFolderRevision] = useState(0);
   const [creatingFolder, setCreatingFolder] = useState(false);
-  const [folderName, setFolderName] = useState("");
-  const [folderError, setFolderError] = useState("");
-  const [folderBusy, setFolderBusy] = useState(false);
-  const { data: sourceFolders, loading: sourceFoldersLoading, error: sourceFoldersError } = useSourceFolders(revision + folderRevision);
+  const { data: sourceFolders } = useSourceFolders(revision + folderRevision);
   const [params, setParams] = useSearchParams();
   const [creatingSource, setCreatingSource] = useState(false);
   const [createdPageId, setCreatedPageId] = useState<string>();
@@ -290,7 +257,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "file"; page: WikiPageSummary } | { kind: "folder"; folder: string; count: number }>();
   const [selectedBuildPaths, setSelectedBuildPaths] = useState<Set<string>>(() => new Set());
   const [renameRequest, setRenameRequest] = useState<{ pageId: string; token: number }>();
-  const pages = (data || []).filter((page) => !deletedSourcePaths.has(page.relativePath));
+  const pages = (data || []).filter((page) => !deletedSourcePaths.has(page.relativePath) && page.externalSource?.status !== "unavailable");
   const batches = excludeDeletedSources(mergeSourceBatches(importBatches || [], recentBatch, recentBatchAcknowledged), deletedSourcePaths);
   const buildRecords = sourceBuildRecords(batches);
   const memoryRecord = buildRecords.find((record) => memoryRecordKey(record) === memoryWindow.pageId);
@@ -298,7 +265,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const memoryCards = pendingMemoryRecords(batches);
   const shownBatch = batches.find((batch) => batch.id === (recentBatch?.id || params.get("batch")));
   const openedMemory = memoryRecord;
-  const memoryPage = openedMemory ? pages.find((page) => cleanSourcePath(page.relativePath) === cleanSourcePath(openedMemory.file.storedPath)) : undefined;
+  const memoryPage = openedMemory ? pages.find((page) => sourcePagePath(page) === cleanSourcePath(openedMemory.file.storedPath)) : undefined;
   const query = params.get("q") || "";
   const folder = params.get("folder") || "";
   const requestedType = params.get("type") || "all";
@@ -307,17 +274,17 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const oldestFirst = params.get("sort") === "oldest";
   const folderCounts = new Map<string, number>();
   for (const page of pages) {
-    const parts = cleanSourcePath(page.relativePath).split("/").slice(0, -1);
+    const parts = sourcePagePath(page).split("/").slice(0, -1);
     for (let depth = 1; depth <= parts.length; depth += 1) {
       const key = parts.slice(0, depth).join("/");
       folderCounts.set(key, (folderCounts.get(key) || 0) + 1);
     }
   }
   const folderPaths = sourceFolderOptions(sourceFolders, folder);
-  const folders = (sourceFolders ? folderPaths : [...folderCounts.keys()].sort((left, right) => left.localeCompare(right, "zh-CN"))).map((name) => [name, folderCounts.get(name) || 0] as const);
+  const folders = (sourceFolders ? folderPaths : [...folderCounts.keys()].filter(name => !name.startsWith("外部来源")).sort((left, right) => left.localeCompare(right, "zh-CN"))).map((name) => [name, folderCounts.get(name) || 0] as const);
   const months = sourceMonthOptions(pages);
   const filtered = pages.filter((page) => {
-    const sourcePath = cleanSourcePath(page.relativePath);
+    const sourcePath = sourcePagePath(page);
     return (!folder || sourcePath.startsWith(`${folder}/`))
       && (type === "all" ? true : type === "pending" ? Boolean(sourceBuildRecordForPage(page, pendingBuilds)) : sourceRecordType(page) === type)
       && (!month || sourceRecordMonth(page) === month)
@@ -329,7 +296,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const selected = filtered.find((page) => page.id === params.get("file")) || filtered[0];
   const selectedBuildRecord = selected ? sourceBuildRecordForPage(selected, buildRecords) : undefined;
   const photoBatch = selectedBuildRecord?.batch.channel === "photos" ? selectedBuildRecord.batch : undefined;
-  const filteredPaths = new Set(filtered.map((page) => cleanSourcePath(page.relativePath)));
+  const filteredPaths = new Set(filtered.map((page) => sourcePagePath(page)));
   const selectableBuildRecords = pendingBuilds.filter(({ file }) => file.buildKind === "direct"
     && ["ready", "deferred"].includes(file.buildStatus || "ready")
     && filteredPaths.has(cleanSourcePath(file.storedPath)));
@@ -396,7 +363,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       return;
     }
     await api<{ ok: true }>("/api/sources/folder", { method: "DELETE", body: JSON.stringify({ folder: deleteTarget.folder, expectedFileCount: deleteTarget.count }) });
-    const removedPaths = pages.filter((page) => cleanSourcePath(page.relativePath).startsWith(`${deleteTarget.folder}/`)).map((page) => page.relativePath);
+    const removedPaths = pages.filter((page) => sourcePagePath(page).startsWith(`${deleteTarget.folder}/`)).map((page) => page.relativePath);
     forgetDeletedSources(removedPaths);
     const parentFolder = deleteTarget.folder.split("/").slice(0, -1).join("/");
     update({ q: undefined, type: undefined, month: undefined, folder: parentFolder || undefined, file: undefined, limit: undefined });
@@ -513,7 +480,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     }
   }
   return <div className="organized-sources-page" ref={workspaceRef}>
-    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths} currentFolder={folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); const record = importedMemoryRecord(batch); if (record) memoryWindow.open(memoryRecordKey(record)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
+    {importOpen ? <ImportMaterialsModal initialRoute={importRoute} folders={folderPaths.filter(name => !name.startsWith("外部来源/"))} currentFolder={folder.startsWith("外部来源/") ? "" : folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); const record = importedMemoryRecord(batch); if (record) memoryWindow.open(memoryRecordKey(record)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
     {deleteTarget ? <ConfirmDeleteDialog
       title={deleteTarget.kind === "folder" ? "删除这个文件夹？" : "删除这份生活记录？"}
       description={deleteTarget.kind === "folder" ? "文件夹内的记录和所有子文件夹都会一起删除。" : "文件会从生活记录中永久移除。"}
@@ -523,7 +490,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
       onClose={() => setDeleteTarget(undefined)}
       onConfirm={deleteSelectedTarget}
     /> : null}
-    {creatingSource ? <div className="source-compose-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreatingSource(false); }}><div className="source-compose-dialog" role="dialog" aria-modal="true" aria-label="写一条生活记录"><NewSourceForm folder={folder} folders={folderPaths} foldersLoading={sourceFoldersLoading} foldersError={sourceFoldersError} onCancel={() => setCreatingSource(false)} onCreated={(page) => { const nextFolder = cleanSourcePath(page.relativePath).split("/").slice(0, -1).join("/"); setCreatingSource(false); setCreatedPageId(page.id); update({ q: undefined, type: undefined, month: undefined, folder: nextFolder || undefined, file: page.id, limit: undefined }); }} /></div></div> : null}
     {memoryCards.length ? <details className="source-memories-disclosure"><summary>照片与账单记忆 · {memoryCards.length}</summary><SourceMemoryCards records={memoryCards} revision={revision} onOpen={(record) => void beginBuild(record, "open")} /></details> : null}
     {openedMemory ? <SourceMemoryDialog title={openedMemory.batch.channel === "photos" ? "照片记忆" : "账单记忆"} onClose={memoryWindow.close}>
       {openedMemory.batch.channel === "photos" ? <PhotoMemoryPanel key={openedMemory.batch.id} batch={openedMemory.batch} revision={revision} /> : openedMemory.batch.journey ? <BillMemoryPanel key={openedMemory.batch.id} record={openedMemory} busy={busyBuildPath === openedMemory.file.storedPath} onBuild={(batch) => void beginBuild({ ...openedMemory, batch }, "build")} onDeep={(batch, cluster, state) => beginJourneyDeep(openedMemory, batch, cluster, state)} /> : memoryPage ? <SourcePreview page={memoryPage} revision={revision} fileNameFocusToken={renameRequest?.pageId === memoryPage.id ? renameRequest.token : 0} buildRecord={openedMemory} buildBusy={busyBuildPath === openedMemory.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => update({ file: renamed.id })} /> : <Empty>正在等待记录进入列表，请稍后重新打开。</Empty>}
@@ -536,7 +502,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       <div className="source-toolbar-right">
       <SearchField className="source-global-search" name="organized-source-search" autoComplete="off" aria-label="搜索生活记录标题或内容" value={query} onChange={(event) => { setCreatedPageId(undefined); update({ q: event.target.value || undefined, file: undefined, limit: undefined }); }} placeholder="搜索标题或内容…" />
       </div>
-      <div className="source-toolbar-actions"><RecordImportTrigger onClick={() => { setImportRoute(undefined); setImportOpen(true); }} label="导入资料" /><button className="desktop-primary" type="button" onClick={() => setCreatingSource(true)}><Icon name="plus" size={14} />新建记录</button></div>
+      <div className="source-toolbar-actions"><RecordImportTrigger onClick={() => { setImportRoute(undefined); setImportOpen(true); }} label="导入资料" /></div>
     </section>
     {type !== "pending" && selectableBuildRecords.length > 1 ? <section className="source-batch-banner" aria-label="可批量构建的记录">
       <p>有 <b>{selectableBuildRecords.length} 份</b>新记录语境完整，可以直接批量构建；其余记录仍会留在列表里逐条查看。</p>
@@ -545,26 +511,38 @@ export function OrganizedSources({ revision }: { revision: number }) {
 
     <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label="生活记录工作区">
       <div className={`source-pane-shell source-folder-shell${folderPaneOpen ? "" : " collapsed"}`}>
-        <aside className="source-folder-pane"><PaneShelf label="文件夹" count={folders.length} open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel="文件夹栏" /><QuietScroll className="source-folder-contents">
+        <aside className="source-folder-pane"><PaneShelf label="文件夹" open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel="文件夹栏" onCreate={() => { setFolderOverride(true); setCreatingFolder(true); }} createLabel="新建文件夹" />
+          {creatingFolder && <InlineNameForm key={folder} label="新建文件夹" placeholder="文件夹名称" onCancel={() => setCreatingFolder(false)} onCreate={async name => {
+            const created = await api<{ path: string }>("/api/sources/folders", { method: "POST", body: JSON.stringify({ folder: [folder, name].filter(Boolean).join("/") }) });
+            setFolderRevision(value => value + 1); setCreatingFolder(false); setCreatedPageId(undefined);
+            update({ folder: created.path, file: undefined, limit: undefined });
+          }} />}
+          <SourceConnectionsPanel compact onOpened={() => setFolderRevision(value => value + 1)} />
+          <QuietScroll className="source-folder-contents">
           <div className={`source-folder-row${!folder ? " active" : ""}`}><button type="button" className="source-folder-select" onClick={() => { setCreatedPageId(undefined); update({ folder: undefined, file: undefined, limit: undefined }); }}><Icon name="source" size={15} /><span>全部材料</span><small>{pages.length}</small></button></div>
           {folders.map(([name, count]) => {
             const recordType = sourceRecordType({ relativePath: name, tags: [], type: undefined });
+            const directory = sourceFolders?.find(item => item.path === name);
+            const rootDirectory = directory?.external && name.split("/").length === 2;
             return <div key={name} className={`source-folder-row${folder === name ? " active" : ""}`}>
-              <button type="button" className="source-folder-select" style={{ paddingLeft: 10 + Math.min(name.split("/").length - 1, 3) * 16 }} onClick={() => { setCreatedPageId(undefined); update({ folder: name, file: undefined, limit: undefined }); }}><Icon name={recordType === "notes" ? "journal" : recordType === "ai" ? "spark" : "receipt"} size={15} /><span>{name.split("/").at(-1)}</span><small>{count}</small></button>
-              {name.startsWith("外部来源") ? null : <SourceItemMenu label={`更多文件夹操作：${name}`} actions={[{ label: "删除文件夹…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "folder", folder: name, count }) }]} />}
+              <button type="button" className="source-folder-select" title={directory?.absolutePath || name} style={{ paddingLeft: 10 + Math.max(0, name.split("/").length - (directory?.external ? 2 : 1)) * 16 }} onClick={() => { setCreatedPageId(undefined); update({ folder: name, file: undefined, limit: undefined }); }}><Icon name={recordType === "notes" ? "journal" : recordType === "ai" ? "spark" : "receipt"} size={15} /><span>{directory?.label || name.split("/").at(-1)}</span><small>{count}</small></button>
+              {rootDirectory ? null : <SourceItemMenu label={`更多文件夹操作：${name}`} actions={[{ label: "删除文件夹…", icon: "trash", danger: true, onSelect: () => setDeleteTarget({ kind: "folder", folder: name, count }) }]} />}
             </div>;
           })}
-        </QuietScroll>{folderPaneOpen && <div className="source-new-folder">{creatingFolder ? <form onSubmit={async (event) => {
-          event.preventDefault(); if (!folderName.trim() || folderBusy) return;
-          setFolderBusy(true); setFolderError("");
-          try {
-            const created = await api<{ path: string }>("/api/sources/folders", { method: "POST", body: JSON.stringify({ folder: [folder, folderName.trim()].filter(Boolean).join("/") }) });
-            setFolderRevision((value) => value + 1); setCreatingFolder(false); setFolderName(""); setCreatedPageId(undefined); update({ folder: created.path, file: undefined, limit: undefined });
-          } catch (reason) { setFolderError(reason instanceof Error ? reason.message : "创建失败，请重试"); }
-          finally { setFolderBusy(false); }
-        }}><TextInput autoFocus aria-label="新文件夹名称" placeholder="文件夹名称" value={folderName} disabled={folderBusy} onChange={(event) => setFolderName(event.target.value)} /><div><button type="submit" disabled={folderBusy || !folderName.trim()}>{folderBusy ? "创建中…" : "创建"}</button><button type="button" disabled={folderBusy} onClick={() => setCreatingFolder(false)}>取消</button></div>{folderError && <p role="alert">{folderError}</p>}</form> : <button type="button" onClick={() => { setCreatingFolder(true); setFolderError(""); }}><Icon name="plus" size={13} />新建文件夹</button>}</div>}</aside>
+        </QuietScroll></aside>
       </div>
-      <FileBrowserPane label={folder ? folder.split("/").at(-1)! : "全部记录"} count={`${filtered.length} 份`} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)} order={oldestFirst ? "按时间从旧到新" : "按记录时间从新到旧"} headerAction={<details className="source-extra-filters"><summary aria-label={`日期和排序：${month ? `${month.slice(0, 4)} 年 ${Number(month.slice(5))} 月` : "全部月份"}，${oldestFirst ? "旧到新" : "新到旧"}`}>{month ? `${month.slice(0, 4)} 年 ${Number(month.slice(5))} 月` : "全部月份"} · {oldestFirst ? "旧→新" : "新→旧"}<Icon name="down" size={12} /></summary><div><p className="source-filter-label">月份</p><div className="source-filter-months" role="group" aria-label="按月份浏览记录"><button type="button" className={!month ? "active" : ""} aria-pressed={!month} onClick={() => { setCreatedPageId(undefined); update({ month: undefined, file: undefined, limit: undefined }); }}>全部月份 <small>{pages.length}</small></button>{months.map((item) => <button type="button" key={item.id} className={month === item.id ? "active" : ""} aria-pressed={month === item.id} onClick={() => { setCreatedPageId(undefined); update({ month: item.id, file: undefined, limit: undefined }); }}>{item.id.slice(0, 4)} 年 {Number(item.id.slice(5))} 月 <small>{item.count}</small></button>)}</div><p className="source-filter-label">排序</p><div className="source-filter-order" role="group" aria-label="记录排序"><button type="button" className={!oldestFirst ? "active" : ""} aria-pressed={!oldestFirst} onClick={() => { setCreatedPageId(undefined); update({ sort: undefined, limit: undefined }); }}>新→旧</button><button type="button" className={oldestFirst ? "active" : ""} aria-pressed={oldestFirst} onClick={() => { setCreatedPageId(undefined); update({ sort: "oldest", limit: undefined }); }}>旧→新</button></div></div></details>} toolbar={
+      <FileBrowserPane label={folder ? sourceFolders?.find(item => item.path === folder)?.label || folder.split("/").at(-1)! : "全部记录"} count={String(filtered.length)} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)}
+        onCreate={() => { setFilePaneOpen(true); setCreatingSource(true); }} createLabel="新建记录"
+        inlineCreate={creatingSource && <InlineNameForm key={folder} label="新建记录" placeholder="记录标题（可稍后修改）" onCancel={() => setCreatingSource(false)} onCreate={async title => {
+          const page = await api<WikiPage>("/api/sources", { method: "POST", body: JSON.stringify({ title, folder }) });
+          setCreatingSource(false); setCreatedPageId(page.id);
+          update({ q: undefined, type: undefined, month: undefined, file: page.id, limit: undefined });
+        }} />}
+        headerAction={<SourceListOptions months={months} month={month} oldestFirst={oldestFirst} total={pages.length}
+          onMonth={value => { setCreatedPageId(undefined); update({ month: value || undefined, file: undefined, limit: undefined }); }}
+          onOrder={value => { setCreatedPageId(undefined); update({ sort: value ? "oldest" : undefined, limit: undefined }); }}
+          onBatchSelect={selectableBuildRecords.length ? () => update({ type: "pending", limit: undefined }) : undefined} />}
+        toolbar={
             type === "pending" && selectableBuildRecords.length > 0 ? <div className="source-batch-toolbar">
               <label><input type="checkbox" checked={allSelectableBuildsSelected} ref={(node) => { if (node) node.indeterminate = anySelectableBuildsSelected && !allSelectableBuildsSelected; }} onChange={(event) => setSelectedBuildPaths(event.target.checked ? new Set(selectableBuildPaths) : new Set())} />全选可直接构建 <small>（{selectableBuildRecords.length} 份）</small></label>
               <button type="button" disabled={!selectedBuildRecords.length || Boolean(busyBuildPath)} onClick={() => beginSelectedBuild(selectedBuildRecords)}><Icon name="build" size={13} />{selectedBuildRecords.length > 1 ? `批量构建 ${selectedBuildRecords.length} 份` : selectedBuildRecords.length === 1 ? "构建这份记录" : "选择记录"}</button>
@@ -575,7 +553,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
               const trackedBuildRecord = sourceBuildRecordForPage(page, buildRecords);
               const buildRecord = trackedBuildRecord || buildableSourceRecordForPage(page, buildRecords);
               const selectable = type === "pending" && selectableBuildRecords.some(({ file }) => file.storedPath === trackedBuildRecord?.file.storedPath);
-              return <FileBrowserItem key={page.id} titleOnly title={page.title.replace(/^(?:19|20)\d{2}[-/.,，]\d{1,2}[-/.,，]\d{1,2}[\s·_-]*/, "") || page.title} label={fileName} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
+              return <FileBrowserItem key={page.id} page={page} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
                 selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">选择构建「{fileName}」</span></label> : null} actions={<FileMenu page={page} extraActions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />} />;
             })}
             {visiblePages.length < filtered.length ? <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>继续显示 <b>{Math.min(120, filtered.length - visiblePages.length)}</b> 份</button> : null}

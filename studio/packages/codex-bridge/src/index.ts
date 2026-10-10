@@ -146,13 +146,13 @@ export class CodexAppServer extends EventEmitter {
     await this.request("thread/resume", { threadId, cwd });
   }
 
-  async startTurn(threadId: string, prompt: string, cwd: string, options: { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean; workspaceWrite?: boolean } = {}): Promise<string> {
+  async startTurn(threadId: string, prompt: string, cwd: string, options: { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean; workspaceWrite?: boolean; writableRoots?: string[] } = {}): Promise<string> {
     const response = await this.request<{ turn: { id: string } }>("turn/start", {
       threadId,
       cwd,
       ...(options.model ? { model: options.model } : {}),
       ...(options.effort ? { effort: options.effort } : {}),
-      ...(options.readOnly ? { sandboxPolicy: { type: "readOnly" }, approvalPolicy: "never" } : options.workspaceWrite ? { sandboxPolicy: { type: "workspaceWrite", writableRoots: [], excludeTmpdirEnvVar: true, excludeSlashTmp: true }, approvalPolicy: "never" } : {}),
+      ...(options.readOnly ? { sandboxPolicy: { type: "readOnly" }, approvalPolicy: "never" } : options.workspaceWrite ? { sandboxPolicy: { type: "workspaceWrite", writableRoots: options.writableRoots || [], excludeTmpdirEnvVar: true, excludeSlashTmp: true }, approvalPolicy: "never" } : {}),
       input: [{ type: "text", text: prompt }, ...(options.imagePaths || []).map((imagePath) => ({ type: "localImage", path: imagePath }))],
     });
     return response.turn.id;

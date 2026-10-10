@@ -59,6 +59,7 @@ export class WikiIndex {
       const [referenceContent, fileStat] = await Promise.all([readFile(absolutePath, "utf8"), stat(absolutePath)]);
       const external = await readExternalSource(this.vaultRoot, this.config, relativePath, referenceContent);
       const content = external?.content ?? referenceContent;
+      const contentStat = external?.externalSource.status === "available" ? await stat(external.externalSource.originalPath) : fileStat;
       let parsedContent = content;
       let parsedData: Record<string, any> = {};
       try {
@@ -89,7 +90,7 @@ export class WikiIndex {
         locations: stringArray(parsedData.location),
         sources: stringArray(parsedData.source),
         excerpt: plainText(body.replace(/^#\s+.+$/m, "")).slice(0, 260),
-        modifiedAt: fileStat.mtime.toISOString(),
+        modifiedAt: contentStat.mtime.toISOString(),
         isSource,
         fileMarkdown: content,
         rawMarkdown: body,

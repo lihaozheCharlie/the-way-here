@@ -1,4 +1,4 @@
-import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -45,6 +45,26 @@ describe("RunStore", () => {
     await writeFile(reference, "后台同步来源版本二"); await writeFile(wiki, "理解二");
     expect(await snapshots.collectChanges(snapshot, bound)).toMatchObject([{ path: `${bound.paths.wiki}/理解.md`, kind: "modified" }]);
     expect(await readFile(path.join(snapshot, "manifest.json"), "utf8")).not.toContain("note.source.md");
+  });
+  it("includes authorized local Markdown changes in the bound run snapshot", async () => {
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-local-diff-")));
+    temporaryRoots.push(root);
+    const workspace = path.join(root, "workspace");
+    const original = path.join(root, "notes");
+    await mkdir(workspace); await mkdir(original);
+    const file = path.join(original, "日记.md");
+    await writeFile(file, "原文");
+    const bound = config("demo");
+    bound.sourceConnections = [{ id: "notes", name: "日记", path: original, autoBuild: false, aiWritable: true }];
+    const snapshots = new RunSnapshots(workspace);
+    const snapshot = path.join(root, "snapshot");
+    await snapshots.snapshot(snapshot, bound);
+    await writeFile(file, "修改后的原文");
+    const changes = await snapshots.collectChanges(snapshot, bound);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ path: file, kind: "modified" });
+    expect(changes[0]?.diff).toContain("+修改后的原文");
+    expect(await readFile(path.join(snapshot, "before/@local/notes/日记.md"), "utf8")).toBe("原文");
   });
   it("serializes concurrent event writes without losing records", async () => {
     const { store } = await storeFixture();

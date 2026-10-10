@@ -1,3 +1,4 @@
+import { alignDocumentPosition, documentScrollContainer, editorOffsetTop, lineOffset, offsetLine } from "./document-position";
 import { AuxPanel } from "./AuxPanel";
 import { TextArea, TextInput } from "./form-controls";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
@@ -8,7 +9,7 @@ import type { WikiPage } from "@the-way-here/shared";
 import { api } from "../api";
 import { apiPageHref, pageHref, useReturnContext } from "./routing";
 
-type MarkdownOutlineItem = { id: string; label: string; level: number };
+type MarkdownOutlineItem = { id: string; label: string; level: number; line: number };
 
 export function shouldEnterDocumentEditMode({ clickCount, insideControl }: { clickCount: number; insideControl: boolean }): boolean {
   return clickCount === 2 && !insideControl;
@@ -21,7 +22,7 @@ export function documentHeadingPrefix(pageId: string): string {
 function markdownOutline(markdown: string, headingPrefix: string): MarkdownOutlineItem[] {
   const items: MarkdownOutlineItem[] = [];
   let inFence = false;
-  for (const line of markdown.split(/\r?\n/)) {
+  for (const [index, line] of markdown.split(/\r?\n/).entries()) {
     if (/^\s*(```|~~~)/.test(line)) {
       inFence = !inFence;
       continue;
@@ -35,19 +36,23 @@ function markdownOutline(markdown: string, headingPrefix: string): MarkdownOutli
       .replace(/[*_~`]/g, "")
       .trim();
     if (!label) continue;
-    items.push({ id: `${headingPrefix}-heading-${items.length}`, label, level: match[1]!.length });
+    items.push({ id: `${headingPrefix}-heading-${items.length}`, label, level: match[1]!.length, line: index + 1 });
   }
   return items;
 }
 
-export function DocumentOutline({ markdown, headingPrefix, title = "本页目录", scrollContainerRef, inactive = false }: { markdown: string; headingPrefix: string; title?: string; scrollContainerRef?: RefObject<HTMLElement | null>; inactive?: boolean }) {
+export function DocumentOutline({ markdown, headingPrefix, title = "本页目录", scrollContainerRef, inactive = false, onNavigate, activeLine }: { markdown: string; headingPrefix: string; title?: string; scrollContainerRef?: RefObject<HTMLElement | null>; inactive?: boolean; onNavigate?: (line: number) => void; activeLine?: number }) {
   const items = useMemo(() => markdownOutline(markdown, headingPrefix), [markdown, headingPrefix]);
   const [activeId, setActiveId] = useState(items[0]?.id || "");
   const outlineRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const scrollContainer = scrollContainerRef?.current || document.getElementById("main-content");
+    if (activeLine !== undefined) {
+      setActiveId(items.filter(item => item.line <= activeLine).at(-1)?.id || items[0]?.id || "");
+      return;
+    }
     const headings = items.map((item) => document.getElementById(item.id)).filter((heading): heading is HTMLElement => Boolean(heading));
+    const scrollContainer = scrollContainerRef?.current || (headings[0] ? documentScrollContainer(headings[0]) : null);
     if (!headings.length) return;
     let frame = 0;
     const update = () => {
@@ -80,7 +85,7 @@ export function DocumentOutline({ markdown, headingPrefix, title = "本页目录
       resizeObserver?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [items, scrollContainerRef]);
+  }, [items, scrollContainerRef, activeLine]);
 
   useEffect(() => {
     const outline = outlineRef.current;
@@ -100,7 +105,7 @@ export function DocumentOutline({ markdown, headingPrefix, title = "本页目录
       <h3>{title}</h3>
       <ol>{items.map((item) => <li key={item.id} style={{ "--outline-depth": Math.min(item.level - baseLevel, 3) } as React.CSSProperties}>{inactive
         ? <span>{item.label}</span>
-        : <a className={activeId === item.id ? "active" : ""} aria-current={activeId === item.id ? "location" : undefined} href={`#${item.id}`} title={item.label} onClick={(event) => { event.preventDefault(); setActiveId(item.id); const heading = document.getElementById(item.id); const scrollContainer = scrollContainerRef?.current || document.getElementById("main-content"); const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"; if (heading && scrollContainer) { const top = scrollContainer.scrollTop + heading.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top - 24; scrollContainer.scrollTo({ top, behavior }); } else heading?.scrollIntoView({ behavior, block: "start" }); window.history.replaceState(window.history.state, "", `#${item.id}`); }}>{item.label}</a>}</li>)}</ol>
+        : <a className={activeId === item.id ? "active" : ""} aria-current={activeId === item.id ? "location" : undefined} href={`#${item.id}`} title={item.label} onClick={(event) => { event.preventDefault(); setActiveId(item.id); if (onNavigate) { onNavigate(item.line); return; } const heading = document.getElementById(item.id); const scrollContainer = scrollContainerRef?.current || (heading ? documentScrollContainer(heading) : null); const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"; if (heading && scrollContainer) { const top = scrollContainer.scrollTop + heading.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top - 24; scrollContainer.scrollTo({ top, behavior }); } else heading?.scrollIntoView({ behavior, block: "start" }); window.history.replaceState(window.history.state, "", `#${item.id}`); }}>{item.label}</a>}</li>)}</ol>
     </div>
   </nav>;
 }
@@ -251,14 +256,19 @@ export function MarkdownBody({ children, headingPrefix, properties }: { children
   const nextHeadingId = () => headingPrefix ? `${headingPrefix}-heading-${headingIndex++}` : undefined;
   return <>{hasProperties && !hasLevelOneHeading ? <NoteProperties properties={properties!} /> : null}<ReactMarkdown remarkPlugins={[remarkGfm]} components={{
     a: ({ href, children: label }) => href?.startsWith("/page/") ? <NavLink to={href} state={returnContext}>{label}</NavLink> : <a href={href} target="_blank" rel="noreferrer">{label}</a>,
-    h1: ({ children: label }) => {
+    p: ({ node, children }) => <p data-source-line={node?.position?.start.line}>{children}</p>,
+    li: ({ node, children, ...props }) => <li {...props} data-source-line={node?.position?.start.line}>{children}</li>,
+    pre: ({ node, children }) => <pre data-source-line={node?.position?.start.line}>{children}</pre>,
+    blockquote: ({ node, children }) => <blockquote data-source-line={node?.position?.start.line}>{children}</blockquote>,
+    table: ({ node, children }) => <table data-source-line={node?.position?.start.line}>{children}</table>,
+    h1: ({ node, children: label }) => {
       const showProperties = hasProperties && !propertiesRendered;
       propertiesRendered = propertiesRendered || showProperties;
-      return <><h1 id={nextHeadingId()}>{label}</h1>{showProperties ? <NoteProperties properties={properties!} /> : null}</>;
+      return <><h1 data-source-line={node?.position?.start.line} id={nextHeadingId()}>{label}</h1>{showProperties ? <NoteProperties properties={properties!} /> : null}</>;
     },
-    h2: ({ children: label }) => <h2 id={nextHeadingId()}>{label}</h2>,
-    h3: ({ children: label }) => <h3 id={nextHeadingId()}>{label}</h3>,
-    h4: ({ children: label }) => <h4 id={nextHeadingId()}>{label}</h4>,
+    h2: ({ node, children: label }) => <h2 data-source-line={node?.position?.start.line} id={nextHeadingId()}>{label}</h2>,
+    h3: ({ node, children: label }) => <h3 data-source-line={node?.position?.start.line} id={nextHeadingId()}>{label}</h3>,
+    h4: ({ node, children: label }) => <h4 data-source-line={node?.position?.start.line} id={nextHeadingId()}>{label}</h4>,
   }}>{markdown}</ReactMarkdown></>;
 }
 
@@ -266,28 +276,45 @@ type SavePageResult = { ok: boolean; modifiedAt?: string };
 
 export function documentIdentity(relativePath: string): { folder: string; fileName: string } {
   const parts = relativePath.replace(/\\/g, "/").split("/").filter(Boolean);
-  const fileName = (parts.pop() || "未命名.md").replace(/\.md$/i, "");
+  const fileName = (parts.pop() || "未命名.md").replace(/\.(md|txt)$/i, "");
   const logicalRoot = parts.findIndex((part) => /^(wiki|原始知识库|sources?)$/i.test(part));
   const logicalParts = logicalRoot >= 0 ? parts.slice(logicalRoot + 1) : parts;
-  return { folder: logicalParts.map((part) => part === "imported" ? "待整理" : part).join(" / ") || "知识库", fileName };
+  return { folder: logicalParts.join(" / ") || "知识库", fileName };
 }
 
-function DocumentFrame({ variant, showIdentity = false, editing = false, showOutline, markdown, headingPrefix, children }: { variant: "reader" | "preview"; showIdentity?: boolean; editing?: boolean; showOutline: boolean; markdown: string; headingPrefix: string; children: ReactNode }) {
+function DocumentFrame({ variant, showIdentity = false, showOutline, markdown, headingPrefix, children, relations, onNavigate, activeLine }: { variant: "reader" | "preview"; showIdentity?: boolean; showOutline: boolean; markdown: string; headingPrefix: string; children: ReactNode; relations?: ReactNode; onNavigate?: (line: number) => void; activeLine?: number }) {
   const [outlineOpen, setOutlineOpen] = useState(false);
-  const outlineVisible = showOutline && markdownOutline(markdown, headingPrefix).length > 1;
-  return <section className={`editable-document editable-document--${variant}${showIdentity ? "" : " knowledge-document"}${editing ? " editing" : ""}${outlineVisible ? " has-outline" : ""}`}>
-    {children}
-    {outlineVisible && <AuxPanel className="document-outline-panel" label="本页目录" open={outlineOpen} onToggle={() => setOutlineOpen(value => !value)} railWidth={44}><DocumentOutline markdown={markdown} headingPrefix={headingPrefix} inactive={editing || !outlineOpen} /></AuxPanel>}
+  const [tab, setTab] = useState<"outline" | "relations">("outline");
+  const frameRef = useRef<HTMLElement>(null);
+  const [compact, setCompact] = useState(true);
+  const hasOutline = markdownOutline(markdown, headingPrefix).length > 1;
+  // Keep the auxiliary shell stable while headings are added or removed in a draft.
+  const [outlineAvailable, setOutlineAvailable] = useState(hasOutline);
+  useEffect(() => { if (hasOutline) setOutlineAvailable(true); }, [hasOutline]);
+  const auxiliaryVisible = Boolean(relations) || (showOutline && outlineAvailable);
+  useEffect(() => {
+    const element = frameRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setCompact(entry!.contentRect.width < 980));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return <section ref={frameRef} className={`editable-document document-surface editable-document--${variant}${showIdentity ? "" : " knowledge-document"}${auxiliaryVisible ? " has-outline" : ""}${compact ? " document-compact" : ""}`}>
+    <div className="document-content">{children}</div>
+    {auxiliaryVisible && <AuxPanel className="document-outline-panel" label="文档导航" open={outlineOpen} onToggle={() => setOutlineOpen(value => !value)} railWidth={44} width={220}>
+      {relations && <div className="document-navigation-tabs" role="group" aria-label="文档导航内容"><button type="button" aria-pressed={tab === "outline"} onClick={() => setTab("outline")}>目录</button><button type="button" aria-pressed={tab === "relations"} onClick={() => setTab("relations")}>关联</button></div>}
+      {relations && tab === "relations" ? <div className="document-relations">{relations}</div> : hasOutline ? <DocumentOutline markdown={markdown} headingPrefix={headingPrefix} inactive={!outlineOpen} onNavigate={onNavigate} activeLine={activeLine} /> : <p className="document-outline-empty">暂无章节标题</p>}
+    </AuxPanel>}
   </section>;
 }
 
 // Snapshots share the document layout without acquiring file-save behavior.
-export function ReadOnlyDocument({ id, markdown, toolbar, page, headerContent, headerActions, showMetadata = true, showOutline = true }: { id: string; markdown: string; toolbar?: ReactNode; page?: WikiPage; showMetadata?: boolean; headerContent?: ReactNode; headerActions?: ReactNode; showOutline?: boolean }) {
+export function ReadOnlyDocument({ id, markdown, toolbar, page, headerContent, headerActions, showMetadata = true, showOutline = true, relations }: { id: string; markdown: string; toolbar?: ReactNode; page?: WikiPage; showMetadata?: boolean; headerContent?: ReactNode; headerActions?: ReactNode; showOutline?: boolean; relations?: ReactNode }) {
   const headingPrefix = documentHeadingPrefix(id);
   const content = page ? editableMarkdownDocument(markdown, true).body : markdown;
   const body = page?.isSource ? markdownWithoutSourceRelations(content) : content;
-  return <DocumentFrame variant="preview" showIdentity={Boolean(page)} showOutline={showOutline} markdown={body} headingPrefix={headingPrefix}>
-    {page ? <header className="editable-document-identity"><div className="document-identity-copy"><h1 className="document-readonly-title">{documentIdentity(page.relativePath).fileName}</h1>{showMetadata && <div className="document-meta-row"><span>{documentIdentity(page.relativePath).folder}</span><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span></div>}</div>{headerActions && <div className="document-header-actions">{headerActions}</div>}</header> : null}
+  return <DocumentFrame variant="preview" showIdentity={Boolean(page)} showOutline={showOutline} relations={relations} markdown={body} headingPrefix={headingPrefix}>
+    {page ? <header className="editable-document-identity"><div className="document-identity-copy"><h1 className="document-readonly-title">{documentIdentity(page.externalSource?.originalPath || page.relativePath).fileName}</h1>{showMetadata && <div className="document-meta-row"><span>{documentIdentity(page.externalSource?.originalPath || page.relativePath).folder}</span><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span></div>}</div>{headerActions && <div className="document-header-actions">{headerActions}</div>}</header> : null}
     {headerContent && <div className="document-header-content">{headerContent}</div>}
     {toolbar && <div className="editable-document-toolbar">{toolbar}</div>}
     {showMetadata && page && Object.keys(pageNoteProperties(page)).length ? <div className="editable-document-properties"><NoteProperties properties={pageNoteProperties(page)} compact /></div> : null}
@@ -296,13 +323,13 @@ export function ReadOnlyDocument({ id, markdown, toolbar, page, headerContent, h
 }
 
 export function EditableDocument(props: Parameters<typeof EditableDocumentEditor>[0]) {
-  if (props.page.externalSource) return <><div className="external-source-notice">{props.page.externalSource.status === "available" ? "原目录只读连接 · 在原文件中编辑后会自动同步" : "原始来源不可用 · 请检查目录连接"}{props.page.externalSource.originalPath ? <div>{props.page.externalSource.originalPath}</div> : null}</div><ReadOnlyDocument page={props.page} id={props.page.id} markdown={props.page.renderedMarkdown} toolbar={props.identityActions} headerContent={props.headerContent} headerActions={props.headerActions} showMetadata={props.showMetadata} />{props.afterContent}</>;
-  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("detached")) return <ReadOnlyDocument page={props.page} id={props.page.id} markdown={props.page.renderedMarkdown} toolbar={props.identityActions} headerContent={props.headerContent} headerActions={props.headerActions} showMetadata={props.showMetadata} />;
+  if (props.page.externalSource?.status === "unavailable") return <><div className="external-source-notice">原文件不可用 · 请重新打开文件夹{props.page.externalSource.originalPath ? <div>{props.page.externalSource.originalPath}</div> : null}</div><ReadOnlyDocument page={props.page} id={props.page.id} markdown={props.page.renderedMarkdown} toolbar={props.identityActions} headerContent={props.headerContent} headerActions={props.headerActions} showMetadata={props.showMetadata} showOutline={props.showOutline} relations={props.relations} />{props.afterContent}</>;
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("detached")) return <ReadOnlyDocument page={props.page} id={props.page.id} markdown={props.page.renderedMarkdown} toolbar={props.identityActions} headerContent={props.headerContent} headerActions={props.headerActions} showMetadata={props.showMetadata} showOutline={props.showOutline} relations={props.relations} />;
   return <EditableDocumentEditor {...props} />;
 }
 
-function EditableDocumentEditor({ page, variant = "reader", startEditing = false, showOutline = false, showIdentity = true, showMetadata = true, headerContent, headerActions, identityActions, fileNameFocusToken = 0, beforeContent, afterContent, onRenamed }: { page: WikiPage; variant?: "reader" | "preview"; startEditing?: boolean; showOutline?: boolean; showIdentity?: boolean; showMetadata?: boolean; headerContent?: ReactNode; headerActions?: ReactNode; identityActions?: ReactNode; fileNameFocusToken?: number; beforeContent?: ReactNode; afterContent?: ReactNode; onRenamed?: (page: WikiPage) => void }) {
-  const identity = documentIdentity(page.relativePath);
+function EditableDocumentEditor({ page, variant = "reader", startEditing = false, showOutline = true, showIdentity = true, showMetadata = true, headerContent, headerActions, identityActions, fileNameFocusToken = 0, beforeContent, afterContent, onRenamed, relations }: { page: WikiPage; variant?: "reader" | "preview"; startEditing?: boolean; showOutline?: boolean; showIdentity?: boolean; showMetadata?: boolean; headerContent?: ReactNode; headerActions?: ReactNode; identityActions?: ReactNode; fileNameFocusToken?: number; beforeContent?: ReactNode; afterContent?: ReactNode; relations?: ReactNode; onRenamed?: (page: WikiPage) => void }) {
+  const identity = documentIdentity(page.externalSource?.originalPath || page.relativePath);
   const [editing, setEditing] = useState(startEditing);
   const [draft, setDraft] = useState(page.markdown);
   const [fileName, setFileName] = useState(identity.fileName);
@@ -328,7 +355,8 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const fileNameInputRef = useRef<HTMLInputElement>(null);
   const documentBodyRef = useRef<HTMLDivElement>(null);
-  const documentScrollTopRef = useRef(0);
+  const positionRef = useRef<{ line: number; top: number } | null>(null);
+  const [activeLine, setActiveLine] = useState(1);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -344,7 +372,7 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
     lastSavedRef.current = page.markdown;
     expectedModifiedAtRef.current = page.modifiedAt;
     pendingRef.current = null;
-    const nextIdentity = documentIdentity(page.relativePath);
+    const nextIdentity = documentIdentity(page.externalSource?.originalPath || page.relativePath);
     fileNameRef.current = nextIdentity.fileName;
     lastSavedFileNameRef.current = nextIdentity.fileName;
     setDraft(page.markdown);
@@ -382,12 +410,38 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   }, []);
 
   useLayoutEffect(() => {
+    const position = positionRef.current;
     if (editing && editorRef.current) {
-      editorRef.current.style.height = "auto";
-      editorRef.current.style.height = `${editorRef.current.scrollHeight}px`;
-      editorRef.current.focus({ preventScroll: true });
+      const editor = editorRef.current;
+      editor.style.height = "auto";
+      editor.style.height = `${editor.scrollHeight}px`;
+      editor.focus({ preventScroll: true });
+      if (position) {
+        const offset = lineOffset(editor.value, position.line);
+        editor.setSelectionRange(offset, offset);
+        alignDocumentPosition(editor, editorOffsetTop(editor, offset), position.top);
+      }
+    } else if (position && documentBodyRef.current) {
+      const blocks = [...documentBodyRef.current.querySelectorAll<HTMLElement>("[data-source-line]")];
+      const block = blocks.filter(block => Number(block.dataset.sourceLine) <= position.line).at(-1) || blocks[0];
+      if (block) alignDocumentPosition(block, 0, position.top);
     }
-    (document.getElementById("main-content") || window).scrollTo({ top: documentScrollTopRef.current, behavior: "auto" });
+    positionRef.current = null;
+  }, [editing]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editing || !editor || typeof ResizeObserver === "undefined") return;
+    let width = editor.getBoundingClientRect().width;
+    const observer = new ResizeObserver(([entry]) => {
+      const nextWidth = entry!.contentRect.width;
+      if (nextWidth === width) return;
+      width = nextWidth;
+      editor.style.height = "auto";
+      editor.style.height = `${editor.scrollHeight}px`;
+    });
+    observer.observe(editor);
+    return () => observer.disconnect();
   }, [editing]);
 
   useLayoutEffect(() => {
@@ -437,7 +491,7 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
         method: "POST",
         body: JSON.stringify({ pageId: pageIdRef.current, fileName: next, expectedModifiedAt: expectedModifiedAtRef.current }),
       });
-      const nextIdentity = documentIdentity(renamed.relativePath);
+      const nextIdentity = documentIdentity(renamed.externalSource?.originalPath || renamed.relativePath);
       pageIdRef.current = renamed.id;
       expectedModifiedAtRef.current = renamed.modifiedAt;
       fileNameRef.current = nextIdentity.fileName;
@@ -485,16 +539,61 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
     setFileName(next);
   }
 
-  function beginEditing() {
+  function beginEditing(target?: HTMLElement) {
     if (editing) return;
-    documentScrollTopRef.current = document.getElementById("main-content")?.scrollTop ?? window.scrollY;
+    const body = documentBodyRef.current;
+    const container = body ? documentScrollContainer(body) : null;
+    const threshold = (container?.getBoundingClientRect().top || 0) + 24;
+    const blocks = [...(body?.querySelectorAll<HTMLElement>("[data-source-line]") || [])];
+    const block = target?.closest<HTMLElement>("[data-source-line]") || blocks.find(block => block.getBoundingClientRect().bottom > threshold);
+    if (block) {
+      const line = Number(block.dataset.sourceLine);
+      positionRef.current = { line, top: block.getBoundingClientRect().top };
+      setActiveLine(line);
+    }
     setEditing(true);
+  }
+
+  function finishEditing() {
+    const editor = editorRef.current;
+    if (editor) {
+      let line = offsetLine(editor.value, editor.selectionStart);
+      const container = documentScrollContainer(editor);
+      const viewportTop = (container?.getBoundingClientRect().top || 0) + 24;
+      const viewportBottom = container?.getBoundingClientRect().bottom || window.innerHeight;
+      const editorTop = editor.getBoundingClientRect().top;
+      let top = editorTop + editorOffsetTop(editor, lineOffset(editor.value, line));
+      if (top < viewportTop || top > viewportBottom) {
+        let low = 1, high = offsetLine(editor.value, editor.value.length);
+        while (low < high) {
+          const middle = Math.ceil((low + high) / 2);
+          if (editorTop + editorOffsetTop(editor, lineOffset(editor.value, middle)) <= viewportTop) low = middle;
+          else high = middle - 1;
+        }
+        line = low;
+        top = editorTop + editorOffsetTop(editor, lineOffset(editor.value, line));
+      }
+      positionRef.current = { line, top };
+    }
+    void persist(draftRef.current);
+    setEditing(false);
+  }
+
+  function navigateEditor(line: number) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const offset = lineOffset(editor.value, line);
+    editor.focus({ preventScroll: true });
+    editor.setSelectionRange(offset, offset);
+    setActiveLine(line);
+    const container = documentScrollContainer(editor);
+    alignDocumentPosition(editor, editorOffsetTop(editor, offset), (container?.getBoundingClientRect().top || 0) + 24);
   }
 
   function requestEditing(event: React.MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
     const insideControl = Boolean(target.closest("a, button, input, textarea, select, summary, [role='button'], [data-no-edit]"));
-    if (shouldEnterDocumentEditMode({ clickCount: event.detail, insideControl })) beginEditing();
+    if (shouldEnterDocumentEditMode({ clickCount: event.detail, insideControl })) beginEditing(target);
   }
 
   const headingPrefix = documentHeadingPrefix(page.id);
@@ -508,15 +607,17 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   const saveError = /失败|不能为空|别处更新/.test(saveState);
   const statusMessage = saveError ? saveState : saveNotice !== "hidden" ? "已保存" : /正在/.test(saveState) ? saveState : "";
   const saveFeedback = <span className={`document-save-state${statusMessage && saveNotice !== "fading" ? " visible" : ""}${saveError ? " error" : ""}`} role="status">{statusMessage}</span>;
-  const toolbar = !showIdentity && <div className="editable-document-toolbar">{saveFeedback}</div>;
+  const toolbar = saveFeedback;
   const propertyPanel = showMetadata && propertiesPinned && Object.keys(properties).length > 0 && <div className="editable-document-properties">{page.isSource && variant === "preview" ? <SourceProperties key={page.id} properties={properties} /> : <NoteProperties properties={properties} compact />}</div>;
 
-  return <DocumentFrame variant={variant} showIdentity={showIdentity} editing={editing} showOutline={showOutline} markdown={readingMarkdown} headingPrefix={headingPrefix}>
+  return <DocumentFrame variant={variant} showIdentity={showIdentity} showOutline={showOutline} relations={relations} onNavigate={editing ? navigateEditor : undefined} activeLine={editing ? activeLine : undefined} markdown={editing ? documentBody : readingMarkdown} headingPrefix={headingPrefix}>
     {showIdentity && <header className="editable-document-identity">
       <div className="document-identity-copy"><label className="document-file-name"><span className="sr-only">文件名</span><TextInput ref={fileNameInputRef} name={`file-name-${page.id}`} autoComplete="off" aria-label={`${page.title} 文件名`} style={{ width: `${Math.min(Math.max(fileName.length * 1.08 + 2, 12), 37)}em` }} value={fileName} onChange={(event) => changeFileName(event.target.value)} onBlur={() => void persistFileName(fileNameRef.current)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") { changeFileName(lastSavedFileNameRef.current); event.currentTarget.blur(); } }} spellCheck={false} /></label>{showMetadata && <div className="document-meta-row"><small>{identity.folder}</small><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span>{identityActions}</div>}</div>
-      <div className="editable-document-identity-actions">{saveFeedback}</div>{headerActions && <div className="document-header-actions">{headerActions}</div>}
+      {headerActions && <div className="document-header-actions">{headerActions}</div>}
     </header>}
     {headerContent && <div className="document-header-content">{headerContent}</div>}{toolbar}{propertyPanel}
-    {editing ? <TextArea ref={editorRef} name={`page-${page.id}`} aria-label={`${page.title} Markdown 正文`} value={documentBody} onChange={(event) => changeDocumentBody(event.target.value)} onBlur={(event) => { if ((event.relatedTarget as HTMLElement | null)?.closest(".voice-dialog")) return; documentScrollTopRef.current = document.getElementById("main-content")?.scrollTop ?? window.scrollY; void persist(draftRef.current); setEditing(false); }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "s") { event.preventDefault(); void persist(draftRef.current); } if (event.key === "Escape") event.currentTarget.blur(); }} spellCheck={false} /> : <div ref={documentBodyRef} className="editable-document-body editable-document-activate" role="textbox" aria-label={`${page.title} 正文，双击后编辑`} aria-readonly="true" tabIndex={0} onDoubleClick={requestEditing} onKeyDown={(event) => { if (event.key === "Enter" || event.key === "F2") { event.preventDefault(); beginEditing(); } }}>{beforeContent}<MarkdownBody headingPrefix={headingPrefix} properties={propertiesPinned ? undefined : properties}>{readingMarkdown}</MarkdownBody>{afterContent}</div>}
+    {beforeContent && <div className="document-context-content">{beforeContent}</div>}
+    {editing ? <TextArea className="document-editor" ref={editorRef} name={`page-${page.id}`} aria-label={`${page.title} Markdown 正文`} value={documentBody} onChange={(event) => changeDocumentBody(event.target.value)} onSelect={(event) => setActiveLine(offsetLine(event.currentTarget.value, event.currentTarget.selectionStart))} onBlur={(event) => { if (event.relatedTarget instanceof Element && event.relatedTarget.closest(".document-outline-panel")) void persist(draftRef.current); else finishEditing(); }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "s") { event.preventDefault(); void persist(draftRef.current); } if (event.key === "Escape" && !event.nativeEvent.isComposing) { event.preventDefault(); finishEditing(); } }} spellCheck={false} /> : <div ref={documentBodyRef} className="editable-document-body editable-document-activate" role="textbox" aria-label={`${page.title} 正文，双击后编辑`} aria-readonly="true" tabIndex={0} onDoubleClick={requestEditing} onKeyDown={(event) => { if (event.key === "Enter" || event.key === "F2") { event.preventDefault(); beginEditing(); } }}><MarkdownBody headingPrefix={headingPrefix} properties={propertiesPinned ? undefined : properties}>{readingMarkdown}</MarkdownBody></div>}
+    {afterContent && <div className="document-context-content">{afterContent}</div>}
   </DocumentFrame>;
 }

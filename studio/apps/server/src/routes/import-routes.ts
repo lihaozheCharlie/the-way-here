@@ -7,6 +7,7 @@ export function registerImportRoutes(app: FastifyInstance, imports: ImportStore,
   app.get("/api/imports", async () => imports.list(await runs.list()));
   app.post<{ Body: { files?: SourceImportFile[]; channel?: SourceImportChannel; targetFolder?: string } }>("/api/imports/files", { bodyLimit: 145 * 1024 * 1024 }, async (request, reply) => {
     try {
+      if (!request.body?.channel || request.body.channel === "files") throw new ImportRequestError(400, "日记与笔记请直接打开本地文件夹");
       return reply.code(201).send(await imports.create(request.body || {}));
     } catch (error) {
       if (error instanceof ImportRequestError) return reply.code(error.statusCode).send({ error: error.message });

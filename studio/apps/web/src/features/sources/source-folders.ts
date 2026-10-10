@@ -8,6 +8,6 @@ export function useSourceFolders(revision = 0) {
 }
 
 export function sourceFolderOptions(folders: SourceFolderSummary[] | undefined, currentFolder = ""): string[] {
-  return [...new Set([...(folders || []).map((folder) => folder.path), currentFolder].filter(Boolean))]
+  return [...new Set([...(folders || []).map((folder) => folder.path), ...(folders ? [] : [currentFolder])].filter(Boolean))]
     .sort((left, right) => left.localeCompare(right, "zh-CN"));
 }

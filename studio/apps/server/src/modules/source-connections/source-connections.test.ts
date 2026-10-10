@@ -1,3 +1,4 @@
+import { listSourceFolders } from "../content/source-folder-catalog.js";
 import { mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
@@ -25,7 +26,7 @@ async function fixture() {
   cleanup.push(async () => { await app.close(); await connections.close(); await knowledge.close(); await rm(temp, { recursive: true, force: true }); });
   return { root, original, knowledge, connections, runs, runMap, app, temp };
 }
-describe("read-only connected source directories", () => {
+describe("local source directories", () => {
   it("indexes original text without copying it and makes existing read/search flows work", async () => {
     const f = await fixture();
     const words = "# 日记\n这段原话只存在于原始目录。今天在河边散步。";
@@ -39,15 +40,37 @@ describe("read-only connected source directories", () => {
     expect(reference).not.toContain("今天在河边散步");
     expect(reference).toContain("twh_external");
     const writer = new PageWriter(f.knowledge);
-    await expect(writer.save(page.id, "不应写入")).rejects.toThrow("原始文件");
-    await expect(writer.deleteSource(page.id)).rejects.toThrow("原始文件");
-    await expect(writer.rename(page.id, "改名")).rejects.toThrow("原始文件");
-    await expect(writer.deleteSourceFolder("外部来源")).rejects.toThrow("原目录");
-    expect(await readFile(path.join(f.original, "日记.md"), "utf8")).toBe(words);
+    await writer.save(page.id, "原地修改后的正文", page.modifiedAt);
+    expect(await readFile(path.join(f.original, "日记.md"), "utf8")).toBe("原地修改后的正文");
+    await expect(writer.deleteSourceFolder("外部来源")).rejects.toThrow("文件夹");
     const tools = createPiTools({ cwd: f.root, config: f.knowledge.index.config, mode: "write" });
     const result = await tools.find((tool) => tool.name === "read_file")!.execute("test", { path: page.relativePath });
-    expect(JSON.stringify(result)).toContain("河边");
-    await expect(tools.find((tool) => tool.name === "write_file")!.execute("test", { path: page.relativePath, content: "修改引用" })).rejects.toThrow("只读");
+    expect(JSON.stringify(result)).toContain("原地修改后的正文");
+    await expect(tools.find((tool) => tool.name === "write_file")!.execute("test", { path: page.relativePath, content: "修改引用" })).rejects.toThrow("允许目录");
+  });
+  it("edits authorized originals with AI and creates real nested folders without copying text", async () => {
+    const f = await fixture();
+    await writeFile(path.join(f.original, "日记.md"), "原文");
+    const [connection] = await f.connections.connect("one", f.original, false, true);
+    const writer = new PageWriter(f.knowledge);
+    const folder = `外部来源/${connection!.id}/2026`;
+    await writer.createSourceFolder(folder);
+    await writer.createSourceFolder(`${folder}/十月`);
+    expect((await listSourceFolders(f.knowledge)).some(item => item.path === `${folder}/十月`)).toBe(true);
+    const created = await writer.createSource("新日记", `${folder}/十月`, "新正文");
+    expect(created?.externalSource?.originalPath).toBe(path.join(f.original, "2026/十月/新日记.md"));
+    const renamed = await writer.rename(created!.id, "新的名字", created!.modifiedAt);
+    expect(renamed.externalSource?.originalPath).toContain("新的名字.md");
+    const tools = createPiTools({ cwd: f.root, config: f.knowledge.index.config, mode: "write" });
+    const result = await tools.find(tool => tool.name === "read_file")!.execute("read", { path: renamed.relativePath });
+    const data = JSON.parse((result.content[0] as { text: string }).text);
+    await tools.find(tool => tool.name === "write_file")!.execute("write", { path: renamed.relativePath, content: "AI 修改", expectedSha256: data.sha256 });
+    expect(await readFile(renamed.externalSource!.originalPath, "utf8")).toBe("AI 修改");
+    await expect(writer.save(renamed.id, "过期修改", renamed.modifiedAt)).rejects.toMatchObject({ statusCode: 409 });
+    await f.connections.rescan("one");
+    await writer.deleteSource(renamed.id);
+    await expect(readFile(renamed.externalSource!.originalPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await writer.deleteSourceFolder(folder);
   });
   it("keeps reference identity across rename and leaves a tombstone after deletion", async () => {
     const f = await fixture(); await writeFile(path.join(f.original, "a.txt"), "记录原文");
@@ -62,6 +85,17 @@ describe("read-only connected source directories", () => {
     expect(f.knowledge.index.get(page.id)?.externalSource?.status).toBe("unavailable");
     expect(f.knowledge.index.get(page.id)?.markdown).not.toContain("记录原文");
     expect((await f.connections.list("one"))[0]?.pendingCount).toBe(1);
+  });
+  it("keeps renamed originals distinct when their previous filename is reused", async () => {
+    const f = await fixture(); await writeFile(path.join(f.original, "a.md"), "第一份记录");
+    const [connection] = await f.connections.connect("one", f.original, false, true);
+    const first = f.knowledge.index.list()[0]!;
+    const writer = new PageWriter(f.knowledge);
+    await writer.rename(first.id, "b");
+    const second = await writer.createSource("a", `外部来源/${connection!.id}`, "新的第二份记录");
+    expect(second?.id).not.toBe(first.id);
+    expect(f.knowledge.index.get(first.id)?.markdown).toBe("第一份记录");
+    expect(second?.markdown).toBe("新的第二份记录");
   });
   it("watches modifications and additions, and preserves them across restart", async () => {
     const f = await fixture(); await writeFile(path.join(f.original, "a.md"), "旧内容");

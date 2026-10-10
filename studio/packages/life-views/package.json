@@ -5,13 +5,16 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@the-way-here/shared": "workspace:*",
     "@the-way-here/wiki-core": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^24.13.3",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
 }

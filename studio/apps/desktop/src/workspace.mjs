@@ -37,8 +37,9 @@ async function ensureWebDemo(root, resources) {
   if (document.errors.length || !YAML.isMap(document.contents) || !YAML.isMap(document.get('knowledgeBases'))) throw new Error('知识空间配置无法读取，请保留原文件并恢复之前的配置。');
   if (document.hasIn(['knowledgeBases', 'demo'])) {
     // Only seed missing bundled reports in the managed demo; preserve custom libraries/results.
-    if (document.getIn(['knowledgeBases', 'demo', 'paths', 'wiki']) === 'vault/demo/wiki') {
-      const report = path.join(root, 'vault/demo/predictions/state.json');
+    const demoWiki = document.getIn(['knowledgeBases', 'demo', 'paths', 'wiki']);
+    if (['vault/demo/wiki', 'app/demo/wiki'].includes(demoWiki)) {
+      const report = path.join(root, path.dirname(demoWiki), 'predictions/state.json');
       try { await access(report); }
       catch (error) {
         if (error.code !== 'ENOENT') throw error;
@@ -51,12 +52,24 @@ async function ensureWebDemo(root, resources) {
     }
     return;
   }
-  // Retain original paths: photo and bill sidecars contain vault/demo references.
-  await cp(path.join(resources, 'demo'), path.join(root, 'vault/demo'), { recursive:true, force:false });
+  const demoRoot = path.join(root, 'app/demo');
+  await cp(path.join(resources, 'demo'), demoRoot, { recursive:true, force:false, errorOnExist: false });
+  // Bundle paths appear in Markdown, import manifests, photo sidecars and prediction reports.
+  async function relocate(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const filename = path.join(directory, entry.name);
+      if (entry.isDirectory()) await relocate(filename);
+      else if (entry.isFile() && /\.(md|json|ya?ml)$/i.test(entry.name)) {
+        const content = await readFile(filename, 'utf8');
+        if (content.includes('vault/demo/')) await writeFile(filename, content.replaceAll('vault/demo/', 'app/demo/'));
+      }
+    }
+  }
+  await relocate(demoRoot);
   document.setIn(['knowledgeBases', 'demo'], {
     name: 'The Way Here 演示 Wiki',
     description: '原 Web 端的匿名演示知识库',
-    paths: { wiki:'vault/demo/wiki', sources:'vault/demo/sources' },
+    paths: { wiki:'app/demo/wiki', sources:'app/demo/sources' },
     validation: { commands:[] },
   });
   await writeFile(target + '.tmp', String(document), {mode:0o600});

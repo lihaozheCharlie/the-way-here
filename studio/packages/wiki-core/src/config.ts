@@ -175,8 +175,9 @@ function normalizeSourceConnections(value: unknown): NonNullable<VaultConfig["so
   const ids = new Set<string>();
   return value.map((entry) => {
     if (!isRecord(entry) || typeof entry.id !== "string" || !/^[a-z0-9-]+$/.test(entry.id) || ids.has(entry.id)
+      || (entry.aiWritable !== undefined && typeof entry.aiWritable !== "boolean")
       || typeof entry.path !== "string" || !path.isAbsolute(entry.path) || typeof entry.name !== "string" || typeof entry.autoBuild !== "boolean") throw new Error("来源目录配置无效");
     ids.add(entry.id);
-    return { id: entry.id, path: path.normalize(entry.path), name: entry.name, autoBuild: entry.autoBuild };
+    return { id: entry.id, path: path.normalize(entry.path), name: entry.name, autoBuild: entry.autoBuild, aiWritable: entry.aiWritable === true };
   });
 }

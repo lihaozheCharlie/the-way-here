@@ -14,6 +14,10 @@ test('fresh installation creates a usable library and upgrades preserve records 
     await mkdir(path.join(resources,'knowledge-engine/tools'),{recursive:true});
     await mkdir(path.join(resources,'demo/wiki'),{recursive:true});
     await writeFile(path.join(resources,'demo/wiki/旧演示.md'),'Original Web demo');
+    await mkdir(path.join(resources,'demo/sources/.imports'),{recursive:true});
+    await mkdir(path.join(resources,'demo/sources/.photo-memories/photo'),{recursive:true});
+    await writeFile(path.join(resources,'demo/sources/.imports/photo.json'),JSON.stringify({files:[{storedPath:'vault/demo/sources/照片.md',builtRefs:[{path:'vault/demo/wiki/旧演示.md'}]}]}));
+    await writeFile(path.join(resources,'demo/sources/.photo-memories/photo/memory.json'),JSON.stringify({reportPath:'vault/demo/sources/照片.md'}));
     await writeFile(path.join(resources,'AGENTS.md'),'Public instructions');
     await writeFile(path.join(resources,'knowledge-engine/tools/version'),'one');
     const root = await prepareWorkspace({userData, resources});
@@ -21,6 +25,9 @@ test('fresh installation creates a usable library and upgrades preserve records 
     const initial = YAML.parse(await readFile(configPath,'utf8'));
     assert.equal(initial.defaultKnowledgeBase,'demo');
     assert.deepEqual(Object.keys(initial.knowledgeBases),['demo']);
+    assert.equal(initial.knowledgeBases.demo.paths.sources,'app/demo/sources');
+    assert.equal(JSON.parse(await readFile(path.join(root,'app/demo/sources/.imports/photo.json'),'utf8')).files[0].storedPath,'app/demo/sources/照片.md');
+    assert.equal(JSON.parse(await readFile(path.join(root,'app/demo/sources/.photo-memories/photo/memory.json'),'utf8')).reportPath,'app/demo/sources/照片.md');
     await assert.rejects(access(path.join(root,'app/personal')));
     await mkdir(path.join(root,'app/personal/wiki'),{recursive:true});
     await mkdir(path.join(root,'app/personal/sources'),{recursive:true});
@@ -29,7 +36,7 @@ test('fresh installation creates a usable library and upgrades preserve records 
     initial.knowledgeBases.personal={name:'我的知识库',paths:{wiki:'app/personal/wiki',sources:'app/personal/sources'}};
     const custom = YAML.stringify(initial) + '\n# keep custom settings\n';
     await writeFile(configPath,custom);
-    assert.equal(await readFile(path.join(root,'vault/demo/wiki/旧演示.md'),'utf8'),'Original Web demo');
+    assert.equal(await readFile(path.join(root,'app/demo/wiki/旧演示.md'),'utf8'),'Original Web demo');
     await mkdir(path.join(resources,'demo/predictions'),{recursive:true});
     await writeFile(path.join(resources,'demo/predictions/state.json'),'{"knowledgeBaseId":"demo","thoughts":"bundled"}');
     await writeFile(path.join(resources,'knowledge-engine/tools/version'),'two');
@@ -37,18 +44,18 @@ test('fresh installation creates a usable library and upgrades preserve records 
     assert.equal(await readFile(path.join(root,'app/personal/wiki/记忆.md'),'utf8'),'keep this record');
     assert.equal(await readFile(path.join(root,'the-way-here.config.yaml'),'utf8'),custom);
     assert.equal(await readFile(path.join(root,'knowledge-engine/tools/version'),'utf8'),'two');
-    const report = path.join(root,'vault/demo/predictions/state.json');
+    const report = path.join(root,'app/demo/predictions/state.json');
     assert.equal(JSON.parse(await readFile(report,'utf8')).thoughts,'bundled');
     await writeFile(report,'{"knowledgeBaseId":"demo","thoughts":"user edit"}');
     await prepareWorkspace({userData,resources});
     assert.equal(JSON.parse(await readFile(report,'utf8')).thoughts,'user edit');
     const oldConfig=YAML.parse(custom); delete oldConfig.knowledgeBases.demo;
     await writeFile(configPath,YAML.stringify(oldConfig));
-    await writeFile(path.join(root,'vault/demo/wiki/旧演示.md'),'User demo edit');
+    await writeFile(path.join(root,'app/demo/wiki/旧演示.md'),'User demo edit');
     await prepareWorkspace({userData,resources});
     assert.equal(YAML.parse(await readFile(configPath,'utf8')).defaultKnowledgeBase,'personal');
-    assert.equal(YAML.parse(await readFile(configPath,'utf8')).knowledgeBases.demo.paths.wiki,'vault/demo/wiki');
-    assert.equal(await readFile(path.join(root,'vault/demo/wiki/旧演示.md'),'utf8'),'User demo edit');
+    assert.equal(YAML.parse(await readFile(configPath,'utf8')).knowledgeBases.demo.paths.wiki,'app/demo/wiki');
+    assert.equal(await readFile(path.join(root,'app/demo/wiki/旧演示.md'),'utf8'),'User demo edit');
     await rm(path.join(root,'the-way-here.config.yaml'));
     await assert.rejects(prepareWorkspace({userData,resources}),/暂时无法访问/);
     const external = path.join(temp,'existing');
@@ -86,6 +93,6 @@ test('upgrade removes only the empty legacy personal library and selects demo', 
     assert.equal(upgraded.defaultKnowledgeBase,'demo');
     assert.deepEqual(Object.keys(upgraded.knowledgeBases),['demo']);
     await assert.rejects(access(path.join(root,'app/personal')));
-    assert.equal(await readFile(path.join(root,'vault/demo/wiki/演示.md'),'utf8'),'Anonymous demo');
+    assert.equal(await readFile(path.join(root,'app/demo/wiki/演示.md'),'utf8'),'Anonymous demo');
   } finally { await rm(temp,{recursive:true,force:true}); }
 });

@@ -1,0 +1,16 @@
+/* Records and letters share the same filename and preview presentation. */
+.file-browser-item .source-file-select { align-items:flex-start; }
+.file-browser-item .source-record-copy { width:100%; min-width:0; }
+.file-browser-item .source-record-copy > .file-browser-name,
+.desktop-shell .organized-sources-page .source-vault .file-browser-item .source-record-copy > .file-browser-name { display:block; margin:0; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; font-size:13px; line-height:1.55; }
+.file-browser-item .source-record-copy > .file-browser-excerpt,
+.desktop-shell .organized-sources-page .source-vault .file-browser-item .source-record-copy > .file-browser-excerpt { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; white-space:normal; overflow-wrap:anywhere; margin-top:5px; color:var(--ink-soft); font-size:13px; line-height:1.65; }
+.inline-name-form { flex:none; margin:4px 8px 8px; padding:4px 6px; border:1px solid var(--accent); border-radius:var(--radius-control); background:var(--paper); }
+.inline-name-form > div { display:flex; align-items:center; gap:4px; }
+.inline-name-form > div > input.text-control { flex:1; min-width:0; width:0; min-height:28px; padding:3px; border:0; background:transparent; font-size:13px; }
+.inline-name-form > div > input.text-control:focus { outline:none; box-shadow:none; }
+.inline-name-form > div > button { display:grid; place-items:center; flex:none; width:24px; height:28px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--accent-ink); cursor:pointer; }
+.inline-name-form > div > button:hover { background:var(--accent-soft); }
+.inline-name-form > div > button:disabled { opacity:.45; cursor:default; }
+.inline-name-form > p { margin:4px 3px; color:var(--danger); font-size:12px; }
+.source-pane-shell.collapsed .inline-name-form { display:none; }

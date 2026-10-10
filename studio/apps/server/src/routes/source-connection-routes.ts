@@ -5,13 +5,13 @@ import { KnowledgeBaseRequestError } from "../modules/knowledge-bases/knowledge-
 
 export function registerSourceConnectionRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, connections: SourceConnections) {
   app.get("/api/source-connections", () => connections.list(knowledge.index.config.knowledgeBaseId));
-  for (const method of ["POST", "PATCH", "DELETE"] as const) app.route<{ Params: { id?: string }; Body: { knowledgeBaseId?: unknown; path?: unknown; autoBuild?: unknown } }>({
+  for (const method of ["POST", "PATCH", "DELETE"] as const) app.route<{ Params: { id?: string }; Body: { knowledgeBaseId?: unknown; path?: unknown; autoBuild?: unknown; aiWritable?: unknown } }>({
     method, url: method === "POST" ? "/api/source-connections" : "/api/source-connections/:id",
     handler: async (request, reply) => {
       try {
         const id = request.body?.knowledgeBaseId;
-        if (id !== knowledge.index.config.knowledgeBaseId) throw new KnowledgeBaseRequestError(409, "知识库已切换，请重新打开目录连接");
-        if (method === "POST") return await connections.connect(id as string, request.body.path, request.body.autoBuild);
+        if (id !== knowledge.index.config.knowledgeBaseId) throw new KnowledgeBaseRequestError(409, "知识库已切换，请重新打开文件夹");
+        if (method === "POST") return await connections.connect(id as string, request.body.path, request.body.autoBuild, request.body.aiWritable);
         if (method === "PATCH") return await connections.update(id as string, request.params.id!, request.body.autoBuild);
         return await connections.disconnect(id as string, request.params.id!);
       } catch (error) {
@@ -22,7 +22,7 @@ export function registerSourceConnectionRoutes(app: FastifyInstance, knowledge: 
   });
   app.post<{ Params: { id: string }; Body: { knowledgeBaseId?: unknown } }>("/api/source-connections/:id/sync", async (request, reply) => {
     try {
-      if (request.body?.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) throw new KnowledgeBaseRequestError(409, "知识库已切换，请重新打开目录连接");
+      if (request.body?.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) throw new KnowledgeBaseRequestError(409, "知识库已切换，请重新打开文件夹");
       return await connections.sync(request.body.knowledgeBaseId as string, request.params.id);
     } catch (error) {
       if (error instanceof KnowledgeBaseRequestError) return reply.code(error.statusCode).send({ error: error.message });

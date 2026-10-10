@@ -1,0 +1,75 @@
+/* All document hosts share one paper, measure and editing geometry. */
+.document-surface {
+  --document-measure: 720px;
+  --document-gutter: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  position: relative;
+  overflow: visible;
+  background: var(--paper);
+}
+.desktop-shell .document-surface.has-outline,
+.document-surface.has-outline { grid-template-columns: minmax(0, 1fr) 44px; }
+.document-content {
+  position: relative;
+  grid-column: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: calc(var(--document-measure) + 2 * var(--document-gutter));
+  margin-inline: auto;
+  padding-inline: var(--document-gutter);
+  box-sizing: border-box;
+}
+.document-surface .document-content > .editable-document-identity { padding: 24px 0 12px; }
+.document-surface .document-content > .editable-document-properties { padding: 8px 0 16px; background: transparent; border-bottom: 1px solid var(--line); }
+.document-surface .document-content > .document-header-content { padding-inline: 0; }
+/* Host-specific legacy prose rules cannot widen the shared column. */
+.document-surface .document-content > :is(.editable-document-body, .document-editor) {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-height: 360px;
+  height: auto;
+  margin: 0;
+  padding: 24px 0 64px;
+  box-sizing: border-box;
+  font: 400 17px/1.85 var(--font-display);
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  overflow-wrap: break-word;
+  resize: none;
+  box-shadow: none;
+}
+.document-surface .document-content .editable-document-body > * { max-width: none; margin-inline: 0; }
+.document-surface .document-content .editable-document-body > :first-child { margin-top: 0; }
+.document-surface .document-content .editable-document-body :is(p, li) { color: inherit; }
+.document-surface .document-content .editable-document-body pre { max-width: 100%; overflow-x: auto; }
+.document-surface .document-content .editable-document-body table { display: block; max-width: 100%; overflow-x: auto; }
+.document-surface .document-content .document-editor:focus { outline: none; box-shadow: none; caret-color: var(--accent); }
+.document-surface .document-content .editable-document-activate:focus-visible { outline: 1px solid var(--accent); outline-offset: 6px; }
+.document-mode-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; padding-block: 8px; }
+.document-mode-switch, .document-navigation-tabs { display: flex; gap: 4px; }
+.document-mode-switch button, .document-navigation-tabs button { min-height: 28px; padding: 4px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink-soft); font: 400 12px/1.5 var(--font-ui); cursor: pointer; }
+.document-mode-switch button[aria-pressed="true"], .document-navigation-tabs button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.document-mode-switch button:hover, .document-navigation-tabs button:hover { background: var(--surface-tinted); }
+.document-mode-bar .document-save-state { position: static; max-width: 60%; white-space: normal; }
+.document-context-content { padding-block: 12px; }
+.desktop-shell .document-surface > .document-outline-panel,
+.document-surface > .document-outline-panel { grid-column: 2; grid-row: 1; position: sticky; top: 0; max-height: calc(100dvh - 100px); overflow-y: auto; max-width: none; border-left: 1px solid var(--line); align-self: start; z-index: 3; }
+.document-surface:has(> .document-outline-panel.is-open):not(.document-compact) { grid-template-columns: minmax(0, 1fr) 220px; }
+.document-surface.document-compact > .document-outline-panel.is-open { position: sticky; margin-left: -176px; box-shadow: var(--shadow-float); }
+.document-surface .document-outline-panel .aux-panel-content { padding-top: 44px; height: auto; }
+.document-surface .document-outline { position: static; max-height: none; padding: 12px; border: 0; background: transparent; }
+.document-navigation-tabs { padding: 0 12px 8px; border-bottom: 1px solid var(--line); }
+.document-relations, .document-outline-empty { padding: 16px; color: var(--ink-soft); font: 400 13px/1.6 var(--font-ui); }
+.document-relations .evidence-panel { width: auto; padding: 0; border: 0; background: transparent; }
+.document-surface .document-readonly-title { margin: 0; font: 700 19px/1.3 var(--font-ui); overflow-wrap: anywhere; }
+.reader-layout:has(.document-surface) { display: block; }
+
+.document-surface .document-content .editable-document-body > p { margin-block: 0 1lh; }
+.document-surface .document-content .editable-document-body > p:last-child { margin-bottom: 0; }
+.document-surface .document-content .document-file-name input { padding: 0; min-height: 32px; font: 700 19px/1.3 var(--font-ui); }

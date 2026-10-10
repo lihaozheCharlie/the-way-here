@@ -25,7 +25,7 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
   const menu = useRef<HTMLDivElement>(null);
   const renameDialog = useRef<HTMLDialogElement>(null);
   useDismissLayer(open, () => { setOpen(false); trigger.current?.focus(); });
-  const fileName = page.relativePath?.split("/").at(-1)?.replace(/\.md$/i, "") || page.title;
+  const fileName = (page.externalSource?.originalPath || page.relativePath)?.split("/").at(-1)?.replace(/\.(md|txt)$/i, "") || page.title;
   useEffect(() => {
     if (!open) return;
     const rect = trigger.current!.getBoundingClientRect();
@@ -68,10 +68,10 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
     finally { setBusy(false); }
   }
   const actions: FileAction[] = [
-    ...(!page.externalSource ? extraActions : []),
-    ...(!page.externalSource ? [{ label: "重命名", onSelect: () => { if (onRename) onRename(); else { setName(fileName); setDialog("rename"); } } }] : []),
+    ...extraActions,
+    { label: "重命名", onSelect: () => { if (onRename) onRename(); else { setName(fileName); setDialog("rename"); } } },
     { label: "打开原始目录", onSelect: () => void reveal() },
-    ...(!page.externalSource ? [{ label: "删除", onSelect: () => onDelete ? onDelete() : setDialog("delete") }] : []),
+    { label: "删除", onSelect: () => onDelete ? onDelete() : setDialog("delete") },
   ];
   return <>
     <button ref={trigger} type="button" className="file-menu-trigger" aria-label={`更多文件操作：${fileName}`} aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={(event) => { event.stopPropagation(); void toggleMenu(); }}><Icon name="more" size={16} /></button>

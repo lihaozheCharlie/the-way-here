@@ -9,6 +9,7 @@ export async function api<T>(url: string, init?: RequestInit): Promise<T> {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (data.permissionRequired) void window.desktop?.requestFolderAccess?.();
     const message = data.error || `请求失败：${response.status}`;
     if (typeof message === "string" && message.includes("请先完成全局 AI 设置")) window.dispatchEvent(new Event("model-configuration-required"));
     throw new Error(message);

@@ -1,5 +1,4 @@
 import { FileMenu } from "../../shared/FileMenu";
-import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { LetterHistory } from "./LetterHistory";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -78,8 +77,6 @@ export function Letters({ revision }: { revision: number }) {
   const versions = selected ? [{ id: "original", label: "原始回信", lensName: "", markdown: "", createdAt: selected.letterDate, runId: "" }, ...generatedVersions] : [];
   const latestVersion = versions.at(-1);
   const activeVersion = versions.find((version) => version.id === params.get("version")) || latestVersion;
-  const perspectiveVersions = [...new Map(generatedVersions.map(version => [version.lensName, version])).values()];
-  const activePerspective = activeVersion?.id === "original" ? "original" : activeVersion?.lensName;
   const historical = Boolean(activeVersion && latestVersion && activeVersion.id !== latestVersion.id);
   const requestedRuns = (runList || []).filter(run => run.sourceModule === "近况回信" && run.displayPrompt?.startsWith(REQUEST_LABEL));
   const pendingRequests = requestedRuns.filter(run => !["completed", "failed", "interrupted"].includes(run.status));
@@ -112,11 +109,11 @@ export function Letters({ revision }: { revision: number }) {
       />
       {(runsError || lensesError) && <p className="letters-load-warning" role="status">{runsError ? "历史版本暂时无法读取，当前显示原始回信。" : "重读视角暂时无法读取。"} 请刷新重试。</p>}
       <div className={`source-vault file-browser-documents${indexOpen ? "" : " file-pane-collapsed"}`} aria-label="近况回信工作区">
-        <FileBrowserPane label="回信列表" count={`${filtered.length} 封`} open={indexOpen} onToggle={() => setIndexOpen(value => !value)} order="按写信时间从新到旧" toggleLabel="回信列表">
+        <FileBrowserPane label="回信列表" count={`${filtered.length} 封`} open={indexOpen} onToggle={() => setIndexOpen(value => !value)} toggleLabel="回信列表">
           {pendingRequests.map(run => <button key={run.id} type="button" className="letter-request-pending" onClick={() => openContextAgent({ runId: run.id })}><span className="letter-request-spinner" aria-hidden="true" /><b>正在写信：{run.displayPrompt?.slice(REQUEST_LABEL.length)}</b><small>查看写信进度</small></button>)}
           {filtered.map(letter => {
             const requested = [...requestedPaths].some(path => path.endsWith(letter.page.relativePath.replaceAll("\\", "/")) || path.endsWith(letter.page.id.replaceAll("\\", "/")));
-            return <FileBrowserItem key={letter.page.id} title={letter.page.title.replace(/^\d{4}-\d{2}-\d{2}\s*/, "")} date={letter.letterDate.slice(0, 10)} dateLabel={letter.letterDate.slice(0, 10).replaceAll("-", ".")} excerpt={letter.page.excerpt} active={selected?.page.id === letter.page.id} onSelect={() => selectLetter(letter.page.id)} actions={<FileMenu page={letter.page} onRenamed={page => selectLetter(page.id, true)} onDeleted={() => selectLetter(undefined, true)} />}>{requested && <span className="letter-request-tag">由你请求</span>}</FileBrowserItem>;
+            return <FileBrowserItem key={letter.page.id} page={letter.page} active={selected?.page.id === letter.page.id} onSelect={() => selectLetter(letter.page.id)} actions={<FileMenu page={letter.page} onRenamed={page => selectLetter(page.id, true)} onDeleted={() => selectLetter(undefined, true)} />}>{requested && <span className="letter-request-tag">由你请求</span>}</FileBrowserItem>;
           })}
         </FileBrowserPane>
         {selected ? <DocumentPreview key={`${selected.page.id}:${activeVersion?.id}`} pageId={selected.page.id} revision={revision} showMetadata={false} onRenamed={page => selectLetter(page.id, true)}
@@ -130,10 +127,6 @@ export function Letters({ revision }: { revision: number }) {
           {selected.evidenceFrom && <span>依据 {selected.evidenceFrom}{selected.evidenceTo && selected.evidenceTo !== selected.evidenceFrom ? ` 至 ${selected.evidenceTo}` : ""} 的材料</span>}
           <div className="letter-meta-themes">{selected.themes.slice(0, 2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}{selected.themes.length > 2 && <details key={selected.page.id} className="letter-more-themes"><summary aria-label={`另外 ${selected.themes.length - 2} 个主题`}>+{selected.themes.length - 2}</summary><div>{selected.themes.slice(2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}</div></details>}</div>
         </div>
-        {perspectiveVersions.length > 0 && <div className="letter-version-bar">
-          {perspectiveVersions.length > 0 && <SegmentedTabs className="letter-perspective-tabs" label="切换回信视角" value={activePerspective || "original"} options={perspectiveVersions.map(version => ({ value: version.lensName, label: `${version.lensName}视角回信` }))} onChange={value => selectVersion(value === "original" ? "original" : perspectiveVersions.find(version => version.lensName === value)?.id)} />}
-
-        </div>}
         {historical && <div className="letter-history-banner" role="status">你正在查看历史版本 <button type="button" onClick={() => selectVersion()}>回到最新版本</button></div>}
 </>}
           footer={activeVersion && activeVersion.id !== "original" ? <button className="letter-generation-link" type="button" onClick={() => openContextAgent({ runId: activeVersion.runId })}>查看生成对话 <Icon name="arrow" size={14} /></button> : undefined}

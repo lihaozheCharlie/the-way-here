@@ -32,7 +32,7 @@ export interface PageSection {
 }
 
 export interface WikiPageSummary {
-  externalSource?: { connectionId: string; originalPath: string; status: "available" | "unavailable"; sha256?: string };
+  externalSource?: { connectionId: string; originalPath: string; originalRelativePath?: string; status: "available" | "unavailable"; sha256?: string };
   id: string;
   relativePath: string;
   title: string;
@@ -64,6 +64,9 @@ export interface WikiPage extends WikiPageSummary {
 export interface SourceFolderSummary {
   /** Slash-separated path relative to the current knowledge base's source root. */
   path: string;
+  label?: string;
+  absolutePath?: string;
+  external?: boolean;
 }
 
 export type SourceChatImportChannel = "chatgpt" | "claude" | "gemini" | "deepseek" | "doubao" | "other-ai";

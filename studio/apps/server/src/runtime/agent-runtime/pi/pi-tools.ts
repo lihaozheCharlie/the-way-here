@@ -131,8 +131,10 @@ class WorkspaceAccess {
   constructor(cwd: string, private readonly config: VaultConfig) {
     this.root = canonicalPath(path.resolve(cwd));
     this.readableDirs = [config.paths.wiki, config.paths.sources, config.paths.skills, config.paths.tools].map((entry) => configuredPath(this.root, entry));
+    this.readableDirs.push(...(config.sourceConnections || []).map(item => item.path));
     this.readableFiles = [configuredPath(this.root, config.paths.agentInstructions)];
     this.writableDirs = [config.paths.wiki, config.paths.sources].map((entry) => configuredPath(this.root, entry));
+    this.writableDirs.push(...(config.sourceConnections || []).filter(item => item.aiWritable).map(item => item.path));
   }
 
   async listFiles(limit = maxListedFiles): Promise<string[]> {
@@ -179,8 +181,13 @@ class WorkspaceAccess {
 
   async write(relativePath: string, content: string, expectedSha256?: string): Promise<{ path: string; sha256: string; bytes: number }> {
     if (Buffer.byteLength(content, "utf8") > maxReadBytes) throw new Error("写入内容过大");
-    const target = this.resolveLexical(relativePath);
-    if (isExternalSourcePath(this.relative(target), this.config)) throw new Error("连接的来源引用为只读，请在原始目录编辑");
+    let target = this.resolveLexical(relativePath);
+    if (isExternalSourcePath(this.relative(target), this.config)) {
+      const reference = await readFile(target, "utf8");
+      const external = await readExternalSource(this.root, this.config, this.relative(target), reference);
+      if (external?.externalSource.status !== "available") throw new Error("原文件不可用");
+      target = external.externalSource.originalPath;
+    };
     if (!this.writableDirs.some((root) => inside(target, root))) throw new Error("写入路径不在当前知识库允许目录内");
     let exists = false;
     try {
@@ -214,7 +221,7 @@ class WorkspaceAccess {
       return;
     }
     for (const entry of entries) {
-      if (files.length >= limit || entry.isSymbolicLink()) continue;
+      if (files.length >= limit || entry.name.startsWith(".") || entry.isSymbolicLink()) continue;
       const target = path.join(directory, entry.name);
       if (entry.isDirectory()) await this.walk(target, files, limit);
       else if (entry.isFile() && /\.(md|txt|json|ya?ml)$/i.test(entry.name)) files.push(this.relative(target));
@@ -229,7 +236,10 @@ class WorkspaceAccess {
   }
 
   private resolveLexical(relativePath: string): string {
-    if (path.isAbsolute(relativePath)) throw new Error("文件路径必须相对工作区");
+    if (path.isAbsolute(relativePath)) {
+      if (!(this.config.sourceConnections || []).some(item => inside(relativePath, item.path))) throw new Error("文件路径必须相对工作区或位于已打开目录");
+      return relativePath;
+    }
     const target = path.resolve(this.root, relativePath);
     if (!inside(target, this.root)) throw new Error("文件路径超出工作区");
     return target;
@@ -252,7 +262,7 @@ class WorkspaceAccess {
   }
 
   private relative(target: string): string {
-    return path.relative(this.root, target).split(path.sep).join("/");
+    return inside(target, this.root) ? path.relative(this.root, target).split(path.sep).join("/") : target;
   }
 }
 

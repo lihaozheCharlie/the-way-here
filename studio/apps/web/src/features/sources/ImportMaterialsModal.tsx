@@ -109,7 +109,11 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
   const [step, setStep] = useState<1 | 2>(1);
   const [files, setFiles] = useState<SelectedImportFile[]>([]);
   const [folderMode, setFolderMode] = useState<"existing" | "new">("existing");
-  const [targetFolder, setTargetFolder] = useState(() => { const initial = initialRoute || rememberedImportRoute("files"); return initial === "photos" ? "照片记忆" : initial === "bill" ? "消费账单" : currentFolder; });
+  function existingDestination(kind: ImportRoute): string {
+    const preferred = kind === "photos" ? "照片记忆" : kind === "bill" ? "消费账单" : currentFolder;
+    return folders.includes(preferred) ? preferred : "";
+  }
+  const [targetFolder, setTargetFolder] = useState(() => existingDestination(initialRoute || rememberedImportRoute("files")));
   const [newFolder, setNewFolder] = useState("");
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
@@ -122,10 +126,10 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
   useDismissLayer(true, onClose, { dismissible: !importing, priority: 1, element: dialogRef });
   const totalBytes = files.reduce((total, item) => total + item.file.size, 0);
   const channel: SourceImportChannel = route === "photos" ? "photos" : route === "chat" ? provider : route === "bill" ? "alipay" : "files";
-  const acceptedPattern = route === "photos" ? /\.(jpe?g|png|webp)$/i : route === "bill" ? /\.csv$/i : route === "files" ? /\.(md|txt|zip)$/i : /\.(md|txt|zip|json|html?)$/i;
-  const accept = route === "photos" ? ".jpg,.jpeg,.png,.webp" : route === "bill" ? ".csv,text/csv" : route === "files" ? ".md,.txt,.zip,text/markdown,text/plain,application/zip" : ".md,.txt,.zip,.json,.html,.htm,text/markdown,text/plain,application/json,text/html,application/zip";
+  const acceptedPattern = route === "photos" ? /\.(jpe?g|png|webp)$/i : route === "bill" ? /\.csv$/i : /\.(md|txt|zip|json|html?)$/i;
+  const accept = route === "photos" ? ".jpg,.jpeg,.png,.webp" : route === "bill" ? ".csv,text/csv" : ".md,.txt,.zip,.json,.html,.htm,text/markdown,text/plain,application/json,text/html,application/zip";
   const destination = folderMode === "new" ? newFolder.trim() : targetFolder;
-  const destinationFolders = [...new Set([...(route === "photos" ? ["照片记忆"] : route === "bill" ? ["消费账单"] : []), ...folders])];
+  const destinationFolders = [...new Set(folders)];
   const routeLabel = route === "photos" ? "照片" : route === "files" ? "日记与笔记" : route === "chat" ? "聊天记录" : "消费账单";
 
   useEffect(() => {
@@ -197,7 +201,7 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
     setFiles([]);
     setError("");
     setDraggingMaterials(false);
-    setTargetFolder(next === "photos" ? "照片记忆" : next === "bill" ? "消费账单" : currentFolder);
+    setTargetFolder(existingDestination(next));
     setFolderMode("existing");
     setNewFolder("");
     dragDepthRef.current = 0;
@@ -249,8 +253,8 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
   }
 
   async function selectDroppedFiles(transfer: DataTransfer) {
-    if (route === "files" && window.desktop && [...transfer.items].some((item) => item.webkitGetAsEntry()?.isDirectory)) {
-      setError("日记文件夹请点“连接文件夹”选择，这样才能持续读取原文件。");
+    if (route === "files" && [...transfer.items].some((item) => item.webkitGetAsEntry()?.isDirectory)) {
+      setError("请打开日记所在的文件夹。");
       return;
     }
     try {
@@ -260,24 +264,9 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
     }
   }
 
-  async function connectDiaryFolder() {
-    if (!window.desktop || !vault || importing) return;
-    setImporting(true);
-    setError("");
-    try {
-      const directory = await window.desktop.chooseSourceDirectory();
-      if (!directory) return;
-      await api("/api/source-connections", { method: "POST", body: JSON.stringify({ knowledgeBaseId: vault.knowledgeBaseId, path: directory, autoBuild: true }) });
-      onConnected();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "连接文件夹失败，请重试。");
-    } finally {
-      setImporting(false);
-    }
-  }
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (route === "files") return;
     if (preparing || importing) return;
     if (step === 1) {
       if (!files.length) {
@@ -330,11 +319,11 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
     <section ref={dialogRef} className="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
       <header className="import-modal-header"><div><h2 id="import-modal-title">带一段记录进来</h2><p>{step === 1 ? "先说说材料来自哪里，再把它放进来。" : "确认这些记录要保留到哪里。"}</p></div><button type="button" onClick={onClose} disabled={importing} aria-label="关闭记录导入窗口"><Icon name="close" size={18} /></button></header>
       <form onSubmit={submit}>
-        <ol className="import-stepper" aria-label="导入进度">
+        {route !== "files" && <ol className="import-stepper" aria-label="导入进度">
           <li className={step === 1 ? "active" : "done"} aria-current={step === 1 ? "step" : undefined}><span>{step === 2 ? <Icon name="check" size={12} /> : "1"}</span><b>{step === 2 ? `${routeLabel} · ${files.length} 个文件` : "选类型 + 加材料"}</b></li>
           <li className="import-stepper-line" aria-hidden="true" />
           <li className={step === 2 ? "active" : ""} aria-current={step === 2 ? "step" : undefined}><span>2</span><b>确认位置</b></li>
-        </ol>
+        </ol>}
         <div className="import-modal-body">
           {step === 1 ? <section className="import-step-panel" aria-label="选择记录类型并添加材料">
             <div className="import-type-grid" role="group" aria-label="记录类型">
@@ -344,9 +333,9 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
               <button type="button" disabled={importing} data-autofocus={route === "photos" ? "true" : undefined} aria-pressed={route === "photos"} className={route === "photos" ? "active" : ""} onClick={() => { if (route !== "photos") changeRoute("photos"); }}><span className="import-type-icon"><Icon name="image" size={18} /></span><b>照片</b></button>
             </div>
             <div className="import-material-zone">
-              <header><b>添加材料</b><span>{routeLabel}</span></header>
+              <header><b>{route === "files" ? "打开文件夹" : "添加材料"}</b><span>{routeLabel}</span></header>
               {route === "chat" ? <div className="import-provider-list" role="group" aria-label="聊天平台">{chatImportProviders.map((item) => <button type="button" key={item.id} aria-pressed={provider === item.id} className={provider === item.id ? "active" : ""} onClick={() => { setProvider(item.id); setFiles([]); setError(""); }}>{item.label}</button>)}</div> : null}
-              <div>
+              {route === "files" ? <SourceConnectionsPanel onOpened={onConnected} /> : <div>
               <div
                 className={`import-file-picker is-dropzone${draggingMaterials ? " is-dragging" : ""}`}
                 onDragEnter={(event) => { event.preventDefault(); dragDepthRef.current += 1; setDraggingMaterials(true); }}
@@ -355,19 +344,17 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
                 onDrop={(event) => { event.preventDefault(); dragDepthRef.current = 0; setDraggingMaterials(false); void selectDroppedFiles(event.dataTransfer); }}
               >
                 <span className="import-drop-icon"><Icon name="up" size={20} /></span>
-                <b>{draggingMaterials ? "放在这里" : route === "photos" ? "选择或拖入照片" : route === "files" && window.desktop ? "连接日记文件夹，或导入单个文件" : "选择或拖入材料"}</b>
-                <span>{route === "photos" ? "JPG / PNG / WebP · 最多 10 张 · 超过 20 MB 自动压缩，单张上限 100 MB · 不接收动图，HEIC 请先导出 JPG" : route === "bill" ? "支付宝导出的 CSV · 单次一份，最多 100 MB" : route === "files" && window.desktop ? "连接后持续读取原文，改动时使用已配置的 AI 更新 Wiki；单个文件或 ZIP 会保存副本。" : route === "files" ? "文件、文件夹或 ZIP 会保存副本 · 单次最多 100 MB" : "官方导出包、文件夹或常见文本格式 · 单次最多 100 MB"}</span>
+                <b>{draggingMaterials ? "放在这里" : route === "photos" ? "选择或拖入照片" : "选择或拖入材料"}</b>
+                <span>{route === "photos" ? "JPG / PNG / WebP · 最多 10 张 · 超过 20 MB 自动压缩，单张上限 100 MB · 不接收动图，HEIC 请先导出 JPG" : route === "bill" ? "支付宝导出的 CSV · 单次一份，最多 100 MB" : "官方导出包、文件夹或常见文本格式 · 单次最多 100 MB"}</span>
                 <div className="import-file-picker-controls">
-                  {route === "files" && window.desktop ? <button type="button" disabled={Boolean(preparing) || importing || !vault} onClick={() => void connectDiaryFolder()}>连接文件夹</button> : null}
-                  {route === "files" && window.desktop ? <span aria-hidden="true">·</span> : null}
-                  <button type="button" disabled={Boolean(preparing) || importing} onClick={() => fileInputRef.current?.click()}>{route === "photos" ? files.length ? "继续添加照片" : "选择照片" : route === "bill" ? "选择 CSV" : route === "files" && window.desktop ? "导入文件或 ZIP" : "选择文件"}</button>
-                  {route !== "bill" && !(route === "files" && window.desktop) ? <><span aria-hidden="true">·</span><button type="button" disabled={Boolean(preparing) || importing} onClick={() => folderInputRef.current?.click()}>选择文件夹</button></> : null}
+
+                  <button type="button" disabled={Boolean(preparing) || importing} onClick={() => fileInputRef.current?.click()}>{route === "photos" ? files.length ? "继续添加照片" : "选择照片" : route === "bill" ? "选择 CSV" : "选择文件"}</button>
+                  {route !== "bill" ? <><span aria-hidden="true">·</span><button type="button" disabled={Boolean(preparing) || importing} onClick={() => folderInputRef.current?.click()}>选择文件夹</button></> : null}
                 </div>
                 <input ref={fileInputRef} key={`${route}-${provider}-files`} name="import-files" type="file" accept={accept} multiple={route !== "bill"} tabIndex={-1} aria-hidden="true" onChange={selectInputFiles} />
                 {route !== "bill" ? <input ref={(node) => { folderInputRef.current = node; if (node) node.webkitdirectory = true; }} key={`${route}-${provider}-folder`} name="import-folder" type="file" accept={accept} multiple tabIndex={-1} aria-hidden="true" onChange={selectInputFiles} /> : null}
               </div>
-              {route === "files" ? <SourceConnectionsPanel compact manageOnly={Boolean(window.desktop)} /> : null}
-              </div>
+              </div>}
               {route === "photos" ? <div className="import-photo-selection" aria-label="已选择的照片">{files.map((item, index) => <figure key={item.relativePath}><img src={thumbnails[index]} alt={item.file.name} /><button type="button" disabled={Boolean(preparing) || importing} aria-label={`移除 ${item.file.name}`} onClick={() => setFiles(files.filter((_, i) => i !== index))}><Icon name="close" size={12} /></button><figcaption>{item.file.name}</figcaption></figure>)}</div> : files.length ? <div className="import-selection-list" aria-label="已选择的材料"><header>已选 {files.length} 个文件 · {formatImportBytes(totalBytes)}</header>
                 {files.map((item, index) => <div key={item.relativePath}><span><Icon name="journal" size={13} /></span><b>{item.relativePath}</b><small>{formatImportBytes(item.file.size)}</small><button type="button" aria-label={`移除 ${item.file.name}`} onClick={() => setFiles(current => current.filter((_, i) => i !== index))}><Icon name="close" size={14} /></button></div>)}
 
@@ -377,14 +364,14 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
             <div className="import-destination-options">
               {route === "photos" ? <label className="import-folder-field"><span>这段记忆叫什么</span><TextInput value={memoryTitle} maxLength={100} disabled={importing} onChange={(event) => setMemoryTitle(event.target.value)} placeholder="例如：云南之旅 · 2026" /></label> : null}
               <button type="button" disabled={importing} className={folderMode === "existing" ? "active" : ""} aria-pressed={folderMode === "existing"} onClick={() => setFolderMode("existing")}><span className="import-radio" /><b>放进已有文件夹</b></button>
-              {folderMode === "existing" ? <label className="import-folder-field"><span>目标文件夹</span><SelectInput disabled={importing} name="target-folder" value={targetFolder} onChange={(event) => setTargetFolder(event.target.value)}><option value="">生活记录根目录</option>{destinationFolders.map((name) => <option value={name} key={name}>{name}</option>)}</SelectInput></label> : null}
+              {folderMode === "existing" ? <label className="import-folder-field"><span>保存文件夹</span><SelectInput disabled={importing} name="target-folder" value={targetFolder} onChange={(event) => setTargetFolder(event.target.value)}><option value="">应用资料根目录</option>{destinationFolders.map((name) => <option value={name} key={name}>{name}</option>)}</SelectInput></label> : null}
               <button type="button" disabled={importing} className={folderMode === "new" ? "active" : ""} aria-pressed={folderMode === "new"} onClick={() => setFolderMode("new")}><span className="import-radio" /><b>新建一个文件夹</b></button>
               {folderMode === "new" ? <label className="import-folder-field"><span>新文件夹名称</span><TextInput disabled={importing} name="new-import-folder" autoComplete="off" value={newFolder} onChange={(event) => setNewFolder(event.target.value)} placeholder={route === "chat" ? `AI聊天记录/${chatImportProviders.find((item) => item.id === provider)?.label}` : route === "bill" ? "消费账单/2026" : route === "photos" ? "照片记忆/2026" : "导入记录/2026"} /></label> : null}
             </div>
-            <aside className="import-summary" aria-label="这批材料摘要"><h3>确认这批材料</h3><dl><div><dt>类型</dt><dd>{routeLabel}</dd></div>{route === "chat" ? <div><dt>平台</dt><dd>{chatImportProviders.find((item) => item.id === provider)?.label}</dd></div> : null}<div><dt>文件数</dt><dd>{files.length} 个</dd></div><div><dt>大小</dt><dd>{formatImportBytes(totalBytes)}</dd></div><div><dt>保存到</dt><dd>{destination || "生活记录根目录"}</dd></div></dl>{route === "photos" ? <p>照片保留在本地；超过 20 MB 的大图压缩后保存，电脑原文件不变。只有点击“AI 帮你写”时，这组所有照片的预览才会一起发送给模型。</p> : null}</aside>
+            <aside className="import-summary" aria-label="这批材料摘要"><h3>确认这批材料</h3><dl><div><dt>类型</dt><dd>{routeLabel}</dd></div>{route === "chat" ? <div><dt>平台</dt><dd>{chatImportProviders.find((item) => item.id === provider)?.label}</dd></div> : null}<div><dt>文件数</dt><dd>{files.length} 个</dd></div><div><dt>大小</dt><dd>{formatImportBytes(totalBytes)}</dd></div><div><dt>保存到</dt><dd>{destination || "应用资料根目录"}</dd></div></dl>{route === "photos" ? <p>照片保留在本地；超过 20 MB 的大图压缩后保存，电脑原文件不变。只有点击“AI 帮你写”时，这组所有照片的预览才会一起发送给模型。</p> : null}</aside>
           </section>}
         </div>
-        <footer className="import-modal-footer"><div aria-live="polite">{preparing ? <span role="status">{preparing}</span> : error ? <span role="alert">{error}</span> : photoPreparationNote || (step === 1 ? files.length ? `已选 ${files.length} 个文件 · 共 ${formatImportBytes(totalBytes)}` : route === "photos" ? "照片保留在本地，最多 10 张。大图会在本地压缩。" : route === "bill" ? "仅支持支付宝导出的 CSV；单次选择一份。" : route === "files" && window.desktop ? "连接文件夹会持续读取原文；导入单个文件或 ZIP 会保存副本。" : "支持文件、文件夹和 ZIP；只会保留支持的记录格式。" : "带进来后即可在生活记录中查看，并保留原始来源。")}</div><div>{step === 1 ? <><button type="button" className="secondary-action" onClick={onClose}>取消</button><button className="primary-action" disabled={!files.length || Boolean(preparing)}>下一步<Icon name="arrow" size={14} /></button></> : <><button type="button" className="secondary-action" onClick={() => { setStep(1); setError(""); }} disabled={importing}><Icon name="back" size={14} />上一步</button><button className="primary-action" disabled={importing || (route === "photos" && !vault) || (folderMode === "new" && !destination)}>{importing ? route === "photos" ? "正在保留照片…" : "正在带进来…" : <>{route === "photos" ? "开始认人物" : "带进来"}<Icon name="arrow" size={14} /></>}</button></>}</div></footer>
+        <footer className="import-modal-footer"><div aria-live="polite">{preparing ? <span role="status">{preparing}</span> : error ? <span role="alert">{error}</span> : photoPreparationNote || (step === 1 ? files.length ? `已选 ${files.length} 个文件 · 共 ${formatImportBytes(totalBytes)}` : route === "photos" ? "照片保留在本地，最多 10 张。大图会在本地压缩。" : route === "bill" ? "仅支持支付宝导出的 CSV；单次选择一份。" : route === "files" ? "直接打开原文件夹，修改会保存到原文件。" : "支持文件、文件夹和 ZIP；只会保留支持的记录格式。" : "带进来后即可在生活记录中查看，并保留原始来源。")}</div><div>{step === 1 ? <><button type="button" className="secondary-action" onClick={onClose}>取消</button>{route !== "files" && <button className="primary-action" disabled={!files.length || Boolean(preparing)}>下一步<Icon name="arrow" size={14} /></button>}</> : <><button type="button" className="secondary-action" onClick={() => { setStep(1); setError(""); }} disabled={importing}><Icon name="back" size={14} />上一步</button><button className="primary-action" disabled={importing || (route === "photos" && !vault) || (folderMode === "new" && !destination)}>{importing ? route === "photos" ? "正在保留照片…" : "正在带进来…" : <>{route === "photos" ? "开始认人物" : "带进来"}<Icon name="arrow" size={14} /></>}</button></>}</div></footer>
       </form>
     </section>
   </div>, document.body);

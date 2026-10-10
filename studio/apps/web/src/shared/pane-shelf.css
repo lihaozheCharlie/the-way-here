@@ -23,3 +23,21 @@
 .desktop-shell .organized-sources-page .source-vault .source-file-row.active { border-color:var(--accent-primary); background:var(--accent-soft); }
 .desktop-shell .organized-sources-page .source-vault .source-file-list > .source-file-list-more { flex:none; min-height:40px; margin-top:8px; padding:9px 12px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface-tinted); color:var(--accent-ink); }
 .desktop-shell .organized-sources-page .source-vault .source-file-list > .source-file-list-more:hover { background:var(--accent-soft); }
+
+/* Shared column controls keep the application's existing blue and white roles. */
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf { position:relative; z-index:2; min-height:44px; height:44px; padding:0 8px 0 12px; gap:4px; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf .pane-shelf-label { display:block; flex:1; min-width:0; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf .pane-shelf-label > b { display:block; color:var(--ink); font-size:13px; letter-spacing:0; text-transform:none; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf .pane-shelf-actions { gap:2px; margin:0; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf :is(.pane-shelf-toggle,.pane-shelf-create,.pane-shelf-option) { display:grid; place-items:center; flex:none; width:28px; height:28px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--ink-soft); cursor:pointer; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf .pane-shelf-create { color:var(--accent-ink); }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf :is(.pane-shelf-toggle,.pane-shelf-create,.pane-shelf-option):hover { background:var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell.collapsed > :is(.source-folder-pane,.source-file-pane) { background:var(--surface-tinted); }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed { display:flex; flex-direction:column; justify-content:flex-start; align-items:center; gap:6px; height:100%; padding:8px 0; border:0; background:var(--surface-tinted); }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed .pane-shelf-toggle { background:var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed .pane-shelf-create { background:var(--accent); color:var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed .pane-shelf-create:hover { background:var(--accent-hover); }
+.pane-shelf-rail-label { display:flex; flex-direction:column; align-items:center; gap:8px; min-width:0; max-width:100%; margin-top:8px; padding:0 4px; border:0; background:transparent; color:var(--ink-soft); cursor:pointer; font:inherit; }
+.pane-shelf-rail-label > span { writing-mode:vertical-rl; letter-spacing:.12em; font-size:12px; max-height:240px; overflow:hidden; }
+.pane-shelf-rail-label > small { padding:2px 4px; border-radius:var(--radius-pill); background:var(--paper); color:var(--ink-soft); font-size:10px; font-variant-numeric:tabular-nums; }

@@ -13,7 +13,7 @@ import { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
 import { PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
 
 export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, _imports: ImportStore, runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
-  const contentWorkspace = () => ({ vaultRoot: knowledge.vaultRoot, index: knowledge.index, events: knowledge.events });
+  const contentWorkspace = () => ({ vaultRoot: knowledge.vaultRoot, index: knowledge.index, events: knowledge.events, refreshSources: knowledge.refreshSources });
   const writer = () => {
     const bound = contentWorkspace();
     return new PageWriter(bound, (previousPath, storedPath) => new ImportStore(bound).renameSource(previousPath, storedPath));
@@ -73,7 +73,7 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
   app.post<{ Body: { title?: string; folder?: string } }>("/api/sources", async (request, reply) => handleContent(reply, async () => {
     const bound = contentWorkspace();
     const page = await new PageWriter(bound).createSource(request.body?.title, request.body?.folder);
-    if (page) await new ImportStore(bound).trackCreatedSource(page);
+    if (page && !page.externalSource) await new ImportStore(bound).trackCreatedSource(page);
     return page;
   }, 201));
   app.post<{ Body: { title?: string; markdown?: string; knowledgeBaseId?: string } }>("/api/capture", async (request, reply) => handleContent(reply, async () => {
@@ -130,6 +130,7 @@ async function handleContent<T>(reply: FastifyReply, action: () => Promise<T>, s
   } catch (error) {
     if (error instanceof ContentRequestError) return reply.code(error.statusCode).send({ error: error.message });
     if (error instanceof ImportRequestError) return reply.code(error.statusCode).send({ error: error.message });
+    if (["EACCES", "EPERM"].includes((error as NodeJS.ErrnoException)?.code || "")) return reply.code(403).send({ error: "无法读写文件，请重新授权文件夹访问权限", permissionRequired: true });
     throw error;
   }
 }

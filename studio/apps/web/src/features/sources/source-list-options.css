@@ -1,0 +1,12 @@
+.source-list-options { position:relative; flex:none; }
+.source-list-options-menu { position:absolute; top:calc(100% + 6px); right:0; z-index:35; width:218px; max-height:calc(100dvh - 180px); overflow:auto; padding:6px; border:1px solid var(--line); border-radius:var(--radius-card-small); background:var(--paper); color:var(--ink); box-shadow:var(--shadow-pop); }
+.source-list-options-menu > div + div,
+.source-list-options-menu > button { margin-top:6px; border-top:1px solid var(--line); }
+.source-list-options-menu p { margin:0; padding:6px 8px 3px; color:var(--ink-soft); font-size:12px; }
+.source-list-options-menu button { display:flex; align-items:center; gap:8px; width:100%; min-height:32px; padding:6px 8px; border:0; border-radius:6px; background:transparent; color:var(--ink); text-align:left; font:inherit; font-size:13px; cursor:pointer; }
+.source-list-options-menu button > span { flex:1; }
+.source-list-options-menu button > small { color:var(--ink-soft); font-size:11px; font-variant-numeric:tabular-nums; }
+.source-list-options-menu button[aria-checked=true] { color:var(--accent-ink); background:var(--accent-soft); }
+.source-list-options-menu button:hover { background:var(--surface-tinted); }
+.source-list-options-menu button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:-2px; }
+.source-list-options-months { max-height:190px; overflow:auto; }

@@ -4,6 +4,7 @@ import { speechSession } from "./speech.mjs";
 import { app, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, shell, dialog, Notification, utilityProcess, session, systemPreferences, net } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { constants } from 'node:fs';
 import { access, realpath } from 'node:fs/promises';
 import { randomBytes, createHash } from 'node:crypto';
 import { localRoute, allowedExternal, trustedSender } from './policy.mjs';
@@ -51,7 +52,23 @@ async function startServer() {
 function registerIPC() {
   function handle(name, fn) { ipcMain.handle(name, (event,...args) => { if (!trustedSender(event.senderFrame?.url,origin)) throw new Error('不受信任的页面'); return fn(...args); }); }
   handle('desktop:window', (route,kind) => { if (!['reader','focus','settings','capture',undefined].includes(kind)) throw new Error('无效的窗口类型'); openWindow(route,kind); });
-  handle('desktop:choose-source-directory', async () => { const result = await dialog.showOpenDialog({ title: '连接原始资料目录', properties: ['openDirectory'] }); return result.canceled ? null : result.filePaths[0]; });
+  handle('desktop:folder-permission', async () => {
+    const result = await dialog.showMessageBox({ type: 'warning', title: '需要文件夹权限', message: '无法读写文件，请在系统设置中允许 The Way Here 访问该文件夹，然后重试。', buttons: ['打开系统设置', '取消'], cancelId: 1 });
+    if (result.response === 0) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
+  });
+  handle('desktop:choose-source-directory', async () => {
+    const result = await dialog.showOpenDialog({ title: '打开文件夹', properties: ['openDirectory'] });
+    if (result.canceled) return null;
+    const selected = result.filePaths[0];
+    const consent = await dialog.showMessageBox({ type: 'question', title: '允许 AI 修改文件夹', message: '允许 AI 修改此文件夹及子文件夹中的内容？', detail: selected, buttons: ['允许并打开', '取消'], defaultId: 0, cancelId: 1 });
+    if (consent.response !== 0) return null;
+    try { await access(selected, constants.R_OK | constants.W_OK); }
+    catch {
+      await dialog.showMessageBox({ type: 'warning', title: '需要文件夹权限', message: '无法读写此文件夹，请允许 The Way Here 访问后重新选择。', detail: selected, buttons: ['打开系统设置', '取消'], cancelId: 1 }).then(async result => { if (result.response === 0) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders'); });
+      return null;
+    }
+    return selected;
+  });
   handle('desktop:reveal', async () => { const error = await shell.openPath(workspace); if (error) throw new Error(error); });
   handle('desktop:speech-start', async () => {
     if (speech || speechStarting) throw new Error('已有一段录音正在进行');
@@ -73,7 +90,7 @@ function registerIPC() {
   });
 }
 async function openExistingWorkspace() {
-  const selection = await dialog.showOpenDialog({title:'打开已有知识空间', message:'选择之前使用的知识空间文件夹。导入普通资料请使用“连接原始目录”。', properties:['openDirectory']});
+  const selection = await dialog.showOpenDialog({title:'打开已有知识空间', message:'选择之前使用的知识空间文件夹。日记与笔记请使用“打开文件夹”。', properties:['openDirectory']});
   if (selection.canceled) return;
   const root = selection.filePaths[0];
   try { await access(path.join(root,'the-way-here.config.yaml')); }
