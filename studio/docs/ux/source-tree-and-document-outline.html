@@ -97,34 +97,51 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .skel{height:10px;margin:0 0 12px;border-radius:5px;background:var(--line)}
 
 /* 文档窗口 */
-.dbar{display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;border-bottom:1px solid var(--line)}
+.dbar{display:flex;align-items:center;gap:12px;height:44px;padding:0 20px;border-bottom:1px solid var(--line)}
 .dbar .path{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--ink-soft)}
 .dbar .path b{color:var(--ink);font-weight:600}
-.seg{margin-left:auto;display:inline-flex;padding:3px;border-radius:999px;background:var(--tint);gap:2px}
-.seg button{height:26px;padding:0 14px;border:0;border-radius:999px;background:none;font-size:12.5px;color:var(--ink-soft)}
-.seg button[aria-pressed=true]{background:var(--paper);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgb(22 46 84/12%)}
+.dbar .state{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);opacity:0;transition:opacity .2s}
+.dbar .state i{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.edit .dbar .state{opacity:1}
+.tryit{margin-left:auto;align-self:center;font-size:12.5px;color:var(--muted)}
 .dscroll{height:520px;overflow:auto;scroll-behavior:smooth}
-.drow{display:flex;justify-content:center;gap:56px;padding:0 40px}
-.col{width:620px;min-width:0;padding:40px 0 140px}
+.drow{position:relative;width:600px;margin:0 auto}
+.col{min-width:0;padding:40px 0 140px;outline:none}
 .dtitle{margin:0 0 24px;font:700 24px/1.4 var(--ui)}
 .col h2,.col h3{position:relative;margin:0;color:var(--ink)}
 .col h2{font-size:20px;line-height:1.4;margin:32px 0 12px}
 .col h3{font-size:16.5px;line-height:1.45;margin:22px 0 8px}
 .col p{margin:0 0 14px;font:16.5px/1.85 var(--serif)}
-.mk{display:none;position:absolute;right:100%;margin-right:10px;top:50%;transform:translateY(-50%);font:500 13px/1 var(--mono);color:var(--faint);white-space:pre}
+.col[contenteditable=true]{caret-color:var(--accent)}
+.mk{display:none;position:absolute;right:100%;margin-right:10px;top:50%;transform:translateY(-50%);font:500 13px/1 var(--mono);color:var(--faint);white-space:pre;user-select:none;pointer-events:none}
 .edit .mk{display:block}
-.edit .col h2.caret,.edit .col h3.caret{border-radius:6px;background:linear-gradient(90deg,rgb(10 124 255/7%),transparent)}
 .edit .col h2.caret .mk,.edit .col h3.caret .mk{color:var(--accent)}
 
-/* 小标题:阅读与编辑共用同一个组件 */
-.outline{position:sticky;top:44px;align-self:flex-start;width:176px;margin-top:44px;padding-left:2px}
-.outline h6{margin:0 0 8px 14px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em}
-.outline ol{margin:0;padding:0;list-style:none;border-left:1px solid var(--line-strong)}
-.outline li{margin-left:-1px}
-.oi{display:block;width:100%;padding:5px 10px 5px calc(13px + var(--lv,0)*12px);border:0;border-left:2px solid transparent;background:none;text-align:left;font-size:13px;line-height:1.45;color:var(--muted)}
+/* 小标题:一个组件,三种状态 */
+.oslot{position:absolute;left:100%;top:0;bottom:0;margin-left:40px}
+.outline{position:sticky;top:44px;margin-top:44px;width:168px}
+.outline[data-s=rail]{width:28px}
+.outline[data-s=none]{display:none}
+.ohead{display:flex;align-items:center;justify-content:space-between;height:24px;margin:0 0 4px 12px}
+.ohead h6{margin:0;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.ofold{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);opacity:0;transition:opacity .15s}
+.ofold svg{width:13px;height:13px;stroke-width:2.2}
+.ofold:hover{background:var(--tint);color:var(--ink)}
+.outline:hover .ofold,.ofold:focus-visible{opacity:1}
+.outline[data-s=rail] .ofold svg{transform:rotate(180deg)}
+.olist{margin:0;padding:0;list-style:none;border-left:1px solid var(--line-strong)}
+.olist li{margin-left:-1px}
+.oi{display:block;width:100%;padding:5px 6px 5px calc(11px + var(--lv,0)*12px);border:0;border-left:2px solid transparent;background:none;text-align:left;font-size:13px;line-height:1.45;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .oi:hover{color:var(--ink)}
 .oi.on{border-left-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.edit .oi.on{background:linear-gradient(90deg,var(--accent-soft),transparent)}
+.rail{display:none;flex-direction:column;align-items:flex-start}
+.outline[data-s=rail] .rail{display:flex}
+.tick{display:flex;align-items:center;width:28px;height:14px;padding:0 0 0 6px;border:0;background:none}
+.tick::before{content:"";width:var(--w);height:2px;border-radius:1px;background:var(--line-strong);transition:width .15s,background .15s}
+.tick:hover::before{background:var(--muted)}
+.tick.on::before{background:var(--accent);width:calc(var(--w) + 6px)}
+.outline[data-s=rail] .opanel{display:none;position:absolute;top:-10px;left:-10px;z-index:5;width:184px;padding:10px 10px 8px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-float)}
+.outline[data-s=rail]:hover .opanel,.outline[data-s=rail]:focus-within .opanel{display:block}
 </style>
 </head>
 <body>
@@ -192,54 +209,68 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
   </section>
 
   <!-- ============ 2. 小标题 ============ -->
-  <section class="sec" id="outline">
-    <h2><span class="no">2</span>文档小标题</h2>
-    <p>所有 Markdown 浏览器共用一个小标题组件,固定在正文右侧:一条细线加一列标题文字,当前阅读位置用蓝色高亮。阅读和编辑的外观一致,只有编辑态在正文标题前多出 <code>##</code> 标记。滚动时高亮自动跟随,点击任一条平滑跳转。</p>
+  <section class="sec" id="outline-sec">
+    <h2><span class="no">2</span>文档与小标题</h2>
+    <p>文档里没有“阅读 / 编辑”按钮:打开就是阅读排版,双击正文直接编辑,按 Esc 完成。小标题是正文右侧的同一个组件,有三种状态:展开、收起、没有小标题。</p>
+
+    <div class="tabs" role="group" aria-label="小标题状态">
+      <button class="chip" type="button" data-s="open" aria-pressed="true">展开</button>
+      <button class="chip" type="button" data-s="rail" aria-pressed="false">收起</button>
+      <button class="chip" type="button" data-s="none" aria-pressed="false">没有小标题</button>
+      <span class="tryit">试试:双击正文编辑,Esc 完成</span>
+    </div>
 
     <div class="win" id="dwin">
       <div class="titlebar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="ttl">The Way Here</span></div>
       <div class="dbar">
-        <div class="path">读书笔记<svg class="i" style="width:12px;height:12px;color:var(--faint)"><use href="#chev"/></svg><b>做事的方法.md</b></div>
-        <div class="seg" role="group" aria-label="模式">
-          <button type="button" id="mRead" aria-pressed="true">阅读</button>
-          <button type="button" id="mEdit" aria-pressed="false">编辑</button>
-        </div>
+        <div class="path">读书笔记<svg class="i" style="width:12px;height:12px;color:var(--faint)"><use href="#chev"/></svg><b id="dname">做事的方法.md</b></div>
+        <div class="state"><i></i>编辑中 · Esc 完成</div>
       </div>
       <div class="dscroll" id="dscroll">
         <div class="drow">
-          <article class="col" id="col">
+          <article class="col" id="col" tabindex="-1">
             <h1 class="dtitle">做事的方法</h1>
-            <h2 id="h1"><span class="mk">##</span>为什么要写下来</h2>
+            <h2><span class="mk" contenteditable="false">##</span>为什么要写下来</h2>
             <p>想法在脑子里总是显得很完整,一旦落到纸上才发现缺了好几块。写作不是记录结论,而是检验思考的过程。</p>
             <p>当一个问题反复出现,最好的办法不是再想一遍,而是把它写成一段话,然后看看哪一句站不住脚。</p>
-            <h2 id="h2"><span class="mk">##</span>三个核心做法</h2>
+            <h2><span class="mk" contenteditable="false">##</span>三个核心做法</h2>
             <p>下面的做法来自过去一年的反复试错,每一条都对应一个具体的失败经历。</p>
-            <h3 id="h3"><span class="mk">###</span>先定义完成的样子</h3>
+            <h3><span class="mk" contenteditable="false">###</span>先定义完成的样子</h3>
             <p>开始之前先用一句话写下“做完是什么样”。没有这句话,任务永远可以再多做一点。</p>
             <p>这句话也是之后复盘的基准:偏差在哪里,一眼就能看见。</p>
-            <h3 id="h4"><span class="mk">###</span>把大事拆到半天以内</h3>
+            <h3><span class="mk" contenteditable="false">###</span>把大事拆到半天以内</h3>
             <p>超过半天的任务,几乎都会在中途被打断。拆小之后,每一块都有清晰的开始和结束。</p>
             <p>拆分的标准不是工整,而是每一块完成后都能带来一次确认。</p>
-            <h3 id="h5"><span class="mk">###</span>每天留一次回看</h3>
+            <h3><span class="mk" contenteditable="false">###</span>每天留一次回看</h3>
             <p>睡前花十分钟看一眼今天写下的东西,删掉冗余,留下真正有用的一两句。</p>
-            <h2 id="h6"><span class="mk">##</span>常见的坑</h2>
+            <h2><span class="mk" contenteditable="false">##</span>常见的坑</h2>
             <p>最常见的问题是把整理当成工作本身。整理只是手段,真正的产出是后面被反复使用的判断。</p>
             <p>另一个坑是追求一次写完。多数好文档都是被一点点改出来的。</p>
-            <h2 id="h7"><span class="mk">##</span>接下来怎么做</h2>
+            <h2><span class="mk" contenteditable="false">##</span>接下来怎么做</h2>
             <p>从下周开始,每个任务都先写一句完成标准,并在周末回看一次实际偏差。</p>
             <p>如果一个月后这件事依然有效,再把它固化成固定流程。</p>
           </article>
-          <nav class="outline" aria-label="文档小标题">
-            <h6>目录</h6>
-            <ol id="olist"></ol>
-          </nav>
+          <div class="oslot">
+            <nav class="outline" id="outline" data-s="open" aria-label="文档小标题">
+              <div class="rail" id="rail"></div>
+              <div class="opanel">
+                <div class="ohead">
+                  <h6>目录</h6>
+                  <button class="ofold" id="ofold" type="button" aria-label="收起目录"><svg class="i"><use href="#chev"/></svg></button>
+                </div>
+                <ol class="olist" id="olist"></ol>
+              </div>
+            </nav>
+          </div>
         </div>
       </div>
     </div>
 
     <ul class="points">
-      <li>阅读 / 编辑:同一个位置、同一种样式,切换模式时目录不跳动</li>
-      <li>编辑态:正文标题前显示 ## 标记;点击目录会跳到该标题并把光标放进去</li>
+      <li><b>展开</b>:一条细线加一列标题,当前位置蓝色高亮,滚动自动跟随,点击平滑跳转;标题过长单行省略</li>
+      <li><b>收起</b>:只剩一列短横线(二级长、三级短),当前位置蓝色;鼠标移上去浮出完整目录,点浮层右上角箭头可固定展开</li>
+      <li><b>没有小标题</b>:不显示目录也不留占位,正文位置不变;写下第一个 ## 后目录自动出现</li>
+      <li><b>编辑</b>:标题前显示 ## 标记,目录高亮跟随光标所在段落;点目录条目,光标直接落到该标题</li>
     </ul>
   </section>
 </main>
@@ -338,36 +369,110 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
   }
   renderTree();renderList();
 
-  /* ---------- 小标题 ---------- */
+  /* ---------- 文档与小标题 ---------- */
   var dscroll=document.getElementById('dscroll'), dwin=document.getElementById('dwin'),
-      olist=document.getElementById('olist'), heads=[].slice.call(document.querySelectorAll('#col h2,#col h3'));
-  olist.innerHTML=heads.map(function(h){
-    var lv=h.tagName==='H3'?1:0;
-    return '<li><button class="oi" type="button" style="--lv:'+lv+'" data-t="'+h.id+'">'+h.textContent.replace(/^#+/,'')+'</button></li>';
-  }).join('');
-  var items=[].slice.call(olist.querySelectorAll('.oi'));
-  function spy(){
-    var top=dscroll.scrollTop+90, cur=0;
+      col=document.getElementById('col'), outline=document.getElementById('outline'),
+      olist=document.getElementById('olist'), rail=document.getElementById('rail'),
+      ofold=document.getElementById('ofold'), dname=document.getElementById('dname'),
+      chips=[].slice.call(document.querySelectorAll('#outline-sec .chip'));
+  var FULL=col.innerHTML, FULL_NAME='做事的方法.md';
+  var PLAIN='<h1 class="dtitle">周三随手记</h1>'
+    +'<p>早上和老陈聊了排期,他的意思是先上线核心流程,其余往后放一放。我觉得可行,但要把风险写清楚。</p>'
+    +'<p>下午整理了上周的访谈记录,有三条反馈重复出现,值得单独拿出来看。</p>'
+    +'<p>晚上想了一下周末的安排,还是先把没写完的复盘补上。</p>';
+  var heads=[], items=[], ticks=[];
+
+  function title(h){return h.textContent.replace(/^#+/,'').trim()}
+  function isEdit(){return dwin.classList.contains('edit')}
+
+  function build(){
+    heads=[].slice.call(col.querySelectorAll('h2,h3'));
+    heads.forEach(function(h,i){h.id='h'+i});
+    olist.innerHTML=heads.map(function(h){
+      return '<li><button class="oi" type="button" style="--lv:'+(h.tagName==='H3'?1:0)+'" data-t="'+h.id+'" title="'+title(h)+'">'+title(h)+'</button></li>';
+    }).join('');
+    rail.innerHTML=heads.map(function(h){
+      return '<button class="tick" type="button" style="--w:'+(h.tagName==='H3'?9:16)+'px" data-t="'+h.id+'" aria-label="'+title(h)+'"></button>';
+    }).join('');
+    items=[].slice.call(olist.querySelectorAll('.oi'));
+    ticks=[].slice.call(rail.querySelectorAll('.tick'));
+    mark();
+  }
+
+  function current(){
+    if(!heads.length)return -1;
+    var cur=0;
+    if(isEdit()){
+      var sel=window.getSelection();
+      if(sel.rangeCount&&col.contains(sel.anchorNode)){
+        var n=sel.anchorNode;
+        heads.forEach(function(h,i){
+          if(h===n||h.contains(n)||(h.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING))cur=i;
+        });
+        return cur;
+      }
+    }
+    var top=dscroll.scrollTop+90;
     heads.forEach(function(h,i){if(h.offsetTop<=top)cur=i});
     if(dscroll.scrollTop+dscroll.clientHeight>=dscroll.scrollHeight-4)cur=heads.length-1;
-    items.forEach(function(b,i){b.classList.toggle('on',i===cur)});
+    return cur;
   }
-  dscroll.addEventListener('scroll',spy);spy();
-  olist.addEventListener('click',function(e){
-    var b=e.target.closest('.oi'); if(!b)return;
+  function mark(){
+    var cur=current(), edit=isEdit();
+    items.forEach(function(b,i){b.classList.toggle('on',i===cur)});
+    ticks.forEach(function(b,i){b.classList.toggle('on',i===cur)});
+    heads.forEach(function(h,i){h.classList.toggle('caret',edit&&i===cur)});
+  }
+  dscroll.addEventListener('scroll',mark);
+  document.addEventListener('selectionchange',function(){if(isEdit())mark()});
+
+  outline.addEventListener('click',function(e){
+    var b=e.target.closest('.oi,.tick'); if(!b)return;
     var h=document.getElementById(b.dataset.t);
     dscroll.scrollTo({top:h.offsetTop-40,behavior:'smooth'});
-    heads.forEach(function(x){x.classList.remove('caret')});
-    if(dwin.classList.contains('edit'))h.classList.add('caret');
+    if(isEdit()){
+      var r=document.createRange();r.selectNodeContents(h);r.collapse(false);
+      var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+      col.focus({preventScroll:true});
+    }
+    mark();
   });
-  function setMode(edit){
-    dwin.classList.toggle('edit',edit);
-    document.getElementById('mRead').setAttribute('aria-pressed',!edit);
-    document.getElementById('mEdit').setAttribute('aria-pressed',edit);
-    if(!edit)heads.forEach(function(x){x.classList.remove('caret')});
+
+  function enterEdit(){
+    if(isEdit())return;
+    dwin.classList.add('edit');
+    col.contentEditable='true';
+    col.focus({preventScroll:true});
+    var s=window.getSelection();if(s.rangeCount)s.collapseToEnd();
+    mark();
   }
-  document.getElementById('mRead').onclick=function(){setMode(false)};
-  document.getElementById('mEdit').onclick=function(){setMode(true)};
+  function exitEdit(){
+    if(!isEdit())return;
+    dwin.classList.remove('edit');
+    col.contentEditable='false';
+    col.blur();window.getSelection().removeAllRanges();
+    mark();
+  }
+  col.addEventListener('dblclick',enterEdit);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')exitEdit()});
+
+  function setOutline(s){
+    outline.dataset.s=s;
+    ofold.setAttribute('aria-label',s==='rail'?'固定展开':'收起目录');
+    chips.forEach(function(c){c.setAttribute('aria-pressed',c.dataset.s===s)});
+  }
+  chips.forEach(function(c){
+    c.addEventListener('click',function(){
+      var s=c.dataset.s;
+      exitEdit();
+      if(s==='none'){col.innerHTML=PLAIN;dname.textContent='周三随手记.md'}
+      else if(col.innerHTML!==FULL){col.innerHTML=FULL;dname.textContent=FULL_NAME}
+      dscroll.scrollTop=0;
+      build();setOutline(s);
+    });
+  });
+  ofold.addEventListener('click',function(){setOutline(outline.dataset.s==='open'?'rail':'open')});
+  build();
 })();
 </script>
 </body>
