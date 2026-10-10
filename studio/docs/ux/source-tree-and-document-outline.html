@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Way Here · 文件夹树与文档小标题 UX 设计稿</title>
+<style>
+:root{
+  --canvas:#f3f7fd; --paper:#fff; --ink:#16233a; --ink-soft:#4c5c74; --muted:#8493a8; --faint:#b4c2d6;
+  --line:#e2eaf5; --line-strong:#c9d6ea;
+  --accent:#0a7cff; --accent-hover:#0868d6; --accent-soft:#e6f1ff; --accent-ink:#08529e; --tint:#eaf2ff;
+  --attention:#f0a326; --attention-soft:#fef3e1; --danger:#c43c43; --danger-soft:#fff0f1; --coral:#ff7a45;
+  --radius-control:11px; --radius-panel:18px;
+  --shadow-card:0 1px 2px rgb(22 46 84/4%),0 14px 34px rgb(22 46 84/7%);
+  --shadow-float:0 18px 44px rgb(22 46 84/16%);
+  --ui:"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif;
+  --serif:"Songti SC","Noto Serif SC",Georgia,serif;
+  --mono:"SF Mono",Menlo,ui-monospace,monospace;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#e8eef7;color:var(--ink);font:14px/1.55 var(--ui);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+kbd{font:11px var(--mono);padding:1px 6px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:6px;background:var(--paper);color:var(--ink-soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- 设计稿页面框架 ---------- */
+.topnav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:6px;padding:10px 28px;background:rgb(255 255 255/88%);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topnav b{font-size:14px;margin-right:auto}
+.topnav a{padding:6px 12px;border-radius:999px;color:var(--ink-soft);text-decoration:none;font-size:13px}
+.topnav a:hover{background:var(--tint);color:var(--accent-ink)}
+.page{max-width:1280px;margin:0 auto;padding:36px 28px 96px}
+.intro h1{margin:0 0 8px;font-size:26px;line-height:1.3}
+.intro p{margin:0;max-width:760px;color:var(--ink-soft)}
+.sec{margin-top:64px;scroll-margin-top:70px}
+.sec>header{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.sec>header .no{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
+.sec h2{margin:0;font-size:20px}
+.sec>.lead{max-width:820px;margin:0 0 18px;color:var(--ink-soft)}
+.problems{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px;padding:0;list-style:none}
+.problems li{padding:5px 12px;border-radius:999px;background:var(--attention-soft);color:#7a4b00;font-size:13px}
+.label{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:650;color:var(--ink-soft)}
+.label::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:22px}
+.note{padding:16px 18px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-card)}
+.note h4{margin:0 0 6px;font-size:14px}
+.note p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.65}
+.scrollx{overflow-x:auto;padding-bottom:6px}
+
+/* ---------- 模拟 macOS 窗口 ---------- */
+.win{background:var(--canvas);border:1px solid var(--line-strong);border-radius:14px;box-shadow:var(--shadow-float);overflow:hidden}
+.titlebar{height:38px;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--canvas)}
+.titlebar .dot{width:12px;height:12px;border-radius:50%}
+.titlebar .dot:nth-child(1){background:#ff5f57}.titlebar .dot:nth-child(2){background:#febc2e}.titlebar .dot:nth-child(3){background:#28c840}
+.titlebar .ttl{margin:0 auto;padding-right:52px;font-size:13px;color:var(--ink-soft)}
+.app{display:grid;grid-template-columns:220px 1fr;height:680px}
+.side{display:flex;flex-direction:column;gap:2px;padding:14px 10px;background:var(--paper);border-right:1px solid var(--line)}
+.side .brand{display:flex;align-items:center;gap:8px;padding:2px 10px 14px;font-weight:700}
+.side .brand i{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--tint);position:relative}
+.side .brand i::after{content:"";position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--coral)}
+.nav{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;border-radius:var(--radius-control);color:var(--ink-soft);font-size:13.5px}
+.nav.on{background:var(--accent);color:#fff;font-weight:600}
+.nav.bottom{margin-top:auto}
+.main{display:flex;flex-direction:column;min-width:0}
+.ptool{display:flex;align-items:center;gap:8px;height:56px;padding:0 20px;flex:none}
+.ptool h3{margin:0 auto 0 0;font-size:17px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);font-size:13px;color:var(--ink)}
+.btn:hover{background:var(--tint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-soft)}
+.btn.icon{width:32px;padding:0;justify-content:center}
+.panes{flex:1;display:grid;grid-template-columns:272px 276px 1fr;min-height:0;border-top:1px solid var(--line)}
+
+/* ---------- 文件夹栏 ---------- */
+.fpane{display:flex;flex-direction:column;min-height:0;background:var(--paper);border-right:1px solid var(--line);position:relative}
+.fhead{display:flex;align-items:center;height:44px;padding:0 10px 0 16px;flex:none}
+.fhead b{font-size:14px;margin-right:auto}
+.open-btn{display:flex;align-items:center;gap:8px;margin:0 12px 6px;height:34px;padding:0 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);font-size:13px;font-weight:600;color:var(--accent-ink);flex:none}
+.open-btn:hover{background:var(--accent-soft);border-color:var(--accent)}
+.open-btn kbd{margin-left:auto}
+.tree{flex:1;min-height:0;overflow:auto;padding:4px 8px 12px}
+.tgroup{padding:14px 10px 6px;font-size:12px;font-weight:650;color:var(--ink-soft);letter-spacing:.02em}
+.trow{position:relative;display:flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 calc(6px + var(--d,0)*16px);border-radius:9px;cursor:pointer;color:var(--ink);user-select:none;outline-offset:-2px}
+.trow::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--d,0)*16px);pointer-events:none;background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 16px)}
+.trow:hover{background:var(--tint)}
+.trow.sel{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.trow.anc .tname{font-weight:600}
+.chev{display:grid;place-items:center;width:16px;height:16px;padding:0;border:0;border-radius:4px;background:none;color:var(--muted);flex:none;position:relative}
+.chev:hover{background:var(--line);color:var(--ink)}
+.chev svg{width:12px;height:12px;stroke-width:2.2;transition:transform .2s var(--ease)}
+.trow.open>.chev svg{transform:rotate(90deg)}
+.chev.none{visibility:hidden}
+.ticon{color:var(--muted)}
+.trow.sel .ticon,.trow.anc .ticon{color:var(--accent)}
+.trow.open .ticon{fill:var(--accent-soft)}
+.tname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tcount{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;min-width:20px;text-align:right}
+.tcount.dim{color:var(--faint)}
+.tmore{display:none;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:6px;background:var(--paper);color:var(--ink-soft);box-shadow:0 0 0 1px var(--line-strong)}
+.trow:hover .tmore,.trow.menu-open .tmore{display:grid}
+.trow:hover .tcount,.trow.menu-open .tcount{display:none}
+.trow.root{height:46px;margin-top:2px}
+.trow.root .tname2{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.trow.root .tname2 b{font-weight:inherit;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow.root .tname2 small{font-size:12px;font-weight:400;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11px}
+.trow.missing{background:var(--danger-soft)}
+.trow.missing .ticon{color:var(--danger)}
+.trow.missing .tname2 small{color:var(--danger);font-family:var(--ui);font-size:12px}
+.reconnect{height:24px;padding:0 9px;border:1px solid var(--danger);border-radius:7px;background:var(--paper);color:var(--danger);font-size:12px;font-weight:600}
+.trow.creating{cursor:default}
+.tinput{flex:1;min-width:0;height:24px;padding:0 8px;border:1px solid var(--accent);border-radius:7px;font:13.5px var(--ui);color:var(--ink);box-shadow:0 0 0 3px rgb(10 124 255/16%);outline:none}
+.fhint{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);flex:none}
+.ctx{position:fixed;z-index:80;min-width:196px;padding:6px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-float);display:none}
+.ctx.on{display:block}
+.ctx button{display:flex;align-items:center;gap:9px;width:100%;height:32px;padding:0 10px;border:0;border-radius:8px;background:none;font-size:13px;text-align:left}
+.ctx button:hover{background:var(--tint)}
+.ctx button.danger{color:var(--danger)}
+.ctx button.danger:hover{background:var(--danger-soft)}
+.ctx hr{margin:5px 6px;border:0;border-top:1px solid var(--line)}
+.ctx small{display:block;padding:2px 10px 4px;font-size:12px;color:var(--ink-soft)}
+
+/* 文件列表 / 预览(仅示意) */
+.lpane{display:flex;flex-direction:column;min-height:0;background:var(--canvas);border-right:1px solid var(--line)}
+.crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:2px;padding:12px 14px 4px;font-size:13px}
+.crumbs button{padding:2px 6px;border:0;border-radius:6px;background:none;color:var(--ink-soft)}
+.crumbs button:hover{background:var(--tint);color:var(--accent-ink)}
+.crumbs button:last-child{color:var(--ink);font-weight:650}
+.crumbs svg{width:12px;height:12px;color:var(--faint)}
+.lmeta{display:flex;align-items:center;gap:8px;padding:4px 14px 10px;font-size:12px;color:var(--ink-soft)}
+.lmeta .seg{margin-left:auto}
+.seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--tint);gap:2px;position:relative}
+.seg button{position:relative;z-index:1;height:26px;padding:0 12px;border:0;border-radius:999px;background:none;font-size:12.5px;color:var(--ink-soft);white-space:nowrap;transition:background .2s var(--ease),color .2s}
+.seg button[aria-pressed=true]{background:var(--paper);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgb(22 46 84/12%)}
+.flist{flex:1;overflow:auto;padding:0 8px 12px}
+.frow{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:10px;border-left:3px solid transparent}
+.frow.on{background:var(--paper);border-left-color:var(--accent);box-shadow:var(--shadow-card)}
+.frow b{font-size:13.5px}
+.frow small{color:var(--ink-soft);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vpane{padding:30px 36px;background:var(--paper);overflow:hidden}
+.vpane h4{margin:0 0 14px;font-size:19px}
+.vpane p{margin:0 0 12px;font:15px/1.9 var(--serif);color:var(--ink)}
+.vpane .skel{height:10px;margin:0 0 12px;border-radius:5px;background:var(--line)}
+
+/* ---------- 弹窗 ---------- */
+.scrim{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;padding:36px 20px;border-radius:18px;background:linear-gradient(180deg,#cfd9e8,#c3cfe0)}
+.mwrap{display:flex;flex-direction:column;gap:10px;align-items:center}
+.mwrap>span{padding:3px 12px;border-radius:999px;background:rgb(255 255 255/70%);font-size:12.5px;font-weight:650;color:var(--ink-soft)}
+.modal{width:620px;max-width:100%;background:var(--paper);border-radius:18px;box-shadow:var(--shadow-float);overflow:hidden}
+.mhead{display:flex;align-items:flex-start;padding:22px 24px 12px}
+.mhead h2{margin:0;font-size:18px}
+.mhead p{margin:2px 0 0;color:var(--ink-soft);font-size:13px}
+.mhead button{margin-left:auto;display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:9px;background:none;color:var(--ink-soft)}
+.mhead button:hover{background:var(--tint)}
+.stepper{display:flex;align-items:center;gap:10px;padding:0 24px 14px;font-size:13px;color:var(--ink-soft)}
+.stepper .n{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--line);font-size:12px;font-weight:700;color:var(--ink-soft)}
+.stepper .on .n{background:var(--accent);color:#fff}
+.stepper .done .n{background:var(--accent-soft);color:var(--accent-ink)}
+.stepper .on b{color:var(--ink)}
+.stepper li{display:flex;align-items:center;gap:8px;list-style:none}
+.stepper ol{display:contents;margin:0;padding:0}
+.stepper .ln{flex:1;height:1px;background:var(--line-strong)}
+.mbody{padding:4px 24px 20px;display:flex;flex-direction:column;gap:14px}
+.types{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.type{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--paper);text-align:left}
+.type:hover{border-color:var(--line-strong);box-shadow:var(--shadow-card)}
+.type.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px rgb(10 124 255/12%)}
+.type .tile{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--tint);color:var(--accent-ink)}
+.type.on .tile{background:var(--accent);color:#fff}
+.type b{font-size:14px}
+.type small{color:var(--ink-soft);font-size:12px;line-height:1.45}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{height:28px;padding:0 12px;border:1px solid var(--line-strong);border-radius:999px;background:var(--paper);font-size:13px;color:var(--ink-soft)}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:26px 16px;border:1.5px dashed var(--line-strong);border-radius:14px;background:var(--canvas);text-align:center}
+.drop .up{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow-card);color:var(--accent)}
+.drop small{color:var(--ink-soft);font-size:12.5px}
+.nudge{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--tint);font-size:13px;color:var(--ink-soft)}
+.nudge .ni{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--paper);color:var(--accent);flex:none}
+.nudge b{display:block;color:var(--ink);font-size:13.5px}
+.nudge .btn{margin-left:auto;flex:none}
+.mfoot{display:flex;align-items:center;gap:10px;padding:14px 24px;border-top:1px solid var(--line);background:var(--canvas)}
+.mfoot .sp{margin-right:auto;font-size:12.5px;color:var(--ink-soft)}
+.fsum{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--canvas);font-size:13px}
+.fsum .tile{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent-ink)}
+.fsum span{margin-left:auto;color:var(--ink-soft);font-size:12.5px}
+.picker{height:232px;overflow:auto;border:1px solid var(--line-strong);border-radius:14px;padding:6px 6px}
+.pickbar{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft)}
+.pickbar .path{display:flex;align-items:center;gap:4px;margin-left:4px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.pickbar .btn{margin-left:auto}
+.fl{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+
+/* ---------- 状态卡 ---------- */
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.state{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-card)}
+.state>h5{margin:0;padding:10px 14px;font-size:12.5px;color:var(--ink-soft);background:var(--canvas);border-bottom:1px solid var(--line)}
+.state .sbody{flex:1;padding:10px 8px;min-height:208px}
+.state .empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 18px;text-align:center}
+.state .empty .big{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--tint);color:var(--accent)}
+.state .empty .big svg{width:22px;height:22px}
+.state .empty b{font-size:14px}
+.state .empty p{margin:0;color:var(--ink-soft);font-size:12.5px;line-height:1.6}
+.dragover{margin:8px;border:1.5px dashed var(--accent);border-radius:14px;background:var(--accent-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:192px;text-align:center;color:var(--accent-ink)}
+.dragover svg{width:26px;height:26px}
+.dragover small{color:var(--ink-soft);font-size:12.5px}
+.deep .trow{--d:var(--d)}
+
+/* ---------- 文档窗口 ---------- */
+.ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:0 0 14px}
+.ctrl label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft)}
+.dwin .titlebar .ttl{padding-right:52px}
+.dbar{display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;background:var(--paper);border-bottom:1px solid var(--line)}
+.dbar .crumb{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:4px}
+.dbar .right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.save{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-soft);transition:opacity .4s}
+.save i{width:7px;height:7px;border-radius:50%;background:#16a870}
+.save.busy i{background:var(--attention);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.robadge{display:none;align-items:center;gap:7px;height:28px;padding:0 12px;border-radius:999px;background:var(--attention-soft);color:#7a4b00;font-size:12.5px;font-weight:600}
+.robadge span{font-weight:400;color:#8a5a10}
+.dwrap{position:relative;display:flex;height:560px;background:var(--paper)}
+.dscroll{position:relative;flex:1;overflow:auto;scroll-behavior:smooth}
+.col{max-width:720px;margin:0 auto;padding:40px 24px 120px}
+.dtitle{margin:0 0 8px;font:700 19px/1.4 var(--ui)}
+.dmeta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:28px;font-size:12.5px;color:var(--ink-soft)}
+.dmeta .kw{padding:2px 9px;border:1px solid var(--line-strong);border-radius:999px}
+.col h2,.col h3{position:relative;font-family:var(--ui);color:var(--ink);margin:0}
+.col h2{font-size:21px;line-height:1.4;margin:38px 0 12px;font-weight:700}
+.col h3{font-size:17px;line-height:1.45;margin:26px 0 8px;font-weight:650}
+.col p{margin:0 0 14px;font:17px/1.85 var(--serif)}
+.mk{display:none;position:absolute;right:100%;margin-right:8px;font:500 13px/1 var(--mono);color:var(--faint);top:50%;transform:translateY(-50%);white-space:pre}
+.dwrap.edit .mk{display:block}
+.dwrap.edit .col [data-blk]{cursor:text}
+.dwrap.edit .col [data-blk].caret::after{content:"";display:inline-block;width:2px;height:1.1em;margin-left:1px;vertical-align:text-bottom;background:var(--accent);animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.dwrap.edit .col p.caret{background:linear-gradient(90deg,rgb(10 124 255/5%),transparent);border-radius:6px}
+.dwrap.ro .col{user-select:text}
+
+/* ---- 目录:刻度轨 + 悬浮卡 ---- */
+.outline{position:absolute;right:0;top:0;bottom:0;width:44px;z-index:5}
+.rail{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:flex-end;max-height:90%;padding:6px 0}
+.tick{display:flex;align-items:center;justify-content:flex-end;width:36px;height:14px;padding:0 6px 0 0;border:0;background:none}
+.tick i{display:block;height:2px;border-radius:2px;background:var(--faint);transition:width .2s var(--ease),background .2s}
+.tick.l2 i{width:18px}.tick.l3 i{width:11px}
+.tick.on i{background:var(--accent);width:24px;height:3px}
+.outline:hover .tick:not(.on) i{background:var(--line-strong)}
+.ocard{position:absolute;right:8px;top:50%;width:268px;max-height:min(440px,92%);display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-float);opacity:0;pointer-events:none;transform:translate(8px,-50%) scale(.98);transform-origin:right center;transition:opacity .16s var(--ease),transform .2s var(--ease)}
+.outline:hover .ocard,.outline:focus-within .ocard{opacity:1;pointer-events:auto;transform:translate(0,-50%) scale(1)}
+.ohead{display:flex;align-items:center;gap:8px;height:40px;padding:0 8px 0 14px;flex:none;border-bottom:1px solid var(--line)}
+.ohead b{font-size:13px}
+.ohead .cnt{font-size:12px;color:var(--ink-soft)}
+.ohead .mode{display:none;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600}
+.dwrap.edit .ohead .mode.m-edit{display:inline-flex;background:var(--accent-soft);color:var(--accent-ink)}
+.dwrap.ro .ohead .mode.m-ro{display:inline-flex;background:var(--attention-soft);color:#7a4b00}
+.ohead .pin{margin-left:auto;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:8px;background:none;color:var(--ink-soft)}
+.ohead .pin:hover{background:var(--tint)}
+.ohead .pin[aria-pressed=true]{background:var(--accent-soft);color:var(--accent-ink)}
+.olist{margin:0;padding:6px;overflow:auto;list-style:none}
+.oi{display:flex;align-items:flex-start;gap:8px;width:100%;padding:7px 10px 7px calc(10px + var(--lv,0)*14px);border:0;border-radius:9px;background:none;text-align:left;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+.oi:hover{background:var(--tint);color:var(--ink)}
+.oi.l2{color:var(--ink);font-weight:600}
+.oi.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:650}
+.oi .tx{flex:1;min-width:0}
+.oi .cur{display:none;margin-top:3px;color:var(--accent)}
+.oi .cur svg{width:12px;height:12px}
+.dwrap.edit .oi.on .cur{display:block}
+.ofoot{display:none;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft)}
+.dwrap.edit .ofoot{display:flex;gap:8px;align-items:center}
+/* 固定为侧栏 */
+.dwrap.pinned .outline{position:relative;flex:0 0 244px;width:244px;border-left:1px solid var(--line);background:var(--paper)}
+.dwrap.pinned .rail{display:none}
+.dwrap.pinned .ocard{position:static;width:100%;max-height:none;height:100%;opacity:1;pointer-events:auto;transform:none;border:0;border-radius:0;box-shadow:none}
+.cmp{width:100%;border-collapse:separate;border-spacing:0;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-card);font-size:13px}
+.cmp th,.cmp td{padding:11px 16px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.cmp tr:last-child td{border-bottom:0}
+.cmp th{background:var(--canvas);font-size:12.5px;color:var(--ink-soft);font-weight:650}
+.cmp td:first-child{font-weight:650;white-space:nowrap}
+.cmp td{color:var(--ink-soft)}
+
+/* 边界情形小稿 */
+.mini{position:relative;height:230px;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mini .ln{height:8px;margin:0 0 9px;border-radius:4px;background:var(--line)}
+.mini .ln.h{height:12px;width:46%;background:var(--line-strong)}
+.mini .page{padding:22px 26px;max-width:none;margin:0}
+.mini .rail{position:absolute;right:6px;top:50%;transform:translateY(-50%)}
+.mini .rail .tick{height:12px}
+.mini .ocard{position:absolute;opacity:1;transform:translate(0,-50%);right:8px;width:208px;max-height:210px;pointer-events:none}
+.mini .oi{padding-top:5px;padding-bottom:5px;font-size:12.5px}
+.mini .oi .tg{display:grid;place-items:center;width:14px;height:20px;color:var(--muted);flex:none}
+.mini .oi .tg svg{width:11px;height:11px;stroke-width:2.2}
+.mini.narrow{width:300px;margin:0 auto}
+.mini .tabs{display:flex;gap:4px;padding:8px 10px 0}
+.mini .tabs button{height:26px;padding:0 10px;border:0;border-radius:999px;background:none;font-size:12.5px;color:var(--ink-soft)}
+.mini .tabs button.on{background:var(--tint);color:var(--accent-ink);font-weight:650}
+.cap{margin:10px 2px 0;font-size:12.5px;color:var(--ink-soft);line-height:1.6}
+.toast{position:fixed;left:50%;bottom:28px;z-index:90;transform:translate(-50%,20px);padding:9px 16px;border-radius:999px;background:var(--ink);color:#fff;font-size:13px;opacity:0;pointer-events:none;transition:.25s var(--ease)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-folder-plus" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10.5v5M9.5 13h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M3 17l5-5 4 4 3-3 6 5"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17v.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3H7l3-3zM12 13v7"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4M4 5v4h4M4 13a8 8 0 0 0 14 4M20 19v-4h-4"/></symbol>
+    <symbol id="i-stack" viewBox="0 0 24 24"><path d="M12 4l9 5-9 5-9-5zM3 14l9 5 9-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 4l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  </defs>
+</svg>
+
+<nav class="topnav" aria-label="设计稿章节">
+  <b>The Way Here · UX 设计稿</b>
+  <a href="#s1">1 导入资料</a>
+  <a href="#s2">2 文件夹树</a>
+  <a href="#s3">3 文档小标题</a>
+</nav>
+
+<div class="page">
+  <div class="intro">
+    <h1>导入资料 · 文件夹树 · 文档小标题</h1>
+    <p>沿用「蓝白 v2」设计语言(画布 #f3f7fd、白色面板、#0a7cff 强调、PingFang + 宋体阅读)。下面三块都是可操作的原型:树可以展开、键盘导航、右键菜单、新建文件夹;文档窗口可以滚动、切换阅读 / 编辑 / 只读。</p>
+  </div>
+
+  <!-- ===================== 1 导入资料 ===================== -->
+  <section class="sec" id="s1">
+    <header><span class="no">1</span><h2>导入资料:只处理“需要解析的材料”</h2></header>
+    <p class="lead">日记与笔记本来就以文件夹形式存在于磁盘上,不需要“导入”这一步,所以从弹窗里拿掉,统一走「打开文件夹」。弹窗只留三类需要解析、落盘的材料:聊天记录、消费账单、照片。</p>
+    <ul class="problems"><li>现状:“日记与笔记”和“打开文件夹”挤在同一个类型格里</li><li>现状:第二步的目标位置是一个扁平下拉,看不出层级</li></ul>
+
+    <div class="scrim">
+      <div class="mwrap">
+        <span>步骤 1 · 选类型 + 加材料</span>
+        <section class="modal" aria-label="导入弹窗 步骤一">
+          <header class="mhead"><div><h2>带一段记录进来</h2><p>先说说材料来自哪里,再把它放进来。</p></div><button type="button" aria-label="关闭"><svg class="i"><use href="#i-close"/></svg></button></header>
+          <div class="stepper"><ol>
+            <li class="on"><span class="n">1</span><b>选类型 + 加材料</b></li><li class="ln" aria-hidden="true"></li><li><span class="n">2</span><b>确认位置</b></li>
+          </ol></div>
+          <div class="mbody">
+            <div class="types" role="group" aria-label="记录类型">
+              <button class="type on" type="button" aria-pressed="true"><span class="tile"><svg class="i"><use href="#i-chat"/></svg></span><b>聊天记录</b><small>ChatGPT、Claude、豆包等平台的导出文件</small></button>
+              <button class="type" type="button" aria-pressed="false"><span class="tile"><svg class="i"><use href="#i-receipt"/></svg></span><b>消费账单</b><small>支付宝导出的 CSV 账单</small></button>
+              <button class="type" type="button" aria-pressed="false"><span class="tile"><svg class="i"><use href="#i-image"/></svg></span><b>照片</b><small>JPG / PNG / WebP,每批最多 10 张</small></button>
+            </div>
+            <div class="chips" role="group" aria-label="聊天平台"><button class="chip on">ChatGPT</button><button class="chip">Claude</button><button class="chip">Gemini</button><button class="chip">DeepSeek</button><button class="chip">豆包</button><button class="chip">其他 AI</button></div>
+            <div class="drop"><span class="up"><svg class="i"><use href="#i-up"/></svg></span><b>选择或拖入材料</b><small>ZIP / JSON / HTML / TXT / Markdown,或包含它们的文件夹</small></div>
+            <div class="nudge"><span class="ni"><svg class="i"><use href="#i-folder"/></svg></span><div><b>要读日记或笔记?不用导入</b>直接打开它们所在的文件夹,文件留在原处,多级子文件夹完整显示。</div><button class="btn" type="button" data-toast="示意:关闭弹窗并唤起系统文件夹选择器">打开文件夹…</button></div>
+          </div>
+          <footer class="mfoot"><span class="sp">未选择文件</span><button class="btn ghost" type="button">取消</button><button class="btn primary" type="button" disabled style="opacity:.4">下一步</button></footer>
+        </section>
+      </div>
+
+      <div class="mwrap">
+        <span>步骤 2 · 确认位置(同一棵树,可点选 / 新建)</span>
+        <section class="modal" aria-label="导入弹窗 步骤二">
+          <header class="mhead"><div><h2>带一段记录进来</h2><p>确认这些记录要保留到哪里。</p></div><button type="button" aria-label="关闭"><svg class="i"><use href="#i-close"/></svg></button></header>
+          <div class="stepper"><ol>
+            <li class="done"><span class="n"><svg class="i" style="width:12px;height:12px;stroke-width:2.6"><use href="#i-check"/></svg></span><b>聊天记录 · 3 个文件</b></li><li class="ln" aria-hidden="true"></li><li class="on"><span class="n">2</span><b>确认位置</b></li>
+          </ol></div>
+          <div class="mbody">
+            <div class="fsum"><span class="tile"><svg class="i"><use href="#i-chat"/></svg></span><div><b>ChatGPT 导出</b></div><span>3 个文件 · 12.4 MB</span></div>
+            <div>
+              <label class="fl" id="pickLabel">保存到</label>
+              <div class="picker" id="picker" role="tree" aria-labelledby="pickLabel"></div>
+            </div>
+            <div class="pickbar">将保存到<span class="path" id="pickPath"></span><button class="btn" type="button" id="pickNew"><svg class="i"><use href="#i-folder-plus"/></svg>在此处新建文件夹</button></div>
+          </div>
+          <footer class="mfoot"><button class="btn ghost" type="button">上一步</button><span class="sp" style="margin-left:auto">共 3 个文件,不会改动电脑上的原文件</span><button class="btn primary" type="button">导入 3 个文件</button></footer>
+        </section>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h4>类型从 4 个减到 3 个,一行排完</h4><p>每类带一句说明,用户不用点进去才知道“账单”要的是 CSV。“日记与笔记”不再是一种导入类型,而是弹窗底部一条轻提示 + 直达按钮,把需求分流到正确入口。</p></div>
+      <div class="note"><h4>目标位置 = 与文件夹栏同一棵树</h4><p>步骤 2 复用文件夹栏的树组件(只列知识库内目录)。默认定位:照片 → 照片记忆,账单 → 消费账单,聊天 → 聊天记录。可当场“新建文件夹”,不用先关弹窗再去建。</p></div>
+      <div class="note"><h4>实现提示</h4><p>移除 <code>route === "files"</code> 分支及其 <code>SourceConnectionsPanel</code> 嵌入;记忆上次类型的 localStorage 里若读到 <code>files</code>,回退为 <code>chat</code>。「打开文件夹」迁到文件夹栏头部(见第 2 节)。</p></div>
+    </div>
+  </section>
+
+  <!-- ===================== 2 文件夹树 ===================== -->
+  <section class="sec" id="s2">
+    <header><span class="no">2</span><h2>生活记录:文件夹栏 = 磁盘上的真实目录</h2></header>
+    <p class="lead">不再按“日记 / AI / 账单”归类,也不再只有一级。每个打开的文件夹作为一个根,下面按磁盘原样逐级展开;名称、层级、顺序与 Finder 一致。下方原型可直接操作:点箭头展开、点行选中、<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 导航、悬停行点 “…” 打开菜单。</p>
+    <ul class="problems"><li>现状:只有一级,深层目录被压平</li><li>现状:图标按内容类型区分,和磁盘不一致</li><li>现状:“打开文件夹”藏在导入弹窗里</li></ul>
+
+    <div class="scrollx">
+    <div class="win" style="min-width:1160px">
+      <div class="titlebar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="ttl">The Way Here</span></div>
+      <div class="app">
+        <aside class="side" aria-label="主导航">
+          <div class="brand"><i><svg class="i" style="width:14px;height:14px;color:var(--accent);stroke-width:2.4"><path d="M3 16l5-6 4 4 5-8"/></svg></i>The Way Here</div>
+          <div class="nav"><svg class="i"><use href="#i-sun"/></svg>此刻</div>
+          <div class="nav"><svg class="i"><use href="#i-chat"/></svg>值得聊聊</div>
+          <div class="nav on"><svg class="i"><use href="#i-book"/></svg>生活记录</div>
+          <div class="nav"><svg class="i"><use href="#i-spark"/></svg>已有理解</div>
+          <div class="nav bottom"><svg class="i"><use href="#i-gear"/></svg>偏好设置</div>
+        </aside>
+        <div class="main">
+          <div class="ptool"><h3>生活记录</h3><button class="btn icon ghost" aria-label="搜索"><svg class="i"><use href="#i-search"/></svg></button><button class="btn"><svg class="i"><use href="#i-up"/></svg>导入</button><button class="btn primary"><svg class="i"><use href="#i-plus"/></svg>新建记录</button></div>
+          <div class="panes">
+            <aside class="fpane" aria-label="文件夹">
+              <div class="fhead"><b>文件夹</b><button class="btn icon ghost" aria-label="新建文件夹" id="newRootChild" title="在选中位置新建文件夹"><svg class="i"><use href="#i-folder-plus"/></svg></button></div>
+              <button class="open-btn" type="button" data-toast="示意:唤起系统文件夹选择器,并默认授权 AI 读写"><svg class="i"><use href="#i-folder"/></svg>打开文件夹…<kbd>⌘O</kbd></button>
+              <div class="tree" id="tree" role="tree" aria-label="文件夹树"></div>
+              <div class="fhint"><svg class="i"><use href="#i-folder-plus"/></svg>也可以把文件夹直接拖进窗口</div>
+            </aside>
+            <section class="lpane" aria-label="文件列表">
+              <nav class="crumbs" id="crumbs" aria-label="当前位置"></nav>
+              <div class="lmeta"><span id="fcount"></span><div class="seg" role="group" aria-label="范围"><button type="button" aria-pressed="true" id="scAll">含子文件夹</button><button type="button" aria-pressed="false" id="scOne">仅此层</button></div></div>
+              <div class="flist" id="flist"></div>
+            </section>
+            <section class="vpane" aria-label="预览" id="vpane"></section>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <p class="label" style="margin-top:34px">各种状态</p>
+    <div class="states">
+      <div class="state"><h5>还没有打开任何文件夹</h5><div class="sbody"><div class="empty"><span class="big"><svg class="i"><use href="#i-folder-plus"/></svg></span><b>打开你放日记的文件夹</b><p>文件留在原处,多级子文件夹会完整显示。AI 经你授权后可读写。</p><button class="btn primary" type="button">打开文件夹…</button><p style="font-size:12px">知识库内的“聊天记录 / 消费账单 / 照片记忆”会自动出现在下方</p></div></div></div>
+      <div class="state"><h5>拖入文件夹时</h5><div class="sbody" style="padding:0"><div class="dragover"><svg class="i"><use href="#i-folder-plus"/></svg><b>松开以打开「读书笔记」</b><small>将作为新的根文件夹加入列表</small></div></div></div>
+      <div class="state"><h5>根文件夹不可用(移动 / 外接盘未挂载)</h5><div class="sbody" id="stMissing"></div></div>
+      <div class="state"><h5>很深的层级 · 长名称</h5><div class="sbody" id="stDeep"></div></div>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h4>一棵树,两组根</h4><p>“已打开的文件夹”是用户授权的外部目录,每个根用两行显示(名称 + 缩写路径),让同名的 “2026” 不再混淆;“知识库内”是 Vault 里的真实目录。两组用同一个组件和交互。</p></div>
+      <div class="note"><h4>只表达磁盘,不表达语义</h4><p>统一用文件夹图标;展开态淡蓝填充;选中行浅蓝底 + 深蓝字;选中项的祖先加粗,一眼看出“我在哪条路径上”。层级用 16px 缩进 + 极淡的竖向引导线。</p></div>
+      <div class="note"><h4>选中父级 = 看到全部后代</h4><p>文件列表默认“含子文件夹”,面包屑可点击回退;切到“仅此层”才只看当前目录。数字是当前范围内的材料数,空目录淡灰显示,仍保留以忠实于磁盘。</p></div>
+      <div class="note"><h4>操作就近放</h4><p>悬停行出现 “…”(计数让位),菜单随根 / 子级不同:根可“从列表移除”(不删磁盘文件,菜单里明说),子级可“重命名 / 移到废纸篓”。新建走行内输入,不弹窗。</p></div>
+      <div class="note"><h4>键盘与无障碍</h4><p><code>role="tree"</code> + roving tabindex;↑↓ 移动、→ 展开 / 进入、← 收起 / 回父级、Enter 选中、<kbd>⌘⇧N</kbd> 新建子文件夹。展开状态按用户记忆,下次打开原样恢复。</p></div>
+      <div class="note"><h4>性能与深层目录</h4><p>子层级在展开时才读取;超过 6 层时缩进步长由 16px 收到 12px,名称超长中间截断并在 hover 显示完整路径。目录读取失败的根显示红色底 + 就地“重新连接”。</p></div>
+    </div>
+  </section>
+
+  <!-- ===================== 3 文档小标题 ===================== -->
+  <section class="sec" id="s3">
+    <header><span class="no">3</span><h2>文档右侧小标题(目录):不占宽度的“刻度轨”</h2></header>
+    <p class="lead">所有 Markdown 浏览共用一个文档组件,所以只设计一套目录,在阅读 / 编辑 / 只读三种状态下仅做最小差异。默认只在右侧留白里露出一列细刻度(长短表示层级,蓝色 = 当前位置),悬停或聚焦才展开成浮动目录卡;想一直看,点“固定”变成 244px 侧栏。</p>
+    <ul class="problems"><li>现状:44px 空白折叠轨 + 竖分隔线,没内容也占位</li><li>现状:展开 220px 挤压正文列</li><li>现状:标题单行省略,层级只靠 12px 缩进</li><li>现状:编辑态与阅读态目录“跟随”逻辑不清</li></ul>
+
+    <div class="ctrl">
+      <div class="seg" id="modeSeg" role="group" aria-label="切换演示状态">
+        <button type="button" data-m="read" aria-pressed="true">阅读态</button>
+        <button type="button" data-m="edit" aria-pressed="false">编辑态</button>
+        <button type="button" data-m="ro" aria-pressed="false">只读态</button>
+      </div>
+      <label><input type="checkbox" id="pinChk"> 固定目录为侧栏</label>
+      <span style="font-size:12.5px;color:var(--ink-soft)">把鼠标移到窗口右侧的细刻度上;阅读态滚动正文,编辑态点击正文任意位置移动光标。</span>
+    </div>
+
+    <div class="scrollx">
+    <div class="win dwin" style="min-width:980px">
+      <div class="titlebar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="ttl" id="dttl">2026-03-14 春天的复盘.md</span></div>
+      <div class="dbar">
+        <div class="crumb">日记<svg class="i" style="width:12px;height:12px;color:var(--faint)"><use href="#i-chev"/></svg>2026<svg class="i" style="width:12px;height:12px;color:var(--faint)"><use href="#i-chev"/></svg>03 月</div>
+        <div class="right">
+          <span class="save" id="save"><i></i><span>已保存</span></span>
+          <span class="robadge" id="robadge"><svg class="i"><use href="#i-lock"/></svg>只读<span>· 历史版本 3月2日 21:40</span></span>
+          <div class="seg" id="inSeg" role="group" aria-label="阅读或编辑">
+            <button type="button" data-m="read" aria-pressed="true">阅读</button>
+            <button type="button" data-m="edit" aria-pressed="false">编辑</button>
+          </div>
+        </div>
+      </div>
+      <div class="dwrap" id="dwrap">
+        <div class="dscroll" id="dscroll"><div class="col" id="col"></div></div>
+        <div class="outline" id="outline">
+          <div class="rail" id="rail" role="presentation"></div>
+          <aside class="ocard" aria-label="文档目录">
+            <div class="ohead"><b>目录</b><span class="cnt" id="ocnt"></span>
+              <span class="mode m-edit"><svg class="i" style="width:12px;height:12px"><use href="#i-edit"/></svg>跟随光标</span>
+              <span class="mode m-ro"><svg class="i" style="width:12px;height:12px"><use href="#i-lock"/></svg>只读</span>
+              <button class="pin" id="pinBtn" type="button" aria-pressed="false" aria-label="固定目录" title="固定为侧栏"><svg class="i"><use href="#i-pin"/></svg></button></div>
+            <ul class="olist" id="olist"></ul>
+            <div class="ofoot"><kbd>⌘</kbd><kbd>↑</kbd><kbd>↓</kbd> 跳到上 / 下一节</div>
+          </aside>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <p class="label" style="margin-top:34px">三种状态只改这几处</p>
+    <table class="cmp">
+      <thead><tr><th></th><th>阅读态</th><th>编辑态</th><th>只读态(独立阅读窗口 / 历史版本 / 原文件不可用)</th></tr></thead>
+      <tbody>
+        <tr><td>当前位置</td><td>跟随滚动(滚动监听,更新刻度与目录高亮)</td><td>跟随光标所在章节,滚动不改变,避免打字时目录乱跳</td><td>同阅读态</td></tr>
+        <tr><td>点击目录项</td><td>平滑滚到该标题,标题顶部留 24px</td><td>滚到标题并把光标放到标题行末,正文不失焦</td><td>同阅读态</td></tr>
+        <tr><td>目录卡头部</td><td>“目录 · N 节” + 固定按钮</td><td>多一枚“跟随光标”蓝色标签;当前项右侧出现光标图标;底部显示 ⌘↑↓ 快捷键</td><td>多一枚“只读”黄色标签;无光标、无快捷键</td></tr>
+        <tr><td>窗口顶栏</td><td>面包屑 + 保存状态 + 阅读 | 编辑</td><td>同左;键入后显示“正在保存…”,完成后回到“已保存”</td><td>用黄色徽章替换切换器与保存状态,写明原因(如“历史版本 3月2日 21:40”)</td></tr>
+        <tr><td>正文</td><td>17px / 1.85 宋体</td><td>字体字号完全一致;Markdown 的 <code>##</code> 记号悬挂在左侧留白,正文不位移</td><td>同阅读态,可选中复制</td></tr>
+      </tbody>
+    </table>
+
+    <p class="label" style="margin-top:34px">边界情形</p>
+    <div class="states">
+      <div><div class="mini"><div class="page"><div class="ln h"></div><div class="ln"></div><div class="ln" style="width:92%"></div><div class="ln" style="width:70%"></div><div class="ln"></div><div class="ln" style="width:84%"></div></div></div><p class="cap"><b>标题少于 2 个</b>:不显示刻度轨,也不留任何占位,正文列保持居中。</p></div>
+
+      <div><div class="mini">
+        <div class="page"><div class="ln h"></div><div class="ln"></div><div class="ln" style="width:80%"></div></div>
+        <div class="rail">
+          <button class="tick l2"><i></i></button><button class="tick l2"><i></i></button><button class="tick l2 on"><i></i></button><button class="tick l2"><i></i></button><button class="tick l2"><i></i></button><button class="tick l2"><i></i></button><button class="tick l2"><i></i></button><button class="tick l2"><i></i></button>
+        </div>
+        <aside class="ocard"><div class="ohead"><b>目录</b><span class="cnt">34 节</span></div><ul class="olist">
+          <li><button class="oi l2"><span class="tg"><svg class="i"><use href="#i-chev"/></svg></span><span class="tx">一、这个季度发生了什么</span></button></li>
+          <li><button class="oi l2 on"><span class="tg"><svg class="i" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></span><span class="tx">二、让我反复想起的三件事</span></button></li>
+          <li><button class="oi" style="--lv:1"><span class="tx">搬家</span></button></li>
+          <li><button class="oi" style="--lv:1"><span class="tx">和妈妈的通话</span></button></li>
+          <li><button class="oi l2"><span class="tg"><svg class="i"><use href="#i-chev"/></svg></span><span class="tx">三、我对自己的判断</span></button></li>
+        </ul></aside>
+      </div><p class="cap"><b>标题很多(30+)</b>:刻度轨只画 H2,最多 14 条;卡片内 H2 可折叠其下的 H3,当前章节自动展开并滚入可视区。</p></div>
+
+      <div><div class="mini narrow">
+        <div class="page" style="padding-right:48px"><div class="ln h"></div><div class="ln"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:72%"></div></div>
+        <div class="rail"><button class="tick l2"><i></i></button><button class="tick l3"><i></i></button><button class="tick l2 on"><i></i></button><button class="tick l3"><i></i></button></div>
+        <aside class="ocard" style="width:190px;top:56%"><div class="ohead"><b>目录</b><span class="cnt">11 节</span></div><ul class="olist"><li><button class="oi l2">一、这个季度</button></li><li><button class="oi l2 on">二、反复想起的事</button></li><li><button class="oi" style="--lv:1">搬家</button></li></ul></aside>
+      </div><p class="cap"><b>窗口 &lt; 980px</b>:刻度轨改为点按展开(触控与键盘同样可达),目录卡覆盖在正文上方而不挤压;选中后自动收起。禁用“固定”。</p></div>
+
+      <div><div class="mini">
+        <div class="page"><div class="ln h"></div><div class="ln"></div><div class="ln" style="width:76%"></div></div>
+        <aside class="ocard" style="width:236px;top:50%;max-height:196px">
+          <div class="tabs"><button class="on">目录</button><button>关联 · 3</button></div>
+          <ul class="olist" style="padding-top:4px"><li><button class="oi l2 on">一、这个季度发生了什么</button></li><li><button class="oi" style="--lv:1">工作</button></li><li><button class="oi" style="--lv:1">生活</button></li><li><button class="oi l2">二、让我反复想起的三件事</button></li></ul>
+        </aside>
+      </div><p class="cap"><b>有关联 / 证据时</b>:同一张卡顶部出现“目录 | 关联”切换,不再另开一块区域;没有关联时没有这个切换。</p></div>
+    </div>
+
+    <div class="notes">
+      <div class="note"><h4>为什么是“刻度轨”</h4><p>目录是导航的辅助,不是内容。默认零宽度占用,正文列 720px 与 24px 边距保持不变;刻度的长短提供“全文有几节、我在哪”的整体感,优于一个空白折叠轨。</p></div>
+      <div class="note"><h4>浮动卡的细节</h4><p>268px、14px 圆角、浮层阴影;H2 加粗为主、H3 缩进 14px 为辅;长标题换行显示(最多 2 行),不再单行省略。进入有 140ms 位移 + 透明度,尊重“减少动态效果”。</p></div>
+      <div class="note"><h4>可访问性</h4><p>刻度是 <code>button</code>,有“跳到「标题」”名称;卡片在 hover 与 <code>:focus-within</code> 都会出现;当前项 <code>aria-current="location"</code>;固定状态与记忆偏好跨文档保留。</p></div>
+    </div>
+  </section>
+</div>
+
+<div class="ctx" id="ctx" role="menu"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const ic=(n,c='i',st='')=>`<svg class="${c}" ${st?`style="${st}"`:''}><use href="#i-${n}"/></svg>`;
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),1900)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-toast]');if(b)toast(b.dataset.toast)});
+
+/* ================= 通用文件夹树 ================= */
+function makeTree(el,groups,opts={}){
+  const st={open:new Set(opts.open||[]),sel:opts.sel||null,creating:null};
+  const byId={};
+  function walk(nodes,parent,pid){nodes.forEach(n=>{n.id=pid+'/'+n.name;n.parent=parent;byId[n.id]=n;if(n.children)walk(n.children,n,n.id)})}
+  groups.forEach(g=>walk(g.nodes,null,g.key));
+  const total=n=>n.fixed??((n.own||0)+(n.children||[]).reduce((a,c)=>a+total(c),0));
+  const hasKids=n=>!!(n.children&&n.children.length)||!!n.lazy;
+  const isAnc=n=>{let p=byId[st.sel]?.parent;while(p){if(p===n)return true;p=p.parent}return false};
+  const showCount=opts.counts!==false;
+  function rows(n,d){
+    const open=st.open.has(n.id),sel=st.sel===n.id,kids=hasKids(n)&&!n.missing,root=d===0&&n.path;
+    const cls=['trow',sel&&'sel',isAnc(n)&&'anc',root&&'root',n.missing&&'missing',open&&kids&&'open',st.menu===n.id&&'menu-open'].filter(Boolean).join(' ');
+    const c=total(n);
+    let s=`<div class="${cls}" role="treeitem" aria-level="${d+1}" ${kids?`aria-expanded="${open}"`:''} aria-selected="${sel}" data-id="${n.id}" style="--d:${d}" tabindex="${sel?0:-1}">`;
+    s+=`<button class="chev ${kids?'':'none'}" tabindex="-1" aria-hidden="true">${ic('chev')}</button>`;
+    s+=`<span class="ticon">${n.missing?ic('warn'):n.all?ic('stack'):ic('folder')}</span>`;
+    s+=root?`<span class="tname2"><b>${n.name}</b><small>${n.missing?'原文件夹不可用':n.path}</small></span>`:`<span class="tname" title="${n.fullTitle||n.name}">${n.name}</span>`;
+    if(n.missing)s+=`<button class="reconnect" type="button">重新连接</button>`;
+    else{ if(showCount)s+=`<span class="tcount ${c?'':'dim'}">${c}</span>`; if(!n.all&&!opts.noMenu)s+=`<button class="tmore" type="button" tabindex="-1" aria-label="更多操作">${ic('more')}</button>`; }
+    s+=`</div>`;
+    if(open&&kids){(n.children||[]).forEach(ch=>s+=rows(ch,d+1)); if(st.creating===n.id)s+=`<div class="trow creating" style="--d:${d+1}"><span class="chev none"></span><span class="ticon">${ic('folder')}</span><input class="tinput" value="新建文件夹" aria-label="新文件夹名称"></div>`}
+    return s;
+  }
+  function render(focusId){
+    const had=el.contains(document.activeElement)&&document.activeElement.closest('.trow');
+    const fid=focusId||(had&&had.dataset.id);
+    let h='';groups.forEach(g=>{if(g.label)h+=`<div class="tgroup" role="presentation">${g.label}</div>`;g.nodes.forEach(n=>h+=rows(n,0))});
+    el.innerHTML=h;
+    const inp=el.querySelector('.tinput');
+    if(inp){inp.focus();inp.select();return}
+    if(fid)el.querySelector(`[data-id="${CSS.escape(fid)}"]`)?.focus();
+  }
+  function select(n){st.sel=n.id;if(hasKids(n)&&!n.missing)st.open.add(n.id);render(n.id);opts.onSelect?.(n,api)}
+  function toggle(n){st.open.has(n.id)?st.open.delete(n.id):st.open.add(n.id);render(n.id)}
+  function startCreate(id){const n=byId[id||st.sel];if(!n||n.all)return;st.creating=n.id;st.open.add(n.id);n.children=n.children||[];render()}
+  function openMenu(ev,n,row){
+    const menu=$('#ctx');st.menu=n.id;row.classList.add('menu-open');
+    const root=!n.parent;
+    const item=(k,i,t,cls='')=>`<button role="menuitem" data-k="${k}" class="${cls}">${ic(i)}${t}</button>`;
+    menu.innerHTML=item('new','folder-plus','新建子文件夹')+(root?'':item('rename','edit','重命名'))+item('reveal','eye','在 Finder 中显示')+(root?item('reload','refresh','重新读取'):'')+'<hr>'+(root?item('remove','close','从列表移除','danger')+'<small>只移除入口,不会删除磁盘上的文件</small>':item('trash','trash','移到废纸篓','danger'));
+    const r=row.getBoundingClientRect();menu.style.left=Math.min(r.right-12,innerWidth-212)+'px';menu.style.top=Math.min(r.bottom+4,innerHeight-230)+'px';menu.classList.add('on');
+    menu.onclick=e=>{const b=e.target.closest('button');if(!b)return;closeMenu();if(b.dataset.k==='new')startCreate(n.id);else toast('示意:'+b.textContent)};
+  }
+  function closeMenu(){$('#ctx').classList.remove('on');st.menu=null;el.querySelector('.menu-open')?.classList.remove('menu-open')}
+  el.addEventListener('click',e=>{
+    const row=e.target.closest('.trow');if(!row||row.classList.contains('creating'))return;
+    const n=byId[row.dataset.id];e.stopPropagation();
+    if(e.target.closest('.tmore'))return openMenu(e,n,row);
+    if(e.target.closest('.reconnect'))return toast('示意:弹出系统文件夹选择器,重新指向原文件夹');
+    if(e.target.closest('.chev')&&hasKids(n))return toggle(n);
+    if(n.missing)return;
+    select(n);
+  });
+  el.addEventListener('contextmenu',e=>{const row=e.target.closest('.trow:not(.creating)');if(!row||opts.noMenu)return;e.preventDefault();openMenu(e,byId[row.dataset.id],row)});
+  el.addEventListener('keydown',e=>{
+    if(e.target.matches('.tinput')){
+      if(e.key==='Enter'){const v=e.target.value.trim();const p=byId[st.creating];if(v&&p){const n={name:v,own:0,parent:p,id:p.id+'/'+v};byId[n.id]=n;p.children.push(n);st.creating=null;st.sel=n.id;render(n.id);opts.onSelect?.(n,api)}}
+      else if(e.key==='Escape'){st.creating=null;render(st.sel)}
+      return;
+    }
+    const row=e.target.closest('.trow');if(!row)return;
+    const list=[...el.querySelectorAll('.trow:not(.creating)')],i=list.indexOf(row),n=byId[row.dataset.id];
+    switch(e.key){
+      case'ArrowDown':list[i+1]?.focus();break;
+      case'ArrowUp':list[i-1]?.focus();break;
+      case'ArrowRight':if(hasKids(n)){st.open.has(n.id)?list[i+1]?.focus():toggle(n)}break;
+      case'ArrowLeft':if(st.open.has(n.id)&&hasKids(n))toggle(n);else if(n.parent)el.querySelector(`[data-id="${CSS.escape(n.parent.id)}"]`)?.focus();break;
+      case'Enter':case' ':if(!n.missing)select(n);break;
+      case'N':case'n':if(e.metaKey&&e.shiftKey){startCreate(n.id);break}return;
+      default:return;
+    }
+    e.preventDefault();
+  });
+  el.addEventListener('focusout',e=>{if(e.target.matches?.('.tinput')){setTimeout(()=>{if(st.creating){st.creating=null;render()}},120)}});
+  document.addEventListener('click',()=>{if(st.menu)closeMenu()});
+  addEventListener('scroll',()=>{if(st.menu)closeMenu()},true);
+  const api={st,byId,select,startCreate,render,total,chain(n){const a=[];while(n){a.unshift(n);n=n.parent}return a}};
+  render();return api;
+}
+
+/* ================= 2 · 生活记录文件夹树 ================= */
+const diary={name:'日记',path:'~/Documents/日记',children:[
+  {name:'2026',children:[{name:'03 月',own:9},{name:'02 月',own:14},{name:'01 月',own:11}]},
+  {name:'2025',children:[{name:'12 月',own:20},{name:'11 月',own:16},{name:'10 月',own:18}]},
+  {name:'2024',own:186},
+  {name:'读书笔记',children:[{name:'社科',own:23},{name:'文学',own:31},{name:'技术',own:12}]},
+  {name:'未整理的零散想法与待补充素材',own:0},
+]};
+const obsidian={name:'Obsidian Vault',path:'~/Obsidian/Vault',children:[{name:'Daily',children:[{name:'2026',own:64},{name:'2025',own:358}]},{name:'Projects',children:[{name:'搬家',own:12},{name:'转岗',own:9}]},{name:'Templates',own:0}]};
+const travel={name:'旅行手账',path:'/Volumes/Backup/旅行手账',missing:true,own:0};
+const vault=[
+  {name:'聊天记录',children:[{name:'ChatGPT',own:42},{name:'Claude',own:18},{name:'豆包',own:9}]},
+  {name:'消费账单',children:[{name:'2026',own:3},{name:'2025',own:12}]},
+  {name:'照片记忆',children:[{name:'2026 春日',own:1},{name:'2025 旅行',own:4}]},
+];
+const titles=['清明前的雨','搬家第三天','和妈妈通电话','换工作的想法','周末的长跑','读《置身事内》','一个人的生日','失眠的夜晚','整理旧照片'];
+const all={name:'全部材料',all:true,fixed:0};
+const groups=[
+  {key:'all',nodes:[all]},
+  {key:'ext',label:'已打开的文件夹',nodes:[diary,obsidian,travel]},
+  {key:'vault',label:'知识库内',nodes:vault},
+];
+let scope='all';
+const tree=makeTree($('#tree'),groups,{open:['ext/日记','ext/日记/2026'],sel:'ext/日记/2026/03 月',onSelect:updateFiles});
+all.fixed=[diary,obsidian,...vault].reduce((a,n)=>a+tree.total(n),0);tree.render();
+function updateFiles(n){
+  const chain=tree.chain(n);
+  $('#crumbs').innerHTML=chain.map((c,i)=>(i?ic('chev'):'')+`<button type="button" data-id="${c.id}">${c.name}</button>`).join('');
+  const cnt=scope==='all'?tree.total(n):(n.own||0);
+  $('#fcount').textContent=`${cnt} 篇材料`;
+  const num=Math.min(cnt,7);let h='';
+  for(let i=0;i<num;i++){const t=titles[(i+n.name.length)%titles.length];h+=`<div class="frow ${i===0?'on':''}"><b>${n.all?'':n.name+' · '}${t}.md</b><small>${n.path||chain[0].name+' › '+(chain[1]?.name||'')}</small></div>`}
+  $('#flist').innerHTML=h||'<div class="frow"><small>这个文件夹里还没有材料</small></div>';
+  const t0=titles[n.name.length%titles.length];
+  $('#vpane').innerHTML=num?`<h4>${t0}</h4><p>今天走到小区门口才发现，桂花已经开了，空气里有一点甜。我站了一会儿，想起去年这个时候还在为搬家的事发愁。</p><p>也许日子就是这样，一件事结束了，另一件事才有空位。</p><div class="skel" style="width:90%"></div><div class="skel" style="width:76%"></div><div class="skel" style="width:84%"></div>`:`<h4 style="color:var(--muted)">选择左侧文件查看</h4>`;
+}
+$('#crumbs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)tree.select(tree.byId[b.dataset.id])});
+[['#scAll','all'],['#scOne','one']].forEach(([s,v])=>$(s).addEventListener('click',()=>{scope=v;$('#scAll').setAttribute('aria-pressed',v==='all');$('#scOne').setAttribute('aria-pressed',v==='one');updateFiles(tree.byId[tree.st.sel])}));
+$('#newRootChild').addEventListener('click',()=>tree.startCreate());
+updateFiles(tree.byId[tree.st.sel]);
+
+/* 状态卡里的静态树 */
+makeTree($('#stMissing'),[{key:'m',nodes:[{name:'日记',path:'~/Documents/日记',own:0,children:[{name:'2026',own:34}]},{name:'旅行手账',path:'/Volumes/Backup/旅行手账',missing:true}]}],{noMenu:true,sel:'m/日记'});
+const deepNode={name:'读书笔记',children:[{name:'社科',children:[{name:'经济学',children:[{name:'中国经济',children:[{name:'置身事内·读书笔记与后续延伸阅读清单合集',children:[{name:'第三章',own:5}]}]}]}]}]};
+makeTree($('#stDeep'),[{key:'d',nodes:[{name:'~/Documents',path:'~/Documents',children:[deepNode]}]}],{noMenu:true,open:['d/~/Documents','d/~/Documents/读书笔记','d/~/Documents/读书笔记/社科','d/~/Documents/读书笔记/社科/经济学','d/~/Documents/读书笔记/社科/经济学/中国经济','d/~/Documents/读书笔记/社科/经济学/中国经济/置身事内·读书笔记与后续延伸阅读清单合集'],sel:'d/~/Documents/读书笔记/社科/经济学/中国经济/置身事内·读书笔记与后续延伸阅读清单合集/第三章'});
+/* 深层:缩进步长收窄 */
+$('#stDeep').querySelectorAll('.trow').forEach(r=>{const d=+r.style.getPropertyValue('--d');if(d>3){r.style.paddingLeft=`calc(6px + ${3*16+(d-3)*10}px)`}});
+
+/* ================= 1 · 导入步骤二的位置选择 ================= */
+const pv=[
+  {name:'聊天记录',children:[{name:'ChatGPT',own:0},{name:'Claude',own:0},{name:'豆包',own:0}]},
+  {name:'消费账单',children:[{name:'2026',own:0},{name:'2025',own:0}]},
+  {name:'照片记忆',own:0},
+  {name:'生活记录',children:[{name:'随手记',own:0}]},
+];
+const picker=makeTree($('#picker'),[{key:'p',nodes:pv}],{counts:false,noMenu:true,open:['p/聊天记录'],sel:'p/聊天记录/ChatGPT',onSelect:n=>{$('#pickPath').innerHTML=picker.chain(n).map(c=>c.name).join(` ${ic('chev','i','width:11px;height:11px')} `)}});
+$('#pickPath').innerHTML=`聊天记录 ${ic('chev','i','width:11px;height:11px')} ChatGPT`;
+$('#pickNew').addEventListener('click',()=>picker.startCreate());
+
+/* ================= 3 · 文档目录 ================= */
+const docData=[
+ ['h2','一、这个季度发生了什么'],
+ ['p','三个月过得比想象中快。回头看，最明显的变化不是发生了什么大事，而是我开始习惯把每天的小事记下来，哪怕只有一两句话。'],
+ ['h3','工作'],
+ ['p','转岗之后的第六周，我终于不再每天晚上复盘白天说错的话。团队的节奏慢慢摸清了，我也敢在会上先开口了。'],
+ ['h3','生活'],
+ ['p','搬到新住处以后，早上多了二十分钟的散步。路边的玉兰开了又谢，我才意识到自己已经很久没有抬头看过树。'],
+ ['h2','二、让我反复想起的三件事'],
+ ['p','有些事当时不觉得重要，过一阵子却会在洗碗、等电梯的时候突然冒出来。我把它们写下来，是想看看它们到底想告诉我什么。'],
+ ['h3','搬家'],
+ ['p','最难的不是打包，而是决定哪些东西可以不带走。我扔掉了一箱旧笔记，又在最后一天把它们捡了回来。'],
+ ['h3','和妈妈的通话'],
+ ['p','她没有问我工作顺不顺利，只是说天气转暖了，让我记得把厚被子晒一晒。挂掉电话后我坐了很久。'],
+ ['h3','一次失败的长跑'],
+ ['p','我原本想一口气跑完十公里，到第六公里就走了下来。奇怪的是，那天晚上我睡得特别好，也没有责备自己。'],
+ ['h2','三、我对自己的判断'],
+ ['p','我比自己以为的更需要独处，但也比自己以为的更需要被人记得。这两件事并不矛盾，只是需要不同的时间去安放。'],
+ ['h2','四、下一个季度想试的事'],
+ ['p','不立大目标，只想做几个小实验，看看哪些会留下来，哪些只是一时兴起。'],
+ ['h3','小实验'],
+ ['p','每周留一个晚上不看手机；每个月给一位很久没联系的朋友写一封信；试着在周日下午去一个没去过的街区走走。'],
+ ['h3','暂时放下的'],
+ ['p','考证、副业、一切需要“从现在开始坚持”的计划。等我真正想做的时候，它们还会在那里。'],
+];
+const D={mode:'read',active:0,heads:[]};
+(function build(){
+  let h='<h1 class="dtitle">2026 年春天的复盘</h1><div class="dmeta"><span>2026-03-14</span><span class="kw">复盘</span><span class="kw">季度</span><span>约 1,800 字</span></div>';
+  let sec=-1,b=0;
+  docData.forEach(([t,x])=>{
+    if(t!=='p'){sec++;D.heads.push({t,x,sec});
+      h+=`<${t} id="h${sec}" data-blk="${b++}" data-sec="${sec}"><span class="mk">${t==='h2'?'## ':'### '}</span>${x}</${t}>`}
+    else h+=`<p data-blk="${b++}" data-sec="${Math.max(sec,0)}">${x}</p>`;
+  });
+  $('#col').innerHTML=h;
+  $('#rail').innerHTML=D.heads.map((e,i)=>`<button class="tick ${e.t==='h2'?'l2':'l3'}" data-i="${i}" aria-label="跳到「${e.x}」"><i></i></button>`).join('');
+  $('#olist').innerHTML=D.heads.map((e,i)=>`<li><button class="oi ${e.t==='h2'?'l2':'l3'}" data-i="${i}" style="--lv:${e.t==='h2'?0:1}" ${''}><span class="tx">${e.x}</span><span class="cur">${ic('edit')}</span></button></li>`).join('');
+  $('#ocnt').textContent=`${D.heads.length} 节`;
+})();
+function setActive(i){
+  D.active=i;
+  document.querySelectorAll('#rail .tick').forEach((t,k)=>t.classList.toggle('on',k===i));
+  document.querySelectorAll('#olist .oi').forEach((t,k)=>{t.classList.toggle('on',k===i);k===i?t.setAttribute('aria-current','location'):t.removeAttribute('aria-current')});
+  const on=$('#olist .oi.on');if(on){const l=$('#olist');const a=on.offsetTop,b=a+on.offsetHeight;if(a<l.scrollTop)l.scrollTop=a-6;else if(b>l.scrollTop+l.clientHeight)l.scrollTop=b-l.clientHeight+6}
+}
+function spy(){
+  if(D.mode==='edit')return;
+  const sc=$('#dscroll');let cur=0;
+  D.heads.forEach((e,i)=>{if($('#h'+i).offsetTop<=sc.scrollTop+110)cur=i});
+  if(sc.scrollTop+sc.clientHeight>=sc.scrollHeight-4)cur=D.heads.length-1;
+  if(cur!==D.active)setActive(cur);
+}
+$('#dscroll').addEventListener('scroll',spy);
+function go(i){
+  const h=$('#h'+i);$('#dscroll').scrollTo({top:h.offsetTop-24,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});
+  if(D.mode==='edit'){setCaret(h);}
+  setActive(i);
+}
+function setCaret(el){document.querySelectorAll('.col .caret').forEach(c=>c.classList.remove('caret'));el.classList.add('caret')}
+['#rail','#olist'].forEach(s=>$(s).addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(b)go(+b.dataset.i)}));
+$('#col').addEventListener('click',e=>{
+  if(D.mode!=='edit')return;
+  const b=e.target.closest('[data-blk]');if(!b)return;
+  setCaret(b);setActive(Math.max(0,+b.dataset.sec));
+  const sv=$('#save');sv.classList.add('busy');sv.lastElementChild.textContent='正在保存…';
+  clearTimeout(go.t);go.t=setTimeout(()=>{sv.classList.remove('busy');sv.lastElementChild.textContent='已保存 · 刚刚'},800);
+});
+function setMode(m){
+  D.mode=m;const w=$('#dwrap');
+  w.classList.toggle('edit',m==='edit');w.classList.toggle('ro',m==='ro');
+  $('#robadge').style.display=m==='ro'?'inline-flex':'none';
+  $('#inSeg').style.display=m==='ro'?'none':'inline-flex';
+  $('#save').style.display=m==='ro'?'none':'flex';
+  $('#dttl').textContent=m==='ro'?'2026-03-14 春天的复盘.md · 历史版本':'2026-03-14 春天的复盘.md';
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+  document.querySelectorAll('#inSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+  document.querySelectorAll('.col .caret').forEach(c=>c.classList.remove('caret'));
+  if(m==='edit'){const h=$('#h'+D.active);setCaret(h.nextElementSibling||h);}
+  else spy();
+}
+document.querySelectorAll('#modeSeg button,#inSeg button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.m)));
+function setPinned(p){$('#dwrap').classList.toggle('pinned',p);$('#pinChk').checked=p;$('#pinBtn').setAttribute('aria-pressed',p)}
+$('#pinChk').addEventListener('change',e=>setPinned(e.target.checked));
+$('#pinBtn').addEventListener('click',()=>setPinned(!$('#dwrap').classList.contains('pinned')));
+document.addEventListener('keydown',e=>{
+  if(D.mode!=='edit'||!e.metaKey||!/Arrow(Up|Down)/.test(e.key))return;
+  e.preventDefault();go(Math.max(0,Math.min(D.heads.length-1,D.active+(e.key==='ArrowDown'?1:-1))));
+});
+setMode('read');setActive(0);
+</script>
+</body>
+</html>
