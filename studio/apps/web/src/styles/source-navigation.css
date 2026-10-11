@@ -1,0 +1,162 @@
+/* Source tree and import flow follow the supplied blue/white navigation reference. */
+body .import-modal { max-width: 620px; }
+body .import-modal .import-type-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+body .import-modal .import-type-grid > button { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--ink); text-align: left; }
+body .import-modal .import-type-grid > button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+body .import-modal .import-type-grid > button b { align-self: auto; font-size: 14px; }
+body .import-modal .import-type-grid > button small { display: block; margin: 0; padding: 0; border: 0; font-size: 12px; line-height: 1.45; color: var(--ink-soft); white-space: normal; }
+body .import-modal .import-type-grid .import-type-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-tinted); color: var(--accent-ink); }
+body .import-modal .import-type-grid > button.active .import-type-icon { color: var(--paper); background: var(--accent); }
+body .import-modal .import-destination-step { display: flex; flex-direction: column; gap: 12px; }
+body .import-modal .import-summary { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); }
+body .import-modal .import-summary h3 { margin-block: 0 8px; }
+body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.desktop-shell .organized-sources-page .source-vault { --folders: 272px; --files: 276px; gap: 0; grid-template-columns: var(--folders) var(--files) minmax(300px, 1fr); }
+.desktop-shell .organized-sources-page .source-vault.folder-pane-collapsed { --folders: 48px; }
+.desktop-shell .organized-sources-page .source-vault.file-pane-collapsed { --files: 48px; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell { border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.desktop-shell .organized-sources-page .source-vault .source-folder-shell { border-radius: 18px 0 0 18px; background: var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .source-folder-pane { background: var(--paper); display: flex; flex-direction: column; overflow: hidden; }
+.desktop-shell .organized-sources-page .source-vault .source-folder-contents { flex: 1; min-height: 0; overflow: auto; }
+.source-pane-shell.collapsed .source-connections, .source-pane-shell.collapsed .source-folder-hint { visibility: hidden; pointer-events: none; }
+
+.organized-sources-page .document-relations .source-knowledge-connections { max-width: 100%; margin: 0; padding: 0; border: 0; }
+.document-relations .source-knowledge-connections > h3 { margin: 0 0 12px; font: 650 13px/1.5 var(--font-ui); }
+.organized-sources-page .document-relations .source-related-knowledge { display: grid; gap: 0; margin: 0; }
+.organized-sources-page .document-relations .source-related-knowledge > a { display: grid; grid-template-columns: minmax(0, 1fr) 20px; gap: 4px 6px; width: 100%; min-width: 0; padding: 12px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.document-relations .source-related-knowledge > a > span { grid-column: 1; font-size: 11px; }
+.organized-sources-page .document-relations .source-related-knowledge > a > b { grid-column: 1; white-space: normal; overflow-wrap: anywhere; }
+.document-relations .source-related-knowledge > a > i { grid-column: 2; grid-row: 1 / span 2; width: 20px; height: 20px; }
+.document-relations .source-related-peek { display: none; }
+
+/* 2026-10-10 life-record reference: one compact, joined, independently scrolling browser. */
+.desktop-shell .page-frame:has(.organized-sources-page) { padding: 16px 20px 24px; }
+.desktop-shell .organized-sources-page { gap: 14px; }
+.desktop-shell .organized-sources-page .source-discovery-tools { flex-wrap: nowrap; gap: 10px; }
+.desktop-shell .organized-sources-page .source-type-filter { flex: none; padding: 3px; border-radius: 9px; background: var(--surface-tinted); }
+.desktop-shell .organized-sources-page .source-type-filter button { min-height: 28px; padding: 3px 12px; border-radius: 6px; font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+.desktop-shell .organized-sources-page .source-type-filter button > .icon { display: none; }
+.desktop-shell .organized-sources-page .source-type-filter button.active { background: var(--paper); color: var(--accent-ink); font-weight: 600; box-shadow: var(--shadow-card); }
+.desktop-shell .organized-sources-page .source-type-filter .source-pending-filter { border-left: 1px solid var(--line-strong); border-radius: 0 6px 6px 0; }
+.desktop-shell .organized-sources-page .source-toolbar-right { flex: 1; min-width: 100px; }
+.desktop-shell .organized-sources-page .source-global-search { width: 100%; height: 34px; min-height: 34px; border-radius: 8px; }
+.source-import-menu { position: relative; flex: none; }
+.source-import-menu > button { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper); color: var(--ink); font: 600 13px/1.5 var(--font-ui); cursor: pointer; }
+.source-import-menu > button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.source-import-menu > [role=menu] { position: absolute; z-index: 20; top: 40px; right: 0; width: 230px; padding: 6px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); box-shadow: var(--shadow-float); }
+.source-import-menu [role=menuitem] { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; text-align: left; font: 400 13px/1.55 var(--font-ui); color: var(--ink); cursor: pointer; }
+.source-import-menu [role=menuitem]:is(:hover,:focus-visible) { background: var(--surface-tinted); }
+.source-import-menu [role=menuitem] small { font-size: 12px; color: var(--ink-soft); }
+.desktop-shell .organized-sources-page .source-vault { --folders: 216px; --files: 252px; grid-template-columns: var(--folders) var(--files) minmax(0, 1fr); gap: 0; align-items: stretch; height: calc(100dvh - 138px); min-height: 360px; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); overflow: hidden; }
+.desktop-shell .organized-sources-page .source-vault.folder-pane-collapsed { --folders: 40px; }
+.desktop-shell .organized-sources-page .source-vault.file-pane-collapsed { --files: 40px; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell { position: relative; top: auto; height: 100%; min-height: 0; max-height: none; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: var(--paper); box-shadow: none; }
+.desktop-shell .organized-sources-page .source-vault .source-file-pane { background: var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .source-folder-contents { flex: 1; min-height: 0; padding: 4px 8px 12px; }
+.desktop-shell .organized-sources-page .source-vault .source-file-contents { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.desktop-shell .organized-sources-page .source-vault .source-file-list { flex: 1; min-height: 0; overflow: auto; gap: 0; padding: 6px 8px 12px; }
+.desktop-shell .organized-sources-page .source-vault .source-file-row { border: 0; border-radius: 9px; background: transparent; box-shadow: none; }
+.desktop-shell .organized-sources-page .source-vault .source-file-row:hover { background: var(--surface-tinted); }
+.desktop-shell .organized-sources-page .source-vault .source-file-row.active { background: var(--accent-soft); box-shadow: none; }
+.desktop-shell .organized-sources-page .source-vault .source-file-select { padding: 9px 28px 9px 12px; }
+.desktop-shell .organized-sources-page .source-vault .source-record-copy { gap: 1px; }
+.desktop-shell .organized-sources-page .source-vault .file-browser-item .source-record-copy > .file-browser-name { font-size: 13.5px; line-height: 1.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desktop-shell .organized-sources-page .source-vault .file-browser-item .source-record-copy > .file-browser-excerpt { display: block; margin: 0; font-size: 12px; line-height: 1.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desktop-shell .organized-sources-page .source-vault .source-file-row.active .file-browser-name { color: var(--accent-ink); }
+.desktop-shell .organized-sources-page .source-vault .pane-shelf button:disabled { opacity: .35; cursor: not-allowed; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed > :is(.pane-shelf-create,.pane-shelf-toggle) { display: none; }
+.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed { height: 100%; justify-content: flex-start; padding-top: 12px; background: var(--surface-tinted); }
+.desktop-shell .organized-sources-page .source-vault .pane-shelf-rail-label { margin: 0; width: 100%; }
+.desktop-shell .organized-sources-page .source-vault .source-preview { min-height: 0; height: 100%; padding: 0; overflow: auto; border: 0; border-radius: 0; box-shadow: none; }
+.desktop-shell .organized-sources-page .source-vault .source-preview-empty { display: grid; place-items: center; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; color: var(--ink-soft); font-size: 13px; }
+.desktop-shell .organized-sources-page .folder-tree-group { display: none; }
+.desktop-shell .organized-sources-page .folder-tree-row::before { display: none; }
+.desktop-shell .organized-sources-page .folder-tree-row.root { min-height: 30px; }
+.desktop-shell .organized-sources-page .folder-tree-row.root .folder-tree-name { display: block; }
+.desktop-shell .organized-sources-page .folder-tree-row.root .folder-tree-name small { display: none; }
+.desktop-shell .organized-sources-page .source-connections { margin: 10px 10px 4px; padding: 0; border: 0; }
+.desktop-shell .organized-sources-page .source-connections > button { justify-content: flex-start; gap: 8px; height: 32px; min-height: 32px; padding: 0 10px; border-radius: 8px; }
+.desktop-shell .organized-sources-page .source-connections > button kbd { display: none; }
+
+/* A single outline switches between an inline text column and its hoverable tick rail. */
+.desktop-shell .source-vault .life-record-document { --document-measure: 500px; --document-gutter: 0px; min-height: 100%; grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) minmax(0,1fr); padding: 0 20px 0 44px; }
+.desktop-shell .source-vault .life-record-document.has-outline { grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) 28px minmax(0,1fr); column-gap: 16px; }
+.desktop-shell .source-vault .life-record-document.outline-pinned { grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) 150px minmax(0,1fr); }
+.desktop-shell .source-vault .life-record-document > .document-content { position: static; grid-column: 2; max-width: var(--document-measure); margin: 0; padding: 44px 0 0; }
+.record-document-header { position: sticky; z-index: 6; top: 0; display: flex; align-items: center; gap: 12px; height: 44px; margin: 0; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--paper); font: 400 12px/1.55 var(--font-ui); }
+.record-document-path { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 13px; color: var(--ink-soft); }
+.record-document-path > b { font-weight: 600; color: var(--ink); }
+.record-document-header > span { margin-left: auto; flex: none; color: var(--ink-soft); }
+.record-document-header.editing > span { color: var(--accent-ink); }
+.record-document-header.editing > span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--accent); }
+.record-document-header > span.error { color: var(--danger); }
+.desktop-shell .source-vault .life-record-document .editable-document-identity { padding: 36px 0 0; margin: 0; min-height: 0; border: 0; }
+.desktop-shell .source-vault .life-record-document .document-file-name input { font: 600 24px/1.4 var(--font-ui); padding: 0; }
+.desktop-shell .source-vault .life-record-document .document-meta-row { display: none; }
+.desktop-shell .source-vault .life-record-document .document-content > .editable-document-properties { padding: 0; border: 0; }
+.desktop-shell .source-vault .life-record-document .document-content > .editable-document-properties:has(.source-property-summary:empty) { display: none; }
+.desktop-shell .source-vault .life-record-document .document-content > :is(.editable-document-body,.document-editor) { padding: 22px 0 160px; font: 400 16px/1.85 var(--font-display); min-height: 360px; }
+.desktop-shell .source-vault .life-record-document .document-content :is(.editable-document-body h2,.document-editor-heading-2) { font: 600 20px/1.4 var(--font-ui); margin: 30px 0 12px; }
+.desktop-shell .source-vault .life-record-document .document-content :is(.editable-document-body h3,.document-editor-heading-3) { font: 600 16.5px/1.45 var(--font-ui); margin: 22px 0 8px; }
+.desktop-shell .source-vault .life-record-document > .document-navigation-host { position: sticky; top: 64px; margin-top: 84px; width: 28px; height: auto; }
+.desktop-shell .source-vault .life-record-document.outline-pinned > .document-navigation-host { width: 150px; }
+.desktop-shell .source-vault .life-record-document .document-outline { width: 28px; }
+.desktop-shell .source-vault .life-record-document .document-outline.pinned { width: 150px; }
+.desktop-shell .source-vault .life-record-document .document-tick-rail { position: relative; top: 0; right: auto; width: 28px; gap: 0; padding: 0; align-items: flex-start; }
+.desktop-shell .source-vault .life-record-document .document-tick { justify-content: flex-start; width: 28px; height: 14px; padding-left: 6px; }
+.desktop-shell .source-vault .life-record-document .document-tick i { width: 8px; }
+.desktop-shell .source-vault .life-record-document .document-tick.major i { width: 14px; }
+.desktop-shell .source-vault .life-record-document .document-tick.active i { width: 20px; }
+.desktop-shell .source-vault .life-record-document .document-outline-card { top: -10px; left: -10px; right: auto; width: 184px; max-height: calc(100dvh - 210px); padding: 10px; border-radius: 12px; }
+.desktop-shell .source-vault .life-record-document .document-outline.pinned .document-outline-card { position: relative; top: 0; left: 0; right: auto; width: 150px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.desktop-shell .source-vault .life-record-document .document-outline:is(:hover,:focus-within) .document-outline-card { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+.desktop-shell .source-vault .life-record-document .document-outline-card > header { height: 24px; padding: 0 0 4px 12px; }
+.desktop-shell .source-vault .life-record-document .document-outline-card > header b { color: var(--ink-soft); font-size: 12px; }
+.desktop-shell .source-vault .life-record-document .document-outline-card > header :is(small,.outline-mode) { display: none; }
+.desktop-shell .source-vault .life-record-document .document-outline-card > header button { width: 24px; height: 24px; opacity: 0; background: transparent; }
+.desktop-shell .source-vault .life-record-document .document-outline:is(:hover,:focus-within) header button { opacity: 1; }
+.desktop-shell .source-vault .life-record-document .document-outline-card ol { padding: 0; border-left: 1px solid var(--line-strong); }
+.desktop-shell .source-vault .life-record-document .outline-item { min-height: 0; padding: 5px 6px 5px calc(11px + var(--outline-depth,0)*12px); border-left: 2px solid transparent; border-radius: 0; font-weight: 400; background: transparent; }
+.desktop-shell .source-vault .life-record-document .outline-item span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desktop-shell .source-vault .life-record-document .outline-item.active { border-left-color: var(--accent); color: var(--accent-ink); background: transparent; font-weight: 600; }
+.desktop-shell .source-vault .life-record-document .document-outline-card footer { display: none; }
+.record-outline-hint { position: absolute; top: 84px; right: 20px; color: var(--ink-soft); font: 400 12.5px/1.5 var(--font-ui); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .desktop-shell .organized-sources-page .source-vault { transition: none; } }
+/* Keep the breadcrumb/status shelf visible while the document itself scrolls. */
+.desktop-shell .source-vault .life-record-document > .record-document-header { position: sticky; grid-column: 1 / -1; grid-row: 1; top: 0; margin: 0 -20px 0 -44px; }
+.desktop-shell .source-vault .life-record-document > .document-content { grid-row: 2; padding-top: 0; }
+.desktop-shell .source-vault .life-record-document > .document-navigation-host { grid-column: 3; grid-row: 2; margin-top: 40px; }
+.record-document-title { margin: 0; color: var(--ink); font: 600 24px/1.4 var(--font-ui); overflow-wrap: anywhere; }
+.desktop-shell .source-vault .life-record-document { grid-template-rows: 44px 1fr; }
+.desktop-shell .organized-sources-page .source-file-row > .file-menu-trigger { opacity: 0; width: 24px; height: 24px; min-height: 24px; right: 4px; top: 9px; }
+.desktop-shell .organized-sources-page .source-file-row:is(:hover,:focus-within) > .file-menu-trigger,
+.desktop-shell .organized-sources-page .source-file-row > .file-menu-trigger[aria-expanded=true] { opacity: 1; }
+.desktop-shell .organized-sources-page .source-type-filter { background: var(--record-sidebar); }
+.desktop-shell .organized-sources-page .source-toolbar-right { flex: 0 1 340px; margin-left: 0; }
+.desktop-shell .organized-sources-page .source-toolbar-actions { margin-left: auto; }
+.source-import-menu > button { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.source-import-menu > button:hover { background: var(--accent-hover); color: var(--paper); }
+.desktop-shell .organized-sources-page .source-vault .pane-shelf { background: var(--record-tint); }
+.desktop-shell .source-vault .life-record-document .editable-document-body > h2:first-child { margin-top: 8px; }
+/* The hover card owns hits above the rail, including its expand control. */
+.desktop-shell .source-vault .life-record-document .document-outline-card { z-index: 3; }
+.desktop-shell .organized-sources-page .source-vault { grid-template-rows: minmax(0,1fr); }
+.desktop-shell .organized-sources-page .source-vault > .source-preview-empty { grid-column: 3; grid-row: 1; height: 100%; min-width: 0; place-content: center; }
+.desktop-shell .organized-sources-page .source-preview-empty > span { color: var(--ink-soft); font: 400 13px/1.55 var(--font-ui); }
+.desktop-shell .organized-sources-page .source-pending-filter > b { background: var(--accent-soft); color: var(--accent-ink); font-size: 11px; }
+.desktop-shell .organized-sources-page .source-folder-pane:has(.folder-tree-empty) > .source-connections { display: none; }
+.desktop-shell .organized-sources-page .folder-tree:has(.folder-tree-empty) { height: 100%; display: flex; flex-direction: column; }
+.desktop-shell .organized-sources-page .folder-tree:has(.folder-tree-empty) > [data-folder=""] { display: none; }
+.desktop-shell .organized-sources-page .folder-tree-empty { flex: 1; justify-content: center; padding: 24px 12px; gap: 8px; }
+.folder-tree-empty p { margin: 0; font: 400 13px/1.55 var(--font-ui); color: var(--ink-soft); }
+
+/* Reclaimed pane space widens the text; the heading navigation stays beside it. */
+.desktop-shell .organized-sources-page .source-vault .source-preview { container-type: inline-size; }
+@container (min-width: 1000px) {
+  .desktop-shell .source-vault .life-record-document { --document-measure: 680px; }
+}
+
+/* Association cards follow the last reading paragraph, without editor end space. */
+.desktop-shell .source-vault .life-record-document .document-content:has(> .document-context-content .source-knowledge-connections) > .editable-document-body { padding-bottom: 24px; min-height: 0; }
+.desktop-shell .source-vault .life-record-document .document-context-content:has(> .source-knowledge-connections) { padding: 0 0 32px; }
+.desktop-shell .source-vault .life-record-document .source-knowledge-connections { margin: 0; padding-top: 16px; }

@@ -1,7 +1,7 @@
 import type { SourceFolderSummary } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 
-const sourceFoldersEndpoint = "/api/sources/folders";
+const sourceFoldersEndpoint = "/api/sources/folders?parent=";
 
 export function useSourceFolders(revision = 0) {
   return useApi<SourceFolderSummary[]>(sourceFoldersEndpoint, revision);

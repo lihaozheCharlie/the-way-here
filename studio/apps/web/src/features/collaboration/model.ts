@@ -191,8 +191,8 @@ export const collaborationModes: Record<WikiRun["mode"], {
   auto: {
     short: "自动判断",
     title: "告诉我你想聊什么，或者想留下什么",
-    description: "平时直接聊；需要时再查已有理解，确有价值的新认识才更新。",
-    boundary: "平时直接聊；确有价值的新认识才更新 Wiki",
+    description: "平时直接聊；需要时查已有理解，明确交办的生成、重写或更新会直接保存。",
+    boundary: "平时直接聊；明确要求写入时直接完成",
     placeholder: "问一个问题，或说说希望补充、整理、更新什么…",
     action: "从这里开始",
   },

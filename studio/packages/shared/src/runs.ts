@@ -120,3 +120,8 @@ export interface DeletedAgentConversation {
   threadId: string;
   deletedRunIds: string[];
 }
+
+/** Automatic conversations may execute user-requested edits; managed outputs stay read-only. */
+export function canWriteRun(run: Pick<WikiRun, "mode" | "outputTarget">): boolean {
+  return run.mode === "write" || (run.mode === "auto" && !run.outputTarget);
+}

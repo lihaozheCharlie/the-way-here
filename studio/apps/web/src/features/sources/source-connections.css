@@ -15,3 +15,18 @@
 .source-connection-confirm { padding: 10px; background: var(--surface-tinted); border-radius: 6px; }
 .source-connection-confirm button + button { margin-left: 8px; }
 .external-source-notice { padding: 10px 14px; border-left: 3px solid var(--ink-soft); background: var(--surface-tinted); color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
+.source-folder-pane .source-connections { padding: 6px 12px; }
+.source-folder-pane .source-connections > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; border-radius: 11px; background: var(--paper); color: var(--accent-ink); font-weight: 600; }
+.source-connections kbd { margin-left: auto; color: var(--ink-soft); font: 400 11px/1.5 var(--font-ui); }
+.source-directory-drop { position: fixed; inset: 100px 28px 28px; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 2px dashed var(--accent); border-radius: 18px; background: var(--accent-soft); color: var(--accent-ink); pointer-events: none; }
+.import-modal .import-type-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.import-type-grid small { color: var(--ink-soft); font-size: 12px; line-height: 1.45; font-weight: 400; }
+.import-folder-nudge { margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface-tinted); color: var(--ink-soft); font-size: 13px; }
+.import-folder-nudge > svg { flex: none; color: var(--accent); }
+.import-folder-nudge > div { flex: 1; min-width: 0; }
+.import-folder-nudge b { color: var(--ink); }
+.import-folder-nudge p { margin: 2px 0 0; }
+.import-folder-nudge button { flex: none; border: 1px solid var(--line-strong); padding: 6px 10px; border-radius: 11px; background: var(--paper); color: var(--accent-ink); cursor: pointer; font: inherit; }
+.import-folder-picker { border: 1px solid var(--line-strong); border-radius: 14px; padding: 6px; }
+.import-folder-picker .folder-tree { height: 232px; overflow: auto; }
+.import-selected-path { margin: 4px 0; color: var(--accent-ink); font-size: 13px; overflow-wrap: anywhere; }

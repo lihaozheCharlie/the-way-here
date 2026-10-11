@@ -6,7 +6,7 @@ import { listBuildSkills } from "../modules/skills/skill-catalog.js";
 import { listReasoningLenses } from "../modules/skills/lens-catalog.js";
 import { readSkillFile, readSkillTree, SkillFileRequestError } from "../modules/skills/skill-files.js";
 import { ContentRequestError, PageWriter } from "../modules/content/page-writer.js";
-import { listSourceFolders } from "../modules/content/source-folder-catalog.js";
+import { listSourceFolders, listSourceFolderChildren } from "../modules/content/source-folder-catalog.js";
 import { ImportRequestError, ImportStore } from "../modules/imports/import-store.js";
 import { KnowledgeBaseRequestError } from "../modules/knowledge-bases/knowledge-base-manager.js";
 import { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
@@ -66,10 +66,23 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
     const page = knowledge.index.get(decodeURIComponent(request.params["*"]));
     return page || reply.code(404).send({ error: "页面不存在" });
   });
-  app.get<{ Querystring: { q?: string } }>("/api/search", async (request) => knowledge.index.search(request.query.q || ""));
+  app.get<{ Querystring: { q?: string; sources?: string } }>("/api/search", async (request) => request.query.sources === "true" ? knowledge.index.search(request.query.q || "", Number.MAX_SAFE_INTEGER).filter(page => page.isSource) : knowledge.index.search(request.query.q || ""));
 
-  app.get("/api/sources/folders", async () => listSourceFolders(knowledge));
-  app.post<{ Body: { folder?: unknown } }>("/api/sources/folders", async (request, reply) => handleContent(reply, () => writer().createSourceFolder(request.body?.folder), 201));
+  app.get<{ Querystring: { parent?: string } }>("/api/sources/folders", async (request, reply) => handleContent(reply, () => request.query.parent === undefined ? listSourceFolders(knowledge) : listSourceFolderChildren(contentWorkspace(), request.query.parent)));
+  app.post<{ Body: { folder?: unknown; action?: unknown; name?: unknown; modifiedAt?: unknown; knowledgeBaseId?: unknown } }>("/api/sources/folder-action", async (request, reply) => {
+    const bound = contentWorkspace();
+    return handleContent(reply, () => knowledge.serializeMutation(async () => {
+      if (request.body?.knowledgeBaseId !== bound.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请刷新后重试");
+      return new PageWriter(bound, (before, after) => new ImportStore(bound).renameSource(before, after)).folderAction(request.body);
+    }));
+  });
+  app.post<{ Body: { folder?: unknown; knowledgeBaseId?: unknown } }>("/api/sources/folders", async (request, reply) => {
+    const bound = contentWorkspace();
+    return handleContent(reply, () => knowledge.serializeMutation(async () => {
+      if (request.body?.knowledgeBaseId !== undefined && request.body.knowledgeBaseId !== bound.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请刷新后重试");
+      return new PageWriter(bound).createSourceFolder(request.body?.folder);
+    }), 201);
+  });
   app.post<{ Body: { title?: string; folder?: string } }>("/api/sources", async (request, reply) => handleContent(reply, async () => {
     const bound = contentWorkspace();
     const page = await new PageWriter(bound).createSource(request.body?.title, request.body?.folder);
@@ -131,6 +144,7 @@ async function handleContent<T>(reply: FastifyReply, action: () => Promise<T>, s
     if (error instanceof ContentRequestError) return reply.code(error.statusCode).send({ error: error.message });
     if (error instanceof ImportRequestError) return reply.code(error.statusCode).send({ error: error.message });
     if (["EACCES", "EPERM"].includes((error as NodeJS.ErrnoException)?.code || "")) return reply.code(403).send({ error: "无法读写文件，请重新授权文件夹访问权限", permissionRequired: true });
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return reply.code(404).send({ error: "原文件夹不可用，请重新连接" });
     throw error;
   }
 }

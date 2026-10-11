@@ -70,6 +70,18 @@ def main() -> int:
             "future-lens",
         ]
 
+        # 已有路由与推理章节仍不能替代新增的成文校准契约。
+        for heading in ("## 特色视角与辨别", "## 成文校准案例"):
+            candidate = root / "uncalibrated-lens.md"
+            candidate.write_text(
+                lens_text("uncalibrated-lens", "缺少校准的视角").replace(
+                    f"{heading}\n\n测试内容。", ""
+                ), encoding="utf-8"
+            )
+            _, errors = MODULE.load_lenses(root)
+            assert any(heading in error for error in errors), errors
+            candidate.unlink()
+
         (root / "broken-lens.md").write_text(
             '---\nlens_id: "broken-lens"\n---\n# 不完整视角\n',
             encoding="utf-8",

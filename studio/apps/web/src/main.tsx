@@ -29,3 +29,4 @@ import "./styles/desktop-redesign.css";
 import "./styles/questions-redesign.css";
 
 import "./shared/document.css";
+import "./styles/source-navigation.css";

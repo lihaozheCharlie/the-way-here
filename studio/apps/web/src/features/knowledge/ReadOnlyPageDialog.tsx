@@ -16,8 +16,8 @@ export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: stri
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.show();
   }, []);
-  return createPortal(<dialog ref={dialog} className="stage-document-dialog" aria-label="只读文件预览" onCancel={event => { event.preventDefault(); onClose(); }}>
-    <header><span>只读预览</span><button type="button" aria-label="关闭文件预览" onClick={onClose}><Icon name="close" size={18} /></button></header>
+  return createPortal(<dialog ref={dialog} className="stage-document-dialog" aria-label="文件预览" onCancel={event => { event.preventDefault(); onClose(); }}>
+    <header><span>文件预览</span><button type="button" aria-label="关闭文件预览" onClick={onClose}><Icon name="close" size={18} /></button></header>
     <div className="stage-document-scroll" onClickCapture={event => {
       const anchor = (event.target as Element).closest('a');
       if (!anchor) return;

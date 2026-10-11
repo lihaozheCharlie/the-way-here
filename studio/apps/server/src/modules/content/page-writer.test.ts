@@ -66,6 +66,22 @@ describe("PageWriter source files", () => {
     await expect(writer.createSourceFolder("shortcut/escape")).rejects.toMatchObject({ statusCode: 403 });
   });
 
+  it("renames real folders while protecting roots, concurrent edits, duplicates and tracked import paths", async () => {
+    const { root, knowledge, writer, filePath, page } = await fixture();
+    const modifiedAt = (await stat(path.dirname(filePath))).mtime.toISOString();
+    await expect(writer.folderAction({ folder: "日记", action: "rename", name: "../escape", modifiedAt })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(writer.folderAction({ folder: "日记", action: "rename", name: "新目录", modifiedAt: "old" })).rejects.toMatchObject({ statusCode: 409 });
+    await mkdir(path.join(root, "sources/同名"));
+    await expect(writer.folderAction({ folder: "日记", action: "rename", name: "同名", modifiedAt })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(writer.folderAction({ folder: "", action: "trash", modifiedAt })).rejects.toMatchObject({ statusCode: 400 });
+    const imports = new ImportStore(knowledge); const batch = await imports.trackCreatedSource(page);
+    const trackedWriter = new PageWriter(knowledge, (before, after) => imports.renameSource(before, after));
+    await expect(trackedWriter.folderAction({ folder: "日记", action: "rename", name: "生活", modifiedAt })).resolves.toEqual({ path: "生活" });
+    expect(await readFile(path.join(root, "sources/生活/今天.md"), "utf8")).toBe("# 今天\n");
+    const manifest = JSON.parse(await readFile(path.join(root, "sources/.imports", `${batch.id}.json`), "utf8"));
+    expect(manifest.files[0].storedPath).toBe("sources/生活/今天.md");
+  });
+
   it("creates a life-record file without duplicating its filename as a Markdown heading", async () => {
     const { root, writer } = await fixture();
 

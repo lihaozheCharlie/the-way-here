@@ -77,6 +77,7 @@ export {
 } from "./agents.js";
 export {
   isTerminalRunStatus,
+  canWriteRun,
   type RunStatus,
   type RunEvent,
   type RunFileChange,

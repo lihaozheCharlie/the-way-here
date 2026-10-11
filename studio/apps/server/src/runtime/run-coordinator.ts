@@ -1,4 +1,4 @@
-import { isTerminalRunStatus } from "@the-way-here/shared";
+import { canWriteRun, isTerminalRunStatus } from "@the-way-here/shared";
 import path from "node:path";
 import { RunOutputs } from "../services/run-outputs.js";
 import { RunRequestError, type StartRunInput } from "../services/run-request.js";
@@ -165,12 +165,12 @@ export class RunCoordinator {
     const stopBuffering = buffersEarlyEvents
       ? this.runtimes.subscribe(envelope => { if (!this.runByExecution.has(executionKey(envelope.ref))) earlyEvents.push(envelope); }) : () => {};
     try {
-      if (mode === "write") await this.runs.snapshot(run.id, taskConfig);
+      if (canWriteRun(run)) await this.runs.snapshot(run.id, taskConfig);
       const ref = await selection.runtime.start({
         cwd: this.knowledge.vaultRoot,
-        prompt: suggestionForRunId ? prompt! : buildRunPrompt(mode, addOutputTargetInstructions(`${input.chatOnly ? "本轮是纯聊天：不要检索 Wiki 或读取文件，直接和用户对话。\n\n" : ""}${prompt!}${prepared.prompt ? `\n\n${prepared.prompt}` : ""}`, normalizedInput.outputTarget), taskConfig),
+        prompt: suggestionForRunId ? prompt! : buildRunPrompt(prepared.strictReadOnly || !canWriteRun(run) ? "read" : mode, addOutputTargetInstructions(`${input.chatOnly ? "本轮是纯聊天：不要检索 Wiki 或读取文件，直接和用户对话。\n\n" : ""}${prompt!}${prepared.prompt ? `\n\n${prepared.prompt}` : ""}`, normalizedInput.outputTarget), taskConfig),
         images: prepared.images,
-        strictReadOnly: prepared.strictReadOnly || mode !== "write",
+        strictReadOnly: prepared.strictReadOnly || !canWriteRun(run),
         model: selection.model.id,
         effort: selection.effort,
         mode,
@@ -383,7 +383,10 @@ export class RunCoordinator {
       }
       return;
     }
-    if (run.mode === "auto") {
+    // Pre-upgrade automatic runs had no write capability or snapshot.
+    const automaticChanges = run.mode === "auto" && canWriteRun(run) && await this.runs.hasSnapshot(runId)
+      ? await this.runs.collectChanges(runId, run.configSnapshot) : [];
+    if (run.mode === "auto" && !automaticChanges.length) {
       await this.runs.update(runId, { status: "completed", result: { ...run.result, completedAt: new Date().toISOString() } });
       void this.startSuggestionCheck(run).catch((error) => this.logger.warn({ err: error, runId }, "Wiki 写入建议判断失败"));
       return;
@@ -391,7 +394,7 @@ export class RunCoordinator {
     await this.runs.setStatus(runId, "validating");
     this.knowledge.events.broadcast("run", await this.runs.get(runId));
     const valid = await this.validate(runId);
-    if (run.mode === "write") await this.runs.collectChanges(runId, run.configSnapshot);
+    if (canWriteRun(run)) await this.runs.collectChanges(runId, run.configSnapshot);
     await this.knowledge.rebuildIfActive(run.knowledgeBaseId);
     if (valid && run.sourceContext?.operation === "build") {
       const resolved = await this.knowledge.resolve(run.knowledgeBaseId);

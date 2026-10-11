@@ -67,6 +67,9 @@ export interface SourceFolderSummary {
   label?: string;
   absolutePath?: string;
   external?: boolean;
+  hasChildren?: boolean;
+  unavailable?: boolean;
+  modifiedAt?: string;
 }
 
 export type SourceChatImportChannel = "chatgpt" | "claude" | "gemini" | "deepseek" | "doubao" | "other-ai";

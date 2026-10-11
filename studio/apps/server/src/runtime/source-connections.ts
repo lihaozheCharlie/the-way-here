@@ -62,22 +62,27 @@ export class SourceConnections {
       return { ...connection, fileCount: state.files.filter((file) => !file.missing).length, pendingCount: Object.keys(state.pending).length, runId: state.runId, error: state.error, scannedAt: state.scannedAt };
     }));
   }
-  connect(id: string, requestedPath: unknown, autoBuild: unknown, aiWritable: unknown = false) {
+  connect(id: string, requestedPath: unknown, autoBuild: unknown, aiWritable: unknown = false, reconnectId?: string) {
     return this.serial(async () => {
       if (typeof requestedPath !== "string" || !path.isAbsolute(requestedPath) || requestedPath.length > 4096 || typeof autoBuild !== "boolean" || typeof aiWritable !== "boolean") throw new KnowledgeBaseRequestError(400, "请选择本机的原始资料文件夹");
       let directory: string;
       try { directory = await realpath(requestedPath); if (!(await lstat(directory)).isDirectory()) throw new Error(); }
       catch { throw new KnowledgeBaseRequestError(400, "目录不可用，请确认路径和读取权限"); }
+      const config = await loadVaultConfig(this.knowledge.vaultRoot, id);
+      const previous = reconnectId ? config.sourceConnections?.find(entry => entry.id === reconnectId) : undefined;
+      if (reconnectId && !previous) throw new KnowledgeBaseRequestError(404, "目录连接不存在");
+      if (previous) { autoBuild = previous.autoBuild; aiWritable = previous.aiWritable ?? false; }
       try { await access(directory, constants.R_OK | (aiWritable ? constants.W_OK : 0)); }
       catch { throw new KnowledgeBaseRequestError(403, "需要文件夹读写权限，请重新选择并授权"); }
       const workspace = await realpath(this.knowledge.vaultRoot);
       // Keep generated data and private sibling knowledge bases out of a source connection.
       if (directory === workspace || inside(directory, workspace) || inside(workspace, directory)) throw new KnowledgeBaseRequestError(400, "请选择工作区外的原始资料目录，避免把生成内容或其他知识库重新收录");
       if (directory === path.parse(directory).root) throw new KnowledgeBaseRequestError(400, "不能连接整个磁盘");
-      const config = await loadVaultConfig(this.knowledge.vaultRoot, id);
-      if (config.sourceConnections?.some((entry) => entry.path === directory || inside(entry.path, directory) || inside(directory, entry.path))) throw new KnowledgeBaseRequestError(409, "这个目录或它的父子目录已经连接");
-      const connection: SourceConnection = { id: randomUUID(), name: path.basename(directory), path: directory, autoBuild, aiWritable };
-      await this.changeConfig(id, (connections) => [...connections, connection]);
+      if (reconnectId && await this.runs.hasActiveKnowledgeBaseRun(id)) throw new KnowledgeBaseRequestError(409, "请等待当前知识库任务结束后再重新连接");
+      if (config.sourceConnections?.some((entry) => entry.id !== reconnectId && (entry.path === directory || inside(entry.path, directory) || inside(directory, entry.path)))) throw new KnowledgeBaseRequestError(409, "这个目录或它的父子目录已经连接");
+      if (reconnectId && !config.sourceConnections?.some(entry => entry.id === reconnectId)) throw new KnowledgeBaseRequestError(404, "目录连接不存在");
+      const connection: SourceConnection = { id: reconnectId || randomUUID(), name: path.basename(directory), path: directory, autoBuild: autoBuild as boolean, aiWritable: aiWritable as boolean };
+      await this.changeConfig(id, (connections) => [...connections.filter(entry => entry.id !== reconnectId), connection]);
       await this.refresh();
       return this.list(id);
     });

@@ -40,6 +40,37 @@ export class PageWriter {
     return { path: folder.split(path.sep).join("/") };
   }
 
+  async folderAction(input: { folder?: unknown; action?: unknown; name?: unknown; modifiedAt?: unknown }): Promise<{ path: string }> {
+    if (typeof input.folder !== "string" || !input.folder || !["rename", "trash", "reveal"].includes(String(input.action))) throw new ContentRequestError(400, "文件夹操作无效");
+    const destination = await sourceDestination(this.knowledge.vaultRoot, this.knowledge.index.config, input.folder);
+    const { root, target } = destination;
+    const info = await lstat(target);
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new ContentRequestError(403, "请选择真实文件夹");
+    if (input.action !== "reveal" && (!isPathInside(root, target) || target === root)) throw new ContentRequestError(403, "根文件夹只能从列表移除");
+    if (input.action !== "reveal" && (typeof input.modifiedAt !== "string" || input.modifiedAt !== info.mtime.toISOString())) throw new ContentRequestError(409, "文件夹内容已经变化，请刷新后重试");
+    let nextFolder = input.folder;
+    if (input.action === "rename") {
+      if (typeof input.name !== "string" || !input.name.trim() || /[\\/]/.test(input.name) || input.name.startsWith(".") || input.name.endsWith(".assert")) throw new ContentRequestError(400, "请输入普通文件夹名称");
+      const next = path.join(path.dirname(target), input.name.trim());
+      await assertSourcePath(root, next);
+      if (next === target) return { path: input.folder };
+      try { await lstat(next); throw new ContentRequestError(409, "同名文件夹已经存在"); } catch (error: any) { if (error.code !== "ENOENT") throw error; }
+      nextFolder = input.folder.split("/").slice(0, -1).concat(input.name.trim()).join("/");
+      const records = destination.connection ? [] : this.knowledge.index.list({ sources: true }).filter(page => page.relativePath.startsWith(`${this.knowledge.index.config.paths.sources}/${input.folder}/`));
+      await rename(target, next);
+      try { for (const page of records) await this.onSourceRenamed?.(page.relativePath, page.relativePath.replace(`${this.knowledge.index.config.paths.sources}/${input.folder}/`, `${this.knowledge.index.config.paths.sources}/${nextFolder}/`)); }
+      catch (error) { await rename(next, target); for (const page of records) await this.onSourceRenamed?.(page.relativePath.replace(`${this.knowledge.index.config.paths.sources}/${input.folder}/`, `${this.knowledge.index.config.paths.sources}/${nextFolder}/`), page.relativePath); throw error; }
+    } else {
+      if (process.platform !== "darwin") throw new ContentRequestError(503, "此操作需要 macOS Finder");
+      const child = input.action === "trash"
+        ? spawn("/usr/bin/osascript", ["-e", 'on run argv\ntell application "Finder" to delete (POSIX file (item 1 of argv) as alias)\nend run', target], { stdio: "ignore" })
+        : spawn("/usr/bin/open", ["-R", target], { stdio: "ignore" });
+      await new Promise<void>((resolve, reject) => { child.once("error", reject); child.once("exit", code => code === 0 ? resolve() : reject(new ContentRequestError(503, "Finder 操作未完成，请重试"))); });
+    }
+    if (input.action !== "reveal") { await this.refresh(); this.knowledge.events.broadcast("index", { folder: nextFolder }); }
+    return { path: nextFolder };
+  }
+
   async createSource(titleValue: string | undefined, folderValue: string | undefined, initialMarkdown = ""): Promise<WikiPage | undefined> {
     if (typeof titleValue !== "string" || !titleValue.trim()) throw new ContentRequestError(400, "请输入文件名后再创建");
     const destination = await sourceDestination(this.knowledge.vaultRoot, this.knowledge.index.config, folderValue || "");

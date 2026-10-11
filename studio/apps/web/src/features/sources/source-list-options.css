@@ -10,3 +10,4 @@
 .source-list-options-menu button:hover { background:var(--surface-tinted); }
 .source-list-options-menu button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:-2px; }
 .source-list-options-months { max-height:190px; overflow:auto; }
+.source-list-options-menu button:disabled { color: var(--ink-soft); opacity: .45; cursor: not-allowed; }

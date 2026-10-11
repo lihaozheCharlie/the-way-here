@@ -3,6 +3,9 @@
 :root {
   color-scheme: light;
   --canvas: #f3f7fd;
+  --record-canvas: #f4f8fd;
+  --record-sidebar: #eaf1fa;
+  --record-tint: #f1f6fd;
   --paper: #ffffff;
   --surface: var(--paper);
   --sidebar: var(--paper);

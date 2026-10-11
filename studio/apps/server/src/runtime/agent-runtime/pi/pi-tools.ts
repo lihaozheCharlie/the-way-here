@@ -18,6 +18,7 @@ const maxSearchedFiles = 5_000;
 const maxSearchMatches = 200;
 
 export function createPiTools(options: {
+  strictReadOnly?: boolean;
   knowledgeEvidence?: StartAgentExecution["knowledgeEvidence"];
   knowledgeIndex?: WikiIndex;
   cwd: string;
@@ -97,7 +98,7 @@ export function createPiTools(options: {
       },
     },
   ];
-  if (options.mode === "write") {
+  if (!options.strictReadOnly && options.mode !== "read") {
     tools.push({
       name: "write_file",
       label: "写入知识文件",

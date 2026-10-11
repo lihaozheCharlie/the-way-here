@@ -175,6 +175,8 @@ describe("letter reader", () => {
     expect(html).not.toContain("展开全部属性");
     expect(html).not.toContain('aria-label="文档模式"');
     expect(html).not.toContain('class="document-mode-switch"');
+    expect(html).not.toContain('aria-label="阅读或编辑"');
+    expect(html).not.toContain('class="document-mode-bar"');
   });
 
   it("uses the file identity and editor shared with life records", () => {

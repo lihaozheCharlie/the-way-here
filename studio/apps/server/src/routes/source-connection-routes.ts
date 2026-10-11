@@ -20,6 +20,12 @@ export function registerSourceConnectionRoutes(app: FastifyInstance, knowledge: 
       }
     },
   });
+  app.post<{ Params: { id: string }; Body: { knowledgeBaseId?: unknown; path?: unknown } }>("/api/source-connections/:id/reconnect", async (request, reply) => {
+    try {
+      if (request.body?.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) throw new KnowledgeBaseRequestError(409, "知识库已切换，请刷新后重试");
+      return await connections.connect(request.body.knowledgeBaseId as string, request.body.path, true, true, request.params.id);
+    } catch (error) { if (error instanceof KnowledgeBaseRequestError) return reply.code(error.statusCode).send({ error: error.message }); throw error; }
+  });
   app.post<{ Params: { id: string }; Body: { knowledgeBaseId?: unknown } }>("/api/source-connections/:id/sync", async (request, reply) => {
     try {
       if (request.body?.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) throw new KnowledgeBaseRequestError(409, "知识库已切换，请重新打开文件夹");

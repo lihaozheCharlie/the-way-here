@@ -1,6 +1,7 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
+  pathForDroppedFile: (file) => webUtils.getPathForFile(file),
   requestFolderAccess: () => ipcRenderer.invoke('desktop:folder-permission'),
   chooseSourceDirectory: () => ipcRenderer.invoke('desktop:choose-source-directory'),
   openWindow: (route, kind) => ipcRenderer.invoke('desktop:window', route, kind),

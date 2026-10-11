@@ -1,4 +1,4 @@
-import { isTerminalRunStatus } from "@the-way-here/shared";
+import { canWriteRun, isTerminalRunStatus } from "@the-way-here/shared";
 import { randomUUID } from "node:crypto";
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -31,9 +31,9 @@ export class RunStore {
     configSnapshot: VaultConfig,
     options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "contextTopicId" | "suggestionForRunId" | "chatOnly">> = {},
   ): Promise<WikiRun> {
-    const mayWrite = mode === "write";
+    const mayWrite = canWriteRun({ mode, outputTarget: options.outputTarget });
     if (mayWrite && !this.activeWriteRuns.has(knowledgeBaseId)) {
-      const active = (await this.list()).find((run) => run.mode === "write"
+      const active = (await this.list()).find((run) => canWriteRun(run)
         && run.knowledgeBaseId === knowledgeBaseId
         && !isTerminalRunStatus(run.status));
       if (active) this.activeWriteRuns.set(knowledgeBaseId, active.id);
@@ -125,6 +125,16 @@ export class RunStore {
 
   snapshot(id: string, config: VaultConfig): Promise<void> {
     return this.snapshots.snapshot(this.runDir(id), config);
+  }
+
+  async hasSnapshot(id: string): Promise<boolean> {
+    try {
+      await stat(path.join(this.runDir(id), "manifest.json"));
+      return true;
+    } catch (error: any) {
+      if (error.code === "ENOENT") return false;
+      throw error;
+    }
   }
 
   async collectChanges(id: string, config: VaultConfig): Promise<RunFileChange[]> {

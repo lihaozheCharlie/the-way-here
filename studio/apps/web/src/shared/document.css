@@ -10,7 +10,7 @@
   background: var(--paper);
 }
 .desktop-shell .document-surface.has-outline,
-.document-surface.has-outline { grid-template-columns: minmax(0, 1fr) 44px; }
+.document-surface.has-outline { grid-template-columns: minmax(0, 1fr) 0; }
 .document-content {
   position: relative;
   grid-column: 1;
@@ -51,20 +51,15 @@
 .document-surface .document-content .editable-document-body table { display: block; max-width: 100%; overflow-x: auto; }
 .document-surface .document-content .document-editor:focus { outline: none; box-shadow: none; caret-color: var(--accent); }
 .document-surface .document-content .editable-document-activate:focus-visible { outline: 1px solid var(--accent); outline-offset: 6px; }
-.document-mode-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; padding-block: 8px; }
-.document-mode-switch, .document-navigation-tabs { display: flex; gap: 4px; }
-.document-mode-switch button, .document-navigation-tabs button { min-height: 28px; padding: 4px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink-soft); font: 400 12px/1.5 var(--font-ui); cursor: pointer; }
-.document-mode-switch button[aria-pressed="true"], .document-navigation-tabs button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
-.document-mode-switch button:hover, .document-navigation-tabs button:hover { background: var(--surface-tinted); }
-.document-mode-bar .document-save-state { position: static; max-width: 60%; white-space: normal; }
+.document-save-feedback { display: flex; justify-content: flex-end; padding-block: 4px; }
+.document-navigation-tabs { display: flex; gap: 4px; }
+.document-navigation-tabs button { min-height: 28px; padding: 4px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink-soft); font: 400 12px/1.5 var(--font-ui); cursor: pointer; }
+.document-navigation-tabs button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.document-navigation-tabs button:hover { background: var(--surface-tinted); }
+.document-save-feedback .document-save-state { position: static; max-width: 100%; white-space: normal; }
 .document-context-content { padding-block: 12px; }
-.desktop-shell .document-surface > .document-outline-panel,
-.document-surface > .document-outline-panel { grid-column: 2; grid-row: 1; position: sticky; top: 0; max-height: calc(100dvh - 100px); overflow-y: auto; max-width: none; border-left: 1px solid var(--line); align-self: start; z-index: 3; }
-.document-surface:has(> .document-outline-panel.is-open):not(.document-compact) { grid-template-columns: minmax(0, 1fr) 220px; }
-.document-surface.document-compact > .document-outline-panel.is-open { position: sticky; margin-left: -176px; box-shadow: var(--shadow-float); }
-.document-surface .document-outline-panel .aux-panel-content { padding-top: 44px; height: auto; }
-.document-surface .document-outline { position: static; max-height: none; padding: 12px; border: 0; background: transparent; }
 .document-navigation-tabs { padding: 0 12px 8px; border-bottom: 1px solid var(--line); }
+.document-relations { min-height: 0; overflow: auto; overflow-wrap: anywhere; }
 .document-relations, .document-outline-empty { padding: 16px; color: var(--ink-soft); font: 400 13px/1.6 var(--font-ui); }
 .document-relations .evidence-panel { width: auto; padding: 0; border: 0; background: transparent; }
 .document-surface .document-readonly-title { margin: 0; font: 700 19px/1.3 var(--font-ui); overflow-wrap: anywhere; }
@@ -73,3 +68,48 @@
 .document-surface .document-content .editable-document-body > p { margin-block: 0 1lh; }
 .document-surface .document-content .editable-document-body > p:last-child { margin-bottom: 0; }
 .document-surface .document-content .document-file-name input { padding: 0; min-height: 32px; font: 700 19px/1.3 var(--font-ui); }
+
+/* The rail overlays the paper's right margin; only an explicitly pinned card takes space. */
+.document-surface > .document-navigation-host { grid-column: 2; grid-row: 1; position: sticky; top: 100px; height: min(560px, calc(100dvh - 180px)); width: 0; align-self: start; z-index: 5; overflow: visible; }
+.desktop-shell .document-surface.outline-pinned, .document-surface.outline-pinned { grid-template-columns: minmax(0, 1fr) 244px; }
+.document-surface.outline-pinned > .document-navigation-host { width: 244px; }
+.document-surface .document-outline { position: sticky; top: 0; display: block; width: 0; max-height: none; padding: 0; border: 0; background: transparent; overflow: visible; }
+.document-surface .document-outline.pinned { width: 244px; }
+.document-tick-rail { position: absolute; z-index: 2; right: 12px; top: 160px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; width: 30px; padding-block: 8px; }
+.document-tick-rail button { display: flex; align-items: center; justify-content: flex-end; width: 30px; height: 15px; border: 0; padding: 0; background: transparent; cursor: pointer; }
+.document-tick-rail i { display: block; width: 11px; height: 2px; border-radius: 2px; background: var(--line-strong); transition: width 140ms ease-out, background 140ms ease-out; }
+.document-tick-rail .major i { width: 20px; }
+.document-tick-rail .active i, .document-tick-rail button:hover i { width: 26px; background: var(--accent); }
+.document-outline-card { position: absolute; z-index: 1; top: 100px; right: 44px; display: flex; flex-direction: column; width: 268px; max-height: min(480px, calc(100dvh - 220px)); border: 1px solid var(--line); border-radius: 14px; background: var(--paper); box-shadow: var(--shadow-float); opacity: 0; visibility: hidden; transform: translateX(5px); transition: opacity 140ms ease-out, transform 140ms ease-out, visibility 140ms; pointer-events: none; }
+.document-outline-card::after { content: ""; position: absolute; top: 0; bottom: 0; right: -44px; width: 44px; }
+.document-outline:not(.compact):is(:hover, :focus-within) .document-outline-card, .document-outline:is(.expanded, .pinned) .document-outline-card { opacity: 1; visibility: visible; transform: translateX(0); pointer-events: auto; }
+.document-outline.pinned .document-outline-card { position: relative; top: 0; right: auto; width: 244px; max-height: calc(100dvh - 180px); border: 0; border-left: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.document-outline-card > header { display: flex; align-items: center; gap: 8px; padding: 14px 12px 10px; color: var(--ink); font: 400 13px/1.5 var(--font-ui); }
+.document-outline-card > header b { font-weight: 650; }
+.document-outline-card > header small { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
+.document-outline-card > header > button { margin-left: auto; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-soft); cursor: pointer; }
+.document-outline-card > header > button[aria-pressed=true] { color: var(--accent); background: var(--accent-soft); }
+.document-outline-card > header > button:disabled { opacity: .4; cursor: default; }
+.outline-mode { padding: 2px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font-size: 10px; white-space: nowrap; }
+.outline-mode.readonly, .document-readonly-badge { background: var(--attention-soft); color: var(--watch-ink); }
+.document-readonly-badge { display: inline-flex; align-items: center; gap: 6px; margin-block: 8px; padding: 4px 9px; border-radius: 7px; font: 400 12px/1.5 var(--font-ui); }
+.document-surface .document-outline-card ol { display: block; overflow: auto; min-height: 0; margin: 0; padding: 0 8px 10px; list-style: none; }
+.document-outline-card li { position: relative; display: flex; align-items: flex-start; }
+.document-outline-card .outline-item { display: flex; align-items: center; gap: 5px; width: 100%; min-height: 32px; padding: 7px 8px 7px calc(8px + var(--outline-depth, 0) * 14px); border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft); text-align: left; font: 400 13px/1.45 var(--font-ui); cursor: pointer; }
+.document-outline-card .outline-item span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
+.document-outline-card .outline-item.major { color: var(--ink); font-weight: 650; }
+.document-outline-card .outline-item.active { background: var(--accent-soft); color: var(--accent-ink); }
+.document-outline-card .outline-item:hover { background: var(--surface-tinted); }
+.outline-section-toggle { position: relative; flex: none; width: 18px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; }
+.document-outline-card footer { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 11px; }
+.document-outline-card kbd { font: inherit; border: 1px solid var(--line-strong); padding: 1px 4px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .document-outline-card, .document-tick-rail i { transition: none; } }
+
+.document-markdown-marker { display: inline-block; width: 0; position: relative; overflow: visible; }
+.document-markdown-marker > span { position: absolute; right: 6px; top: -.85em; color: var(--ink-soft); font: 400 12px/1 var(--font-ui); white-space: nowrap; }
+/* Reading and editing share the heading scale as well as body typography. */
+.document-surface .document-content :is(.editable-document-body h1, .document-editor .document-editor-heading-1) { font-size: 28px; }
+.document-surface .document-content :is(.editable-document-body h2, .document-editor .document-editor-heading-2) { font-size: 21px; }
+.document-surface .document-content :is(.editable-document-body h3, .editable-document-body h4, .editable-document-body h5, .editable-document-body h6, .document-editor .document-editor-heading-3, .document-editor .document-editor-heading-4, .document-editor .document-editor-heading-5, .document-editor .document-editor-heading-6) { font-size: 17px; }
+.document-surface .document-content :is(.editable-document-body :is(h1, h2, h3, h4, h5, h6), .document-editor .document-editor-heading) { font-family: var(--font-display); font-weight: 500; line-height: 1.5; letter-spacing: normal; }
+.document-editor .cm-content:focus-visible { outline: none; }

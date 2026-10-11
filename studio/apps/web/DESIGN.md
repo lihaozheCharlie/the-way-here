@@ -94,6 +94,20 @@ components:
   auxiliary-panel:
     backgroundColor: "{colors.paper}"
     width: "240px"
+  source-folder-row:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    height: "30px"
+  source-folder-selected:
+    backgroundColor: "{colors.accent-soft}"
+    textColor: "{colors.accent-ink}"
+  document-outline-floating:
+    backgroundColor: "{colors.paper}"
+    width: "268px"
+    rounded: "14px"
+  document-outline-pinned:
+    backgroundColor: "{colors.paper}"
+    width: "244px"
   reading-body:
     typography: "{typography.reading}"
     textColor: "{colors.ink}"
@@ -157,7 +171,7 @@ components:
 
 窗口宽度不超过（1150px）时，侧栏与 Inspector 分别为（180px / 290px）；当前后置样式仍保持上述常规页面内边距。主窗口最小宽度（760px）属于桌面约束。
 
-来源工作区打开文件夹（240px）和文件列表（280px），单栏折叠轨为（48px），预览保留至少（360px）。没有手动覆盖时，文件夹按工作区可用宽度（940px）决定展开，来源页 Inspector 按窗口宽度（1540px）自动让位，用户仍可手动展开。完整预览保持同一工作区。两栏同时折叠时也保留各自（48px）轨道。
+来源工作区打开文件夹（272px）和文件列表（276px），单栏折叠轨为（48px），预览区域最小（300px）。没有手动覆盖时，文件夹按工作区可用宽度（940px）决定展开，来源页 Inspector 按窗口宽度（1540px）自动让位，用户仍可手动展开。完整预览保持同一工作区。两栏同时折叠时也保留各自（48px）轨道。
 
 Questions 在页面内放置（6:4）对话和证据，间距（16px），高度受窗口约束且最小（340px）。消息和证据分别滚动；输入区保留在对话容器内。证据折叠后仅保留（48px）轨道；该页不再挂第二个 Inspector。
 
@@ -207,7 +221,23 @@ Questions 在页面内放置（6:4）对话和证据，间距（16px），高度
 
 ### Reading / Editing
 
-阅读与编辑共用宋体正文；文件标题为无衬线，属性摘要保持轻量，保存反馈靠近标题且成功后淡出。已授权本地目录支持原地编辑，独立阅读窗口保持只读。正文双击或按 Enter 编辑，离开正文保存；不提供阅读/编辑切换按钮。
+阅读与编辑共用宋体正文；文件标题为无衬线，属性摘要保持轻量，保存反馈靠近标题且成功后淡出。已授权本地目录支持原地编辑，独立阅读窗口保持只读。所有文档宿主均不提供阅读 / 编辑切换按钮或占位栏；正文双击、F2 或 Enter 进入编辑。正文失焦保存并回到阅读，目录交互保留编辑状态；Escape 回到阅读且不撤销已自动保存的内容。
+
+### Source Folder Tree / Import Destination
+
+文件夹栏与导入第二步复用同一棵懒加载目录树。文件夹栏分“已打开的文件夹”和“知识库内”，不按材料类型伪造层级；外部根显示真实名称和缩写路径，空目录保留，文件夹图标统一。缩进通常（16px），超过六层后每层（12px）；长名称中间截断，悬停可读完整路径。选中行浅蓝底深蓝字，祖先加粗，展开图标浅蓝填充；缺失目录以错误色和“重新连接”说明状态。
+
+树使用 roving tabindex、方向键、Home/End、Enter/空格选中、⌘⇧N 原位新建；右键、Shift+F10 或更多按钮打开同一菜单。外部根可新建子目录、Finder 显示、重新读取和从列表移除；普通子目录可重命名或移到废纸篓。移除根明确说明不会删除磁盘文件，移到废纸篓要求确认。展开偏好按知识库保存，恢复时先读取根再逐层读取当前仍存在的路径，避免旧偏好生成幽灵子项。文件列表通过可点击面包屑和“含子文件夹 / 仅此层”表达范围；“全部材料”的仅此层同样只显示知识库来源根目录的直接文件。
+
+只有根读取完成且整棵树没有目录时，显示文件夹图标、标题“打开你放笔记的文件夹”和“打开文件夹…”按钮；有知识库内目录但没有外部连接时不显示空态。不附加灰色解释段落，也不在侧栏底部常驻拖入提示；实际目录拖入交互保持可用。
+
+导入三种材料各自默认指向聊天记录 / 消费账单 / 照片记忆；位置树仅列知识库内目录，可原位创建多级目标，并显示完整选中路径。旧 files 类型偏好回退到 chat。
+
+### Document Outline / Markdown Editor
+
+共享正文最大行宽（720px）、左右边距（24px），进入编辑保持同一位置、宋体（17px / 1.85）与纸面。CodeMirror 保留纯 Markdown 源码，标题 # 标记视觉悬挂在左侧留白，代码围栏内不应用标题装饰。正文标题在阅读与编辑中使用同一宋体层级：H1（28px）、H2（21px）、H3–H6（17px），字重（500）、行高（1.5）；文件名称仍使用独立的界面标题样式。阅读目录跟随滚动，编辑目录跟随光标；点击目录定位标题行末并维持编辑焦点，⌘↑↓ 跳到上下节。
+
+目录主层标题加粗，子层缩进（14px），长标题最多两行且 title 提供完整文字。章节达到（30）时采用主层刻度、最多（14）条，并折叠非当前主节的子项；当前章节保持可见。有关联 / 证据时在同一卡片内切换，无关联不显示切换。无足够章节且无关联时不挂载导航，也不留下空白轨。窄窗口覆盖规则属于桌面窗口缩放，不引入手机导航。
 
 ### Quick Capture / Preferences
 
@@ -251,10 +281,10 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 
 - 此刻：一句话输入后展开右侧对话；三个紧凑入口提供话题、随手记与已有理解。保留导入、近期线索与理解，后者默认折叠。
 - 值得聊聊：两列卡片、真实类型筛选、每次显示四条；点击高亮并恢复该话题的历史对话。全窗口只有一个对话面板。
-- 生活记录：筛选、搜索、打开文件夹、导入和新建集中到工具栏；日期与排序通过展开入口访问。打开文件夹使用原生目录选择器，全文后的关联理解默认折叠。照片与账单记忆、批量构建、编辑和真实磁盘目录层级保留。
+- 生活记录：筛选、搜索、打开文件夹、导入和新建集中到工具栏；日期与排序通过展开入口访问。打开文件夹使用原生目录选择器，关联理解与目录在同一张导航卡内切换。照片与账单记忆、批量构建、编辑和真实磁盘目录层级保留。
 - 已有理解：四个分类入口各自包含计数与最近更新的真实页面摘要；循环展开与模型校准仍在可展开的摘要区内。
 - Agent：每次窗口加载默认折叠，展开后保留当前对话／历史切换、模型设置、任务与审批能力。折叠不卸载组件，不丢失输入或中止任务。
-- 导入：620px 弹窗，四类材料两列排列，默认显示材料选择与拖放；连接原目录为附加选项。第二步确认文件夹和摘要，保留照片、账单、聊天平台解析及错误处理。
+- 导入：620px 弹窗，聊天记录、消费账单、照片三类材料一行排列，每类附格式说明；日记与笔记通过底部提示直达“打开文件夹”。第二步使用共享文件夹树选择知识库内保存位置，保留摘要、解析与错误处理。
 
 最后加载的 `src/styles/desktop-redesign.css` 定义以上表面，沿用纸灰、白色、灰绿与现有字体令牌。
 
@@ -298,6 +328,19 @@ Mode: Operate。以本次用户提供的桌面 HTML 设计稿为此刻、值得�
 
 Markdown reading, editing, embedded previews, immutable versions and detached readers share `DocumentFrame` and `document.css`. The content column owns its 720px maximum text measure and 24px gutters; document identity, metadata and body align to that column. Body reading and editing use the same 17px/1.85 serif typography, color and padding. Business pages must not override prose geometry or fonts.
 
-Editable documents expose a fixed reading/editing switch with inline save feedback. Double-click and F2/Enter remain editing shortcuts; blur saves without leaving editing, and Escape returns to reading without reverting autosaved changes. Source block positions restore the corresponding paragraph instead of reusing a scroll pixel offset. Plain Markdown syntax, images and headings can still differ in height between modes.
+Editable documents have no reading/editing switch or reserved mode toolbar. Save feedback appears only while saving, after saving, or on errors. Double-click and F2/Enter enter editing; blur saves and returns to reading, except outline interactions preserve editing, and Escape returns to reading without reverting autosaved changes. Source block positions restore the corresponding paragraph instead of reusing a scroll pixel offset. Reading and editing headings share H1 28px, H2 21px, H3–H6 17px, weight 500 and line-height 1.5. Plain Markdown syntax and images can still differ in height between modes.
 
-The shared document auxiliary panel owns outline and optional evidence/relations. Outline links remain usable while editing and navigate to source headings. It starts folded, retains its state across mode changes, uses 220px when open and a 44px folded rail. Below 980px of document width it overlays the content instead of squeezing the text column. Read-only contexts share the paper and navigation without acquiring save behavior.
+The shared document navigation owns outline and optional evidence/relations. Its default tick rail occupies zero layout width; hover or keyboard focus opens a 268px floating card (14px corners, 140ms opacity/translation). Explicit pinning reserves a 244px sidebar and persists the preference. Below 980px of window width the rail opens by activation, the card overlays the text, selection closes it, and pinning is disabled. Read-only contexts share the paper and navigation, show the reason, and acquire no edit or save action.
+
+## 2026-10-10 生活记录新版（当前页面依据）
+
+Mode: Operate。以 `source-tree-and-document-outline (2).html` 为生活记录的当前视觉和交互依据，取代此前该页 272/276px、零宽默认目录轨和显式阅读/编辑切换的说明。其他文档宿主保持已有行为。
+
+- 生活记录沿用全应用的白色窗口标题栏与主侧栏、蓝色选中导航，不随路由修改全局背景、侧栏宽度或导航尺寸；页面工具栏为全部、笔记、AI 对话、照片、账单、待构建，随后是最大 340px 搜索和右侧蓝色导入按钮。导入按钮直接打开导入窗口，在窗口内选择聊天记录、消费账单或照片，不再弹出中间菜单。三类材料区与下方打开文件夹提示保持 16px 间距，提示仅保留标题和操作按钮。
+- 单个 12px 圆角容器内，文件夹 216px、文件列表 252px，两栏收起均为 40px 竖排入口。栏头 44px，列表行只含文件名和一行摘要；更多按钮在悬停、键盘焦点或打开菜单时出现。
+- 目录默认只显示当前层文件，全部材料显示全部后代。“含子文件夹”保留在筛选与排序菜单中；选择目录重置月份。新建操作必须有实际选中目录。打开原目录后选中新根；根移除只断开连接。
+- 正文顶部为可持续看到的路径与状态栏。正文标题 24px UI 字体，正文 16px/1.85 宋体，H2 为 20px、H3 为 16.5px。默认阅读，双击编辑、Esc 完成，不显示阅读/编辑按钮；保存反馈集中到状态栏。
+- 小标题使用同一个组件，默认 150px 文本目录，收起为 28px 短刻度，悬停/聚焦展开 184px 浮卡。当前章节强调，子层缩进 12px。展开偏好和其他文档的固定目录偏好分开。没有二级或更深标题时不占位，编辑时才提示输入 `##`；一个小标题也可导航。目录定位必须避开 44px 栏头并额外留 24px。
+- 阅读区域在宽屏居中，正文与小标题导航相隔 16px，不把导航固定到最右边。正文通常最大 500px，预览可用宽度达到 1000px 时最大 680px，收起左侧分栏后利用回收空间。来源预览不显示额外的目录/关联切换面板；关联结果恢复为来源正文下方的可展开/收起卡片，包含相关日记及知识页面，支持跳转与返回上下文。所有文档宿主不再显示只读徽标或目录只读标签，编辑权限和历史版本选择保持原样。既有属性、照片/账单记忆、任务与错误提示仍然可用。品牌图标沿用独立确认过的母版。首次使用和各层空态均有独立处理，不复制设计稿演示数据或假操作提示。
+
+细项及验证边界见 `../../docs/source-tree-and-outline-checklist.md`。

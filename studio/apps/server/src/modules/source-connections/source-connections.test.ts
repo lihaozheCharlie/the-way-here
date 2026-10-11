@@ -27,6 +27,17 @@ async function fixture() {
   return { root, original, knowledge, connections, runs, runMap, app, temp };
 }
 describe("local source directories", () => {
+  it("reconnects a moved folder with the same logical root and rejects other-library requests", async () => {
+    const f = await fixture();
+    const [connection] = await f.connections.connect("one", f.original, false, false);
+    await expect(f.connections.connect("one", f.original, false, true, connection!.id)).resolves.toMatchObject([{ id: connection!.id, path: f.original }]);
+    const moved = `${f.original}-moved`; await rename(f.original, moved);
+    const response = await f.app.inject({ method: "POST", url: `/api/source-connections/${connection!.id}/reconnect`, payload: { knowledgeBaseId: "one", path: moved } });
+    expect(response.statusCode).toBe(200);
+    expect((await f.connections.list("one"))[0]).toMatchObject({ id: connection!.id, path: moved, autoBuild: false, aiWritable: false });
+    const rejected = await f.app.inject({ method: "POST", url: `/api/source-connections/${connection!.id}/reconnect`, payload: { knowledgeBaseId: "two", path: moved } });
+    expect(rejected.statusCode).toBe(409);
+  });
   it("indexes original text without copying it and makes existing read/search flows work", async () => {
     const f = await fixture();
     const words = "# 日记\n这段原话只存在于原始目录。今天在河边散步。";

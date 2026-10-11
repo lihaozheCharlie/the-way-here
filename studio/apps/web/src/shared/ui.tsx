@@ -2,10 +2,12 @@ import { useQuietScroll } from "./QuietScroll";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
-export type IconName = "heart" | "link" | "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
+export type IconName = "folder" | "pin" | "heart" | "link" | "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
+    folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />,
+    pin: <path d="M9 4h6l-1 6 3 3H7l3-3ZM12 13v7" />,
     heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />,
     link: <><path d="m10 13 4-4M8 15l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0M13 18a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1" /></>,
     info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7h.01" /></>,

@@ -51,7 +51,9 @@ describe("run policy", () => {
     const prompt = buildRunPrompt("auto", "帮我处理这段经历", config);
     expect(prompt).toContain("寒暄、分享近况、表达感受或随意聊天时直接自然回应");
     expect(prompt).toContain("不要为了判断是否值得写入而读取文件");
-    expect(prompt).toContain("绝不修改任何文件");
+    expect(prompt).toContain("直接在本轮完成所请求的写入");
+    expect(prompt).toContain("先给草稿或不要保存时，不得写入");
+    expect(prompt).not.toContain("即使用户提出整理或写入，也先回应");
     expect(prompt).toContain("回复后由独立判断任务处理");
   });
 

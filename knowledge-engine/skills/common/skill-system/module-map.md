@@ -32,7 +32,7 @@ source:
 | `knowledge-engine/skills/common/retrieval/SKILL.md` | 共享关键词召回、来源时间核验、渐进阅读与双链追溯；只提供证据，不负责消费结论或写入 | 独立快照/读取工具与来源提示配置；查询、预测、扫描和需要旧知识的构建模块按需依赖 |
 | `knowledge-engine/skills/common/quality-gate/SKILL.md` | 跨模块内容质量和区分读写模式的验证 | 标签/链接验证器、Skill 体系验证器和安全的生成索引检查 |
 | `knowledge-engine/skills/common/skill-system/SKILL.md` | Skill 设计、`AGENTS.md` 路由健康和模块演进 | `AGENTS.md`、`knowledge-engine/skills/common/skill-system/module-map.md`、`skill体系重构思路.md` 和 GBrain 的 Skill 思路 |
-| `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` | 查询、回信和解释性构建共享的人物推理视角；只改变怎样理解证据，不负责归档，也不决定是否写入 | 动态人物发现、证据护栏、人物推理文件和跨领域语义回归 |
+| `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` | 查询、回信和解释性构建共享的人物推理视角；唯一维护选角、主辅关系和忠实度，只改变怎样理解证据，不负责归档或写入决策 | 动态人物发现、证据核验、人物特色与成文校准、成品定位和多视角语义回归 |
 | `knowledge-engine/skills/common/signal-detector/SKILL.md` | 普通对话、维护或路由诊断期间的轻量信号分类 | 信号检测配方 |
 
 ## 消费模块
