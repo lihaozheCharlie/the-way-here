@@ -34,13 +34,19 @@ export function requestPrompt(request: LetterRequest): { prompt: string; label: 
     ["关联地点", related.places],
     ["关联现实系统", related.systems],
   ] : [];
-  const startingPoints = groups.map(([label, pages]) => `- ${label}：${pages.length ? pages.map(page => `${page.title} [${page.id}]`).join("；") : "暂无"}`).join("\n");
+  const startingPoints = groups.filter(([, pages]) => pages.length).map(([label, pages]) => `- ${label}：${pages.map(page => `${page.title} [${page.id}]`).join("；")}`).join("\n");
   const intent = request.description
-    ? `我的原话是：${request.description}。请先辨认所指的经历或时间；如不能确定，先向我澄清，不要猜测后写信。视角或关注点没有明确指定时，可以根据证据和写信 Skill 自动选择。`
-    : `经历：${request.stage!.title}${request.stage!.range || request.stage!.pageId ? `（${[request.stage!.range, request.stage!.pageId ? `页面 ${request.stage!.pageId}` : ""].filter(Boolean).join("，")}）` : ""}。视角：${request.lens ? `${request.lens.name}${request.lens.attention ? `（${request.lens.attention}）` : ""}` : "未指定，请根据证据和写信 Skill 自动选择"}。关注点：${request.focus || "未指定，请根据证据判断"}。`;
+    ? `经历：${request.description}\n经历或时间不明确时先澄清。`
+    : `经历：${request.stage!.title}${request.stage!.range || request.stage!.pageId ? `（${[request.stage!.range, request.stage!.pageId ? `页面 ${request.stage!.pageId}` : ""].filter(Boolean).join("，")}）` : ""}`;
   return {
     label: request.stage?.title || request.description?.slice(0, 24) || "自由描述",
-    prompt: `请为我主动写一封近况回信。${intent}${startingPoints ? `\n所选阶段已有的关联页面，作为检索起点（不是已核实的写信证据；先读页面，再追溯原始来源，按相关性取舍）：\n${startingPoints}` : ""}\n请使用知识库注册的 build-companion-reflection 流程，检索这段经历的原始材料和必要的已有理解；如指定视角，使用其注意力和推理方式，否则按 Skill 结合材料自动选择合适视角。不模仿人物口头禅。只依据有来源的事实，不虚构经历或心理。若该段经历没有足够的具体材料，请说明并停止，不创建空泛回信。完成后按该 Skill 的归档与质量门保存到当前知识库，并说明保存位置。`,
+    prompt: [
+      "读取并执行 build-companion-reflection，为这段经历写一封近况回信，保存到当前知识库。",
+      intent,
+      request.lens ? `视角：${request.lens.name}${request.lens.attention ? `（${request.lens.attention}）` : ""}` : "",
+      request.focus ? `关注点：${request.focus}` : "",
+      startingPoints ? `检索起点（需追溯原始来源）：\n${startingPoints}` : "",
+    ].filter(Boolean).join("\n"),
   };
 }
 
@@ -54,7 +60,7 @@ export function perspectiveLetterRequest(letter: LetterViewItem, lens: Reasoning
   ].filter(Boolean).join("\n");
   return {
     context: { scope: "近况回信 · 独立人物视角", title: "从原始材料写信", summary: clues, suggestions: [] },
-    prompt: `请依据以下线索找到原始材料，以「${lens.displayName}」的视角写一封完整的近况回信。\n${clues}\n读取人物视角文件 ${lens.relativePath} 的完整推理协议，并使用 build-companion-reflection 的朋友式成文要求。先从原始材料建立中性证据，再由此人物的推理起点、路径、洞见标准和停止位置独立形成这封信；不要借用其他人物的分析框架。不要读取或参考原回信、近况对话总览、任何已有视角版本，也不要比较新旧内容或检查重复。不要虚构事实、模仿口头禅或替我下结论。最终只输出可直接阅读的完整回信正文，并在末尾用“依据”列出实际引用的原始材料；不要修改任何文件，系统会把回答保留为「${lens.displayName}视角回信」。`,
+    prompt: `读取并执行 build-companion-reflection 的「独立人物视角版本」，用「${lens.displayName}」的视角从原始材料写一封近况回信。\n人物文件：${lens.relativePath}\n${clues}\n只返回回信正文和依据，由系统保存。`,
   };
 }
 

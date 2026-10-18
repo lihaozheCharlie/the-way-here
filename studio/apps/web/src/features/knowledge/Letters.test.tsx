@@ -49,12 +49,14 @@ describe("letter reader", () => {
     expect(render()).toContain("主动写一封");
     const guided = requestPrompt({ stage: { title: "转折阶段", range: "2025-01 至 2025-03", pageId: "wiki/stage" }, lens: { name: "导师", attention: "未说出口的顾虑" }, focus: "一次决定" });
     expect(guided.prompt).toContain("经历：转折阶段（2025-01 至 2025-03，页面 wiki/stage）");
-    expect(requestPrompt({ stage: { title: "刚辞职那段经历" }, lens: { name: "朋友" } }).prompt).toContain("经历：刚辞职那段经历。视角：朋友");
+    expect(requestPrompt({ stage: { title: "刚辞职那段经历" }, lens: { name: "朋友" } }).prompt).toContain("经历：刚辞职那段经历\n视角：朋友");
     expect(guided.prompt).toContain("关注点：一次决定");
-    expect(guided.prompt).toContain("不虚构经历或心理");
+    expect(guided.prompt).toContain("读取并执行 build-companion-reflection");
+    expect(guided.prompt).toContain("保存到当前知识库");
     const automatic = requestPrompt({ stage: { title: "刚辞职那段经历" } });
-    expect(automatic.prompt).toContain("视角：未指定，请根据证据和写信 Skill 自动选择");
-    expect(requestPrompt({ description: "写一封关于最近变化的信" }).prompt).toContain("如不能确定，先向我澄清");
+    expect(automatic.prompt).not.toContain("视角：");
+    expect(automatic.prompt).not.toContain("关注点：");
+    expect(requestPrompt({ description: "写一封关于最近变化的信" }).prompt).toContain("经历或时间不明确时先澄清");
   });
 
   it("uses stage relations as retrieval starting points and binds the run to that stage", () => {
@@ -70,7 +72,7 @@ describe("letter reader", () => {
     };
     const prompt = requestPrompt({ stage }).prompt;
     for (const id of ["wiki/event", "wiki/person", "wiki/place", "wiki/system"]) expect(prompt).toContain(`[${id}]`);
-    expect(prompt).toContain("不是已核实的写信证据");
+    expect(prompt).toContain("需追溯原始来源");
     expect(prompt).not.toContain("wiki/letter");
     expect(letterRequestContext({ stage })).toMatchObject({ scope: "近况回信 · 主动写信", title: "匿名阶段", pageId: "wiki/stage", summary: "阶段摘要" });
     expect(letterRequestContext({ description: "匿名经历" }).pageId).toBeUndefined();
@@ -89,7 +91,8 @@ describe("letter reader", () => {
     expect(request.prompt).not.toContain(page.title);
     expect(request.prompt).not.toContain("wiki synthesis");
     expect(request.prompt).not.toContain("重新写");
-    expect(request.prompt).toContain("不要比较新旧内容或检查重复");
+    expect(request.prompt).toContain("build-companion-reflection 的「独立人物视角版本」");
+    expect(request.prompt).toContain("只返回回信正文和依据，由系统保存");
   });
 
   it("shares the reread lens cards with the active letter composer", () => {
