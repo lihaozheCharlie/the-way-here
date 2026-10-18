@@ -232,6 +232,7 @@ export function AppShell({ revision }: { revision: number }) {
       if (event.key.toLowerCase() === "k") action = "search";
       if (event.key === ",") action = "settings";
       if (event.key.toLowerCase() === "n") action = "capture";
+      if (event.key.toLowerCase() === "o") action = "import";
       if (event.altKey && event.key.toLowerCase() === "i") action = "inspector";
       if (event.key === "Enter") action = "detach";
       if (event.shiftKey && event.key.toLowerCase() === "f") action = "focus";

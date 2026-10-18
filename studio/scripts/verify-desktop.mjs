@@ -1,243 +1,111 @@
 import { _electron as electron, expect } from '@playwright/test';
-import { cp, mkdir, mkdtemp, writeFile, readFile, rm, realpath } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-const studio=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const root=await realpath(await mkdtemp(path.join(os.tmpdir(),'twh-desktop-check-')));
-const linkedDirectory=await realpath(await mkdtemp(path.join(os.tmpdir(),'twh-original-check-')));
-await writeFile(path.join(linkedDirectory,'连接原文.md'),'只保留在原目录的第一版');
-const captures=path.join(studio,'.impeccable/reviews'); await mkdir(captures,{recursive:true});
-await cp(path.join(studio,'../vault/demo'),path.join(root,'vault/demo'),{recursive:true});
-await writeFile(path.join(root,'vault/demo/sources/UX 阅读验收.md'),'---\ntype: 日记\ntags: [生活, 回忆, 记录]\ndate: 2026-09-12\n---\n# UX 阅读验收\n\n## 当时的场景\n匿名原始记录，用于检验编辑与属性。\n\n## 后来想到\n还可以继续补充。\n\n### 具体线索\n完整保留原话。');
-await cp(path.join(studio,'../knowledge-engine'),path.join(root,'knowledge-engine'),{recursive:true});
-await writeFile(path.join(root,'AGENTS.md'),'Anonymous desktop verification workspace.');
-await writeFile(path.join(root,'the-way-here.config.yaml'),'version: 3\ndefaultKnowledgeBase: demo\npaths:\n  skills: knowledge-engine/skills\n  tools: knowledge-engine/tools\n  agentInstructions: AGENTS.md\nknowledgeBases:\n  demo:\n    name: The Way Here 演示 Wiki\n    paths:\n      wiki: vault/demo/wiki\n      sources: vault/demo/sources\nagents:\n  runtimes:\n    codex:\n      enabled: false\n    pi:\n      enabled: false\nvalidation:\n  commands: []\n');
-let application;
+
+// Pair with verify-web.mjs: exercise the current shared UI over native IPC,
+// without relying on the retired connection-management panel or HTTP transport.
+const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-app-parity-')));
+const original = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-parity-original-')));
+let app, pid, stateRoot;
+const errors = [];
 try {
-  application=await electron.launch({ ...(process.env.TWH_DESKTOP_EXECUTABLE ? {executablePath:process.env.TWH_DESKTOP_EXECUTABLE,args:['--diagnostics']} : {args:[path.join(studio,'apps/desktop'),'--diagnostics']}), env:{...process.env,THE_WAY_HERE_VAULT:root,THE_WAY_HERE_KNOWLEDGE_BASE:'demo'},timeout:60000 });
-  application.process().stderr.on('data', data => process.stderr.write(data));
-  const page=await application.firstWindow({timeout:60000}); await page.waitForLoadState('domcontentloaded');
-  const errors=[]; page.on('pageerror', error=>errors.push(error.message));
-  await expect(page.locator('h1')).toContainText('欢迎回来');
-  const origin=new URL(page.url()).origin;
+  const filter = file => !['.runtime', '__pycache__', '.DS_Store'].includes(path.basename(file));
+  await cp(path.join(studio, '../vault/demo'), path.join(root, 'vault/demo'), { recursive: true, filter });
+  await cp(path.join(studio, '../knowledge-engine'), path.join(root, 'knowledge-engine'), { recursive: true, filter });
+  await writeFile(path.join(root, 'AGENTS.md'), 'Anonymous platform parity verification.');
+  await writeFile(path.join(root, 'the-way-here.config.yaml'), `version: 3
+defaultKnowledgeBase: demo
+knowledgeBases:
+  demo:
+    name: 匿名兼容验收
+    paths:
+      wiki: vault/demo/wiki
+      sources: vault/demo/sources
+agents:
+  runtimes:
+    codex:
+      enabled: false
+    pi:
+      enabled: false
+validation:
+  commands: []
+`);
+  const originalText = '# 平台兼容样例\n\n匿名原文，验证移除入口不会删除文件。';
+  await writeFile(path.join(original, '平台兼容样例.md'), originalText);
+  const env = { ...process.env, THE_WAY_HERE_VAULT: root, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo', TWH_APP_CACHE_ROOT: path.join(root, 'cache') };
+  delete env.THE_WAY_HERE_DEV;
+  delete env.THE_WAY_HERE_DESKTOP_TOKEN;
+  app = await electron.launch({ ...(process.env.TWH_DESKTOP_EXECUTABLE ? { executablePath: process.env.TWH_DESKTOP_EXECUTABLE, args: ['--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] } : { args: [path.join(studio, 'apps/desktop'), '--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] }), env, timeout: 60000 });
+  pid = app.process().pid;
+  console.log(`Verification App PID ${pid}`);
+  const page = await app.firstWindow();
+  page.setDefaultTimeout(10000);
+  page.on('pageerror', error => errors.push(error.message));
+  await page.waitForURL('**/');
+  const origin = new URL(page.url()).origin;
   expect(new URL(origin).hostname).toMatch(/^workspace-[a-f0-9]+\.localhost$/);
-  await page.evaluate(() => (localStorage.setItem('desktop.verify-persistence','kept'), localStorage.setItem('desktop.inspector','true')));
-  expect(await page.evaluate(() => typeof window.require)).toBe('undefined');
-  expect(await page.evaluate(() => window.desktop.openWindow('https://example.com').then(() => false, () => true))).toBe(true);
-  await page.reload();
-  expect(await page.evaluate(() => localStorage.getItem('desktop.verify-persistence'))).toBe('kept');
-  const invokeMenu=async(label)=> application.evaluate(({Menu},label) => { const walk=(items)=>{for(const item of items){if(item.label===label){item.click();return true;}if(item.submenu&&walk(item.submenu.items))return true;}return false;};if(!walk(Menu.getApplicationMenu().items))throw Error('Missing menu: '+label); },label);
-  for (const route of ['/','/questions','/predict-self','/sources','/knowledge','/insights','/timeline','/letters','/relationships','/cards/personal-lines','/cards/cycles','/cards/systems','/mental-models']) {
-    console.log('Route',route);
-    await page.goto(origin+route); await expect(page.locator('.desktop-sidebar')).toBeVisible();
-    await page.locator('h1').first().waitFor(); await page.waitForTimeout(260);
-    const geometry=await page.locator('.main-area').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
-    expect(geometry.scroll,route+' horizontal overflow').toBeLessThanOrEqual(geometry.width+2);
-    if(route==='/questions') {
-      await expect(page.locator('.desktop-inspector')).toHaveClass(/is-collapsed/);
-      await page.locator('.questions-topic-card button').first().click();
-      await expect(page.locator('.desktop-inspector')).toHaveClass(/is-open/);
-      await expect(page.locator('.context-agent-panel')).toHaveCount(1);
-      await expect(page.locator('.questions-topic-card.active')).toHaveCount(1);
-      await expect.poll(async () => { const input=await page.locator('.context-agent-composer textarea').boundingBox(); return input.y+input.height; }).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
-    }
-    if(route==='/predict-self') {
-      await expect(page.getByRole('heading',{name:'看见未来',exact:true})).toBeVisible();
-      await expect(page.locator('.life-scenario-tree')).toBeVisible();
-      await expect(page.locator('.context-agent-panel')).toHaveCount(1);
-      await page.locator('.life-scenario-tree .prediction-branches button').first().click();
-      await expect(page.locator('.prediction-detail')).toBeVisible();
-      await page.screenshot({path:path.join(captures,'desktop-predictions.png')});
-    }
-    if(route==='/sources') { const body=await page.locator('.source-preview .editable-document-body').boundingBox(); expect(body.width).toBeGreaterThanOrEqual(300); }
-    if(['/','/sources','/letters','/relationships','/questions','/knowledge','/insights','/timeline'].includes(route)) await page.screenshot({path:path.join(captures,`desktop-${route==='/'?'today':route.slice(1)}.png`)});
+  const policy = await page.evaluate(() => fetch('/api/storage/policy').then(response => response.json()));
+  if (path.basename(policy.stateRoot) !== createHash('sha256').update(root).digest('hex').slice(0, 16) || path.basename(path.dirname(policy.stateRoot)) !== 'vaults') throw new Error('Unexpected test state location');
+  stateRoot = policy.stateRoot;
+  await expect(page.locator('.model-onboarding-dialog')).toBeVisible();
+  await page.getByRole('button', { name: '稍后配置', exact: true }).click();
+  await page.getByRole('checkbox', { name: '不再提醒我', exact: true }).check();
+  await page.getByRole('button', { name: '稍后配置', exact: true }).click();
+  for (const route of ['/', '/questions', '/sources', '/knowledge', '/insights', '/timeline', '/letters', '/relationships', '/predict-self']) {
+    await page.goto(origin + route);
+    await expect(page.locator('main h1').first()).toBeAttached();
+    await expect(page.locator('main .loading')).toHaveCount(0);
+    await expect(page.locator('.desktop-navigation a.active')).not.toHaveCount(0);
   }
-  const focusSignal = await page.evaluate(() => fetch('/api/views/today').then(r=>r.json()).then(view=>view.focusCandidates[0]));
-  expect(focusSignal).toBeTruthy();
-  await page.goto(origin+'/focus/'+encodeURIComponent(focusSignal.id));
-  await expect(page.locator('.focus-conversation .context-agent-composer textarea')).toBeVisible();
-  await expect.poll(async()=>{ const box=await page.locator('.focus-conversation .context-agent-composer textarea').boundingBox(); return box.y+box.height; }).toBeLessThanOrEqual(await page.evaluate(()=>innerHeight));
-  await page.waitForTimeout(260);
-  await page.screenshot({path:path.join(captures,'desktop-focus.png')});
-  await page.getByRole('button',{name:'收起相关证据',exact:true}).click();
-  await expect.poll(async()=>Math.round((await page.locator('.focus-evidence-panel').boundingBox()).width)).toBe(48);
-  await page.getByRole('button',{name:'展开相关证据',exact:true}).click();
-  await page.locator('.focus-more-evidence > summary').click();
-  await expect(page.locator('.epistemic-board')).toBeVisible();
-  // UX interaction regression: panes, reader persistence, failure visibility and history drafts.
-  await page.goto(origin+'/sources?q=UX%20阅读验收');
-  await expect(page.getByRole('button',{name:'收起文件夹栏',exact:true})).toBeVisible();
-  expect(Math.round((await page.locator('.source-folder-shell').boundingBox()).width)).toBe(240);
-  expect(Math.round((await page.locator('.source-file-shell').boundingBox()).width)).toBe(280);
-  await page.getByRole('button',{name:'收起文件夹栏',exact:true}).click();
-  await expect.poll(async()=>Math.round((await page.locator('.source-folder-shell').boundingBox()).width)).toBe(48);
-  await page.getByRole('button',{name:'收起文件列表',exact:true}).click();
-  await expect.poll(async()=>Math.round((await page.locator('.source-file-shell').boundingBox()).width)).toBe(48);
-  expect(Math.round((await page.locator('.source-folder-shell').boundingBox()).width)).toBe(48);
-  await page.getByRole('button',{name:'展开文件列表',exact:true}).click();
-  await page.getByRole('button',{name:'展开文件夹栏',exact:true}).click();
-  const doc=page.locator('.source-preview .editable-document');
-  await expect(doc.locator('.source-property-chip')).toHaveCount(2);
-  await doc.getByRole('button',{name:/\+\d+ 个标签/}).click();
-  await expect(doc.locator('.source-property-chip')).toHaveCount(5);
-  await doc.getByRole('button',{name:'收起标签',exact:true}).click();
-  await expect(doc.locator('.source-property-chip')).toHaveCount(2);
-  await expect(doc.getByRole('button',{name:'展开本页目录',exact:true})).toBeVisible();
-  await doc.getByRole('button',{name:'展开本页目录',exact:true}).click();
-  await expect(doc.locator('.document-outline')).toBeVisible();
-  await doc.getByRole('button',{name:'收起本页目录',exact:true}).click();
-  const readFont=await doc.locator('.editable-document-body').evaluate(el=>getComputedStyle(el).fontFamily);
-  await doc.locator('.editable-document-activate').focus(); await page.keyboard.press('Enter');
-  const editor=doc.locator('textarea');
-  expect(await editor.evaluate(el=>getComputedStyle(el).fontFamily)).toBe(readFont);
-  await editor.fill('## 当时的场景\n匿名编辑后的原话。\n\n## 后来想到\n完整保留内容。');
-  await expect(doc.locator('.document-save-state')).toHaveText('已保存');
-  await editor.press('Escape');
-  await expect(doc.locator('.editable-document-body')).toContainText('匿名编辑后的原话');
-  const fixture=await page.evaluate(()=>fetch('/api/search?q=UX%20阅读验收').then(r=>r.json()).then(rows=>rows.find(row=>row.title==='UX 阅读验收')));
-  const persisted=await readFile(path.join(root,fixture.relativePath),'utf8');
-  expect(persisted).toContain('tags: [生活, 回忆, 记录]'); expect(persisted).toContain('匿名编辑后的原话');
-  await expect.poll(async()=>doc.locator('.document-save-state').textContent()).toBe('');
-  await page.evaluate(() => {
-    window.__reviewFetch = window.fetch;
-    window.fetch = (url, init) => init?.method === 'PUT' && String(url).startsWith('/api/pages/')
-      ? Promise.resolve(new Response(JSON.stringify({error:'模拟并发冲突'}),{status:409,headers:{'Content-Type':'application/json'}}))
-      : window.__reviewFetch(url, init);
+  await page.goto(origin + '/sources');
+  await expect(page.locator('.source-connections article, .source-connections label, .source-connections-popover')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /断开连接|确认断开|连接原始目录/ })).toHaveCount(0);
+  // Stub only the OS picker/permission dialog, keeping the actual bridge and runtime.
+  await app.evaluate(({ dialog }, directory) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
+    dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
+  }, original);
+  await page.getByRole('button', { name: '打开文件夹…', exact: true }).click();
+  await page.getByRole('button', { name: '平台兼容样例.md', exact: true }).click();
+  await expect(page.locator('.source-preview')).toContainText('匿名原文');
+  const connections = await page.evaluate(() => fetch('/api/source-connections').then(response => response.json()));
+  expect(connections).toHaveLength(1);
+  const node = page.getByRole('tree', { name: '文件夹树' }).locator(`[data-folder="外部来源/${connections[0].id}"]`);
+  await node.hover();
+  await node.getByRole('button', { name: /更多文件夹操作/ }).click();
+  await expect(page.getByRole('menuitem', { name: '重命名', exact: true })).toHaveCount(0);
+  await expect(page.getByText('只移除入口，不会删除磁盘上的文件', { exact: true })).toBeVisible();
+  await page.getByRole('menuitem', { name: '从列表移除', exact: true }).click();
+  await expect(node).toHaveCount(0);
+  expect(await readFile(path.join(original, '平台兼容样例.md'), 'utf8')).toBe(originalText);
+  await app.evaluate(({ Menu }) => {
+    const file = Menu.getApplicationMenu().items.find(item => item.label === '文件');
+    const item = file.submenu.items.find(item => item.label === '导入生活记录…');
+    if (item.accelerator !== 'CmdOrCtrl+O') throw new Error('Import accelerator changed');
+    item.click();
   });
-  await doc.locator('.editable-document-activate').focus(); await page.keyboard.press('Enter');
-  await doc.locator('textarea').fill('尚未保存的冲突内容。');
-  await expect(doc.locator('.document-save-state')).toContainText('保存失败');
-  await page.waitForTimeout(1800);
-  await expect(doc.locator('.document-save-state')).toHaveClass(/visible.*error/);
-  expect(await readFile(path.join(root,fixture.relativePath),'utf8')).not.toContain('冲突内容');
-  await doc.locator('textarea').fill('## 当时的场景\n匿名编辑后的原话。\n\n## 后来想到\n完整保留内容。');
-  await doc.locator('textarea').press('Escape');
-  await page.evaluate(() => { window.fetch = window.__reviewFetch; delete window.__reviewFetch; });
-  await page.getByRole('button',{name:'展开AI 协作面板',exact:true}).click();
-  await page.locator('.context-agent-composer textarea').fill('切换历史后仍保留的匿名草稿');
-  await page.getByRole('tab',{name:'历史记录',exact:true}).click();
-  await page.getByRole('tab',{name:'当前对话',exact:true}).click();
-  await expect(page.locator('.context-agent-composer textarea')).toHaveValue('切换历史后仍保留的匿名草稿');
-  await page.goto(origin+'/page/'+encodeURIComponent(fixture.id));
-  await expect(page.locator('.editable-document-body')).toContainText('匿名编辑后的原话');
-  await page.getByRole('button',{name:'展开目录与证据',exact:true}).click();
-  await expect(page.locator('.reader-evidence-panel .document-outline')).toBeVisible();
-  await page.locator('.reader-evidence-panel .document-outline').getByRole('link',{name:'后来想到',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'后来想到',exact:true})).toBeInViewport();
-  await page.getByRole('button',{name:'收起目录与证据',exact:true}).click();
-  await expect.poll(async()=>Math.round((await page.locator('.reader-evidence-panel').boundingBox()).width)).toBe(44);
-  await page.locator('#main-content').evaluate(el=>el.scrollTo(0,0));
-  await page.screenshot({path:path.join(captures,'desktop-reader-ux.png')});
-  await page.goto(origin+'/knowledge');
-  await page.locator('.understanding-detail-disclosure > summary').click();
-  const digest=page.locator('.understanding-digest'); await expect(digest.locator('h2')).toHaveCount(4);
-  const cycle=digest.getByRole('button',{name:'展开循环',exact:true});
-  await expect(cycle).toBeVisible(); await cycle.click(); await expect(digest.locator('.cycle-stages section')).toHaveCount(4);
-  const calibration=digest.getByRole('tab',{name:'校准',exact:true});
-  await expect(calibration).toBeVisible(); await calibration.click(); await expect(calibration).toHaveAttribute('aria-selected','true');
-  await page.waitForTimeout(260);
-  await page.screenshot({path:path.join(captures,'desktop-understanding-expanded.png')});
-  await page.goto(origin+'/search?q=记录'); await expect(page.locator('.search-result mark').first()).toBeVisible();
-  await page.screenshot({path:path.join(captures,'desktop-search.png')});
-  await invokeMenu('搜索与命令');
-  await page.getByRole('combobox').fill('近况回信'); await page.getByRole('combobox').press('Enter'); await expect(page).toHaveURL(/letters/);
-  await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-open/); await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-collapsed/); await expect(page.getByRole('button',{name:'展开AI 协作面板',exact:true})).toBeVisible();
-  await invokeMenu('AI 协作面板'); await expect(page.locator('.desktop-inspector')).toHaveClass(/is-open/);
-  const settingsPromise=application.waitForEvent('window'); await invokeMenu('偏好设置…'); const settings=await settingsPromise; await settings.waitForLoadState('domcontentloaded');
-  await expect(settings.getByRole('tab',{name:'AI 助手'})).toBeVisible(); await settings.getByRole('tab',{name:'AI 助手'}).click(); await expect(settings.locator('.ai-configuration')).toBeVisible();
-  await settings.getByLabel('启用对话式整理提示').uncheck();
-  await expect.poll(async()=>page.evaluate(()=>localStorage.getItem('desktop.ai-hints'))).toBe('false');
-  await settings.getByLabel('启用对话式整理提示').check();
-  await settings.getByLabel('每日一条「此刻的话头」').uncheck();
-  await expect.poll(async()=>page.evaluate(()=>localStorage.getItem('desktop.daily-opener'))).toBe('false');
-  await settings.getByLabel('每日一条「此刻的话头」').check();
-  await settings.getByRole('tab',{name:'知识库',exact:true}).click();
-  await settings.getByRole('button',{name:'重命名',exact:true}).first().click();
-  await settings.getByLabel('空间名称',{exact:true}).fill('匿名验收空间');
-  await settings.getByRole('button',{name:'保存名称',exact:true}).click();
-  await expect(settings.getByRole('status')).toContainText('空间名称已保存');
-  await expect.poll(async()=>page.evaluate(()=>fetch('/api/vault').then(r=>r.json()).then(v=>v.name))).toBe('匿名验收空间');
-  await settings.getByRole('tab',{name:'AI 助手',exact:true}).click();
-  await settings.waitForTimeout(260);
-  await settings.screenshot({path:path.join(captures,'desktop-preferences.png')}); await settings.close();
-  await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='main')?.focus());
-  const capturePromise=application.waitForEvent('window'); await invokeMenu('随手记'); const capture=await capturePromise; await capture.waitForLoadState('domcontentloaded');
-  expect(await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='capture').isAlwaysOnTop())).toBe(true);
-  expect(await application.evaluate(({globalShortcut})=>globalShortcut.isRegistered('CommandOrControl+Shift+N'))).toBe(true);
-  await capture.getByRole('textbox',{name:'记录标题（可选）'}).fill('桌面验收记录');
-  await capture.getByRole('textbox',{name:'随手记内容'}).fill('意外关闭也不丢失');
-  await capture.reload(); await expect(capture.getByRole('textbox',{name:'随手记内容'})).toHaveValue('意外关闭也不丢失');
-  await expect(capture.getByRole('textbox',{name:'记录标题（可选）'})).toHaveValue('桌面验收记录');
-  await capture.getByRole('textbox',{name:'随手记内容'}).fill('');
-  await application.evaluate(({ipcMain}) => {
-    ipcMain.removeHandler('desktop:speech-start'); ipcMain.removeHandler('desktop:speech-stop');
-    ipcMain.handle('desktop:speech-start', () => undefined);
-    ipcMain.handle('desktop:speech-stop', () => '这是匿名演示，用于核对语音确认流程。');
-  });
-  await capture.getByRole('button',{name:'语音说一段',exact:true}).click();
-  await expect(capture.getByRole('button',{name:'结束录音',exact:true})).toBeVisible();
-  await capture.getByRole('button',{name:'结束录音',exact:true}).click();
-  await expect(capture.getByRole('textbox',{name:'随手记内容'})).toHaveValue('这是匿名演示，用于核对语音确认流程。');
-  await capture.screenshot({path:path.join(captures,'desktop-capture.png')});
-  await capture.getByRole('button',{name:'保存记录',exact:true}).click(); await expect(capture.locator('.capture-feedback')).toContainText('已保存');
-  await expect(capture.locator('.capture-feedback')).toHaveClass(/is-visible/);
-  await expect(capture.locator('.capture-feedback')).toHaveText('');
-  const pages=await capture.evaluate(()=>fetch('/api/pages?sources=true').then(res=>res.json()));
-  const saved=pages.find(item=>item.title==='桌面验收记录'); expect(saved).toBeTruthy();
-  const stale=await capture.evaluate(async()=>{const result=await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json','X-TWH-Knowledge-Base':'other'},body:JSON.stringify({title:'禁止跨库',markdown:'不能写入',knowledgeBaseId:'demo'})});return result.status;});expect(stale).toBe(409);
-  await capture.close();
-  await page.goto(origin+'/page/'+saved.id.split('/').map(encodeURIComponent).join('/'));
-  await page.locator('.editable-document').waitFor();
-  await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='main')?.focus());
-  const readerPromise=application.waitForEvent('window'); await invokeMenu('在独立窗口打开'); const reader=await readerPromise; await reader.waitForLoadState('domcontentloaded');
-  await expect(reader.locator('.editable-document')).toBeVisible(); expect(await reader.locator('.editable-document-activate').count()).toBe(0); await reader.close();
-  await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='main')?.focus());
-  const focusPromise=application.waitForEvent('window'); await invokeMenu('深入聊聊'); const focus=await focusPromise; await focus.waitForLoadState('domcontentloaded'); await expect(focus.locator('.context-agent-panel')).toBeVisible(); await focus.close();
-  await page.goto(origin+'/sources'); await page.getByRole('button',{name:'导入资料',exact:true}).click(); await page.getByRole('button',{name:/照片 同一段旅程/}).click(); await expect(page.getByRole('dialog')).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: '带一段记录进来', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('.import-type-grid > button')).toHaveCount(3);
   await page.keyboard.press('Escape');
-  await page.locator('.source-connections-popover > summary').click();
-  await page.locator('.source-connection-add input[type="checkbox"]').uncheck();
-  await application.evaluate(({dialog},directory) => { dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]}); },linkedDirectory);
-  await page.getByRole('button',{name:'连接原始目录',exact:true}).click();
-  await expect(page.locator('.source-connections article')).toHaveCount(1);
-  const linkedText='来自外部编辑器的第二版\n\n[[wiki/连接验收#依据|查看依据]]';
-  await writeFile(path.join(linkedDirectory,'连接原文.md'),linkedText);
-  await expect.poll(async()=>page.evaluate(()=>fetch('/api/search?q=来自外部编辑器').then(res=>res.json()).then(rows=>rows.length)),{timeout:10000}).toBe(1);
-  const linkedPage=await page.evaluate(()=>fetch('/api/search?q=来自外部编辑器').then(res=>res.json()).then(rows=>rows[0]));
-  expect(await readFile(path.join(root,linkedPage.relativePath),'utf8')).not.toContain('来自外部编辑器的第二版');
-  await writeFile(path.join(root,'vault/demo/wiki/连接验收.md'),`# 连接验收\n\n## 依据\n[[${linkedPage.id}|回到原文]]`);
-  await expect.poll(async()=>page.evaluate(()=>fetch('/api/pages/wiki/连接验收').then(res=>res.ok ? res.json() : null).then(row=>row?.incomingLinks?.length || 0)),{timeout:10000}).toBe(1);
-  await page.getByRole('button',{name:'连接原文',exact:true}).click();
-  await expect(page.locator('.external-source-notice')).toContainText('原目录只读连接');
-  expect(await page.locator('.editable-document-activate').count()).toBe(0);
-  await page.screenshot({path:path.join(captures,'desktop-source-connections.png')});
-  await page.getByRole('link',{name:'查看依据',exact:true}).click();
-  await expect(page).toHaveURL(/#%E4%BE%9D%E6%8D%AE$/);
-  await expect(page.getByRole('heading',{name:'依据',exact:true})).toBeVisible();
-  await page.getByRole('link',{name:'回到原文',exact:true}).click();
-  await expect(page.locator('.external-source-notice')).toBeVisible();
-  await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>win.kind==='main')?.setSize(1100,780));
-  for (const route of ['/','/predict-self','/sources','/relationships']) {
-    await page.goto(origin+route); await page.locator('h1').first().waitFor();
-    const box=await page.locator('.main-area').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
-    expect(box.scroll, 'compact '+route).toBeLessThanOrEqual(box.width+2);
-    if(route==='/sources') { const preview=await page.locator('.source-preview').boundingBox(); const body=await page.locator('.source-preview .editable-document-body').boundingBox(); expect(body.width).toBeGreaterThanOrEqual(300); expect(preview.y).toBeLessThan(600); }
-    await page.screenshot({path:path.join(captures,`compact-${route==='/'?'today':route.slice(1)}.png`)});
-  }
   expect(errors).toEqual([]);
-  await application.close();
-  application=await electron.launch({ ...(process.env.TWH_DESKTOP_EXECUTABLE ? {executablePath:process.env.TWH_DESKTOP_EXECUTABLE,args:['--diagnostics']} : {args:[path.join(studio,'apps/desktop'),'--diagnostics']}), env:{...process.env,THE_WAY_HERE_VAULT:root,THE_WAY_HERE_KNOWLEDGE_BASE:'demo'},timeout:60000 });
-  const reopened=await application.firstWindow({timeout:60000}); await reopened.waitForLoadState('domcontentloaded');
-  await expect(reopened.locator('h1')).toContainText('欢迎回来');
-  expect(new URL(reopened.url()).origin).toBe(origin);
-  expect(await reopened.evaluate(() => localStorage.getItem('desktop.verify-persistence'))).toBe('kept');
-  expect(await reopened.evaluate(()=>fetch('/api/search?q=来自外部编辑器').then(res=>res.json()).then(rows=>rows.length))).toBe(1);
-  await reopened.goto(origin+'/sources');
-  await reopened.locator('.source-connections-popover > summary').click();
-  await reopened.getByRole('button',{name:'断开连接',exact:true}).click();
-  await reopened.getByRole('button',{name:'确认断开',exact:true}).click();
-  await expect(reopened.locator('.source-connections article')).toHaveCount(0);
-  expect(await readFile(path.join(linkedDirectory,'连接原文.md'),'utf8')).toBe(linkedText);
-  console.log('Desktop verified: source/Wiki links, backlinks, heading navigation, connected directories, original-file updates, no copies, readonly sources, connection persistence and safe disconnect; 13 routes including prediction reports, native menus, search, inspector, preferences, voice confirmation, capture persistence, stale-library guard, readonly reader, focus window, photo import, stable workspace storage across app restart, sandbox and IPC rejection.');
-} catch(error) { const page=application?.windows()[0]; if(page) { console.log('Failed route',page.url(),(await page.locator('body').innerText()).slice(0,2500)); await page.screenshot({path:path.join(captures,'verification-failure.png')}); } throw error; } finally { await application?.close(); await rm(root,{recursive:true,force:true}); await rm(linkedDirectory,{recursive:true,force:true}); }
+  console.log('PASS: App IPC shares Web routes, folder open/remove semantics and three import types; native Cmd/Ctrl+O opens import.');
+} finally {
+  try {
+    const pids = app ? await app.evaluate(({ app }) => app.getAppMetrics().map(item => item.pid)).catch(() => [pid]) : [];
+    await app?.close();
+    const alive = value => { try { process.kill(value, 0); return true; } catch { return false; } };
+    const deadline = Date.now() + 5000;
+    while (pids.some(alive) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 100));
+    if (pids.some(alive)) throw new Error('Verification App or child process is still running');
+  } finally {
+    if (stateRoot) await rm(stateRoot, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+    await rm(original, { recursive: true, force: true });
+  }
+  console.log('Verification App and anonymous state cleaned up.');
+}

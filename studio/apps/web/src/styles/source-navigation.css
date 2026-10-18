@@ -76,7 +76,6 @@ body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px
 .desktop-shell .organized-sources-page .folder-tree-row.root .folder-tree-name small { display: none; }
 .desktop-shell .organized-sources-page .source-connections { margin: 10px 10px 4px; padding: 0; border: 0; }
 .desktop-shell .organized-sources-page .source-connections > button { justify-content: flex-start; gap: 8px; height: 32px; min-height: 32px; padding: 0 10px; border-radius: 8px; }
-.desktop-shell .organized-sources-page .source-connections > button kbd { display: none; }
 
 /* A single outline switches between an inline text column and its hoverable tick rail. */
 .desktop-shell .source-vault .life-record-document { --document-measure: 500px; --document-gutter: 0px; min-height: 100%; grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) minmax(0,1fr); padding: 0 20px 0 44px; }

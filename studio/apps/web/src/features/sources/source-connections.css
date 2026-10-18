@@ -1,23 +1,10 @@
-.source-connections-disclosure { margin-block: 12px; border: 1px solid var(--line, var(--line-strong)); border-radius:var(--radius-control); padding: 12px 16px; }
-.source-connections-disclosure summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 .source-connections { padding-block: 8px; font-size: 13px; line-height: 1.65; color: var(--ink-soft); }
 .source-connections p { margin: 6px 0 10px; }
-.source-connections small { display: block; color: var(--ink-soft); }
-.source-connections label { display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin-block: 12px; }
-.source-connections label input { width: 100%; }
-.source-connections input[type="checkbox"] { accent-color: var(--accent); }
 .source-connections button { border: 1px solid var(--line-strong); border-radius: 7px; padding: 6px 12px; color: var(--accent); background: var(--surface-tinted); cursor: pointer; }
 .source-connections button:disabled { opacity: .5; cursor: default; }
-.source-connection-add, .source-connection-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-block: 10px; }
-.source-connection-add > button { background: var(--accent); color: var(--paper); }
-.source-connections article { border-top: 1px solid var(--line-strong); padding-top: 14px; margin-top: 16px; }
-.source-connections .source-connection-path { overflow-wrap: anywhere; font-size: 12px; }
-.source-connection-confirm { padding: 10px; background: var(--surface-tinted); border-radius: 6px; }
-.source-connection-confirm button + button { margin-left: 8px; }
 .external-source-notice { padding: 10px 14px; border-left: 3px solid var(--ink-soft); background: var(--surface-tinted); color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
 .source-folder-pane .source-connections { padding: 6px 12px; }
 .source-folder-pane .source-connections > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; border-radius: 11px; background: var(--paper); color: var(--accent-ink); font-weight: 600; }
-.source-connections kbd { margin-left: auto; color: var(--ink-soft); font: 400 11px/1.5 var(--font-ui); }
 .source-directory-drop { position: fixed; inset: 100px 28px 28px; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 2px dashed var(--accent); border-radius: 18px; background: var(--accent-soft); color: var(--accent-ink); pointer-events: none; }
 .import-modal .import-type-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .import-type-grid small { color: var(--ink-soft); font-size: 12px; line-height: 1.45; font-weight: 400; }
