@@ -47,3 +47,4 @@
 .source-folder-scope button { flex: 1; border: 0; border-radius: 999px; padding: 4px 8px; background: transparent; color: var(--ink-soft); font: 400 12px/1.5 var(--font-ui); cursor: pointer; }
 .source-folder-scope button[aria-pressed=true] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-card); }
 @media (prefers-reduced-motion: reduce) { .folder-tree-chevron svg { transition: none; } }
+.folder-tree-row.is-drop-target { background: var(--accent-soft); color: var(--accent-ink); outline: 2px solid var(--accent-primary); outline-offset: -2px; }

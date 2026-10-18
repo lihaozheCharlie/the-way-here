@@ -24,6 +24,16 @@ export interface CodexServerRequest {
   params: Record<string, unknown>;
 }
 
+export interface CodexDynamicTool {
+  type: "function"; name: string; description: string; inputSchema: unknown;
+}
+export interface CodexThreadOptions {
+  dynamicTools?: CodexDynamicTool[];
+  config?: Record<string, unknown>;
+  sandbox?: "read-only";
+  approvalPolicy?: "never";
+}
+
 function resolveExecutable(command: string): string {
   try {
     if (command.includes("/") || command.includes("\\")) return realpathSync(command);
@@ -42,7 +52,7 @@ export class CodexAppServer extends EventEmitter {
   private pending = new Map<number | string, PendingRequest>();
   private ready?: Promise<void>;
 
-  constructor(command = "codex") {
+  constructor(command = "codex", private readonly options: { experimentalApi?: boolean; args?: string[] } = {}) {
     super();
     // Resolve symlinks so Codex can locate companion executables installed
     // beside the real binary (not beside a user-level symlink).
@@ -50,7 +60,16 @@ export class CodexAppServer extends EventEmitter {
   }
 
   static isAvailable(command = "codex"): boolean {
-    return spawnSync(resolveExecutable(command), ["--version"], { stdio: "ignore", timeout:5_000 }).status === 0;
+    return this.availability(command).available;
+  }
+
+  static availability(command = "codex"): { available: boolean; reason?: string } {
+    const result = spawnSync(resolveExecutable(command), ["--version"], { stdio: "ignore", timeout:5_000 });
+    if (result.status === 0) return { available: true };
+    const code = (result.error as NodeJS.ErrnoException | undefined)?.code;
+    if (code === "ENOENT") return { available: false, reason: "未找到 Codex 命令，请选择已安装的 CLI 程序。" };
+    if (code === "EACCES" || code === "EPERM") return { available: false, reason: `系统拒绝执行 Codex（${code}），请检查程序权限及商店沙盒限制。` };
+    return { available: false, reason: `Codex 启动检查失败（${code || result.signal || result.status || "unknown"}），请检查程序及其依赖。` };
   }
 
   async start(): Promise<void> {
@@ -60,7 +79,7 @@ export class CodexAppServer extends EventEmitter {
   }
 
   private async initialize(): Promise<void> {
-    this.process = spawn(this.command, ["app-server"], {
+    this.process = spawn(this.command, ["app-server", ...(this.options.args || [])], {
       stdio: ["pipe", "pipe", "pipe"],
       env: process.env,
     });
@@ -88,6 +107,7 @@ export class CodexAppServer extends EventEmitter {
         title: "the-way-here",
         version: "0.1.0",
       },
+      ...(this.options.experimentalApi ? { capabilities: { experimentalApi: true } } : {}),
     });
     this.notify("initialized", {});
     } catch (error) {
@@ -137,13 +157,13 @@ export class CodexAppServer extends EventEmitter {
     return this.request("thread/read", { threadId, includeTurns: true });
   }
 
-  async startThread(cwd: string, model?: string): Promise<string> {
-    const response = await this.request<{ thread: { id: string } }>("thread/start", { cwd, ...(model ? { model } : {}) });
+  async startThread(cwd: string, model?: string, options?: CodexThreadOptions): Promise<string> {
+    const response = await this.request<{ thread: { id: string } }>("thread/start", { cwd, ...(model ? { model } : {}), ...options });
     return response.thread.id;
   }
 
-  async resumeThread(threadId: string, cwd: string): Promise<void> {
-    await this.request("thread/resume", { threadId, cwd });
+  async resumeThread(threadId: string, cwd: string, options?: Omit<CodexThreadOptions, "dynamicTools">): Promise<void> {
+    await this.request("thread/resume", { threadId, cwd, ...options });
   }
 
   async startTurn(threadId: string, prompt: string, cwd: string, options: { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean; workspaceWrite?: boolean; writableRoots?: string[] } = {}): Promise<string> {

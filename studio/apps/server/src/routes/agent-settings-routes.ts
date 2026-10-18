@@ -5,6 +5,7 @@ import type { StudioEvents } from "../runtime/studio-events.js";
 import { AgentSettingsValidationError } from "../runtime/agent-runtime/agent-settings-store.js";
 
 export function registerAgentSettingsRoutes(app: FastifyInstance, settings: AgentRuntimeSettings, events: StudioEvents): void {
+  app.get("/api/distribution", async () => ({ operator: process.env.TWH_OPERATOR || undefined, privacyPolicyUrl: process.env.TWH_PRIVACY_URL || undefined, supportUrl: process.env.TWH_SUPPORT_URL || undefined }));
   app.get("/api/agent-runtimes", async () => settings.catalog());
   app.get("/api/agent-models", async () => (await settings.catalog()).flatMap((runtime) => runtime.models));
   app.get("/api/agent-provider-presets", async () => settings.providerPresets());

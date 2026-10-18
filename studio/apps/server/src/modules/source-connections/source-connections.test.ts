@@ -204,3 +204,72 @@ describe("local source directories", () => {
     expect(await f.connections.list("one")).toHaveLength(0);
   });
 });
+
+it("moves a captured diary into a connected directory with tracking and resolved backlinks intact", async () => {
+  const f = await fixture();
+  const [connection] = await f.connections.connect("one", f.original, false);
+  const { ImportStore } = await import("../imports/import-store.js");
+  const imports = new ImportStore(f.knowledge);
+  const writer = new PageWriter(f.knowledge, (before, after) => imports.renameSource(before, after));
+  const page = (await writer.createSource("今天", "随手记", "# 今天\n\n匿名生活记录。"))!;
+  const batch = await imports.trackCreatedSource(page);
+  const wikiFile = path.join(f.root, "app/one/wiki/关联.md");
+  await mkdir(path.dirname(wikiFile), { recursive: true });
+  await writeFile(wikiFile, `# 关联\n\n[[${page.id}|今天原话]]\n[[${page.id}#今天|当天章节]]\n`);
+  await f.knowledge.index.rebuild();
+  const moved = await writer.move({ pageId: page.id, folder: `外部来源/${connection!.id}`, expectedModifiedAt: page.modifiedAt });
+  expect(moved.externalSource?.originalPath).toBe(path.join(f.original, "今天.md"));
+  expect(await readFile(path.join(f.original, "今天.md"), "utf8")).toBe("# 今天\n\n匿名生活记录。");
+  await expect(readFile(path.join(f.root, page.relativePath))).rejects.toMatchObject({ code: "ENOENT" });
+  expect((await imports.list()).find(item => item.id === batch.id)?.files[0]?.storedPath).toBe(moved.relativePath);
+  expect(await readFile(wikiFile, "utf8")).toContain(`[[${moved.id}|今天原话]]`);
+  expect(await readFile(wikiFile, "utf8")).toContain(`[[${moved.id}#今天|当天章节]]`);
+  expect(f.knowledge.index.get(moved.id)?.incomingLinks.some(item => item.title === "关联")).toBe(true);
+  const restored = await writer.move({ pageId: moved.id, folder: "随手记", expectedModifiedAt: moved.modifiedAt });
+  expect(restored.relativePath).toBe(page.relativePath);
+  expect((await imports.list()).find(item => item.id === batch.id)?.files[0]?.storedPath).toBe(page.relativePath);
+  await expect(readFile(path.join(f.original, "今天.md"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("moves between internal and connected folders without overwriting or following symlinks", async () => {
+  const f = await fixture();
+  const [connection] = await f.connections.connect("one", f.original, false);
+  const writer = new PageWriter(f.knowledge);
+  const page = (await writer.createSource("今天", "随手记", "不能丢的正文"))!;
+  await writeFile(path.join(f.original, "今天.md"), "已有文件");
+  const input = { pageId: page.id, folder: `外部来源/${connection!.id}`, expectedModifiedAt: page.modifiedAt };
+  await expect(writer.move(input)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await readFile(path.join(f.original, "今天.md"), "utf8")).toBe("已有文件");
+  await expect(writer.move({ ...input, expectedModifiedAt: "old" })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(writer.move({ ...input, folder: "../escape" })).rejects.toBeInstanceOf(Error);
+  await symlink(f.original, path.join(f.root, "app/one/sources/捷径"));
+  await expect(writer.move({ ...input, folder: "捷径" })).rejects.toMatchObject({ statusCode: 403 });
+  await mkdir(path.join(f.root, "app/one/sources/日记"));
+  const moved = await writer.move({ ...input, folder: "日记" });
+  expect(moved.relativePath).toBe("app/one/sources/日记/今天.md");
+  const back = await writer.move({ pageId: moved.id, folder: "随手记", expectedModifiedAt: moved.modifiedAt });
+  expect(back.relativePath).toBe(page.relativePath);
+});
+
+it("rolls back a move when import bookkeeping fails", async () => {
+  const f = await fixture();
+  const writer = new PageWriter(f.knowledge);
+  const page = (await writer.createSource("今天", "随手记", "原正文"))!;
+  await mkdir(path.join(f.root, "app/one/sources/日记"));
+  const broken = new PageWriter(f.knowledge, async () => { throw new Error("tracking unavailable"); });
+  await expect(broken.move({ pageId: page.id, folder: "日记", expectedModifiedAt: page.modifiedAt })).rejects.toThrow("tracking unavailable");
+  expect(await readFile(path.join(f.root, page.relativePath), "utf8")).toBe("原正文");
+  await expect(readFile(path.join(f.root, "app/one/sources/日记/今天.md"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+
+it("rejects a move requested for a different library before touching files", async () => {
+  const f = await fixture();
+  const { registerContentRoutes } = await import("../../routes/content-routes.js");
+  const { ImportStore } = await import("../imports/import-store.js");
+  registerContentRoutes(f.app, f.knowledge, new ImportStore(f.knowledge), async () => [], async () => false);
+  const page = (await new PageWriter(f.knowledge).createSource("今天", "随手记", "保留原文"))!;
+  const result = await f.app.inject({ method: "POST", url: "/api/sources/move", payload: { knowledgeBaseId: "two", pageId: page.id, folder: "日记", expectedModifiedAt: page.modifiedAt } });
+  expect(result.statusCode).toBe(409);
+  expect(await readFile(path.join(f.root, page.relativePath), "utf8")).toBe("保留原文");
+});

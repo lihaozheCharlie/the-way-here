@@ -1,9 +1,14 @@
-import { cp, mkdir, readFile, realpath, symlink, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, realpath, rm, symlink, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 // Materialize the installed production graph, preserving pnpm's separate versions.
 // Package exports may hide package.json, so resolve package directories directly.
 export async function packageServer(studio, destination) {
+  // Each package gets a fresh staging graph; stale links also retain removed dependencies.
+  const stagingRoot = path.join(path.resolve(studio), '.runtime', 'package');
+  const relative = path.relative(stagingRoot, path.resolve(destination));
+  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error('Server packaging destination must be inside .runtime/package');
+  await rm(destination, { recursive: true, force: true });
   const seen = new Map();
   const dependencyRoot = path.join(destination,'node_modules/.runtime-deps');
   await mkdir(dependencyRoot,{recursive:true});
@@ -24,6 +29,9 @@ export async function packageServer(studio, destination) {
     await cp(source,target,{recursive:true,filter:(file) => {
       const relative = path.relative(source,file);
       if (relative.split(path.sep).includes('node_modules')) return false;
+      // npm archives may accidentally contain their authors' agent settings.
+      // They are development metadata, never a runtime dependency.
+      if (relative.split(path.sep).some(part => ['.claude', '.codex', '.agents', '.git', '.github'].includes(part))) return false;
       return !(/\.map$|\.d\.(?:ts|mts|cts)$/.test(relative));
     }});
     for (const name of new Set([...Object.keys(manifest.dependencies || {}),...Object.keys(manifest.optionalDependencies || {}),...Object.keys(manifest.peerDependencies || {})])) {
@@ -39,8 +47,9 @@ export async function packageServer(studio, destination) {
   }
   const server=path.join(studio,'apps/server');
   const manifest=JSON.parse(await readFile(path.join(server,'package.json'),'utf8'));
-  const dependencies=Object.fromEntries(Object.entries(manifest.dependencies).filter(([name])=>!name.startsWith('@the-way-here/')));
-  await cp(path.join(server,'dist'),path.join(destination,'dist'),{recursive:true});
+  const dependencies=Object.fromEntries(Object.entries(manifest.dependencies).filter(([name])=>!name.startsWith('@the-way-here/') && name !== '@fastify/static'));
+  await cp(path.join(server,'dist'),path.join(destination,'dist'),{recursive:true,filter:file => path.basename(file) !== 'index.js'});
+  await stat(path.join(destination,'dist/desktop.js')); // Desktop runtime entry; never ship the Web listener.
   await writeFile(path.join(destination,'package.json'),JSON.stringify({name:manifest.name,version:manifest.version,type:'module',dependencies},null,2));
   for(const name of Object.keys(dependencies)) {
     const resolved=await resolve(name,server); if(!resolved) throw new Error(`Missing ${name}`);

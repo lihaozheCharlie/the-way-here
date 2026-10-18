@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { validationCommand } from "./bundled-tools.js";
 import type { VaultConfig, WikiRun } from "@the-way-here/shared";
 
 export type ValidationResult = NonNullable<WikiRun["validation"]>[number];
@@ -16,7 +17,8 @@ export async function runValidationCommands(options: {
   for (const command of options.config.validation.commands) {
     if (!command.length) continue;
     const result = await new Promise<{ exitCode: number | null; output: string }>((resolve) => {
-      const child = spawn(command[0]!, command.slice(1), {
+      const executable = validationCommand(command, options.vaultRoot);
+      const child = spawn(executable[0]!, executable.slice(1), {
         cwd: options.vaultRoot,
         env: { ...process.env, THE_WAY_HERE_KNOWLEDGE_BASE: options.knowledgeBaseId },
         detached: process.platform !== "win32",

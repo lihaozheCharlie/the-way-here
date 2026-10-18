@@ -4,6 +4,7 @@ import { useApi } from "../../shared/use-api";
 import type { VaultInfo } from "@the-way-here/shared";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { LifeRecordCapture } from "./LifeRecordCapture";
+import { PhotoLibraryCard } from "./PhotoLibraryCard";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import "./today.css";
 
@@ -23,6 +24,7 @@ export function Today({ revision }: { revision: number }) {
       <p>我会记得你的来路，也会坦白哪些地方还不懂你。你先说，我们再一起把生活慢慢理清。</p>
     </section>
     <LifeRecordCapture key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} />
+    <PhotoLibraryCard key={`photos:${vault.knowledgeBaseId}`} />
     <PageAgentContext context={{ scope: "此刻", title: "从此刻说起", summary: "听听最近发生的事，一起把生活慢慢理清。", defaultMode: "read", suggestions: ["我想聊聊最近发生的一件事。"] }} />
   </div>;
 }

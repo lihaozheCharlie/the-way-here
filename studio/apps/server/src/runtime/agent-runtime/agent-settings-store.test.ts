@@ -20,6 +20,34 @@ afterEach(async () => {
 });
 
 describe("AgentSettingsStore", () => {
+  it("requires explicit consent and invalidates it on recipient changes", async () => {
+    const { store } = await fixture();
+    expect((await store.load()).public.dataConsent).toBeUndefined();
+    const agreed = await store.update({...update(),dataSharingConsent:true});
+    expect(agreed.public.dataConsent?.recipientId).toBe("pi:deepseek");
+    expect((await store.update(update({providerId:"zhipu",model:"glm-5.2"}))).public.dataConsent).toBeUndefined();
+    await expect(store.update({...update(),dataSharingConsent:"yes" as unknown as boolean})).rejects.toThrow();
+    expect((await store.update({...update(),dataSharingConsent:false})).public.dataConsent).toBeUndefined();
+  });
+
+  it("encrypts legacy credentials and fails closed when the keychain is unavailable", async () => {
+    const {store,stateRoot} = await fixture();
+    await store.update(update({apiKey:"private-test-key"}));
+    const {randomBytes,createCipheriv,createDecipheriv} = await import("node:crypto");
+    const key=randomBytes(32);
+    const codec = {
+      async encrypt(text:string) { const iv=randomBytes(12); const cipher=createCipheriv("aes-256-gcm",key,iv); const body=Buffer.concat([cipher.update(text,"utf8"),cipher.final()]); return Buffer.concat([iv,cipher.getAuthTag(),body]).toString("base64"); },
+      async decrypt(text:string) { const bytes=Buffer.from(text,"base64");const cipher=createDecipheriv("aes-256-gcm",key,bytes.subarray(0,12));cipher.setAuthTag(bytes.subarray(12,28));return Buffer.concat([cipher.update(bytes.subarray(28)),cipher.final()]).toString("utf8"); },
+    };
+    const encrypted = new AgentSettingsStore(config,"/anonymous/workspace",stateRoot,codec);
+    expect((await encrypted.load()).provider?.apiKey).toBe("private-test-key");
+    const bytes = await readFile(path.join(stateRoot,"agent-settings.json"),"utf8");
+    expect(bytes).not.toContain("private-test-key");
+    expect(JSON.parse(bytes).version).toBe(3);
+    expect((await new AgentSettingsStore(config,"/anonymous/workspace",stateRoot,codec).load()).provider?.apiKey).toBe("private-test-key");
+    await expect(new AgentSettingsStore(config,"/anonymous/workspace",stateRoot,undefined).load()).rejects.toThrow("解密");
+    expect(await readFile(path.join(stateRoot,"agent-settings.json"),"utf8")).toBe(bytes);
+  });
   it("uses a Codex-first global default with a curated DeepSeek selection", async () => {
     const { store } = await fixture();
     const settings = await store.load();

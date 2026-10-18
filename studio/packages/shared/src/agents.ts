@@ -74,6 +74,7 @@ export interface AgentProviderPreset {
 }
 
 export interface AgentGlobalSettings {
+  dataConsent?: { version: number; recipientId: string; acceptedAt: string };
   runtimeId: AgentRuntimeId;
   codex: {
     model: string;
@@ -90,6 +91,7 @@ export interface AgentGlobalSettings {
 }
 
 export interface UpdateAgentGlobalSettings {
+  dataSharingConsent?: boolean;
   runtimeId: AgentRuntimeId;
   codex: {
     model: string;

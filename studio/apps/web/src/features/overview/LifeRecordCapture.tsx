@@ -1,29 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { isTerminalRunStatus, type WikiRun } from "@the-way-here/shared";
 import { api } from "../../api";
 import { TextArea } from "../../shared/form-controls";
 import { pageHref } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
-import "./today.css";
 import { CaptureVoice } from "../desktop/CaptureVoice";
+import { CaptureFolderDialog, CaptureHistoryDialog } from "./CaptureDialogs";
+import { useCaptureDraft } from "./useCaptureDraft";
+import "./today.css";
+import "./life-record-capture.css";
 
 export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { knowledgeBaseId: string; standalone?: boolean }) {
-  const key = `${standalone ? "desktop" : "today"}.capture.${knowledgeBaseId}`;
-  const [draft, setDraft] = useState(() => {
-    const text = localStorage.getItem(key) || "";
-    const title = standalone ? localStorage.getItem(`${key}.title`) : "";
-    return title ? `${title}\n\n${text}` : text;
-  });
-  const [runId, setRunId] = useState(() => localStorage.getItem(`${key}.run`) || "");
+  const legacyKey = `${standalone ? "desktop" : "today"}.capture.${knowledgeBaseId}`;
+  const capture = useCaptureDraft(knowledgeBaseId, legacyKey);
+  const { draft, key } = capture;
+  const [runId, setRunId] = useState(() => localStorage.getItem(`${key}.run`) || localStorage.getItem(`${legacyKey}.run`) || "");
   const [run, setRun] = useState<WikiRun>();
-  const [starting, setStarting] = useState(false);
-  const [voiceActive, setVoiceActive] = useState(false);
-  const [error, setError] = useState("");
-  const submitting = useRef(false);
-  const input = useRef<HTMLTextAreaElement>(null);
+  const [starting, setStarting] = useState(false), [voiceActive, setVoiceActive] = useState(false), [preview, setPreview] = useState("");
+  const [dialog, setDialog] = useState<"history" | "folder" | null>(null), [error, setError] = useState("");
+  const submitting = useRef(false), input = useRef<HTMLTextAreaElement>(null), transcriptView = useRef<HTMLDivElement>(null);
+  const voiceRange = useRef({ start: 0, end: 0, text: "" });
+  const headingId = useId();
   const busy = starting || Boolean(runId && (!run || !isTerminalRunStatus(run.status)));
-  useEffect(() => { localStorage.setItem(key, draft); if (standalone) localStorage.removeItem(`${key}.title`); }, [key, draft, standalone]);
+  const callbacks = useRef(capture); callbacks.current = capture;
+  useEffect(() => { const node = transcriptView.current; if (node) node.scrollTop = node.scrollHeight; }, [preview]);
   useEffect(() => {
     if (!runId) return;
     let active = true;
@@ -35,9 +36,8 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
         if (next.knowledgeBaseId !== knowledgeBaseId || next.outputTarget?.kind !== "life-record") throw new Error("记录任务与当前知识库不一致");
         setRun(next); setError("");
         if (isTerminalRunStatus(next.status)) {
-          localStorage.removeItem(`${key}.run`);
-          setRunId("");
-          if (next.status === "completed" && next.result?.outputPageId) setDraft("");
+          localStorage.removeItem(`${key}.run`); localStorage.removeItem(`${legacyKey}.run`); setRunId("");
+          if (next.status === "completed" && next.result?.outputPageId) { callbacks.current.reset(); void callbacks.current.refresh().catch(callbacks.current.fail); }
           else setError(next.error || "整理未完成，原话已保留，可以再次发送。");
           return;
         }
@@ -45,51 +45,57 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
         if (active) {
           const message = reason instanceof Error ? reason.message : "暂时无法获取进度，正在重试…";
           setError(message);
-          if (message.includes("任务不存在") || message.includes("不一致")) {
-            localStorage.removeItem(`${key}.run`); setRunId(""); return;
-          }
+          if (message.includes("任务不存在") || message.includes("不一致")) { localStorage.removeItem(`${key}.run`); localStorage.removeItem(`${legacyKey}.run`); setRunId(""); return; }
         }
       }
       if (active) timer = setTimeout(() => void refresh(), 1500);
     }
     void refresh();
     return () => { active = false; clearTimeout(timer); };
-  }, [runId, key, knowledgeBaseId]);
+  }, [runId, key, legacyKey, knowledgeBaseId]);
 
   async function submit() {
-    if (!draft.trim() || busy || voiceActive || submitting.current) return;
+    if (!draft.text.trim() || busy || voiceActive || submitting.current) return;
     submitting.current = true; setStarting(true); setError(""); setRun(undefined);
     try {
+      const savedDraft = await capture.flush();
       const next = await api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({
-        knowledgeBaseId, mode: "read", title: "整理一条生活记录", sourceModule: standalone ? "随手记" : "此刻", prompt: "请整理这段生活记录。", displayPrompt: draft,
-        outputTarget: { kind: "life-record", label: "随手记", originalText: draft },
+        knowledgeBaseId, mode: "read", title: "整理当天日记", sourceModule: standalone ? "随手记" : "此刻", prompt: "请将原话整理成当天的日记。", displayPrompt: draft.text,
+        outputTarget: { kind: "life-record", label: "随手记", originalText: draft.text, diaryDate: draft.diaryDate, folder: draft.folder, captureId: draft.id, captureRevision: savedDraft?.revision || draft.revision },
       }) });
       localStorage.setItem(`${key}.run`, next.id); setRunId(next.id); setRun(next);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "发送失败，原话已保留。"); }
     finally { submitting.current = false; setStarting(false); }
   }
-
-  return <section className="today-capture" aria-labelledby="today-capture-title">
-    {standalone ? <h1 id="today-capture-title">随手记</h1> : <h2 id="today-capture-title">随手记一笔</h2>}
-    <p>写下来，或者说一段。我会帮你整理成一条生活记录。</p>
+  const pendingCount = capture.history.filter(e => e.status === "draft" || e.text !== (e.originalText ?? e.content)).length;
+  const badge = draft.status === "saved" ? "补充中" : draft.text.trim() ? "待整理" : "新记录";
+  return <section className="today-capture life-record-capture" aria-labelledby={headingId}>
+    <header className="capture-heading"><div>{standalone ? <h1 id={headingId}>随手记</h1> : <h2 id={headingId}>随手记</h2>}<span className="capture-badge">{badge}</span></div><button type="button" className="capture-history-trigger" disabled={busy || voiceActive || !capture.ready} onClick={() => { void capture.flush().then(() => capture.refresh()).then(() => setDialog("history")).catch(capture.fail); }}><Icon name="history" size={17} />历史记录{pendingCount > 0 && <span>{pendingCount} 待整理</span>}</button></header>
     <form onSubmit={event => { event.preventDefault(); void submit(); }}>
-      <div className="today-composer">
-        <TextArea ref={input} voice={false} rows={5} maxLength={50_000} disabled={busy} aria-label="此刻的记录" placeholder="此刻发生了什么，先留下来……" value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => {
+      <div className="capture-editor-body">
+        {voiceActive ? <div className="capture-live-editor" ref={transcriptView} role="textbox" aria-label="此刻的记录，语音临时转写" aria-readonly="true" tabIndex={0}>{voiceRange.current.text.slice(0,voiceRange.current.start)}<span className="capture-temporary-text">{preview || "正在听…"}</span>{voiceRange.current.text.slice(voiceRange.current.end)}</div> : <TextArea ref={input} voice={false} rows={5} maxLength={50_000} disabled={busy} aria-label="此刻的记录" placeholder="此刻发生了什么？写下来，或说一段……" value={draft.text} onChange={event => { capture.setText(event.target.value); setRun(undefined); }} onKeyDown={event => {
           if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(); }
-        }} />
-        <div className="today-composer-tools">
-          {!busy ? <CaptureVoice onActive={setVoiceActive} onText={text => {
-            const start = input.current?.selectionStart ?? draft.length;
-            const end = input.current?.selectionEnd ?? draft.length;
-            setDraft(value => `${value.slice(0, start)}${text}${value.slice(end)}`);
-            requestAnimationFrame(() => { input.current?.focus(); input.current?.setSelectionRange(start + text.length, start + text.length); });
-          }} /> : <span role="status">正在整理，完成后会自动保存…</span>}
-          <button type="submit" className="desktop-primary" disabled={!draft.trim() || busy || voiceActive}><Icon name="up" size={16} />{busy ? "正在整理…" : "整理并保存"}</button>
-        </div>
+        }} />}
+        <CaptureVoice disabled={busy || !capture.ready} hasText={Boolean(draft.text.trim())} onActive={active => {
+          if (active) { voiceRange.current = { start: input.current?.selectionStart ?? draft.text.length, end: input.current?.selectionEnd ?? draft.text.length, text: draft.text }; setPreview(""); }
+          else { localStorage.removeItem(`${key}.voice`); setPreview(""); }
+          setVoiceActive(active);
+        }} onProgress={text => {
+          setPreview(text);
+          const { start, end, text: base } = voiceRange.current;
+          try { localStorage.setItem(`${key}.voice`, `${base.slice(0,start)}${text}${base.slice(end)}`); } catch { /* Native transcript and complete audio remain on disk. */ }
+        }} onText={text => {
+          const { start, end, text: base } = voiceRange.current;
+          capture.setText(`${base.slice(0,start)}${text}${base.slice(end)}`);
+          setRun(undefined);
+          requestAnimationFrame(() => { input.current?.focus(); input.current?.setSelectionRange(start+text.length,start+text.length); });
+        }} actions={<>{draft.text.trim() && <button type="button" className="capture-stash" disabled={busy || voiceActive || !capture.ready} onClick={() => { setStarting(true); void capture.stash().then(() => setRun(undefined)).catch(capture.fail).finally(() => setStarting(false)); }}>暂存</button>}<button type="submit" className="desktop-primary" disabled={!draft.text.trim() || busy || voiceActive || !capture.ready}><Icon name="spark" size={18} />{busy ? "正在整理…" : "整理并保存"}</button></>} />
       </div>
-      <p className="today-capture-hint">AI 整理后保存为新的 Markdown 文件，同时保留你的原话。</p>
+      <footer className="capture-footer"><button type="button" disabled={busy || voiceActive || !capture.ready || draft.status === "saved"} className="capture-destination" title={draft.status === "saved" ? "继续补充将更新原文件；移动文件请在生活记录中操作" : "选择保存目录"} onClick={() => setDialog("folder")}><Icon name="folder" size={16} /><span>保存到 <span>生活记录 / <strong>{draft.folder}</strong></span></span>{draft.status !== "saved" && <Icon name="down" size={13} />}</button><span role="status">{voiceActive ? "浅灰文字为临时转写，完成录音后会校准" : busy ? "正在整理，原话已保留" : capture.status}</span></footer>
     </form>
-    {error && <p className="today-capture-error" role="alert">{error}</p>}
-    {run?.status === "completed" && run.result?.outputPageId && <p role="status" className="today-capture-saved">已保存到生活记录。<NavLink to={pageHref(run.result.outputPageId)}>查看记录 <Icon name="arrow" size={14} /></NavLink></p>}
+    {(error || capture.error) && <p className="capture-error" role="alert">{error || capture.error}</p>}
+    {run?.status === "completed" && run.result?.outputPageId && <p role="status" className="capture-saved">已保存。<NavLink to={pageHref(run.result.outputPageId)}>查看记录 <Icon name="arrow" size={14} /></NavLink></p>}
+    {dialog === "history" && <CaptureHistoryDialog entries={capture.history} restore={capture.restore} remove={capture.remove} close={() => setDialog(null)} />}
+    {dialog === "folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={draft.folder} defaultFolder={capture.defaultFolder} choose={capture.chooseFolder} close={() => setDialog(null)} />}
   </section>;
 }

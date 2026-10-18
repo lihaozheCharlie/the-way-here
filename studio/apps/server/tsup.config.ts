@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: { index: "src/index.ts", "search-wiki": "src/cli/search-wiki.ts" },
+  entry: { index: "src/index.ts", desktop: "src/desktop.ts", "search-wiki": "src/cli/search-wiki.ts" },
   format: ["esm"],
   platform: "node",
   target: "node22",

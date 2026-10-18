@@ -10,8 +10,9 @@ import "./folder-tree.css";
 const folderLabel = (node: SourceFolderSummary) => { const text = node.label || node.path.split("/").at(-1)!; return text.length > 32 ? `${text.slice(0, 17)}…${text.slice(-12)}` : text; };
 export const folderParent = (path: string) => path.startsWith("外部来源/") && path.split("/").length === 2 ? "" : path.split("/").slice(0, -1).join("/");
 export function folderAncestors(path: string): string[] { const result: string[] = []; for (let p = folderParent(path); p; p = folderParent(p)) result.unshift(p); return result; }
-export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0, internalOnly = false, createToken = 0, onChanged }: {
+export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0, internalOnly = false, createToken = 0, onChanged, fileDrop }: {
   selected: string; onSelect: (path: string) => void; revision?: number; counts?: Map<string, number>; total?: number;
+  fileDrop?: { accepts: (data: DataTransfer, folder: string) => boolean; drop: (data: DataTransfer, folder: string) => void };
   internalOnly?: boolean; createToken?: number; onChanged?: () => void;
 }) {
   const { data: vault } = useApi<VaultInfo>("/api/vault");
@@ -27,6 +28,8 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
   const openRef = useRef(open);
   openRef.current = open;
   const [focused, setFocused] = useState(selected);
+  const [dropTarget, setDropTarget] = useState("");
+  useEffect(() => { const clear = () => setDropTarget(""); window.addEventListener("dragend", clear); return () => window.removeEventListener("dragend", clear); }, []);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<{ parent: string; node?: SourceFolderSummary }>();
   const [name, setName] = useState("");
@@ -158,7 +161,11 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
       const depth = folderAncestors(node.path).length, root = Boolean(node.external && depth === 0), expanded = open.has(node.path), childrenLoaded = loaded.has(node.path);
       const hasChildren = !node.unavailable && (!childrenLoaded || nodes.some(n => folderParent(n.path) === node.path));
       const group = node.external ? "已打开的文件夹" : "知识库内", label = !internalOnly && group !== lastGroup ? group : ""; lastGroup = group;
-      return <React.Fragment key={node.path}>{label && <div className="folder-tree-group" role="presentation">{label}</div>}{editing?.node?.path === node.path ? input(folderParent(node.path), node) : <div role="treeitem" aria-level={depth + 1} aria-expanded={hasChildren ? expanded : undefined} aria-selected={selected === node.path} tabIndex={focused === node.path ? 0 : -1} data-folder={node.path} title={node.absolutePath || node.path} style={{ "--tree-indent": `${Math.min(depth, 6) * 16 + Math.max(0, depth - 6) * 12}px` } as React.CSSProperties} className={`folder-tree-row${root ? " root" : ""}${selected === node.path ? " selected" : ""}${selected.startsWith(node.path + "/") ? " ancestor" : ""}${expanded ? " expanded" : ""}${node.unavailable ? " unavailable" : ""}${menu?.node.path === node.path ? " menu-open" : ""}`} onFocus={() => setFocused(node.path)} onClick={() => { if (!node.unavailable) { onSelect(node.path); if (hasChildren && !expanded) toggle(node.path); } }} onKeyDown={event => key(event, node)} onContextMenu={event => { if (internalOnly) return; event.preventDefault(); showMenu(node, { right: event.clientX, bottom: event.clientY }); }}>
+      return <React.Fragment key={node.path}>{label && <div className="folder-tree-group" role="presentation">{label}</div>}{editing?.node?.path === node.path ? input(folderParent(node.path), node) : <div role="treeitem" aria-level={depth + 1} aria-expanded={hasChildren ? expanded : undefined} aria-selected={selected === node.path} tabIndex={focused === node.path ? 0 : -1} data-folder={node.path} title={node.absolutePath || node.path} style={{ "--tree-indent": `${Math.min(depth, 6) * 16 + Math.max(0, depth - 6) * 12}px` } as React.CSSProperties} className={`folder-tree-row${dropTarget === node.path ? " is-drop-target" : ""}${root ? " root" : ""}${selected === node.path ? " selected" : ""}${selected.startsWith(node.path + "/") ? " ancestor" : ""}${expanded ? " expanded" : ""}${node.unavailable ? " unavailable" : ""}${menu?.node.path === node.path ? " menu-open" : ""}`} onDragOver={event => {
+        if (!node.unavailable && fileDrop?.accepts(event.dataTransfer, node.path)) { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = "move"; setDropTarget(node.path); }
+      }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(""); }} onDrop={event => {
+        setDropTarget(""); if (!node.unavailable && fileDrop?.accepts(event.dataTransfer, node.path)) { event.preventDefault(); event.stopPropagation(); fileDrop.drop(event.dataTransfer, node.path); }
+      }} onFocus={() => setFocused(node.path)} onClick={() => { if (!node.unavailable) { onSelect(node.path); if (hasChildren && !expanded) toggle(node.path); } }} onKeyDown={event => key(event, node)} onContextMenu={event => { if (internalOnly) return; event.preventDefault(); showMenu(node, { right: event.clientX, bottom: event.clientY }); }}>
         <button type="button" className="folder-tree-chevron" aria-label={`${expanded ? "收起" : "展开"}${node.label || node.path}`} tabIndex={-1} style={{ visibility: hasChildren ? "visible" : "hidden" }} onClick={event => { event.stopPropagation(); toggle(node.path); }}><Icon name="down" size={12} /></button>
         <Icon name={node.unavailable ? "info" : "folder"} size={16} /><span className="folder-tree-name"><b>{folderLabel(node)}</b>{root && <small>{node.unavailable ? "原文件夹不可用" : node.absolutePath?.replace(/^\/Users\/[^/]+/, "~")}</small>}</span>
         {node.unavailable ? <button className="folder-reconnect" type="button" disabled={busy} onClick={event => { event.stopPropagation(); void action(node, "reconnect"); }}>重新连接</button> : <>{counts && <small className={`folder-tree-count${counts.get(node.path) ? "" : " is-empty"}`}>{counts.get(node.path) || 0}</small>}{!internalOnly && <button type="button" className="folder-tree-more" aria-label={`更多文件夹操作：${node.label || node.path}`} aria-haspopup="menu" tabIndex={-1} onClick={event => { event.stopPropagation(); showMenu(node, event.currentTarget.getBoundingClientRect()); }}><Icon name="more" size={15} /></button>}</>}

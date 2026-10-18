@@ -1,3 +1,4 @@
+import { moveSource } from "./source-mover.js";
 import { ContentRequestError } from "./content-error.js";
 import { sourceDestination, sourceFile, assertSourcePath } from "./source-access.js";
 import { spawn } from "node:child_process";
@@ -91,6 +92,10 @@ export class PageWriter {
     const page = destination.connection ? this.knowledge.index.list({ sources: true }).map(item => this.knowledge.index.get(item.id)!).find(item => item.externalSource?.originalPath === target) : this.knowledge.index.get(id);
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, path: page?.relativePath });
     return page;
+  }
+
+  async move(input: { pageId?: unknown; folder?: unknown; expectedModifiedAt?: unknown }): Promise<WikiPage> {
+    return moveSource(this.knowledge, input, this.onSourceRenamed);
   }
 
   async rename(pageId: string | undefined, fileName: string | undefined, expectedModifiedAt?: string): Promise<WikiPage> {

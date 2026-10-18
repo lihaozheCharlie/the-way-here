@@ -11,6 +11,7 @@ import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { VaultConfig, WikiRun } from "@the-way-here/shared";
 import type { WikiIndex } from "@the-way-here/wiki-core";
 import { searchWiki } from "../../../services/wiki-search.js";
+import { executableTool } from "../../../services/bundled-tools.js";
 
 const maxReadBytes = 1_000_000;
 const maxListedFiles = 500;
@@ -43,11 +44,12 @@ export function createPiTools(options: {
       }),
       execute: async (_callId, params) => {
         const p = params as {action:string; purpose:string; page?:string; terms?:string[]; start?:number; offset?:number; limit?:number};
-        const args = [bound.reader,"--file",bound.file,"--knowledge-base",bound.knowledgeBaseId,"--hash",bound.inputHash,"--action",p.action,"--purpose",p.purpose];
+        const reader = process.env.TWH_BUNDLED_ENGINE ? executableTool("knowledge-engine/skills/common/retrieval/scripts/evidence_reader.py", options.cwd) : bound.reader;
+        const args = [reader,"--file",bound.file,"--knowledge-base",bound.knowledgeBaseId,"--hash",bound.inputHash,"--action",p.action,"--purpose",p.purpose];
         if (p.page !== undefined) args.push("--page",p.page);
         for (const field of ["start","offset","limit"] as const) if (p[field] !== undefined) args.push(`--${field}`,String(p[field]));
         if (p.terms?.length) args.push("--terms",...p.terms);
-        const {stdout} = await promisify(execFile)("python3",args,{cwd:options.cwd,maxBuffer:4_000_000,timeout:30_000});
+        const {stdout} = await promisify(execFile)(process.env.TWH_BUNDLED_PYTHON || "python3",args,{cwd:options.cwd,maxBuffer:4_000_000,timeout:30_000});
         return textResult(stdout,JSON.parse(stdout));
       },
     }];

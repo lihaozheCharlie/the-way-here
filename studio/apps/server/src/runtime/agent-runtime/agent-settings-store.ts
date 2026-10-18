@@ -10,6 +10,8 @@ import type {
   UpdateAgentGlobalSettings,
 } from "@the-way-here/shared";
 import type { PiProviderConfig } from "./pi/pi-model-catalog.js";
+import { desktopSecretCodec, type SecretCodec } from "./desktop-secret-codec.js";
+import { dataConsentVersion } from "./data-consent.js";
 import {
   defaultThirdPartySelection,
   findThirdPartySelection,
@@ -22,6 +24,7 @@ const settingsVersion = 2;
 const efforts = new Set<AgentReasoningEffort>(["off", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
 
 type StoredAgentSettings = {
+  dataConsent?: AgentGlobalSettings["dataConsent"];
   version: 2;
   runtimeId: "codex" | "pi";
   codex: {
@@ -53,11 +56,13 @@ export class AgentSettingsValidationError extends Error {}
 export class AgentSettingsStore {
   private readonly filePath: string;
   private loaded?: StoredAgentSettings;
+  private mutationQueue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly config: AgentRuntimeConfig,
     vaultRoot: string,
     stateRoot = stateRootForVault(vaultRoot),
+    private readonly codec: SecretCodec | undefined = desktopSecretCodec(),
   ) {
     this.filePath = path.join(stateRoot, "agent-settings.json");
   }
@@ -67,22 +72,40 @@ export class AgentSettingsStore {
     return snapshotOf(this.loaded);
   }
 
-  async update(input: UpdateAgentGlobalSettings): Promise<AgentSettingsSnapshot> {
+  update(input: UpdateAgentGlobalSettings): Promise<AgentSettingsSnapshot> {
+    const task = this.mutationQueue.then(() => this.persistUpdate(input));
+    this.mutationQueue = task.catch(() => undefined);
+    return task;
+  }
+
+  private async persistUpdate(input: UpdateAgentGlobalSettings): Promise<AgentSettingsSnapshot> {
     const current = this.loaded || await this.readStored();
     const next = normalizeUpdate(input, current);
-    await atomicWrite(this.filePath, next);
+    await this.writeStored(next);
     this.loaded = next;
     return snapshotOf(next);
   }
 
   private async readStored(): Promise<StoredAgentSettings> {
     try {
-      return normalizeStored(JSON.parse(await readFile(this.filePath, "utf8")));
+      const envelope = JSON.parse(await readFile(this.filePath, "utf8"));
+      if (envelope.version === 3) {
+        if (!this.codec || typeof envelope.encrypted !== "string") throw new Error("无法解密 AI 设置，请使用原桌面应用和系统钥匙串打开");
+        return normalizeStored(JSON.parse(await this.codec.decrypt(envelope.encrypted)));
+      }
+      const stored = normalizeStored(envelope);
+      if (this.codec) await this.writeStored(stored);
+      return stored;
     } catch (error: any) {
       if (error?.code === "ENOENT") return defaultsFrom(this.config);
       if (error instanceof AgentSettingsValidationError) throw error;
       throw new Error(`全局 Agent 设置无法读取：${error.message || String(error)}`);
     }
+  }
+
+  private async writeStored(value: StoredAgentSettings): Promise<void> {
+    const stored = this.codec ? { version: 3, encrypted: await this.codec.encrypt(JSON.stringify(value)) } : value;
+    await atomicWrite(this.filePath, stored);
   }
 }
 
@@ -115,6 +138,7 @@ function normalizeStored(value: unknown): StoredAgentSettings {
   return {
     version: settingsVersion,
     runtimeId,
+    dataConsent: normalizeConsent(value.dataConsent),
     codex: {
       model: text(codex.model, "Codex 模型", false),
       effort: effort(codex.effort, "Codex 思考深度"),
@@ -149,6 +173,7 @@ function migrateLegacy(value: LegacyAgentSettings): StoredAgentSettings {
 function normalizeUpdate(input: UpdateAgentGlobalSettings, current: StoredAgentSettings): StoredAgentSettings {
   const raw: unknown = input;
   if (!isRecord(raw)) throw new AgentSettingsValidationError("Agent 设置必须是对象");
+  if (raw.dataSharingConsent !== undefined && typeof raw.dataSharingConsent !== "boolean") throw new AgentSettingsValidationError("AI 共享许可必须明确选择同意或撤回");
   const codex: Record<string, unknown> = isRecord(raw.codex) ? raw.codex : {};
   const thirdParty: Record<string, unknown> = isRecord(raw.thirdParty) ? raw.thirdParty : {};
   const runtimeId = runtime(raw.runtimeId);
@@ -160,6 +185,10 @@ function normalizeUpdate(input: UpdateAgentGlobalSettings, current: StoredAgentS
   return {
     version: settingsVersion,
     runtimeId,
+    dataConsent: raw.dataSharingConsent === true
+      ? { version: dataConsentVersion, recipientId: runtimeId === "codex" ? "codex" : `pi:${selection.providerId}`, acceptedAt: new Date().toISOString() }
+      : raw.dataSharingConsent === false || runtimeId !== current.runtimeId || selection.providerId !== current.thirdParty.providerId
+        ? undefined : current.dataConsent,
     codex: {
       model: text(codex.model, "Codex 模型", runtimeId === "codex"),
       effort: effort(codex.effort, "Codex 思考深度"),
@@ -174,6 +203,7 @@ function snapshotOf(stored: StoredAgentSettings): AgentSettingsSnapshot {
   return {
     public: {
       runtimeId: stored.runtimeId,
+      dataConsent: stored.dataConsent,
       codex: { ...stored.codex },
       thirdParty: {
         providerId: stored.thirdParty.providerId,
@@ -243,7 +273,12 @@ function isRecord(value: unknown): value is Record<string, any> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-async function atomicWrite(filePath: string, value: StoredAgentSettings): Promise<void> {
+function normalizeConsent(value: unknown): AgentGlobalSettings["dataConsent"] {
+  if (!isRecord(value) || value.version !== dataConsentVersion || typeof value.recipientId !== "string" || typeof value.acceptedAt !== "string" || !Number.isFinite(Date.parse(value.acceptedAt))) return undefined;
+  return { version: dataConsentVersion, recipientId: value.recipientId, acceptedAt: value.acceptedAt };
+}
+
+async function atomicWrite(filePath: string, value: unknown): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
   const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });

@@ -22,8 +22,14 @@ extraResources:
     to: native/trayTemplate.png
   - from: apps/desktop/dist/trayTemplate@2x.png
     to: native/trayTemplate@2x.png
+  - from: apps/desktop/dist/speech-engine
+    to: native/speech-engine
   - from: apps/desktop/dist/speech-capture
     to: native/speech-capture
+  - from: apps/desktop/dist/photo-library
+    to: native/photo-library
+  - from: apps/desktop/native/run-knowledge-tool.py
+    to: native/run-knowledge-tool.py
 mac:
   icon: apps/desktop/dist/app.icns
   category: public.app-category.lifestyle
@@ -33,6 +39,7 @@ mac:
     NSMicrophoneUsageDescription: 将你主动录制的生活片段转成文字，确认后才保存。
     NSSpeechRecognitionUsageDescription: 将你说的话转成可编辑的原话，优先使用设备上的语音识别。
     NSCameraUsageDescription: 导入你选择的照片与生活记录。
+    NSPhotoLibraryUsageDescription: 按你输入的日期、相册名或地点查找并展示照片，不自动导入或发送给 AI。
 dmg:
   title: The Way Here
 

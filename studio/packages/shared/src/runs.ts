@@ -67,9 +67,19 @@ export interface PhotoMemoryOutputTarget {
 }
 
 export interface CaptureOutputTarget {
+  captureId?: string;
+  captureRevision?: number;
+  folder?: string;
+  /** Server-owned destination and file revision, frozen before generation. */
+  storedPath?: string;
+  expectedFileHash?: string;
   kind: "life-record";
   label: string;
   originalText: string;
+  /** Local calendar date frozen at submission. */
+  diaryDate?: string;
+  /** Server-owned identity candidates and relationship evidence, frozen with the run. Never accepted from clients. */
+  entityLinks?: Array<{ pageId: string; title: string; matchedNames: string[]; relationshipContext?: string; titleIsAmbiguous?: boolean }>;
 }
 
 export type AgentOutputTarget = LetterVersionOutputTarget | JourneyReportOutputTarget | PhotoMemoryOutputTarget | CaptureOutputTarget;

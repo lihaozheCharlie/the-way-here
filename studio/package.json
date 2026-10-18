@@ -18,9 +18,14 @@
     "desktop:package": "pnpm build && node scripts/package-desktop.mjs",
     "test:desktop": "pnpm --filter @the-way-here/desktop test",
     "desktop:native": "node scripts/build-desktop-native.mjs",
-    "desktop:verify": "node scripts/verify-desktop.mjs"
+    "desktop:verify": "node scripts/verify-desktop.mjs",
+    "appstore:assets": "pnpm build && node scripts/prepare-app-store-assets.mjs",
+    "appstore:check": "node scripts/package-mas.mjs",
+    "appstore:dev": "node scripts/package-mas.mjs --build",
+    "appstore:release": "node scripts/package-mas.mjs --build --release"
   },
   "devDependencies": {
+    "@openai/codex": "0.162.1",
     "@playwright/test": "^1.63.0",
     "concurrently": "^9.2.1",
     "electron": "^44.3.0",

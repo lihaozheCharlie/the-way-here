@@ -439,8 +439,12 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
       if (draftRef.current === lastSavedRef.current && fileNameRef.current === lastSavedFileNameRef.current) return;
       event.preventDefault();
     };
+    const beforeMove = (event: Event) => {
+      if (draftRef.current !== lastSavedRef.current || fileNameRef.current !== lastSavedFileNameRef.current || savingRef.current || renamingRef.current) event.preventDefault();
+    };
+    window.addEventListener("source-file-move-request", beforeMove);
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    return () => { window.removeEventListener("beforeunload", warn); window.removeEventListener("source-file-move-request", beforeMove); };
   }, []);
 
   useLayoutEffect(() => {

@@ -5,6 +5,7 @@ import { ConversationWindow } from "../features/desktop/ConversationWindow";
 import { useDesktopNotifications } from "../features/desktop/use-desktop-notifications";
 import { CommandPalette } from "../features/desktop/CommandPalette";
 import { Preferences } from "../features/desktop/Preferences";
+import { Privacy } from "../features/desktop/Privacy";
 import { ModelOnboarding } from "../features/desktop/ModelOnboarding";
 import { QuickCapture } from "../features/desktop/QuickCapture";
 import { useInspector } from "../features/desktop/InspectorContext";
@@ -277,6 +278,7 @@ export function AppShell({ revision }: { revision: number }) {
           <Routes>
             <Route path="/conversation" element={<ConversationWindow revision={revision} />} />
             <Route path="/preferences" element={<Preferences revision={revision} />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">正在打开知识库…</p>} />
             <Route path="/" element={<Today revision={revision} />} />
             <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : null} />

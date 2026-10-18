@@ -87,3 +87,15 @@ describe("run policy", () => {
     expect(parseAgentOutputTarget({ kind: "journey-report", importId: "batch-1", storedPath: "sources/旅程.md", label: "报告", clueId: "../other" })).toBeUndefined();
   });
 });
+
+it("validates diary dates and ignores forged identity matches from clients", () => {
+  const base = { kind: "life-record", label: "随手记", originalText: "嗯，今天见到小林。" };
+  expect(parseAgentOutputTarget({ ...base, diaryDate: "2026-10-16", entityLinks: [{pageId:"other/person"}] })).toEqual({ ...base, diaryDate: "2026-10-16" });
+  for (const diaryDate of ["2026-02-30", "2026-13-16", "../../file", 123]) expect(parseAgentOutputTarget({ ...base, diaryDate })).toBeUndefined();
+  const prompt = addOutputTargetInstructions("", parseAgentOutputTarget({ ...base, diaryDate: "2026-10-16" }));
+  expect(prompt).toContain("第一人称"); expect(prompt).toContain("呃、嗯、啊");
+  expect(prompt).toContain("不压缩成摘要"); expect(prompt).toContain("2026-10-16 日记");
+  expect(prompt).toContain("先通读完整原话再成文");
+  expect(prompt).toContain("关系证据与本轮语境共同明确指向同一人");
+  expect(prompt).toContain("leader 的 leader");
+});

@@ -13,3 +13,11 @@ export function stateRootForVault(vaultRoot: string): string {
   return path.join(appStateRoot(), "vaults", key);
 }
 
+
+/** Desktop provides one app-owned cache root; standalone runs retain vault-local app state isolation. */
+export function cacheRootForVault(vaultRoot: string): string {
+  const shared = process.env.TWH_APP_CACHE_ROOT;
+  if (!shared) return path.join(stateRootForVault(vaultRoot), "cache");
+  if (!path.isAbsolute(shared)) throw new Error("应用缓存目录必须是绝对路径");
+  return path.join(shared, "vaults", createHash("sha256").update(path.resolve(vaultRoot)).digest("hex").slice(0, 16));
+}

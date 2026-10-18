@@ -39,9 +39,11 @@ apps/desktop
   主进程：窗口、菜单、状态项、通知、系统权限、工作区选择
   preload：隔离的少量 IPC 方法（不向页面提供文件系统或 Node）
   native/SpeechCapture.swift：用户主动触发的系统语音识别
-        │ authenticated loopback HTTP + SSE
-apps/server（Electron utilityProcess 托管，动态端口）
-  HTTP 运行时校验 / 内容与导入 / 知识库编排 / Agent 与 Run
+        │ private utilityProcess IPC + event frames（无监听端口）
+apps/server/studio-application（Electron utilityProcess 托管）
+  共享运行时校验 / 内容与导入 / 知识库编排 / Agent 与 Run
+  Web 独立入口：studio-server + index → HTTP / 静态页面 / SSE
+  客户端独立入口：desktop → 内部消息 / API 注入 / 事件订阅
         │
   wiki-core / life-views / run-manager / codex-bridge / shared
         │
@@ -57,7 +59,7 @@ apps/web
 
 桌面宿主不实现知识判断、不读取或改写笔记。Web 页面只通过本地 API 访问内容。原有领域 package 职责保持不变；迁移主要发生在运行宿主、应用组合层、共享交互和呈现层。
 
-生产依赖由 `scripts/package-server.mjs` 从已安装依赖图物化，保留各版本及许可证，排除工作区源码、私人库和开发依赖。桌面构建通过白名单打包 app、web、server 与原生辅助程序；知识引擎、Python 校验环境和原 Web 演示库随包提供，用户数据保存在应用包之外。应用仅监听 `127.0.0.1` 动态端口；桌面模式要求进程随机会话令牌，界面使用按工作区散列确定的稳定 `https://workspace-….localhost` origin，Electron 协议处理器转发到动态端口并添加令牌；外部 HTTPS 请求不携带令牌。由此 localStorage 与 IndexedDB 在重启后保持原有空间，照片草稿、随手记与偏好不会因端口变化丢失。渲染进程启用 sandbox、contextIsolation，禁用 nodeIntegration；IPC 校验来源与本地路由，外链只允许 http/https/mailto。
+生产依赖由 `scripts/package-server.mjs` 从已安装依赖图物化，保留各版本及许可证，排除工作区源码、私人库和开发依赖。桌面构建通过白名单打包客户端、前端资源、知识运行时与原生辅助程序；知识引擎、Python 校验环境和匿名演示库随包提供，用户数据保存在应用包之外。桌面应用不监听网络端口；界面使用按工作区散列确定的稳定 `https://workspace-….localhost` origin，Electron 协议处理器直接读取静态资源，并通过私有 IPC 调用知识运行时。外部 HTTPS 请求独立发送。localStorage 与 IndexedDB 在重启后保持原有空间。渲染进程启用 sandbox、contextIsolation，禁用 nodeIntegration；IPC 校验来源与本地路由，外链只允许 http/https/mailto。
 
 现有 Agent Run 的知识库与配置快照继续决定 Prompt、审批、验证与差异。新增 `POST /api/capture` 验证显式知识库 ID，绑定当时的索引与导入清单，首次写入即包含完整确认正文，使用排他创建避免覆盖同名记录。页面 API 对内容写入携带首次加载的知识库 ID；切库后服务端拒绝旧窗口内容写入，窗口刷新以清除过期页面上下文。随手记草稿按库存储。
 
@@ -127,7 +129,17 @@ Studio 不把知识构建规则重新写进 TypeScript。它提供编排、展�
 
 ## Agent 运行时
 
-### 照片记忆冷启
+### 系统照片库检索（2026-10）
+
+“此刻”的 `PhotoLibraryCard` 提供独立、只读的系统照片入口；首次展开只检查权限，明确点击后才请求 PhotoKit `.readWrite` 授权（公开 API 无 read-only 授权级别，应用不调用任何修改方法）。桌面主进程按窗口持有 `PhotoLibrary`，通过受信任 IPC 和带关联 ID 的 NDJSON 协议调用随包 Swift `PhotoLibrary.swift`；不向 renderer 暴露文件系统或可执行路径，不通过本地 HTTP 服务访问照片。每个搜索绑定原窗口和当前知识库卡片生命周期；切库、收起、离开页面、窗口销毁、退出或超时会释放进程及全部请求，结果不写入 Vault、localStorage 或磁盘。
+
+`packages/shared/src/photo-library.ts` 定义输入、授权、照片及预览契约；主进程 `photoQuery` 做运行时校验，支持本地日历日期的今天、昨天、今年、去年、本月、上个月、最近 1–366 天、YYYY、YYYY-MM、YYYY-MM-DD 及中文年月日。起止日期包含结束日，使用次日零点作为开区间；拒绝不存在、倒序、重复时间条件。关键词按原文件名或用户相册名做不区分大小写的包含匹配，不调用视觉模型或系统私有人物索引。地点模式把关键词交给 Apple 地理编码，拒绝多地点歧义，并以返回中心点 30km 对照片已有 GPS 本机过滤；返回解析地点和坐标，不声称行政区精确匹配，也不请求当前设备位置。位置缺失、日期不准及未同步的手机照片不能自动补全。
+
+搜索排除隐藏照片、只含静态图像资产，每页最多 36 张，以原生搜索快照的 opaque cursor 续查；每个窗口最多保留 4 个搜索快照。UI 的图片队列并发最多 4，缩略图最长边 360px，大图 1600px；原生重新编码 JPEG，移除原 EXIF/GPS，不复制原图。默认禁止网络下载，只对用户明确点击的云端照片允许网络获取；地点查询单独说明联网用途。权限在搜索、取图、回到窗口及展开期间定期检查，撤回后清除展示。原生组件需 `NSPhotoLibraryUsageDescription`，MAS 主应用需 `com.apple.security.personal-information.photos-library`；独立辅助进程继承沙盒，签名包的 TCC 授权归属需实机验收。
+
+此入口只搜索和浏览，未加入语义天气、人脸姓名识别、全库持久化索引或故事导入；选中文件进入照片记忆仍使用下述既有流程。匿名验证覆盖 UI 授权/拒绝/失败/空结果/分页/云端预览/取消/切库，原生编译及查询协议另行验证，不以模拟 UI 证明真实图库访问或 MAS 审核通过。
+
+### 照片记忆冷启流程
 
 生活记录页用紧凑缩略卡片展示待完成的照片与账单记忆；列表右侧继续呈现原有 Markdown 来源正文，不挂载照片编辑工作区或启动人脸检测，也不在账单正文头部重复渲染记忆入口。卡片以最新导入清单状态为准，已构建或已暂缓的记忆退出顶部区域；刚导入的本机快照只补齐刷新前缺少的批次，不覆盖服务端状态。导入列表响应会排除来源文件已经不存在的条目，空批次不再返回；历史清单与隐藏原图继续保留。删除文件或文件夹成功后，浏览器立即同步移除待完成卡片、待构建计数和打开的记忆，再等待服务端刷新；刚导入的快照一旦被服务端接收便停止补齐，防止删除后从旧缓存重新出现。完整列表仍保留“打开照片记忆 / 打开账单记忆”入口；显式点击后在原生模态对话框加载详情，照片沿用人物与讲述流程，账单进入线索卡片墙。账单清单为每条线索保存结构化交易证据；展开时只渲染前三笔单行摘要，其余笔数折叠，悬停和键盘聚焦都能读取完整交易字段。确认、简答、跳过和重新处理都在卡片原位完成；“展开细聊”把单条线索交接给 Agent 抽屉，页面右下角原有的通用对话入口始终保留。发起 Agent 对话时关闭记忆弹窗并交接焦点，避免叠加模态窗口。页面或文件切换只静默恢复关联会话，只有主动点击对话入口或触发 `open-context-agent` 才打开窗口。
 
@@ -234,7 +246,7 @@ flowchart LR
 
 ### 服务端
 
-- `apps/server/src/index.ts` 读取启动参数；`studio-server.ts` 是装配入口，注册路由、运行时与资源生命周期。
+- `apps/server/src/studio-application.ts` 装配共享业务路由、运行时与资源生命周期；`index.ts` / `studio-server.ts` 负责 Web HTTP、静态页面及 SSE 适配，`desktop.ts` 负责桌面私有 IPC 适配。
 - `runtime/knowledge-runtime.ts` 管理索引、活动知识库、文件监听与重建。
 - `runtime/run-coordinator.ts` 管理任务状态、审批、快照、验证、恢复及执行事件。它依赖 `agent-runtime/types.ts` 中的 `AgentRuntimeProvider`，不引用具体适配器或照片、账单存储。
 - `services/run-outputs.ts` 统一结果目标验证、来源构建准备、只读结果保存与构建后的影像发布。每次操作显式接收 Run 绑定的配置及索引；不保存活动知识库，也不管理任务状态。
@@ -284,7 +296,7 @@ Electron 的 `workspace.mjs` 负责选择持久化位置：显式开发覆盖 �
 
 ### 运行生命周期与资源上限
 
-桌面 `service-process.mjs` 将握手、超时、异常退出和监听器清理集中管理：仅接受 loopback HTTP 地址，60 秒未就绪会终止进程，未换行缓冲不超过 64 KiB。校验命令独立绑定 Run 的知识库，默认每条限时 120 秒，超时在 macOS/Linux 终止进程组；累计和实时输出各限制 50,000 字符，以 close 事件确认输出管道已排空。
+桌面 `runtime-process.mjs` 通过私有父子进程消息管理就绪握手、关联请求、超时、取消和实时事件，不创建 TCP/HTTP 监听。客户端不再传递 Web 根目录、端口或桌面 HTTP token；静态页面由主进程校验路径后直接读取。Web HTTP/SSE 入口独立保留，客户端包不包含 Web 监听入口与 `@fastify/static`。60 秒未就绪会终止进程；请求体最多 2 MiB，响应最多 64 MiB，并发请求最多 128 个，子进程退出会拒绝全部挂起请求并关闭事件流。校验命令独立绑定 Run 的知识库，默认每条限时 120 秒，超时在 macOS/Linux 终止进程组；累计和实时输出各限制 50,000 字符，以 close 事件确认输出管道已排空。
 
 SSE 连接绑定响应的关闭/错误事件，心跳和连接共同释放；单客户端缓冲超过 1 MiB 后断开，由浏览器重连。服务关闭会结束已接管的事件流。来源同步定时器在上次完成后再调度，避免慢扫描造成队列积压；监听错误持久化到连接状态。知识库创建、删除与连接配置更新复用同一修改队列。
 
@@ -365,9 +377,17 @@ Agent 对话与模型设置使用独立的 `agent-conversation.css` 表面样式
 桌面包分发匿名预测 state.json，排除 predictions/.runtime；托管空间升级仅补齐默认演示路径中缺失的预测结果，不覆盖现有结果或自定义 demo 路径。
 
 
-### 此刻：整理为生活记录
+### 此刻：整理为当天日记
 
-此刻仅呈现产品说明与快速记录输入。文字和桌面语音共用草稿，按知识库隔离保存；发送通过现有 `/api/runs` 发起独立 read 任务，`outputTarget.kind=life-record` 保存输入原话，禁止续接会话与构建上下文。模型使用 strictReadOnly，只返回 Markdown；服务端 CaptureRecordStore 使用 Run 的 configSnapshot 在 sources/随手记新建文件，并登记生活记录。文件名由任务日期与 ID 派生，不接受模型路径；独占创建、不覆盖，恢复同一任务时校验内容并复用。正文区分模型整理与输入原话，成功后 result.outputPageId / outputSavedAt 提供可打开的记录。切换库或离开页面不改变任务归属，失败保留草稿，返回页面通过持久化任务 ID 恢复进度。
+此刻仅呈现产品说明与快速记录输入。快速记录语音入口空闲时仅显示麦克风；启动、录音、识别分为独立状态。原生 SpeechCapture 逐行上报 ready 与 level（约 80ms 一次的实际麦克风音量），桌面桥接仅向发起窗口推送音量与结束事件，最终文字仍由 stopSpeech 返回。录音条提供取消、计时、音量历史与结束；取消丢弃本次文字，自动结束与错误退出录音状态，卸载时解除订阅并停止录音。文字和桌面语音共用草稿，按知识库隔离保存；发送通过现有 `/api/runs` 发起独立 read 任务，`outputTarget.kind=life-record` 保存输入原话，禁止续接会话与构建上下文。模型使用 strictReadOnly，只返回 Markdown；服务端 CaptureRecordStore 使用 Run 的 configSnapshot 在 sources/随手记新建文件，并登记生活记录。文件名由任务日期与 ID 派生，不接受模型路径；独占创建、不覆盖，恢复同一任务时校验内容并复用。Markdown 只保存整理正文，输入原话先写入应用缓存，成功后 result.outputPageId / outputSavedAt 提供可打开的记录。切换库或离开页面不改变任务归属，失败保留草稿，返回页面通过持久化任务 ID 恢复进度。
+
+语音采用两阶段识别。原生 SpeechCapture 持续录制完整 `recording.caf`；Apple Speech 只用于录音中的实时预览，45 秒轮换请求，同段较短或空的回调不再覆盖较长的预览。预览识别不可用、拒绝授权或报错时，麦克风仍继续录音；最终识别不依赖 Apple Speech。原生检查点保存在应用数据目录 `cache/speech-recordings/<session>/transcript-preview.txt`（会话目录权限 0700）。
+
+停止后桌面主进程将完整 CAF 转为 16kHz 单声道 PCM WAV，使用本地 whisper.cpp v1.8.2 / Whisper large-v3 Q5_0 与 Silero VAD v5.1.2 重新识别全部音频，避免把流式中间文字当成最终稿。VAD 排除静音尾段，降低无声段幻觉；正文自带标点并统一中文逗号。结果按时间轴校验后保存在 `transcript-whisper.json` 与 `transcript-whisper.txt`，不覆盖原始录音和预览检查点。成功才用最终全文填回输入框；精确识别失败保留预览并明确提示，不冒充完整转写。取消输入跳过精确识别；退出终止本次本地识别子进程。
+
+音量、预览、备份、精确识别进度和结束事件只发送至发起窗口，打开录音也按窗口绑定。前端显示真实预览文字和精确识别百分比，按库及入口持续保存待回填草稿，刷新可恢复；音量不等于转写完成。模型、VAD 和静态链接 CLI 随桌面包分发，运行时不安装 Python、不下载依赖、不上传录音。构建脚本固定 whisper.cpp 提交和模型 SHA-256，随包包含工具、模型和 VAD 许可证。每个识别子进程具有超时和取消处理。
+
+日记的本地日历日期 `diaryDate` 在提交时冻结，服务端校验日期格式与有效性；旧请求由服务端补当天日期。模型去除无意义停顿、重复和录音用语，保留第一人称、具体细节和原意，不压缩为摘要，也不将过去经历改写成今天。已有实体匹配由 wiki-core 根据本次绑定库的实体标题与别名生成，冲突别名不自动关联；服务端忽略客户端提交的 entityLinks，将候选冻结在 Run 中。出现人物关系称呼时，wiki-core 从绑定索引的实体正文中选取最多三个相关段落（每段最多 600 字），将 relationshipContext 与候选一起冻结；这些片段仅用于结合本轮语境核对误识别姓名与关系层级，不作为补写日记经历的来源。模型先通读全文，整合明确改口，区分自我修正与真实先后变化；姓名仅在关系、时间和语境共同明确且无竞争候选时规范，否则保留原称呼。模型只接收这些候选及片段，不自行读取或改写实体页面；保存正文时只生成候选内的名称链接，支持规范姓名并排除普通代词，重复保存不嵌套链接，输入原话保持不变。每次整理独立保存为当天的一篇日记，不覆盖或合并已有日记。
 
 原首页话头、摘要和重复导航移出此刻；完整内容仍由侧栏的值得聊聊、生活记录与已有理解访问。
 
@@ -386,3 +406,36 @@ Agent 对话与模型设置使用独立的 `agent-conversation.css` 表面样式
 生活记录通过 `/api/search?sources=true&q=…` 按索引完整来源正文过滤当前目录/类型/月列表；此模式返回全部匹配的来源摘要，普通 `/api/search` 保持 30 条限制。客户端仍不读取磁盘或 Vault 文件。请求由服务端当前知识库索引执行；文件修改继续走已有版本冲突和知识库请求边界。
 
 来源预览沿用全局窗口与主导航样式，`recordStyle` 不接收关联侧栏内容，只显示设计稿中的小标题导航；宽屏阅读区域居中且正文与导航保持相邻。来源预览复用共享文档组件的 `recordStyle`：默认展开的小标题、来源专属偏好、顶部路径与保存状态、双击编辑及无标题提示。非来源文档保留原来的模式切换、浮卡和固定目录行为。验收入口与覆盖边界记录在 `source-tree-and-outline-checklist.md`。
+
+### 商店分发与数据授权（2026-10-12）
+
+MAS 使用独立签名配置，与 DMG 分发并存。主进程维护 security-scoped bookmarks，启动时恢复；新增授权后重启 utility service。MAS 随包固定 OpenAI Codex 0.162.1，以 app-sandbox + inherit 两项权限签名；不执行外部 CLI。用户通过原生目录选择器连接既有 ChatGPT 登录，只导入 auth.json 的登录材料至应用私有 codex-mas 目录，不导入原有会话、插件、MCP、hooks 或配置；启动时固定 OpenAI 接收方及受控工作目录。商店外版本保留原来的外部 CLI 方式。
+
+AgentSettingsStore 维护按运行时/厂商绑定的显式共享许可，Registry 包装所有 AI runtime start/steer/allow/recover。撤回阻止新请求并中断活动任务；更换接收方使记录失效。商店外 Codex 自己的服务配置变更目前不能自动识别，需用户撤回重授；MAS 固定内置 Codex 的 OpenAI 接收方。打包桌面应用由主进程 safeStorage 处理加密，utilityProcess parentPort 传输加密请求，设置文件保存加密 envelope；解密失败不回退明文。开发服务器保持原文件存储。
+
+确定性 Python 工具从签名 Resources 执行，桌面 bootstrap 从相同 bundle 加载 vault_context 代码，仅把其 __file__ 数据上下文绑定到冻结工作区；不修改共享知识引擎或复制领域逻辑。验证、预测证据读取都走 bundle 路径，用户可写副本用于内容和规则展示。发布元信息经打包资源注入服务，web 只读取 /api/distribution。
+
+MAS 的 Codex app-server 启用 experimental dynamicTools，关闭原生 shell、统一执行、外部插件、MCP、网页搜索及其他宿主能力，所有回合维持 readOnly 沙箱。文件权限由客户端 MasCodexTools 执行：复用 createPiTools 的知识库绑定、路径检查、读取哈希及乐观写入，不以模型提示替代权限。动态工具目录在会话内稳定，实际工具集逐 Run 绑定；调用必须匹配当前 threadId/turnId，参数需运行时校验。停止、结束或撤回许可后取消绑定并拒绝后续调用。恢复时没有对应 Run 工具上下文的活动回合中断，要求用户重新发起；不恢复无归属的工具执行。
+
+### 生活记录文件移动
+
+列表文件可拖到 FolderTree 的真实目录，也可通过文件菜单“移动到…”选择目录；目标目录高亮，完成后刷新文件、目录计数和导入列表并定位新文件。保存中的编辑器阻止移动，避免切换正文丢失草稿。`POST /api/sources/move` 必须携带知识库 ID、文件 ID、目标逻辑目录和修改时间。服务端冻结请求库上下文并串行执行，活动 AI 任务期间拒绝移动。来源与目标限制在本库来源目录或已经连接的原目录，拒绝符号链接、越界、缺失目录、过期文件及同名覆盖。照片和账单记忆保持专属目录。
+
+SourceMover 使用独占复制兼容跨磁盘移动，校验文件内容后同步导入构建状态和已有 Wiki 链接（保留可见文字与章节定位），最后才删除旧文件；目标为连接目录时使用扫描后的真实来源引用 ID。关联更新失败时回滚文件和已写入的关联，不覆盖并发产生的文件。正文不做内容改写，移动成功广播索引变化。
+
+### 随手记草稿与历史
+
+随手记的编辑区、语音控制、历史详情和目录选择分别位于 overview/LifeRecordCapture、desktop/CaptureVoice 和 overview/CaptureDialogs。录音期间只读显示浅灰临时转写，光标选区与原输入冻结；完成后由完整录音的本地 Whisper 结果精确替换该选区。暂停/继续通过原生进程命令与确认事件控制麦克风，暂停期间不计入界面录音时长。
+
+`/api/capture/history`、`/api/capture/draft`、`/api/capture/default-folder` 和历史删除接口按知识库隔离本机状态。草稿采用序列化原子写入与 revision 比较，本机编辑检查点继续保留以应对服务中断。历史导入既有已完成随手记任务，并保留删除标记防止重新出现；删除历史不删除已保存的 Markdown 文件，界面确认明确说明。
+
+life-record 目标可携带 captureId/captureRevision 和当前目录；storedPath/expectedFileHash 仅由服务端从历史解析并冻结，不接受客户端提供。保存期间再次比较草稿版本和原文件哈希，阻止并发覆盖。继续补充更新同一文件，写入前在应用缓存 capture-versions 保留上一版；原话与历次输入存入 capture-inputs，历史元数据只保留整理结果、版本索引和未提交编辑。新记录的默认目录按知识库保存，不会移动已有记录；路径继续限定在配置来源目录内并拒绝符号链接和隐藏目录。
+
+
+### 应用存储与缓存边界
+
+桌面主进程通过 `TWH_APP_CACHE_ROOT=<userData>/cache` 为本机运行时绑定缓存根；`cacheRootForVault` 按工作区路径哈希隔离，未指定时使用 `stateRootForVault/cache`。输入文件进一步按知识库和任务哈希隔离，权限 0600。路径不接受客户端指定。语音新会话统一进入 `<userData>/cache/speech-recordings`；旧目录不自动移动。
+
+CaptureRecordStore 在写日记前保存输入缓存，Markdown 仅含整理正文；缓存失败使保存失败，保留运行原话与草稿。CaptureHistoryStore 读取时补回缓存原话，写入时将原话及版本输入移入缓存；与已保存输入不同的未提交补充仍保留在必要状态中。旧历史在下一次写入时迁移原话字段，旧 Markdown 不自动重写。输入缓存缺失时历史以已保存整理稿回填编辑，不恢复已清理原话，不影响日记文件、版本检查、默认目录或删除标记。
+
+`services/storage-policy.ts` 是当前存储分类的机器可读入口，经只读 `GET /api/storage/policy` 提供；没有清理接口。策略区分可重建中间文件、需检查状态/引用的输入备份与不可删除的必要状态，未知目录默认保留。完整目录、运行记录副本与旧目录处理边界见 [STORAGE.md](STORAGE.md)。

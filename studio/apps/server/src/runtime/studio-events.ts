@@ -2,6 +2,13 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 /** One lifecycle for the stream, heartbeat and backpressure budget. */
 export class StudioEvents {
+  private readonly subscribers = new Set<(event: string, data: unknown) => void>();
+
+  subscribe(listener: (event: string, data: unknown) => void): () => void {
+    this.subscribers.add(listener);
+    return () => { this.subscribers.delete(listener); };
+  }
+
   private readonly clients = new Map<FastifyReply, () => void>();
 
   private write(client: FastifyReply, frame: string): void {
@@ -15,11 +22,13 @@ export class StudioEvents {
   }
 
   broadcast(event: string, data: unknown): void {
+    for (const listener of this.subscribers) listener(event, data);
     const frame = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     for (const client of this.clients.keys()) this.write(client, frame);
   }
 
   close(): void {
+    this.subscribers.clear();
     for (const [client, cleanup] of this.clients) { cleanup(); client.raw.end(); }
   }
 

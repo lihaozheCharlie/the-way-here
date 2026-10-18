@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, DragEventHandler } from "react";
 import type { WikiPageSummary } from "@the-way-here/shared";
 import { PaneShelf } from "./PaneShelf";
 import { QuietScroll } from "./QuietScroll";
@@ -20,12 +20,12 @@ export function FileBrowserPane({ label, count, open, onToggle, toolbar, headerA
   </div>;
 }
 
-export function FileBrowserItem({ page, active, onSelect, selection, actions, children }: {
-  page: Pick<WikiPageSummary, "relativePath" | "title" | "excerpt">; active: boolean; onSelect: () => void;
-  selection?: ReactNode; actions?: ReactNode; children?: ReactNode;
+export function FileBrowserItem({ page, active, onSelect, selection, actions, children, onDragStart, onDragEnd }: {
+  page: Pick<WikiPageSummary, "relativePath" | "title" | "excerpt" | "externalSource">; active: boolean; onSelect: () => void;
+  selection?: ReactNode; actions?: ReactNode; children?: ReactNode; onDragStart?: DragEventHandler<HTMLElement>; onDragEnd?: DragEventHandler<HTMLElement>;
 }) {
-  const fileName = page.relativePath.replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
-  return <article className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""} file-browser-item`}>
+  const fileName = (page.externalSource?.originalPath || page.relativePath).replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
+  return <article draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragEnd={onDragEnd} className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""} file-browser-item`}>
     {selection}
     <button type="button" className="source-file-select" aria-label={fileName} aria-current={active ? "true" : undefined} onClick={onSelect}>
       <span className="source-record-copy"><b className="file-browser-name">{fileName}</b>{page.excerpt && <small className="file-browser-excerpt" data-overflow-tooltip="off">{page.excerpt}</small>}</span>

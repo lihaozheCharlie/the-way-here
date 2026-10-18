@@ -14,7 +14,7 @@ import { SearchField } from "../../shared/form-controls";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
-import type { PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
+import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { graphCategoryNames } from "../../shared/categories";
 import { pageDestination, pageHref, type ReturnContext } from "../../shared/routing";
@@ -191,9 +191,22 @@ function SourcePreview({ page, revision, startEditing = false, fileNameFocusToke
 }
 
 export function OrganizedSources({ revision }: { revision: number }) {
+  const { data: moveVault } = useApi<VaultInfo>("/api/vault", revision);
+  const moveScope = useRef(moveVault?.knowledgeBaseId); moveScope.current = moveVault?.knowledgeBaseId;
+  const draggedSource = useRef<{ page: WikiPageSummary; knowledgeBaseId: string } | undefined>(undefined);
+  const movingRef = useRef(false);
+  const [moving, setMoving] = useState(false);
+  const [moveMessage, setMoveMessage] = useState("");
+  const [moveChoice, setMoveChoice] = useState<WikiPageSummary>();
+  const moveChoiceScope = useRef<string | undefined>(undefined);
+  useEffect(() => { setMoveChoice(undefined); draggedSource.current = undefined; setMoveMessage(""); }, [moveVault?.knowledgeBaseId]);
+  const [moveDestination, setMoveDestination] = useState("");
+  const moveDialog = useRef<HTMLElement>(null);
+  useDismissLayer(Boolean(moveChoice), () => setMoveChoice(undefined), { dismissible: !moving, element: moveDialog, priority: 1 });
+  useEffect(() => { if (moveChoice) moveDialog.current?.focus(); }, [moveChoice]);
   const [folderRevision, setFolderRevision] = useState(0);
   const { data, loading } = useApi<WikiPageSummary[]>("/api/pages?sources=true", revision + folderRevision);
-  const { data: importBatches } = useApi<SourceImportBatch[]>("/api/imports", revision);
+  const { data: importBatches } = useApi<SourceImportBatch[]>("/api/imports", revision + folderRevision);
   const [folderCreateToken, setFolderCreateToken] = useState(0);
   const [includeChildren, setIncludeChildren] = useState(false);
   const { data: sourceFolders } = useSourceFolders(revision + folderRevision);
@@ -268,6 +281,23 @@ export function OrganizedSources({ revision }: { revision: number }) {
       && (!month || sourceRecordMonth(page) === month)
       && (!query.trim() || matchingIds.has(page.id));
   }).sort((a, b) => (oldestFirst ? 1 : -1) * (sourceRecordDate(a).getTime() - sourceRecordDate(b).getTime()));
+  async function moveFile(targetFolder: string) {
+    const payload = draggedSource.current;
+    if (!payload || movingRef.current) return;
+    if (payload.knowledgeBaseId !== moveScope.current) { setBuildError("知识库已切换，请重新选择文件"); return; }
+    if (!window.dispatchEvent(new Event("source-file-move-request", { cancelable: true }))) { setBuildError("正文或文件名尚未保存，请等待保存完成后再移动"); return; }
+    const { page, knowledgeBaseId } = payload;
+    movingRef.current = true; setMoving(true); setBuildError(""); setMoveMessage("正在移动…");
+    try {
+      const moved = await api<WikiPage>("/api/sources/move", { method: "POST", body: JSON.stringify({ pageId: page.id, folder: targetFolder, knowledgeBaseId, expectedModifiedAt: page.modifiedAt }) });
+      if (moveScope.current !== knowledgeBaseId) return;
+      setMoveChoice(undefined); setCreatedPageId(undefined); setRecentBatch(undefined); setSelectedBuildPaths(new Set());
+      setFolderRevision(value => value + 1);
+      update({ folder: targetFolder, file: moved.id, q: undefined, month: undefined, type: undefined, limit: undefined, batch: undefined });
+      setMoveMessage(`已移动到「${sourceFolders?.find(item => item.path === targetFolder)?.label || targetFolder.split("/").at(-1)}」`);
+    } catch (reason) { if (moveScope.current === knowledgeBaseId) { setMoveMessage(""); setBuildError(reason instanceof Error ? reason.message : "移动失败，原文件已保留"); } }
+    finally { movingRef.current = false; setMoving(false); draggedSource.current = undefined; }
+  }
   const requestedLimit = Number.parseInt(params.get("limit") || "120", 10);
   const visibleLimit = Number.isFinite(requestedLimit) ? Math.max(120, requestedLimit) : 120;
   const visiblePages = filtered.slice(0, visibleLimit);
@@ -471,7 +501,15 @@ export function OrganizedSources({ revision }: { revision: number }) {
       {openedMemory.batch.channel === "photos" ? <PhotoMemoryPanel key={openedMemory.batch.id} batch={openedMemory.batch} revision={revision} /> : openedMemory.batch.journey ? <BillMemoryPanel key={openedMemory.batch.id} record={openedMemory} busy={busyBuildPath === openedMemory.file.storedPath} onBuild={(batch) => void beginBuild({ ...openedMemory, batch }, "build")} onDeep={(batch, cluster, state) => beginJourneyDeep(openedMemory, batch, cluster, state)} /> : memoryPage ? <SourcePreview page={memoryPage} revision={revision} fileNameFocusToken={renameRequest?.pageId === memoryPage.id ? renameRequest.token : 0} buildRecord={openedMemory} buildBusy={busyBuildPath === openedMemory.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <Empty>正在等待记录进入列表，请稍后重新打开。</Empty>}
     </SourceMemoryDialog> : null}
     {shownBatch && !["photos", "alipay"].includes(shownBatch.channel || "") ? <ImportedBatchGuide batch={shownBatch} busyPath={busyBuildPath} onStart={beginBuild} onStartAll={beginBatchBuild} onDefer={deferBuilds} /> : null}
+    {moveMessage ? <p className="source-move-status" role="status">{moveMessage}</p> : null}
     {buildError ? <p className="source-build-error" role="alert">{buildError}</p> : null}
+    {moveChoice ? createPortal(<div className="desktop-modal-backdrop" onClick={event => { if (event.target === event.currentTarget && !moving) setMoveChoice(undefined); }}><section className="source-move-dialog" ref={moveDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="source-move-title" onKeyDown={event => {
+      if (event.key !== "Tab") return;
+      const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]),[role="treeitem"][tabindex="0"]')].filter(node => node.tabIndex >= 0);
+      const first = controls[0], last = controls.at(-1);
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }}><h2 id="source-move-title">移动「{documentIdentity(moveChoice.externalSource?.originalPath || moveChoice.relativePath).fileName}」</h2><p>选择目标文件夹</p><FolderTree selected={moveDestination} onSelect={setMoveDestination} revision={revision + folderRevision} />{buildError ? <p role="alert">{buildError}</p> : null}<footer><button type="button" disabled={moving} onClick={() => setMoveChoice(undefined)}>取消</button><button type="button" className="desktop-primary" disabled={moving || !moveDestination || sourcePagePath(moveChoice).split("/").slice(0, -1).join("/") === moveDestination} onClick={() => { if (moveChoiceScope.current) { draggedSource.current = { page: moveChoice, knowledgeBaseId: moveChoiceScope.current }; void moveFile(moveDestination); } }}>{moving ? "正在移动…" : "移动到这里"}</button></footer></section></div>, document.body) : null}
     <h1 className="sr-only">生活记录</h1>
     <section className="source-discovery-tools" aria-label="筛选生活记录">
       <div className="source-type-filter" role="group" aria-label="按来源类型筛选">{[...sourceRecordTypes].sort((a, b) => ["all", "notes", "ai", "photos", "bill"].indexOf(a.id) - ["all", "notes", "ai", "photos", "bill"].indexOf(b.id)).map((item) => <button type="button" key={item.id} className={type === item.id ? "active" : ""} aria-pressed={type === item.id} onClick={() => { setCreatedPageId(undefined); update({ type: item.id === "all" ? undefined : item.id, file: undefined, limit: undefined }); }}><Icon name={item.id === "all" ? "library" : item.id === "notes" ? "journal" : item.id === "ai" ? "message" : item.id === "photos" ? "image" : "receipt"} size={14} />{item.id === "notes" ? "笔记" : item.id === "bill" ? "账单" : item.label}</button>)}{pendingBuilds.length ? <button type="button" className={`source-pending-filter${type === "pending" ? " active" : ""}`} aria-pressed={type === "pending"} onClick={() => { setCreatedPageId(undefined); update({ type: type === "pending" ? undefined : "pending", file: undefined, limit: undefined }); }}><Icon name="spark" size={14} />待构建 <b>{pendingBuilds.length}</b></button> : null}</div>
@@ -486,7 +524,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
         <aside className="source-folder-pane"><PaneShelf label="文件夹" open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel="文件夹栏" onCreate={() => { setFolderOverride(true); setFolderCreateToken(value => value + 1); }} createLabel="新建文件夹" createDisabled={!folder} />
           <SourceConnectionsPanel compact onOpened={path => { setFolderRevision(value => value + 1); if (path) { setFolderOverride(true); setCreatedPageId(undefined); update({ folder: path, file: undefined, month: undefined, q: undefined, type: undefined }); } }} />
           <QuietScroll className="source-folder-contents">
-            <FolderTree selected={folder} onSelect={path => { setCreatedPageId(undefined); setCreatingSource(false); setRenameRequest(undefined); update({ folder: path || undefined, month: undefined, file: undefined, limit: undefined }); }} counts={folderCounts} total={pages.length} revision={revision + folderRevision} createToken={folderCreateToken} onChanged={() => setFolderRevision(value => value + 1)} />
+            <FolderTree fileDrop={{ accepts: (data, target) => Boolean(data.types.includes("application/x-the-way-here-source") && !movingRef.current && draggedSource.current && draggedSource.current.knowledgeBaseId === moveScope.current && sourcePagePath(draggedSource.current.page).split("/").slice(0, -1).join("/") !== target), drop: (_data, target) => { void moveFile(target); } }} selected={folder} onSelect={path => { setCreatedPageId(undefined); setCreatingSource(false); setRenameRequest(undefined); update({ folder: path || undefined, month: undefined, file: undefined, limit: undefined }); }} counts={folderCounts} total={pages.length} revision={revision + folderRevision} createToken={folderCreateToken} onChanged={() => setFolderRevision(value => value + 1)} />
           </QuietScroll></aside>
       </div>
       <FileBrowserPane label={folder ? sourceFolders?.find(item => item.path === folder)?.label || folder.split("/").at(-1)! : "全部记录"} count={String(filtered.length)} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)}
@@ -516,8 +554,14 @@ export function OrganizedSources({ revision }: { revision: number }) {
                 const renamed = await api<WikiPage>("/api/pages/rename", { method: "POST", body: JSON.stringify({ pageId: page.id, fileName, expectedModifiedAt: page.modifiedAt }) });
                 setRenameRequest(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id });
               }} />;
-              return <FileBrowserItem key={page.id} page={page} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
-                selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">选择构建「{fileName}」</span></label> : null} actions={<FileMenu page={page} extraActions={[{ label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />} />;
+              return <FileBrowserItem key={page.id} page={page}
+                onDragStart={!moving && moveVault && recordType !== "photos" && recordType !== "bill" ? event => {
+                  if ((event.target as HTMLElement).closest(".file-menu, input")) { event.preventDefault(); return; }
+                  draggedSource.current = { page, knowledgeBaseId: moveVault.knowledgeBaseId };
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("application/x-the-way-here-source", page.id);
+                } : undefined} onDragEnd={() => { draggedSource.current = undefined; }} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
+                selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">选择构建「{fileName}」</span></label> : null} actions={<FileMenu page={page} extraActions={[...(moveVault && recordType !== "photos" && recordType !== "bill" ? [{ label: "移动到…", onSelect: () => { moveChoiceScope.current = moveVault.knowledgeBaseId; setBuildError(""); setMoveDestination(sourcePagePath(page).split("/").slice(0, -1).join("/")); setMoveChoice(page); } }] : []), { label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />} />;
             })}
             {visiblePages.length < filtered.length ? <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>继续显示 <b>{Math.min(120, filtered.length - visiblePages.length)}</b> 份</button> : null}
             {query.trim() && searching ? <Loading label="正在搜索正文" /> : searchError ? <p role="alert">{searchError}</p> : visiblePages.length === 0 ? <div className="source-list-empty"><b>没有匹配的记录</b><p>{!sourceFolders?.length ? "打开文件夹后，里面的文件会显示在这里" : type === "pending" ? "新带进来的记录都已经构建完成。" : !query && !month && type === "all" && folder ? "这个文件夹里还没有文件" : "换一个来源、月份或搜索词试试。"}</p></div> : null}

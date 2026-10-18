@@ -27,6 +27,7 @@ if (process.platform === 'darwin') {
     CFBundleIdentifier: 'com.thewayhere.desktop.dev',
     NSMicrophoneUsageDescription: '将你主动录制的生活片段转成文字，确认后才保存。',
     NSSpeechRecognitionUsageDescription: '将你说的话转成可编辑的原话。',
+    NSPhotoLibraryUsageDescription: '按你输入的日期、相册名或地点查找并展示照片，不自动导入或发送给 AI。',
   })) {
     execFileSync('/usr/bin/plutil', ['-replace', key, '-string', value, plist]);
   }

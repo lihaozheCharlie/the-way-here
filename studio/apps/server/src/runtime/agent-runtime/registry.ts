@@ -13,6 +13,7 @@ import { AgentSettingsStore, AgentSettingsValidationError, type AgentSettingsSna
 import { CodexRuntimeAdapter } from "./codex-runtime-adapter.js";
 import { PiRuntimeAdapter } from "./pi/pi-runtime-adapter.js";
 import { listThirdPartyProviderPresets } from "./third-party-provider-catalog.js";
+import { hasDataConsent, protectRuntime } from "./data-consent.js";
 import type { AgentRuntime, AgentRuntimeEnvelope, AgentRuntimeProvider, AgentRuntimeSettings, ResolvedAgentSelection } from "./types.js";
 
 export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeSettings {
@@ -20,7 +21,9 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
   private readonly listeners = new Set<(envelope: AgentRuntimeEnvelope) => void>();
   private readonly enabled: Record<AgentRuntimeId, boolean>;
   private readonly pi: PiRuntimeAdapter;
+  private updateQueue: Promise<unknown> = Promise.resolve();
   private catalogPromise?: Promise<AgentRuntimeDescriptor[]>;
+  private readonly protectedRuntimes: Array<ReturnType<typeof protectRuntime>> = [];
 
   private constructor(
     config: VaultConfig["agents"],
@@ -33,7 +36,7 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
       pi: config.runtimes.pi.enabled,
     };
     this.pi = new PiRuntimeAdapter(vaultRoot, config.runtimes.pi.enabled, globalSettings.provider ? [globalSettings.provider] : []);
-    this.register(new CodexRuntimeAdapter(config.runtimes.codex.command));
+    this.register(new CodexRuntimeAdapter(process.env.TWH_CODEX_COMMAND || config.runtimes.codex.command, { allowTools: () => hasDataConsent("codex", this.globalSettings.public) }));
     this.register(this.pi);
   }
 
@@ -69,10 +72,17 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
     return listThirdPartyProviderPresets();
   }
 
-  async updateSettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings> {
+  updateSettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings> {
+    const update = this.updateQueue.catch(() => undefined).then(() => this.applySettings(input));
+    this.updateQueue = update;
+    return update;
+  }
+
+  private async applySettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings> {
     if (input.runtimeId === "pi" && !this.enabled.pi) throw new AgentSettingsValidationError("此工作区未启用第三方模型运行方式");
     const next = await this.settingsStore.update(input);
     this.globalSettings = next;
+    await Promise.all(this.protectedRuntimes.filter(runtime => !hasDataConsent(runtime.id, next.public)).map(runtime => runtime.revoke()));
     this.pi.configure(this.enabled.pi, next.provider ? [next.provider] : []);
     this.catalogPromise = undefined;
     return next.public;
@@ -126,7 +136,9 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
   }
 
   private register(runtime: AgentRuntime): void {
-    this.runtimes.set(runtime.id, runtime);
+    const protectedRuntime = protectRuntime(runtime, () => this.globalSettings.public);
+    this.protectedRuntimes.push(protectedRuntime);
+    this.runtimes.set(runtime.id, protectedRuntime);
     runtime.subscribe((envelope) => {
       for (const listener of this.listeners) listener(envelope);
     });

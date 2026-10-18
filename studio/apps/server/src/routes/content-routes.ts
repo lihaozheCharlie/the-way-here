@@ -1,3 +1,5 @@
+import { storagePolicy } from "../services/storage-policy.js";
+import { CaptureHistoryStore } from "../modules/content/capture-history-store.js";
 import { CompanionshipStore } from "../runtime/companionship-store.js";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { AgentRuntimeDescriptor, PageCategory } from "@the-way-here/shared";
@@ -18,6 +20,7 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
     const bound = contentWorkspace();
     return new PageWriter(bound, (previousPath, storedPath) => new ImportStore(bound).renameSource(previousPath, storedPath));
   };
+  app.get("/api/storage/policy", async () => storagePolicy(knowledge.vaultRoot, knowledge.index.config));
   app.get("/api/health", async () => ({ ok: true, vaultRoot: knowledge.vaultRoot, indexedAt: knowledge.index.lastIndexedAt }));
   const companionship = new CompanionshipStore(knowledge.vaultRoot);
   app.get("/api/vault", async () => {
@@ -89,6 +92,30 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
     if (page && !page.externalSource) await new ImportStore(bound).trackCreatedSource(page);
     return page;
   }, 201));
+  const captures = new CaptureHistoryStore(knowledge.vaultRoot);
+  app.get<{ Querystring: { knowledgeBaseId?: string } }>("/api/capture/history", async (request, reply) => handleContent(reply, async () => {
+    if (request.query.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请重新打开随手记");
+    const boundIndex = knowledge.index;
+    await captures.importCompleted(request.query.knowledgeBaseId, boundIndex);
+    const { entries, defaultFolder } = await captures.list(request.query.knowledgeBaseId);
+    return { entries, defaultFolder };
+  }));
+  app.put<{ Body: { knowledgeBaseId?: unknown } }>("/api/capture/draft", async (request, reply) => handleContent(reply, async () => {
+    const id = knowledge.index.config.knowledgeBaseId;
+    if (request.body?.knowledgeBaseId !== id) throw new ContentRequestError(409, "知识库已切换，草稿仍已留在本机");
+    return captures.put(id, request.body);
+  }));
+  app.put<{ Body: { knowledgeBaseId?: unknown; folder?: unknown } }>("/api/capture/default-folder", async (request, reply) => handleContent(reply, async () => {
+    const id = knowledge.index.config.knowledgeBaseId;
+    if (request.body?.knowledgeBaseId !== id) throw new ContentRequestError(409, "知识库已切换，请重试");
+    return captures.setDefault(id, request.body?.folder);
+  }));
+  app.delete<{ Params: { id: string }; Body: { knowledgeBaseId?: unknown; revision?: unknown } }>("/api/capture/history/:id", async (request, reply) => handleContent(reply, async () => {
+    const id = knowledge.index.config.knowledgeBaseId;
+    if (request.body?.knowledgeBaseId !== id) throw new ContentRequestError(409, "知识库已切换，请重试");
+    if (await hasActiveKnowledgeBaseRun(id)) throw new ContentRequestError(409, "请等整理完成后再删除历史记录");
+    return captures.remove(id, request.params.id, request.body?.revision);
+  }));
   app.post<{ Body: { title?: string; markdown?: string; knowledgeBaseId?: string } }>("/api/capture", async (request, reply) => handleContent(reply, async () => {
     const body = request.body;
     if (!body || typeof body.title !== "string" || body.title.length > 180 || /[\\/]/.test(body.title) || typeof body.markdown !== "string" || !body.markdown.trim() || body.markdown.length > 200_000) return reply.code(400).send({ error: "请填写有效的记录标题和正文" });
@@ -104,6 +131,14 @@ export function registerContentRoutes(app: FastifyInstance, knowledge: Knowledge
   app.delete<{ Body: { folder?: string; expectedFileCount?: number } }>("/api/sources/folder", async (request, reply) => handleContent(reply, () => writer().deleteSourceFolder(request.body?.folder, request.body?.expectedFileCount)));
   app.post<{ Body: { pageId?: string } }>("/api/files/reveal", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId, true)));
   app.post<{ Body: { pageId?: string } }>("/api/files/open-in-editor", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId)));
+  app.post<{ Body: { pageId?: unknown; folder?: unknown; expectedModifiedAt?: unknown; knowledgeBaseId?: unknown } }>("/api/sources/move", async (request, reply) => {
+    const bound = contentWorkspace();
+    return handleContent(reply, () => knowledge.serializeMutation(async () => {
+      if (!request.body || request.body.knowledgeBaseId !== bound.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请刷新后重试");
+      if (await hasActiveKnowledgeBaseRun(bound.index.config.knowledgeBaseId)) throw new ContentRequestError(409, "请等当前 AI 任务结束后再移动文件");
+      return new PageWriter(bound, (before, after) => new ImportStore(bound).renameSource(before, after)).move(request.body);
+    }));
+  });
   app.post<{ Body: { pageId?: string; fileName?: string; expectedModifiedAt?: string } }>("/api/pages/rename", async (request, reply) => handleContent(reply, () => writer().rename(request.body?.pageId, request.body?.fileName, request.body?.expectedModifiedAt)));
   app.put<{ Params: { "*": string }; Body: { markdown?: string; expectedModifiedAt?: string } }>("/api/pages/*", async (request, reply) => handleContent(reply, () => writer().save(decodeURIComponent(request.params["*"]), request.body?.markdown, request.body?.expectedModifiedAt)));
 

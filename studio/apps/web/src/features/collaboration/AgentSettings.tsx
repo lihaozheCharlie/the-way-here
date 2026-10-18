@@ -78,6 +78,7 @@ export function useAgentSelection(revision: number) {
   const baselineRef = useRef(baseline);
   const apiKeyRef = useRef(apiKey);
   const clearApiKeyRef = useRef(clearApiKey);
+  const pendingConsent = useRef<boolean | undefined>(undefined);
   const savingRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
@@ -114,7 +115,8 @@ export function useAgentSelection(revision: number) {
   }
 
   function selectRuntime(runtimeId: AgentRuntimeId) {
-    update((current) => ({ ...current, runtimeId }));
+    pendingConsent.current = undefined;
+    update((current) => ({ ...current, runtimeId, dataConsent: current.runtimeId === runtimeId ? current.dataConsent : undefined }));
   }
 
   function selectCodexModel(model: string) {
@@ -127,6 +129,7 @@ export function useAgentSelection(revision: number) {
   }
 
   function selectProvider(providerId: string) {
+    pendingConsent.current = undefined;
     const provider = providers.find((entry) => entry.id === providerId) || providers[0]!;
     const model = provider.models[0]!;
     apiKeyRef.current = "";
@@ -135,6 +138,7 @@ export function useAgentSelection(revision: number) {
     setClearApiKey(false);
     update((current) => ({
       ...current,
+      dataConsent: current.thirdParty.providerId === provider.id ? current.dataConsent : undefined,
       thirdParty: { ...current.thirdParty, providerId: provider.id, model: model.id, effort: model.defaultReasoningEffort },
     }));
   }
@@ -162,8 +166,10 @@ export function useAgentSelection(revision: number) {
     return { runtimeId: "pi", model: `global-third-party/${settings.thirdParty.model}`, effort: settings.thirdParty.effort };
   }
 
-  async function save(includeKey = true): Promise<AgentSelection> {
+  async function save(includeKey = true, consent?: boolean): Promise<AgentSelection> {
     if (!baselineRef.current) throw new Error(loadError || "正在读取全局 AI 设置");
+    if (consent !== undefined) pendingConsent.current = consent;
+    else consent = pendingConsent.current;
     while (true) {
       if (savingRef.current) {
         await savingRef.current;
@@ -173,12 +179,13 @@ export function useAgentSelection(revision: number) {
       const currentKey = includeKey ? apiKeyRef.current : "";
       const currentClear = clearApiKeyRef.current;
       const signature = JSON.stringify(current);
-      if (signature === baselineRef.current && !currentKey && !currentClear) return selection(current);
+      if (signature === baselineRef.current && !currentKey && !currentClear && consent === undefined) return selection(current);
       const provider = providers.find((entry) => entry.id === current.thirdParty.providerId) || providers[0]!;
       const model = provider.models.find((entry) => entry.id === current.thirdParty.model) || provider.models[0]!;
       const payload: UpdateAgentGlobalSettings = {
+        dataSharingConsent: consent,
         runtimeId: current.runtimeId,
-        codex: { ...current.codex },
+        codex: { ...current.codex, model: current.codex.model || codexModels[0]!.id },
         thirdParty: {
           providerId: provider.id,
           model: model.id,
@@ -201,6 +208,8 @@ export function useAgentSelection(revision: number) {
           if (currentKey && apiKeyRef.current === currentKey) { apiKeyRef.current = ""; setApiKey(""); }
           if (clearApiKeyRef.current === currentClear) { clearApiKeyRef.current = false; setClearApiKey(false); }
           setSaved(true);
+          consent = undefined;
+          pendingConsent.current = undefined;
         } catch (reason) {
           setError(reason instanceof Error ? reason.message : String(reason));
           throw reason;
@@ -248,6 +257,7 @@ export function useAgentSelection(revision: number) {
     setApiKey: (value: string) => { apiKeyRef.current = value; clearApiKeyRef.current = false; setApiKey(value); setClearApiKey(false); setSaved(false); setError(""); },
     removeApiKey: () => { apiKeyRef.current = ""; clearApiKeyRef.current = true; setApiKey(""); setClearApiKey(true); setSaved(false); setError(""); },
     save,
+    changeDataConsent: (allowed: boolean) => save(false, allowed),
   };
 }
 
@@ -307,6 +317,14 @@ export function AiConfiguration({ id, agent, runtimeId, heading }: { id: string;
     </div>}
 
     <p className="ai-config-save-state" role="status">{agent.loading ? "正在读取设置…" : agent.saving ? "正在保存…" : agent.error ? <><span>保存失败</span><button type="button" onClick={() => void agent.save().catch(() => undefined)}>重试</button></> : agent.apiKey ? "密钥输入完成后点击保存密钥" : agent.dirty ? "更改将自动保存" : agent.saved ? "已保存，所有对话生效" : ""}</p>
+    <section className="ai-data-sharing" aria-labelledby={`${id}-data-heading`}>
+      <h3 id={`${id}-data-heading`}>允许 AI 使用哪些资料</h3>
+      <p>接收方：{codexSelected ? (typeof window !== "undefined" && window.desktop?.isMacAppStore ? "OpenAI（内置 Codex，使用你导入的 ChatGPT 登录）" : "你选择的 Codex CLI 及其配置的模型服务（默认 OpenAI）") : agent.selectedProvider.displayName}。对话、整理和自动更新可能发送输入、相关日记、知识页面、照片预览、账单内容及历史对话；AI 可继续读取当前知识库及你授权目录中的任务相关资料。用途是回答、整理和更新知识。</p>
+      <p>资料会离开设备。服务商的保留、训练使用及处理地区以其政策和账户设置为准。撤回许可会阻止新请求并停止活动任务，已发送的资料需向服务商申请删除。更换服务后需重新同意。{!(typeof window !== "undefined" && window.desktop?.isMacAppStore) && "修改 Codex 内部服务配置前请先撤回许可。"}</p>
+      <label><input type="checkbox" disabled={agent.loading || agent.saving} checked={agent.draft.dataConsent?.version === 1 && agent.draft.dataConsent.recipientId === (codexSelected ? "codex" : `pi:${agent.selectedProvider.id}`)} onChange={event => void agent.changeDataConsent(event.target.checked).catch(() => undefined)} /><span>我已了解并允许向上述服务发送任务所需资料，包括我启用的自动更新</span></label>
+      <a href="/privacy" target="_blank" rel="noreferrer">隐私与数据使用说明</a>
+      {typeof window !== "undefined" && window.desktop?.isMacAppStore && codexSelected && <button type="button" disabled={agent.saving} onClick={() => void window.desktop?.connectCodexCLI?.().then(connected => { if (connected) window.location.reload(); }).catch(reason => window.alert(reason instanceof Error ? reason.message : "未能连接 Codex，请重试。"))}>连接已登录的 Codex…</button>}
+    </section>
     {(agent.error || agent.loadError) && <p className="ai-config-error" role="alert">{agent.error || agent.loadError}</p>}
     </div>
   </fieldset>;

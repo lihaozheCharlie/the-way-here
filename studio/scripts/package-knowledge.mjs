@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, realpath } from 'node:fs/promises';
+import { cp, mkdir, rm, realpath, readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -25,6 +25,14 @@ export async function packageKnowledge(studio) {
   const python = path.join(studio, '.runtime/package/python');
   await rm(python, {recursive:true, force:true});
   await cp(path.resolve(binary,'../..'), python, {recursive:true, verbatimSymlinks:true});
+  // The knowledge tools are headless. CPython's optional Tk GUI library uses
+  // NSWindowDidOrderOnScreenNotification, which is not a public AppKit API.
+  // Remove the unused GUI subsystem instead of rewriting its private API name.
+  for (const relative of ['lib/libtcl9tk9.0.dylib','lib/libtcl9.0.dylib','lib/tcl9','lib/tcl9.0','lib/tk9.0','lib/itcl4.3.5','lib/thread3.0.4','lib/python3.12/tkinter','lib/python3.12/idlelib']) {
+    await rm(path.join(python,relative),{recursive:true,force:true});
+  }
+  const extensions=path.join(python,'lib/python3.12/lib-dynload');
+  for (const file of await readdir(extensions)) if (file.startsWith('_tkinter.')) await rm(path.join(extensions,file));
   run(['pip','install','--python',path.join(python,'bin/python3'),'--target',path.join(python,'lib/python3.12/site-packages'),'--no-deps','PyYAML==6.0.3']);
   const check = spawnSync(path.join(python,'bin/python3'), ['-I','-c','import yaml; print(yaml.__version__)'], {encoding:'utf8',env:{PATH:'/usr/bin:/bin'}});
   if (check.status !== 0 || check.stdout.trim() !== '6.0.3') throw new Error('Bundled Python is not self-contained');

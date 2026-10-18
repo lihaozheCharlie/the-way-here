@@ -14,3 +14,10 @@
 .inline-name-form > div > button:disabled { opacity:.45; cursor:default; }
 .inline-name-form > p { margin:4px 3px; color:var(--danger); font-size:12px; }
 .source-pane-shell.collapsed .inline-name-form { display:none; }
+.file-browser-item[draggable="true"] .source-file-select { cursor: grab; }
+.file-browser-item[draggable="true"]:active .source-file-select { cursor: grabbing; }
+.source-move-status { margin: 0; color: var(--ink-soft); font-size: 13px; }
+.source-move-dialog { width: min(480px, calc(100vw - 48px)); max-height: 75vh; overflow: auto; padding: 24px; border-radius: var(--radius-card); background: var(--surface); color: var(--ink); }
+.source-move-dialog h2 { margin: 0 0 8px; font-size: 17px; overflow-wrap: anywhere; }
+.source-move-dialog > p { color: var(--ink-soft); font-size: 13px; }
+.source-move-dialog footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }

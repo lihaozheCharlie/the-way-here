@@ -1,6 +1,7 @@
+import { ContentRequestError } from "../modules/content/page-writer.js";
 import { CaptureRecordStore } from "../modules/content/capture-record-store.js";
 import type { AgentOutputTarget, AgentRunResult, RunFileChange, VaultConfig, WikiRun } from "@the-way-here/shared";
-import type { WikiIndex } from "@the-way-here/wiki-core";
+import { diaryEntityLinks, type WikiIndex } from "@the-way-here/wiki-core";
 import { JourneyReportStore, JourneyReportTargetError } from "../modules/imports/journey-report-store.js";
 import { PhotoMemoryStore, PhotoMemoryError } from "../modules/imports/photo-memory-store.js";
 import { photoPeopleVisibleAnswer } from "../modules/imports/photo-person-bindings.js";
@@ -38,6 +39,16 @@ export class RunOutputs {
   async prepare(config: VaultConfig, index: WikiIndex, mode: WikiRun["mode"], request: StartRunInput, hasActiveRun: () => Promise<boolean>) {
     const input = { ...request };
     if (input.outputTarget?.kind === "life-record" && (mode !== "read" || input.sessionId || input.sourceContext)) throw new RunRequestError(400, "快速记录必须使用独立的只读整理任务");
+    if (input.outputTarget?.kind === "life-record") {
+      const now = new Date();
+      let prepared;
+      try { prepared = await this.captures.prepare(config, input.outputTarget); }
+      catch (error) { if (error instanceof ContentRequestError) throw new RunRequestError(error.statusCode, error.message); throw error; }
+      input.outputTarget = { ...prepared,
+        diaryDate: input.outputTarget.diaryDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+        entityLinks: diaryEntityLinks(input.outputTarget.originalText, index.list(), id => index.get(id)?.markdown),
+      };
+    }
     let photoInput: { images?: Array<{ path: string; mimeType: "image/jpeg" }>; prompt: string } | undefined;
     try {
       if (input.outputTarget?.kind === "photo-memory") {

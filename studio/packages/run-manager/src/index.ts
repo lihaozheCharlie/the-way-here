@@ -1,2 +1,2 @@
 export { RunStore } from "./run-store.js";
-export { stateRootForVault } from "./state-paths.js";
+export { stateRootForVault, cacheRootForVault } from "./state-paths.js";

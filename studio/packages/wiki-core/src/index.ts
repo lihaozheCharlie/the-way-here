@@ -7,3 +7,4 @@ export { readExternalSource, isExternalSourcePath, EXTERNAL_SOURCE_FOLDER } from
 export { bodyLines, datesIn, evidenceTime, type EvidencePage } from "./evidence-metadata.js";
 export { buildEvidenceProfiles, searchEvidenceGroups, parseRetrievalPolicy, type RetrievalPolicy } from "./evidence-retrieval.js";
 export { createEvidenceSnapshot } from "./evidence-snapshot.js";
+export { diaryEntityLinks, linkDiaryEntities } from "./diary-entities.js";

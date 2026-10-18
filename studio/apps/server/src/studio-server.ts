@@ -1,64 +1,25 @@
-import { SourceConnections } from "./runtime/source-connections.js";
-import { registerSourceConnectionRoutes } from "./routes/source-connection-routes.js";
-import { PredictionService } from "./runtime/prediction-service.js";
-import { registerPredictionRoutes } from "./routes/prediction-routes.js";
 import path from "node:path";
-import { registerAgentSettingsRoutes } from "./routes/agent-settings-routes.js";
 import { fileURLToPath } from "node:url";
-import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
-import { registerContentRoutes } from "./routes/content-routes.js";
-import { registerImportRoutes } from "./routes/import-routes.js";
-import { registerRunRoutes } from "./routes/run-routes.js";
-import { registerPhotoMemoryRoutes } from "./routes/photo-memory-routes.js";
-import { ImportStore } from "./modules/imports/import-store.js";
-import { AgentRuntimeRegistry } from "./runtime/agent-runtime/registry.js";
-import { KnowledgeRuntime } from "./runtime/knowledge-runtime.js";
-import { RunCoordinator } from "./runtime/run-coordinator.js";
+import { StudioApplication, type StudioApplicationOptions } from "./studio-application.js";
 
-export type StudioServerOptions = {
-  vaultRoot: string;
-  knowledgeBaseId?: string;
-  development?: boolean;
-};
+export type StudioServerOptions = StudioApplicationOptions & { development?: boolean };
 
+/** Web host only. The desktop entry never imports this network/static adapter. */
 export class StudioServer {
-  private constructor(
-    readonly app: FastifyInstance,
-    private readonly knowledge: KnowledgeRuntime,
-    private readonly runs: RunCoordinator,
-    private readonly sourceConnections: SourceConnections,
-    private readonly predictions: PredictionService,
-  ) {}
+  private constructor(private readonly application: StudioApplication) {}
+  get app() { return this.application.app; }
 
   static async create(options: StudioServerOptions): Promise<StudioServer> {
-    const app = Fastify({ logger: true, bodyLimit: 2 * 1024 * 1024 });
+    const application = await StudioApplication.create(options);
+    const app = application.app;
+    app.get("/api/events", async (request, reply) => application.connectEvents(request, reply));
     if (process.env.THE_WAY_HERE_DESKTOP_TOKEN) {
       const token = process.env.THE_WAY_HERE_DESKTOP_TOKEN;
       app.addHook("onRequest", async (request, reply) => {
         if (request.headers["x-twh-desktop"] !== token) return reply.code(403).send({ error: "需要本机桌面会话" });
       });
     }
-    const knowledge = await KnowledgeRuntime.create(options.vaultRoot, options.knowledgeBaseId);
-    app.addHook("onRequest", async (request, reply) => {
-      const expected = request.headers["x-twh-knowledge-base"];
-      const contentWrite = !["GET", "HEAD", "OPTIONS"].includes(request.method) && !/^\/api\/(?:vault|runs|agent-)/.test(request.url);
-      if (contentWrite && expected && expected !== knowledge.index.config.knowledgeBaseId) return reply.code(409).send({ error: "知识库已切换，请重新打开页面后再修改；原草稿尚未写入其他知识库。" });
-    });
-    const runtimes = await AgentRuntimeRegistry.create(knowledge.index.config.agents, knowledge.vaultRoot);
-    const runs = new RunCoordinator(knowledge, runtimes, app.log);
-    const predictions = new PredictionService(knowledge, runtimes, app.log);
-    registerPredictionRoutes(app, knowledge, predictions);
-    const imports = new ImportStore(knowledge);
-    registerContentRoutes(app, knowledge, imports, () => runtimes.catalog(), async (knowledgeBaseId) => await runs.hasActiveKnowledgeBaseRun(knowledgeBaseId) || await predictions.hasActive(knowledgeBaseId));
-    registerImportRoutes(app, imports, runs);
-    registerRunRoutes(app, runs);
-    const sourceConnections = new SourceConnections(knowledge, runs);
-    registerSourceConnectionRoutes(app, knowledge, sourceConnections);
-    registerAgentSettingsRoutes(app, runtimes, knowledge.events);
-    registerPhotoMemoryRoutes(app, knowledge, runs);
-    app.get("/api/events", async (request, reply) => knowledge.events.connect(request, reply));
-
     if (!options.development) {
       const serverDir = path.dirname(fileURLToPath(import.meta.url));
       await app.register(fastifyStatic, { root: process.env.THE_WAY_HERE_WEB_ROOT || path.resolve(serverDir, "../../web/dist"), prefix: "/" });
@@ -67,23 +28,13 @@ export class StudioServer {
         return reply.sendFile("index.html");
       });
     }
-    await predictions.reconcile();
-    await runs.reconcile();
-    await sourceConnections.start();
-    return new StudioServer(app, knowledge, runs, sourceConnections, predictions);
+    return new StudioServer(application);
   }
 
   async listen(host: string, port: number): Promise<void> {
     await this.app.listen({ host, port });
     this.app.log.info(`The Way Here: http://${host}:${port}`);
-    this.app.log.info(`Vault: ${this.knowledge.vaultRoot}`);
   }
 
-  async close(): Promise<void> {
-    await this.sourceConnections.close();
-    this.predictions.close();
-    this.runs.close();
-    await this.knowledge.close();
-    await this.app.close();
-  }
+  async close(): Promise<void> { await this.application.close(); }
 }

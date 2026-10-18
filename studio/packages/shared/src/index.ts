@@ -85,12 +85,15 @@ export {
   type LetterVersionOutputTarget,
   type JourneyReportOutputTarget,
   type PhotoMemoryOutputTarget,
+  type CaptureOutputTarget,
   type AgentOutputTarget,
   type WikiRun,
   type DeletedAgentConversation,
 } from "./runs.js";
+export type { PhotoLibraryAuthorization, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult, LibraryPhoto } from "./photo-library.js";
 export type { UnderstandingScore, PredictionView } from "./predictions.js";
 
 export type { LifeDimension, LifeEvidence, LifeScenario, LifePredictionReport, PredictionThoughtKind } from "./predictions.js";
 
 export { predictionPathwayLabels, type PredictionPathway } from "./predictions.js";
+export type { CaptureEntry, CaptureHistory } from "./capture.js";
