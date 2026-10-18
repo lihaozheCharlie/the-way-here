@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>随手记 · 多来源 UX 设计稿 — The Way Here</title>
+<style>
+/* ───────── Tokens: copied 1:1 from apps/web/src/styles/theme-tokens.css ───────── */
+:root {
+  color-scheme: light;
+  --canvas:#f3f7fd; --record-canvas:#f4f8fd; --paper:#fff; --surface:var(--paper); --surface-tinted:#eaf2ff;
+  --ink:#16233a; --ink-soft:#4c5c74; --muted:#8493a8; --faint:#b4c2d6;
+  --line:#e2eaf5; --line-strong:#c9d6ea;
+  --accent:#0a7cff; --accent-hover:#0868d6; --accent-soft:#e6f1ff; --accent-ink:#08529e; --accent-primary:var(--accent);
+  --warm:#ff7a45; --warm-soft:#fff0e8; --warm-ink:#c65021;
+  --danger:#c43c43; --shadow-ink:#162e54;
+  --radius-control:11px; --radius-card-small:12px; --radius-card:18px; --radius-pill:999px;
+  --shadow-card:0 1px 2px rgb(22 46 84 / 4%),0 14px 34px rgb(22 46 84 / 7%);
+  --shadow-pop:0 18px 44px rgb(22 46 84 / 16%);
+  --shadow-panel:var(--shadow-card);
+  --hero-surface:linear-gradient(120deg,var(--accent-soft),var(--paper) 78%);
+  --font-ui:"PingFang SC","Helvetica Neue",-apple-system,BlinkMacSystemFont,sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--canvas);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.icon{flex:none}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:2px solid var(--accent-primary);outline-offset:3px}
+
+/* ───────── Review toolbar (not part of the product) ───────── */
+.review-bar{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line)}
+.review-bar-inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap;max-width:1040px;margin:0 auto;padding:10px 24px}
+.review-bar b{font-size:13px;white-space:nowrap}
+.review-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.review-group > span{font-size:12px;color:var(--ink-soft);margin-right:2px}
+.review-group button{border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);border-radius:var(--radius-pill);padding:4px 11px;font-size:12px}
+.review-group button:hover{background:var(--surface-tinted)}
+.review-group button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+
+/* ───────── Today page column ───────── */
+.today-simple{display:grid;gap:28px;max-width:760px;margin:36px auto 56px;padding:0 20px}
+.today-companion-card{padding:32px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--hero-surface);box-shadow:var(--shadow-card)}
+.today-companion-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--radius-pill);background:var(--paper);color:var(--accent-ink);font-size:14px;font-weight:650}
+.today-companion-card h1{margin:20px 0 14px;font-size:clamp(28px,3vw,36px);font-weight:750;line-height:1.35;letter-spacing:-.02em}
+.today-companion-card p{margin:0;color:var(--ink-soft);font-size:16px;line-height:1.85}
+
+/* ───────── Capture card · existing styles (life-record-capture.css / capture-voice.css) ───────── */
+.life-record-capture{position:relative;padding:0;border-radius:20px;background:var(--paper);border:1px solid var(--line);overflow:hidden;min-width:0;box-shadow:var(--shadow-card)}
+.capture-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 26px 12px}
+.capture-heading > div{display:flex;align-items:center;gap:12px}
+.life-record-capture .capture-heading h2{margin:0;font-size:22px;line-height:1.4;font-weight:700;letter-spacing:-.025em;white-space:nowrap}
+.capture-badge{border-radius:6px;padding:4px 7px;font-size:11px;color:var(--ink-soft);background:var(--surface-tinted);white-space:nowrap}
+.capture-history-trigger{display:flex;align-items:center;gap:7px;padding:6px 0 6px 8px;border:0;color:var(--ink-soft);background:transparent;font-size:13px;white-space:nowrap}
+.capture-history-trigger > span{color:var(--accent-primary);background:var(--accent-soft);padding:4px 6px;border-radius:6px;font-size:11px}
+.capture-editor-body{padding:8px 26px 22px}
+.capture-editor-body textarea,.capture-live-editor{display:block;width:100%;min-height:165px;margin:0 0 8px;padding:8px 0 16px;border:0;border-radius:0;background:transparent;color:var(--ink);font-family:inherit;font-size:16px;line-height:1.9;resize:vertical;box-shadow:none}
+.capture-editor-body textarea:focus{outline:none}
+.life-record-capture:has(textarea:focus-visible) .capture-editor-body{box-shadow:inset 0 0 0 2px var(--accent-soft)}
+textarea::placeholder{color:var(--ink-soft)}
+.capture-live-editor{white-space:pre-wrap;overflow-wrap:anywhere}
+.capture-temporary-text{color:var(--muted)}
+.capture-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 26px;border-top:1px solid var(--line);background:var(--record-canvas);color:var(--ink-soft);font-size:12px}
+.capture-destination{display:flex;align-items:center;gap:7px;min-width:0;border:0;background:transparent;padding:0;color:var(--ink-soft);font-size:12px;text-align:left}
+.capture-destination strong{color:var(--ink);font-weight:600}
+.capture-footer > span{text-align:right;line-height:1.5}
+.capture-saved{padding:0 26px;margin:14px 0;font-size:13px;line-height:1.6;color:var(--ink-soft)}
+.capture-saved a{display:inline-flex;align-items:center;gap:5px;margin-left:7px;color:var(--accent-primary)}
+.capture-voice{display:block}
+.capture-listening{display:flex;align-items:center;gap:14px;padding:18px;margin:8px 0 18px;border-radius:14px;background:var(--accent-soft);color:var(--accent-primary)}
+.capture-waveform{display:flex;flex:none;align-items:center;gap:3px;height:34px;width:50px;overflow:hidden}
+.capture-waveform i{flex:0 0 2px;border-radius:2px;background:currentColor;height:5px;transition:transform 100ms linear}
+.capture-listening-copy{display:grid;gap:4px;flex:1;min-width:0;font-size:14px}
+.capture-listening-copy strong{font-weight:550}
+.capture-listening-copy > span{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.capture-listening-controls{display:flex;align-items:center;gap:8px}
+.capture-listening-controls button{min-height:36px;padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:13px;white-space:nowrap}
+.capture-listening-controls .capture-cancel{padding:7px;display:grid;place-items:center}
+.capture-listening.is-paused{color:var(--ink-soft)}
+.capture-action-row,.capture-primary-actions,.capture-voice-entry{display:flex;align-items:center;gap:12px}
+.capture-action-row{justify-content:space-between;min-height:44px}
+.capture-speak{display:inline-flex;gap:9px;align-items:center;padding:10px 14px;min-height:42px;border:0;border-radius:11px;background:var(--accent-soft);color:var(--accent-primary);font-weight:600;font-size:14px;white-space:nowrap}
+.capture-stash{border:0;background:transparent;color:var(--ink-soft);padding:10px 7px;min-height:40px;font-size:14px}
+.desktop-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:11px;padding:11px 17px;min-height:42px;white-space:nowrap;font-size:14px;font-weight:600;background:var(--accent);color:var(--paper)}
+.desktop-primary:hover:not(:disabled){background:var(--accent-hover)}
+.desktop-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:6px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);color:var(--ink);font-size:13px}
+.desktop-secondary:hover:not(:disabled){background:var(--surface-tinted)}
+.life-record-capture button:disabled{opacity:.45;cursor:default}
+
+/* ───────── NEW · source switcher (reuses .segmented-tabs: pill track + sliding white indicator) ───────── */
+.capture-sources{position:relative;display:flex;align-items:center;width:max-content;max-width:calc(100% - 52px);margin:4px 26px 6px;padding:4px;border-radius:var(--radius-pill);background:var(--surface-tinted);isolation:isolate}
+.capture-sources-indicator{position:absolute;left:0;top:4px;bottom:4px;width:0;border-radius:var(--radius-pill);background:var(--surface);box-shadow:var(--shadow-panel);transition:transform .2s var(--ease),width .2s var(--ease);z-index:-1}
+.capture-source{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:6px 16px;border:0;border-radius:var(--radius-pill);background:transparent;color:var(--ink-soft);font-size:14px;white-space:nowrap}
+.capture-source[aria-selected=true]{color:var(--accent-ink);font-weight:600}
+.capture-source:not([aria-selected=true]):not(:disabled):hover{color:var(--ink)}
+.capture-source:disabled{opacity:.45;cursor:default}
+.capture-source-count{min-width:18px;padding:1px 6px;border-radius:var(--radius-pill);background:var(--accent-soft);color:var(--accent-primary);font-size:11px;font-weight:600;text-align:center}
+.capture-more-wrap{position:relative}
+.capture-menu{position:absolute;left:0;top:calc(100% + 10px);z-index:5;min-width:240px;padding:6px;border:1px solid var(--line);border-radius:var(--radius-card-small);background:var(--paper);box-shadow:var(--shadow-pop)}
+.capture-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:var(--radius-control);background:transparent;text-align:left;font-size:14px}
+.capture-menu button:disabled{opacity:1;color:var(--ink-soft);cursor:default}
+.capture-menu small{margin-left:auto;padding:2px 6px;border-radius:6px;background:var(--surface-tinted);color:var(--ink-soft);font-size:11px}
+.capture-panel[hidden]{display:none}
+
+/* ───────── NEW · attachment tray ("材料") ───────── */
+.capture-tray{margin:0 0 18px;padding:14px 0 0;border-top:1px solid var(--line)}
+.capture-tray-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:12px;color:var(--ink-soft)}
+.capture-tray-head b{color:var(--ink);font-weight:600}
+.link-button{border:0;background:transparent;padding:4px 0;color:var(--accent-primary);font-size:13px}
+.capture-tray-list{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}
+.capture-material{position:relative;display:flex;align-items:center}
+.capture-material.is-photo img{display:block;width:64px;height:64px;object-fit:cover;border-radius:10px;background:var(--surface-tinted)}
+.capture-material.is-event{gap:10px;max-width:220px;height:64px;padding:0 14px 0 12px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink)}
+.capture-material.is-event span{display:grid;min-width:0;font-size:13px;line-height:1.4}
+.capture-material.is-event span strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.capture-material.is-event span em{font-style:normal;font-size:12px;color:var(--ink-soft)}
+.capture-material > button{position:absolute;top:-7px;right:-7px;display:grid;place-items:center;width:22px;height:22px;padding:0;border:1px solid var(--line-strong);border-radius:50%;background:var(--paper);color:var(--ink-soft);box-shadow:var(--shadow-panel)}
+.capture-material > button:hover{color:var(--danger)}
+
+/* ───────── NEW · photo source panel (replaces the standalone photo-library card) ───────── */
+.source-lead{display:flex;align-items:center;gap:8px;margin:6px 0 16px;color:var(--ink-soft);font-size:13px;line-height:1.7}
+.source-lead .icon{color:var(--accent-ink)}
+.source-field{display:grid;gap:6px;min-width:0;font-size:13px;color:var(--ink-soft)}
+.source-field > span{line-height:1.4}
+.source-field input[type=search],.source-field input[type=text],.source-field input[type=date],.source-field select{width:100%;min-width:0;height:38px;padding:6px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);color:var(--ink);font-size:14px;caret-color:var(--accent-primary);font-variant-numeric:tabular-nums}
+.source-field input::placeholder{color:var(--ink-soft)}
+.source-field input:disabled,.source-field select:disabled{opacity:.55}
+.filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.chip-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:28px}
+.chip-row.is-muted{opacity:.45}
+.chip-row .chip-label{font-size:12px;color:var(--ink-soft);margin-right:2px}
+.chip{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:3px 11px;border:1px solid var(--line);border-radius:var(--radius-pill);background:transparent;color:var(--ink-soft);font-size:13px;white-space:nowrap}
+.chip:not(:disabled):hover{background:var(--surface-tinted)}
+.chip[aria-pressed=true],.chip[aria-checked=true]{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.chip:disabled{cursor:default}
+.field-help{margin:0;font-size:12px;line-height:1.7;color:var(--ink-soft)}
+.advanced-toggle{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:4px 0;border:0;background:transparent;color:var(--ink);font-size:14px;font-weight:550}
+.advanced-toggle .icon{color:var(--ink-soft);transition:transform .2s var(--ease)}
+.advanced-toggle[aria-expanded=true] .icon:last-child{transform:rotate(180deg)}
+.advanced-toggle .capture-source-count{font-weight:600}
+.advanced-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:16px}
+.advanced-summary{display:flex;flex-wrap:wrap;gap:6px}
+.advanced-summary .chip{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent-ink)}
+.advanced-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 16px;margin-top:12px;padding:18px;border-radius:14px;background:var(--record-canvas)}
+.advanced-panel[hidden]{display:none}
+.advanced-panel .span-2{grid-column:span 2}
+.advanced-panel .span-3{grid-column:1/-1}
+.album-field{display:flex;align-items:end;gap:8px}
+.album-field .source-field{flex:1}
+.icon-button{display:grid;place-items:center;flex:none;width:38px;height:38px;padding:0;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);color:var(--ink-soft)}
+.icon-button:hover:not(:disabled){background:var(--surface-tinted)}
+.check-field{display:flex;align-items:center;gap:9px;align-self:end;min-height:38px;font-size:14px;color:var(--ink)}
+.check-field input{appearance:auto;width:16px;height:16px;margin:0;accent-color:var(--accent-ink)}
+.source-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px}
+.source-actions .desktop-primary{min-height:40px}
+.source-note{margin:16px 0 0;font-size:12px;line-height:1.75;color:var(--ink-soft)}
+
+.photo-results{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.result-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--ink-soft)}
+.result-head strong{color:var(--ink);font-weight:600;font-size:14px}
+.result-scroll{max-height:372px;overflow:auto;margin:12px -10px 0;padding:6px 10px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:16px 12px;margin:0;padding:0;list-style:none}
+.photo-tile{position:relative;min-width:0}
+.photo-tile-main{display:block;width:100%;aspect-ratio:1;padding:0;border:0;border-radius:var(--radius-control);overflow:hidden;background:var(--surface-tinted);position:relative}
+.photo-tile-main img{display:block;width:100%;height:100%;object-fit:cover;transition:filter .15s}
+.photo-tile-main:hover img{filter:brightness(.95)}
+.photo-tile.is-selected .photo-tile-main{box-shadow:0 0 0 3px var(--accent-primary)}
+.photo-tile-check{position:absolute;top:7px;left:7px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--paper);background:color-mix(in srgb,var(--shadow-ink) 28%,transparent);color:var(--paper);opacity:0;transition:opacity .15s}
+.photo-tile:hover .photo-tile-check,.photo-tile-main:focus-visible .photo-tile-check{opacity:1}
+.photo-tile.is-selected .photo-tile-check{opacity:1;background:var(--accent-primary);border-color:var(--paper)}
+.photo-tile.is-selected .photo-tile-check .icon{display:block}
+.photo-tile-check .icon{display:none}
+.photo-tile:hover .photo-tile-check .icon{display:block;opacity:.7}
+.photo-tile-zoom{position:absolute;right:7px;bottom:32px;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow-panel);opacity:0;transition:opacity .15s}
+.photo-tile:hover .photo-tile-zoom,.photo-tile-zoom:focus-visible{opacity:1}
+.photo-tile figcaption,.photo-tile .caption{display:flex;align-items:center;gap:4px;margin-top:7px;color:var(--ink-soft);font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums}
+.photo-tile figure{margin:0}
+.photo-cloud{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;width:100%;aspect-ratio:1;padding:10px;border-radius:var(--radius-control);background:var(--surface-tinted);color:var(--ink-soft);font-size:12px;text-align:center}
+.photo-cloud .desktop-secondary{min-height:28px;padding:3px 9px;font-size:12px}
+.photo-skeleton{aspect-ratio:1;border-radius:var(--radius-control);background:linear-gradient(90deg,var(--surface-tinted),var(--record-canvas),var(--surface-tinted));background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.progress-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--ink-soft)}
+.empty-note{margin:0;padding:26px 0 8px;text-align:center;color:var(--ink-soft);font-size:13px;line-height:1.8}
+.empty-note .desktop-secondary{margin-top:12px}
+.more-row{display:flex;justify-content:center;margin-top:16px}
+
+.selection-bar{position:sticky;bottom:0;display:flex;align-items:center;gap:14px;margin-top:16px;padding:12px 12px 12px 16px;border-radius:14px;background:var(--accent-soft);color:var(--accent-ink)}
+.selection-bar[hidden]{display:none}
+.selection-stack{display:flex;flex:none}
+.selection-stack img{width:30px;height:30px;margin-left:-8px;border:2px solid var(--accent-soft);border-radius:8px;object-fit:cover}
+.selection-stack img:first-child{margin-left:0}
+.selection-copy{flex:1;min-width:0;display:grid;gap:2px;font-size:14px}
+.selection-copy strong{font-weight:600}
+.selection-copy span{font-size:12px;color:var(--ink-soft)}
+.selection-bar .link-button{color:var(--ink-soft)}
+
+.access-block{display:grid;gap:14px;justify-items:start;padding:22px;border-radius:14px;background:var(--record-canvas)}
+.access-block h3{margin:0;font-size:16px;font-weight:650}
+.access-block p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.8}
+.access-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+.event-list{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.event-row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border-radius:var(--radius-control);cursor:pointer}
+.event-row:hover{background:var(--record-canvas)}
+.event-row:has(input:checked){background:var(--accent-soft);color:var(--accent-ink)}
+.event-row input{appearance:auto;width:16px;height:16px;margin:0;accent-color:var(--accent-primary)}
+.event-row span{display:grid;flex:1;min-width:0;font-size:14px;line-height:1.5}
+.event-row span em{font-style:normal;font-size:12px;color:var(--ink-soft)}
+.event-row > small{font-size:12px;color:var(--ink-soft)}
+.mock-tag{display:inline-flex;margin-left:8px;padding:2px 7px;border-radius:6px;background:var(--warm-soft);color:var(--warm-ink);font-size:11px;font-weight:600;vertical-align:middle}
+
+/* preview dialog (same chrome as .capture-dialog) */
+.capture-dialog{width:min(720px,calc(100vw - 48px));max-height:calc(100dvh - 48px);padding:0;border:1px solid var(--line);border-radius:18px;background:var(--paper);color:var(--ink);box-shadow:var(--shadow-pop)}
+.capture-dialog::backdrop{background:color-mix(in srgb,var(--shadow-ink) 22%,transparent)}
+.capture-dialog > header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line)}
+.capture-dialog > header h2{margin:0;font-size:18px}
+.capture-dialog > header p{margin:2px 0 0;font-size:12px;color:var(--ink-soft)}
+.capture-dialog > header > button{display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--ink-soft);padding:6px}
+.capture-dialog .dialog-body{padding:20px 24px;background:var(--record-canvas)}
+.capture-dialog .dialog-body img{display:block;max-width:100%;max-height:460px;margin:0 auto;border-radius:var(--radius-control)}
+.capture-dialog footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;border-top:1px solid var(--line);padding:16px 24px}
+.capture-dialog footer .desktop-primary{min-height:40px}
+
+/* ───────── Design notes (review material only) ───────── */
+.notes{max-width:900px;margin:0 auto;padding:0 24px 80px;display:grid;gap:22px}
+.notes > header h2{margin:0 0 6px;font-size:22px;letter-spacing:-.02em}
+.notes > header p{margin:0;color:var(--ink-soft)}
+.note-card{padding:26px 28px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--paper);box-shadow:var(--shadow-card)}
+.note-card h3{margin:0 0 12px;font-size:17px;font-weight:650}
+.note-card h4{margin:18px 0 6px;font-size:14px}
+.note-card p,.note-card li{color:var(--ink-soft);font-size:14px;line-height:1.85}
+.note-card p{margin:0 0 8px}
+.note-card ul,.note-card ol{margin:0;padding-left:20px}
+.note-card strong{color:var(--ink);font-weight:600}
+.note-card code{padding:1px 6px;border-radius:6px;background:var(--surface-tinted);color:var(--accent-ink);font-size:12.5px}
+.model{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap;margin:14px 0 4px}
+.model > div{flex:1;min-width:190px;padding:14px 16px;border-radius:14px;background:var(--record-canvas)}
+.model b{display:block;margin-bottom:4px;color:var(--ink);font-size:14px}
+.model span{font-size:13px;color:var(--ink-soft);line-height:1.7}
+.model .is-accent{background:var(--accent-soft)}
+.model .is-accent b{color:var(--accent-ink)}
+.rules{width:100%;border-collapse:collapse;font-size:13px}
+.rules th,.rules td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.7}
+.rules th{color:var(--ink);font-weight:600;background:var(--record-canvas);white-space:nowrap}
+.rules td{color:var(--ink-soft)}
+.rules td:first-child{color:var(--ink);font-weight:550;white-space:nowrap}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compare > div{padding:16px 18px;border-radius:14px;background:var(--record-canvas)}
+.compare b{display:block;margin-bottom:6px;font-size:14px}
+.question{display:grid;gap:4px;padding:14px 16px;margin-top:10px;border-radius:14px;background:var(--warm-soft)}
+.question b{color:var(--warm-ink);font-size:14px}
+.question span{color:var(--ink-soft);font-size:13px;line-height:1.75}
+
+@media (max-width:640px){
+  .filter-grid,.advanced-panel,.compare{grid-template-columns:1fr}
+  .advanced-panel .span-2{grid-column:auto}
+  .capture-heading{align-items:flex-start;padding:20px 18px 12px}
+  .capture-editor-body{padding:8px 18px 18px}
+  .capture-sources{margin-left:18px;margin-right:18px;max-width:calc(100% - 36px);overflow-x:auto}
+  .capture-footer{padding:14px 18px;flex-wrap:wrap}
+  .capture-listening{flex-wrap:wrap}
+  .selection-bar{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){
+  .capture-sources-indicator,.capture-waveform i,.advanced-toggle .icon{transition:none}
+  .photo-skeleton{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="review-bar" role="region" aria-label="设计稿状态预览">
+  <div class="review-bar-inner">
+    <b>状态预览</b>
+    <div class="review-group" data-group="write"><span>说或写</span>
+      <button type="button" data-scenario="write-empty">空白</button>
+      <button type="button" data-scenario="write-recording">录音中</button>
+      <button type="button" data-scenario="write-attached">已添加材料</button>
+    </div>
+    <div class="review-group" data-group="photo"><span>找照片</span>
+      <button type="button" data-scenario="photo-ask">首次授权</button>
+      <button type="button" data-scenario="photo-denied">授权被拒</button>
+      <button type="button" data-scenario="photo-unavailable">非 macOS</button>
+      <button type="button" data-scenario="photo-filters">筛选</button>
+      <button type="button" data-scenario="photo-loading">搜索中</button>
+      <button type="button" data-scenario="photo-results">结果与选择</button>
+      <button type="button" data-scenario="photo-empty">无结果</button>
+    </div>
+    <div class="review-group" data-group="future"><span>未来</span>
+      <button type="button" data-scenario="future">更多来源（看日历）</button>
+    </div>
+  </div>
+</div>
+
+<main class="today-simple">
+  <section class="today-companion-card" aria-labelledby="home-intro-title">
+    <span class="today-companion-badge"><i data-icon="heart" data-size="18"></i>长期陪伴 · 已相处 42 天</span>
+    <h1 id="home-intro-title">有什么，都可以聊聊</h1>
+    <p>我会记得你的来路，也会坦白哪些地方还不懂你。你先说，我们再一起把生活慢慢理清。</p>
+  </section>
+
+  <!-- ═════════ 随手记（多来源） ═════════ -->
+  <section class="life-record-capture" id="card" aria-labelledby="capture-title">
+    <header class="capture-heading">
+      <div><h2 id="capture-title">随手记</h2><span class="capture-badge" id="badge">新记录</span></div>
+      <button type="button" class="capture-history-trigger" id="history-trigger"><i data-icon="history" data-size="17"></i>历史记录<span>2 待整理</span></button>
+    </header>
+
+    <div class="capture-sources" id="sources" role="tablist" aria-label="记录方式">
+      <span class="capture-sources-indicator" id="sources-indicator" aria-hidden="true"></span>
+    </div>
+
+    <form id="capture-form" onsubmit="return false">
+      <div class="capture-editor-body">
+
+        <!-- 来源 1 · 说或写（现有能力，原样保留） -->
+        <div class="capture-panel" id="panel-write" role="tabpanel" aria-labelledby="tab-write">
+          <div class="capture-live-editor" id="live-editor" hidden role="textbox" aria-readonly="true" tabindex="0" aria-label="此刻的记录，语音临时转写"></div>
+          <textarea id="draft" rows="5" aria-label="此刻的记录" placeholder="此刻发生了什么？写下来，或说一段……"></textarea>
+
+          <div class="capture-tray" id="tray" hidden>
+            <div class="capture-tray-head"><span id="tray-title">已添加 <b>0</b> 项材料</span><button type="button" class="link-button" id="tray-more">继续添加</button></div>
+            <ul class="capture-tray-list" id="tray-list"></ul>
+          </div>
+
+          <div class="capture-voice">
+            <div class="capture-listening" id="listening" hidden aria-label="语音输入">
+              <div class="capture-waveform" id="waveform" aria-hidden="true"></div>
+              <div class="capture-listening-copy"><strong role="status" id="listening-title">正在听，临时文字会出现在上方</strong><span id="listening-meta">00:00 · 完成后校准文字与标点</span></div>
+              <div class="capture-listening-controls">
+                <button type="button" id="pause-btn">暂停</button>
+                <button type="button" id="finish-btn">完成录音</button>
+                <button type="button" class="capture-cancel" id="cancel-btn" aria-label="取消本段录音" title="取消本段录音"><i data-icon="close" data-size="16"></i></button>
+              </div>
+            </div>
+            <div class="capture-action-row">
+              <div class="capture-voice-entry"><button type="button" class="capture-speak" id="speak-btn"><svg width="18" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg><span id="speak-label">说一段</span></button></div>
+              <div class="capture-primary-actions">
+                <button type="button" class="capture-stash" id="stash-btn" hidden>暂存</button>
+                <button type="submit" class="desktop-primary" id="submit-btn" disabled><i data-icon="spark" data-size="18"></i>整理并保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 来源 2 · 找照片 -->
+        <div class="capture-panel" id="panel-photo" role="tabpanel" aria-labelledby="tab-photo" hidden>
+          <div id="photo-unavailable" hidden>
+            <div class="access-block">
+              <h3>请在 macOS 桌面应用中连接系统照片库</h3>
+              <p>网页版读取不到系统照片库。其他照片仍可从“生活记录”导入。</p>
+            </div>
+          </div>
+          <div id="photo-ask" hidden>
+            <div class="access-block">
+              <h3>允许访问照片库</h3>
+              <p>允许后可以搜索这台 Mac 的系统照片库。只读取和展示，选中后才会加入记录，不自动导入，也不发送给 AI。未同步到这台 Mac 的手机照片无法查找。</p>
+              <div class="access-actions"><button type="button" class="desktop-primary" id="allow-btn">允许访问照片库</button></div>
+            </div>
+          </div>
+          <div id="photo-denied" hidden>
+            <div class="access-block">
+              <h3>尚未允许访问照片库</h3>
+              <p>你可以在系统设置的“隐私与安全性 → 照片”中开启，开启后回到这里重新检查。</p>
+              <div class="access-actions"><button type="button" class="desktop-secondary">打开系统设置</button><button type="button" class="desktop-secondary" id="recheck-btn">已设置，重新检查</button></div>
+            </div>
+          </div>
+
+          <div id="photo-search" hidden>
+            <p class="source-lead"><i data-icon="image" data-size="18"></i>从一张照片想起——按时间、地点、相册或收藏，找找最近或以前的照片。</p>
+            <div class="filter-grid">
+              <div style="display:grid;gap:8px;align-content:start">
+                <label class="source-field"><span>时间（可选）</span><input type="search" id="f-time" maxlength="120" placeholder="例如：最近30天、去年、2024年5月" aria-describedby="time-help"></label>
+                <div class="chip-row" role="group" aria-label="常用时间"><button type="button" class="chip" data-time="最近7天" aria-pressed="false">最近 7 天</button><button type="button" class="chip" data-time="最近30天" aria-pressed="false">最近 30 天</button><button type="button" class="chip" data-time="今年" aria-pressed="false">今年</button><button type="button" class="chip" data-time="去年" aria-pressed="false">去年</button></div>
+              </div>
+              <div style="display:grid;gap:8px;align-content:start">
+                <label class="source-field"><span>拍摄地点（可选）</span><input type="search" id="f-place" maxlength="120" placeholder="例如：浙江杭州富阳" aria-describedby="place-help"></label>
+                <div class="chip-row is-muted" id="radius-row" role="radiogroup" aria-label="地点附近范围"><span class="chip-label">附近</span>
+                  <button type="button" class="chip" role="radio" aria-checked="false" data-radius="1" disabled>1 公里</button><button type="button" class="chip" role="radio" aria-checked="false" data-radius="5" disabled>5</button><button type="button" class="chip" role="radio" aria-checked="false" data-radius="10" disabled>10</button><button type="button" class="chip" role="radio" aria-checked="true" data-radius="30" disabled>30</button><button type="button" class="chip" role="radio" aria-checked="false" data-radius="100" disabled>100</button>
+                </div>
+              </div>
+            </div>
+            <p class="field-help" id="time-help" style="margin-top:10px">时间留空查看全部日期；也可在“更多筛选”里用起止日期，和上方时间任选一种。</p>
+            <p class="field-help" id="place-help">地点由 Apple 联网定位，只匹配有位置记录的照片；附近范围不代表行政区边界。</p>
+
+            <div class="advanced-row">
+              <button type="button" class="advanced-toggle" id="adv-toggle" aria-expanded="false" aria-controls="adv-panel"><i data-icon="controls" data-size="17"></i>更多筛选<span class="capture-source-count" id="adv-count" hidden>0</span><i data-icon="down" data-size="16"></i></button>
+              <div class="advanced-summary" id="adv-summary"></div>
+            </div>
+            <div class="advanced-panel" id="adv-panel" hidden>
+              <label class="source-field"><span>时间依据</span><select id="f-basis"><option value="taken">拍摄时间</option><option value="added">加入图库时间</option></select></label>
+              <label class="source-field"><span>开始日期（可选）</span><input type="date" id="f-from" min="1900-01-01" max="2200-12-31"></label>
+              <label class="source-field"><span>结束日期（可选）</span><input type="date" id="f-through" min="1900-01-01" max="2200-12-31"></label>
+              <div class="album-field span-2">
+                <label class="source-field"><span>相册</span><select id="f-album"><option value="">全部相册</option><option>杭州之行</option><option>家人</option><option>2024 年夏天</option><option>收藏精选</option></select></label>
+                <button type="button" class="icon-button" aria-label="刷新相册" title="刷新相册"><i data-icon="refresh" data-size="17"></i></button>
+              </div>
+              <label class="source-field"><span>照片类型</span><select id="f-type"><option value="all">全部照片</option><option value="live">实况照片</option><option value="screenshot">截屏</option><option value="panorama">全景</option><option value="portrait">人像模式</option><option value="raw">RAW</option><option value="burst">连拍</option></select></label>
+              <label class="check-field span-3"><input type="checkbox" id="f-fav">仅看收藏</label>
+            </div>
+
+            <div class="source-actions">
+              <button type="button" class="desktop-primary" id="search-btn"><i data-icon="search" data-size="16"></i><span>搜索照片</span></button>
+              <button type="button" class="desktop-secondary" id="clear-btn">清除筛选</button>
+            </div>
+
+            <div class="photo-results" id="photo-results" hidden>
+              <div id="progress" class="progress-row" role="status" hidden><span>正在读取照片信息，大图库或地点查询可能需要一些时间。</span><button type="button" class="desktop-secondary" id="cancel-search">取消查找</button></div>
+              <div id="result-body" hidden>
+                <div class="result-head"><span><strong id="result-count">找到 128 张照片</strong> <span id="result-summary"></span></span><span id="result-hint">点选照片即可加入记录 · 放大查看请点右下角</span></div>
+                <div class="result-scroll"><ul class="photo-grid" id="photo-grid"></ul></div>
+                <div class="more-row"><button type="button" class="desktop-secondary" id="more-btn">显示更多照片</button></div>
+              </div>
+              <div id="empty-body" hidden>
+                <p class="empty-note">没有找到符合条件的照片。试试放宽时间、地点范围，或清除部分筛选条件。<br><button type="button" class="desktop-secondary" id="empty-clear">清除筛选</button></p>
+              </div>
+            </div>
+
+            <div class="selection-bar" id="selection-bar" hidden>
+              <div class="selection-stack" id="selection-stack" aria-hidden="true"></div>
+              <div class="selection-copy"><strong id="selection-title">已选 0 张</strong><span>选中后才会加入这条记录，照片原文件不会被改动</span></div>
+              <button type="button" class="link-button" id="selection-clear">清空</button>
+              <button type="button" class="desktop-primary" id="selection-add"><i data-icon="plus" data-size="17"></i>加入这条记录</button>
+            </div>
+            <p class="source-note">仅浏览系统照片库，不改动照片，不发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需点击下载预览。</p>
+          </div>
+        </div>
+
+        <!-- 来源 3 · 看日历（未来来源示意：证明同一套面板规范可承载新能力） -->
+        <div class="capture-panel" id="panel-calendar" role="tabpanel" aria-labelledby="tab-calendar" hidden>
+          <p class="source-lead"><i data-icon="now" data-size="18"></i>想想这段时间做过什么——勾选日程，作为这条记录的背景。<span class="mock-tag">未来来源示意</span></p>
+          <div class="chip-row" role="group" aria-label="日程范围" style="margin-bottom:12px"><button type="button" class="chip" aria-pressed="false">今天</button><button type="button" class="chip" aria-pressed="true">最近 7 天</button><button type="button" class="chip" aria-pressed="false">本月</button><button type="button" class="chip" aria-pressed="false">自选…</button></div>
+          <ul class="event-list" id="event-list"></ul>
+          <div class="selection-bar" id="event-bar" hidden>
+            <div class="selection-copy"><strong id="event-title">已选 0 项日程</strong><span>只读取日程标题与时间，不发送给 AI</span></div>
+            <button type="button" class="desktop-primary" id="event-add"><i data-icon="plus" data-size="17"></i>加入这条记录</button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="capture-footer">
+        <button type="button" class="capture-destination" title="选择保存目录"><i data-icon="folder" data-size="16"></i><span>保存到 <span>生活记录 / <strong>随手记</strong></span></span><i data-icon="down" data-size="13"></i></button>
+        <span role="status" id="status">草稿会自动暂存</span>
+      </footer>
+    </form>
+    <p class="capture-saved" id="saved" role="status" hidden>已保存。<a href="#" onclick="return false">查看记录 <i data-icon="arrow" data-size="14"></i></a></p>
+  </section>
+</main>
+
+<dialog class="capture-dialog" id="preview-dialog" aria-labelledby="preview-title">
+  <header><div><h2 id="preview-title">照片</h2><p id="preview-meta"></p></div><button type="button" id="preview-close" aria-label="关闭大图"><i data-icon="close" data-size="18"></i></button></header>
+  <div class="dialog-body"><img id="preview-img" alt=""></div>
+  <footer><button type="button" class="desktop-secondary" id="preview-close-2">关闭</button><button type="button" class="desktop-primary" id="preview-select">选择这张</button></footer>
+</dialog>
+
+<!-- ═════════ 设计说明 ═════════ -->
+<div class="notes">
+  <header>
+    <h2>设计说明</h2>
+    <p>上方卡片为可交互原型；用顶部“状态预览”可直接跳到每个状态。以下是设计思路与规则。</p>
+  </header>
+
+  <section class="note-card">
+    <h3>一、核心思路：随手记 = 一条记录 + 若干材料</h3>
+    <p>现在的随手记只有“说 / 写”一种输入。要承载找照片、将来的看日历和连接其他 App，不能每加一个能力就多一块卡片。所以把卡片拆成三个稳定的概念：</p>
+    <div class="model">
+      <div><b>来源（Source）</b><span>取得材料的一种方式：说或写、找照片、看日历……用顶部的来源切换器选择，一次只展开一个。</span></div>
+      <div><b>材料（Material）</b><span>来源产出的东西：文字、照片、日程……统一放进“材料托盘”，样子不同，但进出规则相同。</span></div>
+      <div class="is-accent"><b>记录（Record）</b><span>用户最终保存的那一条。无论从哪个来源进来，都走同一个“整理并保存”和同一个保存目录。</span></div>
+    </div>
+    <p style="margin-top:12px">好处：新增来源只需要提供“一个面板 + 一种材料样式”，标题栏、托盘、动作行、页脚都不用改；用户的心智也始终是“我在写一条记录，顺手把素材带进来”。</p>
+  </section>
+
+  <section class="note-card">
+    <h3>二、卡片结构</h3>
+    <ol>
+      <li><strong>标题栏（不变）</strong>：“随手记”+ 状态徽标 + 历史记录。徽标逻辑沿用：新记录 / 待整理 / 补充中；只有材料没有文字时也算“待整理”。</li>
+      <li><strong>来源切换器（新增）</strong>：胶囊分段控件，直接复用项目里已有的 <code>.segmented-tabs</code> 视觉（浅蓝轨道 + 白色滑块）。标签用“动词 + 图标”，与现有按钮“说一段 / 找照片”保持同一语气。</li>
+      <li><strong>来源面板（按来源切换）</strong>：说或写面板保持现状；找照片面板是本次新增；其它来源以后同样放这里。</li>
+      <li><strong>材料托盘（新增，仅“说或写”面板显示）</strong>：在文本下方，一排缩略图 / 日程小卡，可逐项移除。有材料时输入框提示语变为“这些照片是什么时候的事？写几句，或说一段……”，引导补上故事。</li>
+      <li><strong>动作行（不变）</strong>：说一段 / 暂存 / 整理并保存。</li>
+      <li><strong>页脚（不变）</strong>：保存目录 + 状态文字，各来源只更换状态文案（如“选中后才会加入记录”）。</li>
+    </ol>
+  </section>
+
+  <section class="note-card">
+    <h3>三、找照片面板：把 demo 的 9 个控件分成两层</h3>
+    <div class="compare">
+      <div><b>第一层 · 一眼可见</b><span style="color:var(--ink-soft);font-size:13px;line-height:1.8">时间（附 4 个常用时间快捷）、拍摄地点（附近范围仅在填了地点后可选）、搜索。覆盖“上个月 / 去年 / 在杭州”这类最常见的回忆线索。</span></div>
+      <div><b>第二层 · “更多筛选”折叠</b><span style="color:var(--ink-soft);font-size:13px;line-height:1.8">时间依据、起止日期、相册（含刷新）、照片类型、仅看收藏。折叠时，已生效的条件以蓝色小标签显示并可单个移除，不会“藏着筛选而不自知”。</span></div>
+    </div>
+    <h4>结果与选择</h4>
+    <ul>
+      <li>结果区最高 372px，内部滚动；“已选 N 张”条始终吸附在底部，不会被滚走。</li>
+      <li>点击缩略图 = 选中 / 取消（左上角圆形勾选）；放大查看用右下角按钮，打开与“历史记录”同款的弹窗，可在大图里直接选择。</li>
+      <li>iCloud 照片在格子里显示“下载预览”，不自动联网下载。</li>
+      <li>选中不等于保存。点“加入这条记录”后，照片进入材料托盘，并自动回到“说或写”，用户接着写故事。</li>
+    </ul>
+    <h4>授权与降级</h4>
+    <p>首次授权 / 已拒绝 / 非 macOS 三种状态都在同一面板内以说明块呈现，文案沿用现有实现，不再单独占一张卡片。“找照片”标签始终可见，保证发现性；在不支持的环境里点进去会看到原因与替代路径。</p>
+  </section>
+
+  <section class="note-card">
+    <h3>四、交互规则</h3>
+    <table class="rules">
+      <thead><tr><th>场景</th><th>规则</th></tr></thead>
+      <tbody>
+        <tr><td>切换来源</td><td>各来源的输入、筛选条件、搜索结果、已选项全部保留，切回来继续；不弹确认。</td></tr>
+        <tr><td>录音中</td><td>其他来源标签置灰不可点，避免录音和筛选互相打断；完成或取消录音后恢复。</td></tr>
+        <tr><td>材料进入记录</td><td>只能通过来源面板里明确的“加入这条记录”进入，不会因为搜索或选中就自动写入。</td></tr>
+        <tr><td>移除材料</td><td>托盘里每项右上角 × 移除，仅从这条记录移除，不影响原照片 / 日程。</td></tr>
+        <tr><td>保存</td><td>仍需有文字才能“整理并保存”（保持现有产品原则：记录以用户自己的话为主）。</td></tr>
+        <tr><td>键盘</td><td>来源切换器支持 ← → 切换；缩略图是可聚焦按钮，空格 / 回车选中；搜索框回车触发搜索。</td></tr>
+        <tr><td>动效</td><td>仅切换器滑块与展开箭头有 200ms 过渡；尊重“减少动态效果”设置。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="note-card">
+    <h3>五、未来来源如何接入</h3>
+    <p>在“状态预览 → 未来”里可以看到一个“看日历”的示意：它复用了完全相同的切换器、面板外壳、底部“已选”条和材料托盘，只多了一种日程小卡。新增来源按下面清单设计即可：</p>
+    <ul>
+      <li><strong>标签</strong>：一个图标 + 两到三个字的动词（看日历、连接 App）。</li>
+      <li><strong>面板</strong>：顶部一句说明 → 常用条件前置 → 低频条件进“更多筛选” → 结果列表 → 底部“已选”条。</li>
+      <li><strong>材料样式</strong>：定义托盘里一项长什么样（64px 高，右上角 × 移除）。</li>
+      <li><strong>授权与隐私</strong>：未授权 / 被拒绝 / 不支持三种状态，用同一个说明块；面板底部写一句“读什么、不做什么”。</li>
+      <li><strong>数量上限</strong>：切换器最多直接显示 4 个来源，第 5 个起收进“更多 ▾”菜单（尚未开放的来源以“即将支持”标记，不可点）。</li>
+    </ul>
+  </section>
+
+  <section class="note-card">
+    <h3>六、与现有风格的对应（未引入新的视觉语言）</h3>
+    <ul>
+      <li>颜色全部取自 <code>theme-tokens.css</code>：蓝色只用于交互与选中，未新增任何色值。</li>
+      <li>卡片壳、标题 22px/700、徽标、页脚底色、说一段按钮、录音条、“整理并保存”主按钮均沿用现有尺寸与圆角（20 / 14 / 11px）。</li>
+      <li>输入框 38px 高、<code>--radius-control</code> 圆角、13–14px 字号，与 demo 的表单控件规格一致；次要按钮与 demo 的 <code>desktop-secondary</code> 一致。</li>
+      <li>原先独立的“从一张照片想起”卡片在新设计中并入随手记，此刻页面只保留“陪伴卡片 + 随手记”两块。</li>
+    </ul>
+  </section>
+
+  <section class="note-card">
+    <h3>七、需要你拍板的问题</h3>
+    <div class="question"><b>1. 选中的照片最终去向</b><span>原型按“附在这条随手记里，随原话一起整理”设计。另一种方案是“加入后创建一批照片记忆，进入认人 → 讲故事流程”。两者的界面差别只在“加入这条记录”按钮的文案和托盘的提示，但后端与数据落点不同，请确认。</span></div>
+    <div class="question"><b>2. 单条记录的材料上限</b><span>建议照片 ≤ 9 张，超出时在选择条提示“最多加入 9 张”。</span></div>
+    <div class="question"><b>3. 非 macOS 是否隐藏“找照片”</b><span>原型选择保留标签并说明原因（利于发现）；若希望界面更干净，可只在桌面端显示。</span></div>
+  </section>
+</div>
+
+<script>
+/* ───────── Icons (paths copied from shared/ui.tsx; calendar/cloud/mic follow the same 1.8 stroke grammar) ───────── */
+const ICON_PATHS = {
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+  pin:'<path d="M9 4h6l-1 6 3 3H7l3-3ZM12 13v7"/>',
+  heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
+  now:'<circle cx="12" cy="12" r="7"/><path d="M12 7v5l3 2"/>',
+  search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
+  controls:'<path d="M4 7h8M18 7h2M4 17h2M12 17h8M14 4v6M8 14v6"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  spark:'<path d="m12 3 1.2 4.1L17 9l-3.8 1.9L12 15l-1.2-4.1L7 9l3.8-1.9L12 3Z"/><path d="m18.5 15 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z"/>',
+  arrow:'<path d="M5 12h14M14 7l5 5-5 5"/>',
+  refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/>',
+  history:'<path d="M4.7 7.8A8 8 0 1 1 4 12"/><path d="M4 4v4h4M12 8v4l2.7 1.6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  close:'<path d="m6 6 12 12M18 6 6 18"/>',
+  down:'<path d="m7 9 5 5 5-5"/>',
+  check:'<path d="m5 12 4 4L19 6"/>',
+  zoom:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4M8 10.5h5M10.5 8v5"/>',
+  calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  cloud:'<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5a3.75 3.75 0 0 1-.5 7.5Z"/>',
+  grid:'<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>'
+};
+const icon = (name,size=18) => `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]||''}</svg>`;
+const hydrateIcons = (root=document) => root.querySelectorAll('i[data-icon]').forEach(el => el.replaceWith(Object.assign(document.createElement('span'),{innerHTML:icon(el.dataset.icon,+el.dataset.size||18)}).firstChild));
+hydrateIcons();
+
+/* ───────── Data ───────── */
+const $ = id => document.getElementById(id);
+const IMG = n => `assets/photo-${n}.png`;
+const photos = Array.from({length:48},(_,i)=>{
+  const d = new Date(2026,8,28 - i*2 - (i%3));
+  return { id:'p'+i, img:(i%8)+1, date:`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`, name:`IMG_${4210+i*7}.HEIC`, loc:i%4!==3, cloud:i===5||i===11||i===17, pos:['center','30% 40%','70% 60%'][i%3] };
+});
+const events = [
+  { id:'e1', title:'和小林在西湖边吃饭', time:'9月24日 18:30', cal:'生活' },
+  { id:'e2', title:'爸妈来杭州', time:'9月26日 全天', cal:'家人' },
+  { id:'e3', title:'产品评审会', time:'9月27日 14:00', cal:'工作' },
+  { id:'e4', title:'周末去富阳徒步', time:'9月28日 08:00', cal:'生活' },
+  { id:'e5', title:'妈妈生日', time:'10月1日 全天', cal:'家人' },
+];
+const sources = [
+  { id:'write', label:'说或写', icon:'edit' },
+  { id:'photo', label:'找照片', icon:'image' },
+  { id:'calendar', label:'看日历', icon:'calendar', future:true },
+];
+const state = { mode:'write', future:false, recording:false, paused:false, atts:[], selected:new Map(), eventsSel:new Set(), auth:'ok', shown:24, photoStatus:'idle', radius:30 };
+let searchTimer, recTimer, waveTimer, seconds = 0;
+
+/* ───────── Source switcher ───────── */
+const tabsEl = $('sources'), indicator = $('sources-indicator');
+function visibleSources(){ return sources.filter(s => !s.future || state.future); }
+function renderTabs(){
+  tabsEl.querySelectorAll('.capture-source,.capture-more-wrap').forEach(n=>n.remove());
+  const list = visibleSources();
+  list.forEach(s=>{
+    const b = document.createElement('button');
+    b.type='button'; b.className='capture-source'; b.id='tab-'+s.id; b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', String(state.mode===s.id)); b.setAttribute('aria-controls','panel-'+s.id);
+    b.tabIndex = state.mode===s.id?0:-1; b.disabled = state.recording && state.mode!==s.id;
+    const count = s.id==='photo' ? state.selected.size : s.id==='calendar' ? state.eventsSel.size : 0;
+    b.innerHTML = `${icon(s.icon,18)}<span>${s.label}</span>${count?`<span class="capture-source-count" aria-label="已选 ${count} 项">${count}</span>`:''}`;
+    b.addEventListener('click',()=>setMode(s.id));
+    tabsEl.appendChild(b);
+  });
+  if(state.future){
+    const wrap = document.createElement('div'); wrap.className='capture-more-wrap';
+    wrap.innerHTML = `<button type="button" class="capture-source" id="more-sources" aria-haspopup="menu" aria-expanded="false" ${state.recording?'disabled':''}>${icon('grid',18)}<span>更多</span>${icon('down',14)}</button><div class="capture-menu" id="more-menu" role="menu" hidden><button type="button" role="menuitem" disabled>${icon('link'in ICON_PATHS?'link':'plus',17)}<span>连接其他 App</span><small>即将支持</small></button></div>`;
+    tabsEl.appendChild(wrap);
+    const btn = wrap.querySelector('#more-sources'), menu = wrap.querySelector('#more-menu');
+    btn.addEventListener('click',e=>{ e.stopPropagation(); const open = menu.hidden; menu.hidden=!open; btn.setAttribute('aria-expanded',String(open)); });
+  }
+  requestAnimationFrame(moveIndicator);
+}
+function moveIndicator(){
+  const active = tabsEl.querySelector('.capture-source[aria-selected=true]');
+  if(!active){ indicator.style.width='0'; return; }
+  indicator.style.width = active.offsetWidth+'px';
+  indicator.style.transform = `translateX(${active.offsetLeft - 0}px)`;
+}
+window.addEventListener('resize',moveIndicator);
+document.addEventListener('click',()=>{ const m=$('more-menu'); if(m){ m.hidden=true; $('more-sources')?.setAttribute('aria-expanded','false'); } });
+tabsEl.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight'].includes(e.key)) return;
+  const tabs=[...tabsEl.querySelectorAll('[role=tab]:not(:disabled)')]; const i=tabs.findIndex(t=>t===document.activeElement); if(i<0) return;
+  const next = tabs[(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length]; next.focus(); next.click(); e.preventDefault();
+});
+function setMode(m){
+  if(state.recording) return;
+  state.mode = m;
+  ['write','photo','calendar'].forEach(id=>{ $('panel-'+id).hidden = id!==m; });
+  renderTabs(); renderStatus(); renderPhotoView();
+}
+
+/* ───────── Write panel ───────── */
+const draft = $('draft');
+function renderWrite(){
+  const hasText = draft.value.trim().length>0;
+  $('submit-btn').disabled = !hasText || state.recording;
+  $('stash-btn').hidden = !hasText;
+  $('speak-label').textContent = hasText ? '接着说' : '说一段';
+  draft.placeholder = state.atts.length ? '这些照片是什么时候的事？写几句，或说一段……' : '此刻发生了什么？写下来，或说一段……';
+  $('badge').textContent = (hasText || state.atts.length) ? '待整理' : '新记录';
+  const tray = $('tray'); tray.hidden = state.atts.length===0;
+  if(state.atts.length){
+    $('tray-title').innerHTML = `已添加 <b>${state.atts.length}</b> 项材料`;
+    $('tray-list').innerHTML = state.atts.map(a=> a.type==='photo'
+      ? `<li class="capture-material is-photo"><img src="${IMG(a.img)}" alt="${a.name}，${a.date}" style="object-position:${a.pos}"><button type="button" data-remove="${a.id}" aria-label="移除照片 ${a.name}">${icon('close',12)}</button></li>`
+      : `<li class="capture-material is-event">${icon('calendar',22)}<span><strong>${a.title}</strong><em>${a.time}</em></span><button type="button" data-remove="${a.id}" aria-label="移除日程 ${a.title}">${icon('close',12)}</button></li>`).join('');
+  }
+}
+draft.addEventListener('input',()=>{ renderWrite(); $('saved').hidden=true; });
+$('tray-list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-remove]'); if(!b) return;
+  state.atts = state.atts.filter(a=>a.id!==b.dataset.remove); renderWrite(); renderStatus();
+});
+$('tray-more').addEventListener('click',()=>setMode(state.future?'calendar':'photo'));
+$('submit-btn').addEventListener('click',()=>{
+  $('status').textContent='正在整理，原话已保留'; $('submit-btn').disabled=true; $('submit-btn').lastChild.textContent='正在整理…';
+  setTimeout(()=>{ $('submit-btn').lastChild.textContent='整理并保存'; $('saved').hidden=false; draft.value=''; state.atts=[]; renderWrite(); renderStatus(); },1200);
+});
+
+/* recording (visual only) */
+const bars = Array.from({length:12},()=>document.createElement('i')); bars.forEach(b=>$('waveform').appendChild(b));
+const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+function startRec(){
+  if(state.recording) return;
+  state.recording=true; state.paused=false; seconds=0;
+  $('listening').hidden=false; $('speak-btn').hidden=true; draft.hidden=true; $('live-editor').hidden=false;
+  $('live-editor').innerHTML = `${esc(draft.value)}<span class="capture-temporary-text">今天在湖边走了很久，风很舒服，突然想起……</span>`;
+  $('pause-btn').textContent='暂停'; $('listening').classList.remove('is-paused'); $('listening-title').textContent='正在听，临时文字会出现在上方';
+  recTimer=setInterval(()=>{ if(state.paused) return; seconds++; $('listening-meta').textContent=`${fmt(seconds)} · 完成后校准文字与标点`; },1000);
+  waveTimer=setInterval(()=>{ bars.forEach((b,i)=>{ const v = state.paused?0.8:1+Math.random()*(2+ (i%4)); b.style.transform=`scaleY(${v})`; }); },110);
+  renderTabs(); renderWrite(); renderStatus();
+}
+function stopRec(keep){
+  clearInterval(recTimer); clearInterval(waveTimer);
+  state.recording=false; $('listening').hidden=true; $('speak-btn').hidden=false; draft.hidden=false; $('live-editor').hidden=true;
+  if(keep) draft.value = (draft.value ? draft.value+'\n' : '') + '今天在湖边走了很久，风很舒服，突然想起第一次来杭州的那个下午。';
+  renderTabs(); renderWrite(); renderStatus();
+}
+const esc = s => s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+$('speak-btn').addEventListener('click',startRec);
+$('finish-btn').addEventListener('click',()=>stopRec(true));
+$('cancel-btn').addEventListener('click',()=>stopRec(false));
+$('pause-btn').addEventListener('click',()=>{ state.paused=!state.paused; $('pause-btn').textContent=state.paused?'继续录音':'暂停'; $('listening').classList.toggle('is-paused',state.paused); $('listening-title').textContent=state.paused?'录音已暂停':'正在听，临时文字会出现在上方'; });
+
+/* ───────── Footer status per source ───────── */
+function renderStatus(){
+  let t='草稿会自动暂存';
+  if(state.recording) t='浅灰文字为临时转写，完成录音后会校准';
+  else if(state.mode==='photo') t=state.auth==='ok' ? '只读取系统照片库，选中后才加入记录' : '照片库不会被改动，也不会发送给 AI';
+  else if(state.mode==='calendar') t='只读取日程标题与时间，选中后才加入记录';
+  else if(state.atts.length) t=`已带上 ${state.atts.length} 项材料，保存时一并整理`;
+  $('status').textContent=t;
+}
+
+/* ───────── Photo panel ───────── */
+const f = { time:$('f-time'), place:$('f-place'), basis:$('f-basis'), from:$('f-from'), through:$('f-through'), album:$('f-album'), type:$('f-type'), fav:$('f-fav') };
+function renderPhotoView(){
+  ['photo-unavailable','photo-ask','photo-denied','photo-search'].forEach(id=>$(id).hidden=true);
+  const map={ok:'photo-search',notDetermined:'photo-ask',denied:'photo-denied',unavailable:'photo-unavailable'};
+  $(map[state.auth==='notDetermined'?'notDetermined':state.auth]).hidden=false;
+  const hasPlace = f.place.value.trim().length>0;
+  $('radius-row').classList.toggle('is-muted',!hasPlace);
+  $('radius-row').querySelectorAll('.chip').forEach(c=>{ c.disabled=!hasPlace; c.setAttribute('aria-checked',String(+c.dataset.radius===state.radius)); });
+  document.querySelectorAll('[data-time]').forEach(c=>c.setAttribute('aria-pressed',String(f.time.value.trim()===c.dataset.time)));
+  renderAdvSummary();
+  const selected=[...state.selected.values()], n=selected.length;
+  $('selection-bar').hidden = !(state.mode==='photo' && state.auth==='ok' && n>0);
+  $('selection-title').textContent=`已选 ${n} 张`;
+  $('selection-stack').innerHTML = selected.slice(-4).map(p=>`<img src="${IMG(p.img)}" alt="" style="object-position:${p.pos}">`).join('');
+}
+function advItems(){
+  const items=[];
+  if(f.basis.value==='added') items.push(['basis','加入图库时间']);
+  if(f.from.value||f.through.value) items.push(['dates',`${f.from.value||'…'} 至 ${f.through.value||'…'}`]);
+  if(f.album.value) items.push(['album','相册：'+f.album.value]);
+  if(f.type.value!=='all') items.push(['type',f.type.selectedOptions[0].text]);
+  if(f.fav.checked) items.push(['fav','仅看收藏']);
+  return items;
+}
+function renderAdvSummary(){
+  const items=advItems(), open=$('adv-toggle').getAttribute('aria-expanded')==='true';
+  $('adv-count').hidden = items.length===0; $('adv-count').textContent=items.length;
+  $('adv-summary').innerHTML = open ? '' : items.map(([k,t])=>`<button type="button" class="chip" data-clear="${k}" aria-label="移除筛选：${t}">${t}${icon('close',12)}</button>`).join('');
+}
+$('adv-summary').addEventListener('click',e=>{
+  const b=e.target.closest('[data-clear]'); if(!b) return;
+  ({basis:()=>f.basis.value='taken',dates:()=>{f.from.value='';f.through.value='';},album:()=>f.album.value='',type:()=>f.type.value='all',fav:()=>f.fav.checked=false})[b.dataset.clear]();
+  renderPhotoView();
+});
+$('adv-toggle').addEventListener('click',()=>{ const open=$('adv-toggle').getAttribute('aria-expanded')!=='true'; $('adv-toggle').setAttribute('aria-expanded',String(open)); $('adv-panel').hidden=!open; renderAdvSummary(); });
+Object.values(f).forEach(el=>el.addEventListener('input',renderPhotoView)); Object.values(f).forEach(el=>el.addEventListener('change',renderPhotoView));
+document.querySelectorAll('[data-time]').forEach(c=>c.addEventListener('click',()=>{ f.time.value = f.time.value.trim()===c.dataset.time ? '' : c.dataset.time; renderPhotoView(); }));
+$('radius-row').addEventListener('click',e=>{ const c=e.target.closest('[data-radius]'); if(!c||c.disabled) return; state.radius=+c.dataset.radius; renderPhotoView(); });
+[f.time,f.place].forEach(el=>el.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.isComposing){ e.preventDefault(); runSearch(); } }));
+function clearFilters(){
+  f.time.value='';f.place.value='';f.basis.value='taken';f.from.value='';f.through.value='';f.album.value='';f.type.value='all';f.fav.checked=false;state.radius=30; renderPhotoView();
+}
+$('clear-btn').addEventListener('click',clearFilters);
+$('empty-clear').addEventListener('click',()=>{ clearFilters(); state.photoStatus='idle'; renderResults(); });
+
+function summaryText(){
+  const parts=[f.basis.value==='added'?'加入图库时间':'拍摄时间'];
+  if(f.time.value.trim()) parts.push(f.time.value.trim()); else if(f.from.value||f.through.value) parts.push(`${f.from.value||'…'} 至 ${f.through.value||'…'}`); else parts.push('全部日期');
+  if(f.place.value.trim()) parts.push(`${f.place.value.trim()}附近 ${state.radius} 公里`);
+  if(f.album.value) parts.push(f.album.value);
+  if(f.fav.checked) parts.push('仅收藏');
+  return '· '+parts.join(' · ');
+}
+function runSearch(){
+  if(state.photoStatus==='loading') return;
+  state.shown=24; state.photoStatus='loading'; renderResults();
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>{ state.photoStatus = /火星|mars/i.test(f.place.value) ? 'empty' : 'results'; renderResults(); },1100);
+}
+$('search-btn').addEventListener('click',runSearch);
+$('cancel-search').addEventListener('click',()=>{ clearTimeout(searchTimer); state.photoStatus='idle'; renderResults(); });
+$('more-btn').addEventListener('click',()=>{ state.shown=Math.min(photos.length,state.shown+12); renderResults(); });
+
+function renderResults(){
+  const s=state.photoStatus, loading=s==='loading';
+  $('photo-results').hidden = s==='idle';
+  $('progress').hidden=!loading; $('result-body').hidden = !(s==='results'||loading); $('empty-body').hidden = s!=='empty';
+  $('search-btn').disabled=loading; $('clear-btn').disabled=loading; $('search-btn').lastChild.textContent = loading?'查找中…':'搜索照片';
+  if(loading){
+    $('result-body').hidden=false; document.querySelector('#result-body .result-head').style.visibility='hidden'; $('more-btn').parentElement.hidden=true;
+    $('photo-grid').innerHTML = Array.from({length:12},()=>`<li><div class="photo-skeleton"></div></li>`).join('');
+    return;
+  }
+  document.querySelector('#result-body .result-head').style.visibility=''; 
+  if(s!=='results'){ renderPhotoView(); return; }
+  $('result-count').textContent='找到 128 张照片'; $('result-summary').textContent=summaryText();
+  const list=photos.slice(0,state.shown);
+  $('photo-grid').innerHTML = list.map(p=>{
+    const sel=state.selected.has(p.id);
+    const cap=`<div class="caption"><time>${p.date.replace(/^\d+年/,'')}</time>${p.loc?icon('pin',12):''}</div>`;
+    if(p.cloud) return `<li class="photo-tile${sel?' is-selected':''}"><div class="photo-cloud">${icon('cloud',24)}<span>照片在 iCloud</span><button type="button" class="desktop-secondary" data-download="${p.id}">下载预览</button></div>${cap}</li>`;
+    return `<li class="photo-tile${sel?' is-selected':''}" data-id="${p.id}"><button type="button" class="photo-tile-main" role="checkbox" aria-checked="${sel}" aria-label="选择照片：${p.name}，${p.date}"><img src="${IMG(p.img)}" alt="" style="object-position:${p.pos}" loading="lazy"><span class="photo-tile-check">${icon('check',14)}</span></button><button type="button" class="photo-tile-zoom" data-zoom="${p.id}" aria-label="放大照片：${p.name}">${icon('zoom',16)}</button>${cap}</li>`;
+  }).join('');
+  $('more-btn').parentElement.hidden = state.shown>=photos.length;
+  renderPhotoView();
+}
+$('photo-grid').addEventListener('click',e=>{
+  const dl=e.target.closest('[data-download]');
+  if(dl){ const p=photos.find(x=>x.id===dl.dataset.download); p.cloud=false; renderResults(); return; }
+  const z=e.target.closest('[data-zoom]'); if(z){ openPreview(z.dataset.zoom); return; }
+  const tile=e.target.closest('.photo-tile[data-id]'); if(!tile||!e.target.closest('.photo-tile-main')) return;
+  toggleSelect(tile.dataset.id);
+});
+function toggleSelect(id){
+  const p=photos.find(x=>x.id===id);
+  state.selected.has(id)?state.selected.delete(id):state.selected.set(id,p);
+  const tile=$('photo-grid').querySelector(`[data-id="${id}"]`);
+  if(tile){ tile.classList.toggle('is-selected',state.selected.has(id)); tile.querySelector('.photo-tile-main').setAttribute('aria-checked',String(state.selected.has(id))); }
+  renderPhotoView(); renderTabs();
+}
+$('selection-clear').addEventListener('click',()=>{ state.selected.clear(); renderResults(); renderTabs(); });
+$('selection-add').addEventListener('click',()=>{
+  state.selected.forEach(p=>{ if(!state.atts.some(a=>a.id===p.id)) state.atts.push({type:'photo',id:p.id,img:p.img,name:p.name,date:p.date,pos:p.pos}); });
+  state.selected.clear(); renderResults(); setMode('write'); renderWrite(); renderStatus(); draft.focus();
+});
+
+/* preview dialog */
+let previewId=null;
+const dlg=$('preview-dialog');
+function openPreview(id){
+  previewId=id; const p=photos.find(x=>x.id===id);
+  $('preview-title').textContent=p.date; $('preview-meta').textContent=`${p.name}${p.loc?' · 有位置信息':''}`;
+  $('preview-img').src=IMG(p.img); $('preview-img').alt=p.name; syncPreviewBtn(); dlg.showModal();
+}
+const syncPreviewBtn=()=>{ $('preview-select').textContent = state.selected.has(previewId)?'取消选择':'选择这张'; };
+$('preview-select').addEventListener('click',()=>{ toggleSelect(previewId); syncPreviewBtn(); });
+['preview-close','preview-close-2'].forEach(id=>$(id).addEventListener('click',()=>dlg.close()));
+
+/* auth */
+$('allow-btn').addEventListener('click',()=>{ $('allow-btn').textContent='等待系统授权…'; $('allow-btn').disabled=true; setTimeout(()=>{ $('allow-btn').textContent='允许访问照片库'; $('allow-btn').disabled=false; state.auth='ok'; renderPhotoView(); renderStatus(); },900); });
+$('recheck-btn').addEventListener('click',()=>{ state.auth='ok'; renderPhotoView(); renderStatus(); });
+
+/* ───────── Calendar panel (future source mock) ───────── */
+$('event-list').innerHTML = events.map(ev=>`<li><label class="event-row"><input type="checkbox" value="${ev.id}"><span><strong style="font-weight:550">${ev.title}</strong><em>${ev.time}</em></span><small>${ev.cal}</small></label></li>`).join('');
+$('event-list').addEventListener('change',e=>{
+  e.target.checked?state.eventsSel.add(e.target.value):state.eventsSel.delete(e.target.value);
+  const n=state.eventsSel.size; $('event-bar').hidden=n===0; $('event-title').textContent=`已选 ${n} 项日程`; renderTabs();
+});
+$('event-add').addEventListener('click',()=>{
+  state.eventsSel.forEach(id=>{ const ev=events.find(x=>x.id===id); if(!state.atts.some(a=>a.id===id)) state.atts.push({type:'event',id,title:ev.title,time:ev.time}); });
+  state.eventsSel.clear(); $('event-list').querySelectorAll('input').forEach(i=>i.checked=false); $('event-bar').hidden=true; setMode('write'); renderWrite(); renderStatus();
+});
+
+/* ───────── Scenarios ───────── */
+function resetAll(){
+  clearTimeout(searchTimer); if(state.recording){ clearInterval(recTimer); clearInterval(waveTimer); state.recording=false; $('listening').hidden=true; $('speak-btn').hidden=false; draft.hidden=false; $('live-editor').hidden=true; }
+  Object.assign(state,{mode:'write',future:false,paused:false,atts:[],auth:'ok',shown:24,photoStatus:'idle',radius:30}); state.selected.clear(); state.eventsSel.clear();
+  draft.value=''; $('saved').hidden=true; clearFilters(); $('adv-toggle').setAttribute('aria-expanded','false'); $('adv-panel').hidden=true;
+  $('event-list').querySelectorAll('input').forEach(i=>i.checked=false); $('event-bar').hidden=true;
+  renderResults();
+}
+const pick = ids => ids.map(i=>{ const p=photos[i]; return p; });
+const scenarios = {
+  'write-empty'(){ resetAll(); setMode('write'); },
+  'write-recording'(){ resetAll(); draft.value='下午在公司楼下散了会儿步。'; renderWrite(); setMode('write'); startRec(); },
+  'write-attached'(){ resetAll(); draft.value='周末和家人去了富阳，爸妈第一次爬那座山，走得比我想象中稳。'; pick([0,1,2,4]).forEach(p=>state.atts.push({type:'photo',id:p.id,img:p.img,name:p.name,date:p.date,pos:p.pos})); setMode('write'); renderWrite(); renderStatus(); },
+  'photo-ask'(){ resetAll(); state.auth='notDetermined'; setMode('photo'); },
+  'photo-denied'(){ resetAll(); state.auth='denied'; setMode('photo'); },
+  'photo-unavailable'(){ resetAll(); state.auth='unavailable'; setMode('photo'); },
+  'photo-filters'(){ resetAll(); f.time.value='最近30天'; f.place.value='浙江杭州富阳'; f.album.value='杭州之行'; f.fav.checked=true; $('adv-toggle').setAttribute('aria-expanded','true'); $('adv-panel').hidden=false; setMode('photo'); },
+  'photo-loading'(){ resetAll(); f.time.value='去年'; f.place.value='杭州'; setMode('photo'); state.photoStatus='loading'; renderResults(); clearTimeout(searchTimer); },
+  'photo-results'(){ resetAll(); f.time.value='最近30天'; f.place.value='浙江杭州富阳'; f.type.value='all'; f.album.value='杭州之行'; setMode('photo'); state.photoStatus='results'; [0,1,3].forEach(i=>state.selected.set(photos[i].id,photos[i])); renderResults(); renderTabs(); },
+  'photo-empty'(){ resetAll(); f.time.value='去年'; f.place.value='火星基地'; setMode('photo'); state.photoStatus='empty'; renderResults(); },
+  'future'(){ resetAll(); state.future=true; draft.value='周末去富阳徒步，顺便见了小林。'; renderWrite(); setMode('calendar'); [...$('event-list').querySelectorAll('input')].slice(3,4).forEach(i=>{ i.checked=true; i.dispatchEvent(new Event('change',{bubbles:true})); }); }
+};
+document.querySelectorAll('[data-scenario]').forEach(b=>b.addEventListener('click',()=>{
+  scenarios[b.dataset.scenario](); document.querySelectorAll('[data-scenario]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  document.getElementById('card').scrollIntoView({block:'center',behavior:'smooth'});
+}));
+
+renderTabs(); renderWrite(); renderStatus(); renderPhotoView();
+document.querySelector('[data-scenario=write-empty]').setAttribute('aria-pressed','true');
+</script>
+</body>
+</html>
