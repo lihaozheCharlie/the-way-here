@@ -224,6 +224,77 @@ textarea::placeholder{color:var(--ink-soft)}
 .capture-dialog footer{display:flex;align-items:center;justify-content:flex-end;gap:12px;border-top:1px solid var(--line);padding:16px 24px}
 .capture-dialog footer .desktop-primary{min-height:40px}
 
+/* ───────── NEW · 50 张上限 ───────── */
+.photo-tile.is-capped .photo-tile-main{opacity:.4;cursor:not-allowed}
+.photo-tile.is-capped .photo-tile-check{display:none}
+.limit-note{margin:12px 0 0;padding:9px 14px;border-radius:var(--radius-control);background:var(--warm-soft);color:var(--warm-ink);font-size:13px;line-height:1.6}
+.limit-note[hidden]{display:none}
+.selection-bar.is-full{background:var(--warm-soft);color:var(--warm-ink)}
+.selection-bar.is-full .selection-stack img{border-color:var(--warm-soft)}
+.selection-count{font-variant-numeric:tabular-nums}
+
+/* ───────── NEW · 带去整理：沿用“带一段记录进来”弹窗 + 照片记忆工作区 ───────── */
+.flow-dialog{width:min(860px,calc(100vw - 48px))}
+.flow-dialog .dialog-body{padding:0;background:var(--paper);max-height:calc(100dvh - 230px);overflow:auto}
+.flow-stepper{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid var(--line);margin:0;list-style:none;font-size:13px;color:var(--ink-soft)}
+.flow-stepper li{display:flex;align-items:center;gap:8px}
+.flow-stepper li > span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--surface-tinted);color:var(--ink-soft);font-size:11px;font-weight:600}
+.flow-stepper li.active{color:var(--ink);font-weight:600}
+.flow-stepper li.active > span,.flow-stepper li.done > span{background:var(--accent);color:var(--paper)}
+.flow-stepper li.done{color:var(--accent-ink)}
+.flow-stepper .line{flex:none;width:36px;height:1px;background:var(--line-strong)}
+.import-grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:22px;padding:22px 24px}
+.import-grid h4{margin:0 0 8px;font-size:14px;font-weight:600}
+.import-fields{display:grid;gap:18px;align-content:start}
+.import-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.import-thumbs li{width:44px;height:44px;border-radius:8px;overflow:hidden;background:var(--surface-tinted)}
+.import-thumbs img{display:block;width:100%;height:100%;object-fit:cover}
+.import-thumbs .more{display:grid;place-items:center;color:var(--accent-ink);background:var(--accent-soft);font-size:12px;font-weight:600}
+.folder-list{display:grid;gap:2px;margin:0;padding:6px;list-style:none;border:1px solid var(--line-strong);border-radius:var(--radius-control)}
+.folder-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--ink)}
+.folder-list li.is-selected{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.folder-list li.is-child{margin-left:18px}
+.import-summary{align-self:start;padding:16px 18px;border-radius:14px;background:var(--record-canvas)}
+.import-summary h3{margin:0 0 10px;font-size:14px}
+.import-summary dl{display:grid;gap:8px;margin:0}
+.import-summary dl div{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.import-summary dt{color:var(--ink-soft)}
+.import-summary dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.import-summary p{margin:12px 0 0;font-size:12px;line-height:1.75;color:var(--ink-soft)}
+.memory-head{display:flex;align-items:center;gap:14px;padding:18px 24px 0}
+.memory-head img{width:48px;height:48px;border-radius:10px;object-fit:cover}
+.memory-head h3{margin:0;font-size:18px}
+.memory-head p{margin:0;font-size:12px;color:var(--ink-soft)}
+.photo-progress{display:flex;gap:24px;margin:14px 0 0;padding:0 24px;list-style:none;border-bottom:1px solid var(--line)}
+.photo-progress li{padding:8px 0;border-bottom:2px solid transparent;margin-bottom:-1px;font-size:14px;color:var(--ink-soft)}
+.photo-progress li.current{border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.photo-progress li.done{color:var(--ink)}
+.stage{padding:20px 24px}
+.stage-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.stage-heading h3{margin:0 0 4px;font-size:16px}
+.stage-heading p{margin:0;font-size:13px;line-height:1.7;color:var(--ink-soft)}
+.face-stage{position:relative;max-width:440px;margin:0 auto;border-radius:12px;overflow:hidden;background:var(--surface-tinted)}
+.face-stage img{display:block;width:100%}
+.face-box{position:absolute;border:2px solid var(--accent);border-radius:8px;box-shadow:0 0 0 1px rgb(255 255 255 / 55%)}
+.face-box.is-pending{border-style:dashed}
+.face-label{position:absolute;left:-2px;top:calc(100% + 4px);padding:2px 8px;border:0;border-radius:6px;background:var(--accent);color:var(--paper);font-size:12px;white-space:nowrap}
+.is-pending .face-label{background:var(--paper);color:var(--accent-ink)}
+.stage-help{margin:12px 0 0;font-size:12px;line-height:1.7;color:var(--ink-soft);text-align:center}
+.story-gallery{display:flex;gap:6px;overflow:auto;padding-bottom:4px;margin-bottom:16px}
+.story-gallery img{flex:none;width:64px;height:64px;border-radius:8px;object-fit:cover}
+.assist{display:grid;gap:10px;padding:14px 16px;border-radius:14px;background:var(--record-canvas);margin:14px 0 16px}
+.assist-row{display:flex;gap:10px;align-items:center}
+.assist-row input{flex:1;min-width:0;height:38px;padding:6px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);font-size:14px}
+.assist-row input::placeholder{color:var(--ink-soft)}
+.assist-context{display:flex;flex-wrap:wrap;gap:6px}
+.story-label{display:block;margin-bottom:6px;font-size:13px;color:var(--ink-soft)}
+.story-text{display:block;width:100%;min-height:150px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);font-size:15px;line-height:1.85;resize:vertical}
+.flow-dialog .photo-help{margin:10px 0 0;font-size:12px;color:var(--ink-soft)}
+.flow-dialog footer .foot-left{margin-right:auto}
+.flow-dialog footer .foot-note{margin-right:auto;font-size:12px;color:var(--ink-soft)}
+.flow-dialog footer .text-action{border:0;background:transparent;color:var(--ink-soft);padding:8px 10px}
+@media (max-width:640px){.import-grid{grid-template-columns:1fr}}
+
 /* ───────── Design notes (review material only) ───────── */
 .notes{max-width:900px;margin:0 auto;padding:0 24px 80px;display:grid;gap:22px}
 .notes > header h2{margin:0 0 6px;font-size:22px;letter-spacing:-.02em}
@@ -275,22 +346,31 @@ textarea::placeholder{color:var(--ink-soft)}
 <div class="review-bar" role="region" aria-label="设计稿状态预览">
   <div class="review-bar-inner">
     <b>状态预览</b>
+    <div class="review-group" data-group="platform"><span>平台</span>
+      <button type="button" data-scenario="platform-mac">macOS</button>
+      <button type="button" data-scenario="platform-other">非 macOS</button>
+    </div>
     <div class="review-group" data-group="write"><span>说或写</span>
       <button type="button" data-scenario="write-empty">空白</button>
       <button type="button" data-scenario="write-recording">录音中</button>
-      <button type="button" data-scenario="write-attached">已添加材料</button>
     </div>
     <div class="review-group" data-group="photo"><span>找照片</span>
       <button type="button" data-scenario="photo-ask">首次授权</button>
       <button type="button" data-scenario="photo-denied">授权被拒</button>
-      <button type="button" data-scenario="photo-unavailable">非 macOS</button>
       <button type="button" data-scenario="photo-filters">筛选</button>
       <button type="button" data-scenario="photo-loading">搜索中</button>
       <button type="button" data-scenario="photo-results">结果与选择</button>
+      <button type="button" data-scenario="photo-limit">达到 50 张</button>
       <button type="button" data-scenario="photo-empty">无结果</button>
     </div>
+    <div class="review-group" data-group="flow"><span>带去整理</span>
+      <button type="button" data-scenario="flow-confirm">确认位置</button>
+      <button type="button" data-scenario="flow-people">认人（圈选）</button>
+      <button type="button" data-scenario="flow-story">讲故事</button>
+      <button type="button" data-scenario="flow-done">已生成记录</button>
+    </div>
     <div class="review-group" data-group="future"><span>未来</span>
-      <button type="button" data-scenario="future">更多来源（看日历）</button>
+      <button type="button" data-scenario="future">更多来源���看日历）</button>
     </div>
   </div>
 </div>
@@ -348,12 +428,6 @@ textarea::placeholder{color:var(--ink-soft)}
 
         <!-- 来源 2 · 找照片 -->
         <div class="capture-panel" id="panel-photo" role="tabpanel" aria-labelledby="tab-photo" hidden>
-          <div id="photo-unavailable" hidden>
-            <div class="access-block">
-              <h3>请在 macOS 桌面应用中连接系统照片库</h3>
-              <p>网页版读取不到系统照片库。其他照片仍可从“生活记录”导入。</p>
-            </div>
-          </div>
           <div id="photo-ask" hidden>
             <div class="access-block">
               <h3>允许访问照片库</h3>
@@ -410,7 +484,8 @@ textarea::placeholder{color:var(--ink-soft)}
             <div class="photo-results" id="photo-results" hidden>
               <div id="progress" class="progress-row" role="status" hidden><span>正在读取照片信息，大图库或地点查询可能需要一些时间。</span><button type="button" class="desktop-secondary" id="cancel-search">取消查找</button></div>
               <div id="result-body" hidden>
-                <div class="result-head"><span><strong id="result-count">找到 128 张照片</strong> <span id="result-summary"></span></span><span id="result-hint">点选照片即可加入记录 · 放大查看请点右下角</span></div>
+                <div class="result-head"><span><strong id="result-count">找到 128 张照片</strong> <span id="result-summary"></span></span><span id="result-hint">点选照片即可选中，最多 50 张 · 放大查看请点右下角</span></div>
+                <p class="limit-note" id="limit-note" role="status" hidden>一条记录最多选 50 张。先取消几张，再继续选。</p>
                 <div class="result-scroll"><ul class="photo-grid" id="photo-grid"></ul></div>
                 <div class="more-row"><button type="button" class="desktop-secondary" id="more-btn">显示更多照片</button></div>
               </div>
@@ -421,11 +496,11 @@ textarea::placeholder{color:var(--ink-soft)}
 
             <div class="selection-bar" id="selection-bar" hidden>
               <div class="selection-stack" id="selection-stack" aria-hidden="true"></div>
-              <div class="selection-copy"><strong id="selection-title">已选 0 张</strong><span>选中后才会加入这条记录，照片原文件不会被改动</span></div>
+              <div class="selection-copy"><strong class="selection-count" id="selection-title">已选 0 / 50 张</strong><span id="selection-sub">下一步圈选人物、让 AI 串成故事，照片原文件不会被改动</span></div>
               <button type="button" class="link-button" id="selection-clear">清空</button>
-              <button type="button" class="desktop-primary" id="selection-add"><i data-icon="plus" data-size="17"></i>加入这条记录</button>
+              <button type="button" class="desktop-primary" id="selection-add"><i data-icon="spark" data-size="17"></i>整理成照片记忆</button>
             </div>
-            <p class="source-note">仅浏览系统照片库，不改动照片，不发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需点击下载预览。</p>
+            <p class="source-note">仅浏览系统照片库，不改动照片；点“AI 帮你写”之前不会发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需先点击下载预览才能选。</p>
           </div>
         </div>
 
@@ -456,6 +531,13 @@ textarea::placeholder{color:var(--ink-soft)}
   <footer><button type="button" class="desktop-secondary" id="preview-close-2">关闭</button><button type="button" class="desktop-primary" id="preview-select">选择这张</button></footer>
 </dialog>
 
+<dialog class="capture-dialog flow-dialog" id="flow-dialog" aria-labelledby="flow-title">
+  <header><div><h2 id="flow-title">带一段记录进来</h2><p id="flow-sub"></p></div><button type="button" id="flow-close" aria-label="关闭"><i data-icon="close" data-size="18"></i></button></header>
+  <div id="flow-stepper-slot"></div>
+  <div class="dialog-body" id="flow-body"></div>
+  <footer id="flow-foot"></footer>
+</dialog>
+
 <!-- ═════════ 设计说明 ═════════ -->
 <div class="notes">
   <header>
@@ -480,7 +562,7 @@ textarea::placeholder{color:var(--ink-soft)}
       <li><strong>标题栏（不变）</strong>：“随手记”+ 状态徽标 + 历史记录。徽标逻辑沿用：新记录 / 待整理 / 补充中；只有材料没有文字时也算“待整理”。</li>
       <li><strong>来源切换器（新增）</strong>：胶囊分段控件，直接复用项目里已有的 <code>.segmented-tabs</code> 视觉（浅蓝轨道 + 白色滑块）。标签用“动词 + 图标”，与现有按钮“说一段 / 找照片”保持同一语气。</li>
       <li><strong>来源面板（按来源切换）</strong>：说或写面板保持现状；找照片面板是本次新增；其它来源以后同样放这里。</li>
-      <li><strong>材料托盘（新增，仅“说或写”面板显示）</strong>：在文本下方，一排缩略图 / 日程小卡，可逐项移除。有材料时输入框提示语变为“这些照片是什么时候的事？写几句，或说一段……”，引导补上故事。</li>
+      <li><strong>材料托盘（仅“说或写”面板显示）</strong>：在文本下方，一排日程小卡等“附在这条记录上”的轻材料，可逐项移除。<em>照片不进托盘</em>：照片有自己的“认人 → 讲故事”流程，选好后直接带去整理（见下一节）。</li>
       <li><strong>动作行（不变）</strong>：说一段 / 暂存 / 整理并保存。</li>
       <li><strong>页脚（不变）</strong>：保存目录 + 状态文字，各来源只更换状态文案（如“选中后才会加入记录”）。</li>
     </ol>
@@ -497,10 +579,23 @@ textarea::placeholder{color:var(--ink-soft)}
       <li>结果区最高 372px，内部滚动；“已选 N 张”条始终吸附在底部，不会被滚走。</li>
       <li>点击缩略图 = 选中 / 取消（左上角圆形勾选）；放大查看用右下角按钮，打开与“历史记录”同款的弹窗，可在大图里直接选择。</li>
       <li>iCloud 照片在格子里显示“下载预览”，不自动联网下载。</li>
-      <li>选中不等于保存。点“加入这条记录”后，照片进入材料托盘，并自动回到“说或写”，用户接着写故事。</li>
+      <li><strong>单条记录最多 50 张。</strong>选择条显示“已选 N / 50 张”；达到 50 张后，未选缩略图变灰且不可再选，选择条提示“已达上限”，大图弹窗里的按钮也变为“已达 50 张上限”。仍想点选时，列表上方会出现一行提醒。</li>
+      <li>选中不等于保存。点“整理成照片记忆”才会把选中的照片带去整理。</li>
     </ul>
-    <h4>授权与降级</h4>
-    <p>首次授权 / 已拒绝 / 非 macOS 三种状态都在同一面板内以说明块呈现，文案沿用现有实现，不再单独占一张卡片。“找照片”标签始终可见，保证发现性；在不支持的环境里点进去会看到原因与替代路径。</p>
+    <h4>授权与平台</h4>
+    <p>“找照片”依赖 macOS 系统照片库，<strong>非 macOS 时整个“找照片”标签直接隐藏</strong>，不出现入口也不出现说明块；只剩一个来源时，来源切换器也一并隐藏，卡片退回现在的“说或写”样貌。macOS 下的首次授权 / 已拒绝两种状态仍在同一面板内以说明块呈现，文案沿用现有实现。（用顶部“平台”可对比两种情况。）</p>
+  </section>
+
+  <section class="note-card">
+    <h3>三·补、照片的去向：选好后接入现有“导入照片”流程</h3>
+    <p>选择条的主按钮改为“整理成照片记忆”，点击后<strong>不离开此刻页面</strong>，直接打开已有的导入与照片记忆流程，复用现有页面，不新做一套：</p>
+    <ol>
+      <li><strong>带一段记录进来</strong>：已选照片以缩略图条展示，填写记忆名称，确认保存到“生活记录 / 照片记忆”，右侧是文件数、大小的核对摘要。系统照片库里的 HEIC 自动导出为 JPG 后导入。点“开始认人物”时才真正导入。</li>
+      <li><strong>认人（圈选）</strong>：与现有一致，实线框是已标注人物，虚线框是待认领，可拖动缩放，也可“圈选漏掉的人”，认出的人在同组照片里同步更新；可跳过。</li>
+      <li><strong>讲故事</strong>：补充线索后点“AI 帮你写”，AI 把全部照片串成一篇故事，用户核对修改后“收进理解”。</li>
+      <li><strong>完成</strong>：弹窗关闭，随手记卡片回到“找照片”并清空已选，卡片底部提示“已生成生活记录「…」”，可直接查看。</li>
+    </ol>
+    <p style="margin-top:10px">导入后中途关闭不会丢失：照片记忆已建立，可从历史记录回来继续。弹窗是为了在设计稿里呈现；落地时也可直接跳转到现有的照片记忆工作区页面。“状态预览 → 带去整理”可逐步查看。</p>
   </section>
 
   <section class="note-card">
@@ -510,10 +605,12 @@ textarea::placeholder{color:var(--ink-soft)}
       <tbody>
         <tr><td>切换来源</td><td>各来源的输入、筛选条件、搜索结果、已选项全部保留，切回来继续；不弹确认。</td></tr>
         <tr><td>录音中</td><td>其他来源标签置灰不可点，避免录音和筛选互相打断；完成或取消录音后恢复。</td></tr>
-        <tr><td>材料进入记录</td><td>只能通过来源面板里明确的“加入这条记录”进入，不会因为搜索或选中就自动写入。</td></tr>
-        <tr><td>移除材料</td><td>托盘里每项右上角 × 移除，仅从这条记录移除，不影响原照片 / 日程。</td></tr>
+        <tr><td>材料进入记录</td><td>日程等轻材料通过面板里明确的“加入这条记录”进入；照片通过“整理成照片记忆”进入导入流程。搜索或选中本身不会自动写入任何东西。</td></tr>
+        <tr><td>照片数量</td><td>单条记录最多 50 张，超出前拦截，不允许“先选再删”。</td></tr>
+        <tr><td>非 macOS</td><td>“找照片”标签隐藏；只剩“说或写”时来源切换器也隐藏。</td></tr>
+        <tr><td>移除材料</td><td>托盘里每项右上角 × 移除，仅从这条记录移除，不影响原日程；照片在选择条里点“清空”或取消勾选。</td></tr>
         <tr><td>保存</td><td>仍需有文字才能“整理并保存”（保持现有产品原则：记录以用户自己的话为主）。</td></tr>
-        <tr><td>键盘</td><td>来源切换器支持 ← → 切换；缩略图是可聚焦按钮，空格 / 回车选中；搜索框回车触发搜索。</td></tr>
+        <tr><td>键盘</td><td>来源切换器支持 ← → 切换；缩略图是可聚���按钮，空格 / 回车选中；搜索框回车触发搜索。</td></tr>
         <tr><td>动效</td><td>仅切换器滑块与展开箭头有 200ms 过渡；尊重“减少动态效果”设置。</td></tr>
       </tbody>
     </table>
@@ -543,9 +640,8 @@ textarea::placeholder{color:var(--ink-soft)}
 
   <section class="note-card">
     <h3>七、需要你拍板的问题</h3>
-    <div class="question"><b>1. 选中的照片最终去向</b><span>原型按“附在这条随手记里，随原话一起整理”设计。另一种方案是“加入后创建一批照片记忆，进入认人 → 讲故事流程”。两者的界面差别只在“加入这条记录”按钮的文案和托盘的提示，但后端与数据落点不同，请确认。</span></div>
-    <div class="question"><b>2. 单条记录的材料上限</b><span>建议照片 ≤ 9 张，超出时在选择条提示“最多加入 9 张”。</span></div>
-    <div class="question"><b>3. 非 macOS 是否隐藏“找照片”</b><span>原型选择保留标签并说明原因（利于发现）；若希望界面更干净，可只在桌面端显示。</span></div>
+    <div class="question"><b>1. 一键收进理解的命名</b><span>最后一步沿用现有按钮文案“收进理解”，保存后在此刻页提示“已生成生活记录”。若希望与卡片里的“整理并保存”统一措辞，只需改按钮文字。</span></div>
+    <div class="question"><b>2. 照片选择与流程的承载方式</b><span>设计稿用弹窗承载“确认位置 → 认人 → 讲故事”。若现有照片记忆工作区已是独立页面，落地时直接跳转即可，卡片部分的设计不变。</span></div>
   </section>
 </div>
 
@@ -580,7 +676,8 @@ hydrateIcons();
 /* ───────── Data ───────── */
 const $ = id => document.getElementById(id);
 const IMG = n => `assets/photo-${n}.png`;
-const photos = Array.from({length:48},(_,i)=>{
+const MAX_PHOTOS = 50;
+const photos = Array.from({length:128},(_,i)=>{
   const d = new Date(2026,8,28 - i*2 - (i%3));
   return { id:'p'+i, img:(i%8)+1, date:`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`, name:`IMG_${4210+i*7}.HEIC`, loc:i%4!==3, cloud:i===5||i===11||i===17, pos:['center','30% 40%','70% 60%'][i%3] };
 });
@@ -593,18 +690,20 @@ const events = [
 ];
 const sources = [
   { id:'write', label:'说或写', icon:'edit' },
-  { id:'photo', label:'找照片', icon:'image' },
+  { id:'photo', label:'找照片', icon:'image', macOnly:true },
   { id:'calendar', label:'看日历', icon:'calendar', future:true },
 ];
-const state = { mode:'write', future:false, recording:false, paused:false, atts:[], selected:new Map(), eventsSel:new Set(), auth:'ok', shown:24, photoStatus:'idle', radius:30 };
+const state = { platform:'mac', mode:'write', future:false, recording:false, paused:false, atts:[], selected:new Map(), eventsSel:new Set(), auth:'ok', shown:24, photoStatus:'idle', radius:30 };
 let searchTimer, recTimer, waveTimer, seconds = 0;
 
 /* ───────── Source switcher ───────── */
 const tabsEl = $('sources'), indicator = $('sources-indicator');
-function visibleSources(){ return sources.filter(s => !s.future || state.future); }
+function visibleSources(){ return sources.filter(s => (!s.future || state.future) && (!s.macOnly || state.platform==='mac')); }
 function renderTabs(){
   tabsEl.querySelectorAll('.capture-source,.capture-more-wrap').forEach(n=>n.remove());
   const list = visibleSources();
+  tabsEl.style.display = list.length<=1 ? 'none' : '';
+  if(list.length<=1 && state.mode!=='write'){ state.mode='write'; ['write','photo','calendar'].forEach(id=>{ $('panel-'+id).hidden = id!=='write'; }); }
   list.forEach(s=>{
     const b = document.createElement('button');
     b.type='button'; b.className='capture-source'; b.id='tab-'+s.id; b.setAttribute('role','tab');
@@ -651,7 +750,7 @@ function renderWrite(){
   $('submit-btn').disabled = !hasText || state.recording;
   $('stash-btn').hidden = !hasText;
   $('speak-label').textContent = hasText ? '接着说' : '说一段';
-  draft.placeholder = state.atts.length ? '这些照片是什么时候的事？写几句，或说一段……' : '此刻发生了什么？写下来，或说一段……';
+  draft.placeholder = state.atts.length ? '这些日程背后发生了什么？写几句，或说一段……' : '此刻发生了什么？写下来，或说一段……';
   $('badge').textContent = (hasText || state.atts.length) ? '待整理' : '新记录';
   const tray = $('tray'); tray.hidden = state.atts.length===0;
   if(state.atts.length){
@@ -701,7 +800,7 @@ $('pause-btn').addEventListener('click',()=>{ state.paused=!state.paused; $('pau
 function renderStatus(){
   let t='草稿会自动暂存';
   if(state.recording) t='浅灰文字为临时转写，完成录音后会校准';
-  else if(state.mode==='photo') t=state.auth==='ok' ? '只读取系统照片库，选中后才加入记录' : '照片库不会被改动，也不会发送给 AI';
+  else if(state.mode==='photo') t=state.auth==='ok' ? '只读取系统照片库，选好后进入“认人 → 讲故事”' : '照片库不会被改动，也不会发送给 AI';
   else if(state.mode==='calendar') t='只读取日程标题与时间，选中后才加入记录';
   else if(state.atts.length) t=`已带上 ${state.atts.length} 项材料，保存时一并整理`;
   $('status').textContent=t;
@@ -710,9 +809,9 @@ function renderStatus(){
 /* ───────── Photo panel ───────── */
 const f = { time:$('f-time'), place:$('f-place'), basis:$('f-basis'), from:$('f-from'), through:$('f-through'), album:$('f-album'), type:$('f-type'), fav:$('f-fav') };
 function renderPhotoView(){
-  ['photo-unavailable','photo-ask','photo-denied','photo-search'].forEach(id=>$(id).hidden=true);
-  const map={ok:'photo-search',notDetermined:'photo-ask',denied:'photo-denied',unavailable:'photo-unavailable'};
-  $(map[state.auth==='notDetermined'?'notDetermined':state.auth]).hidden=false;
+  ['photo-ask','photo-denied','photo-search'].forEach(id=>$(id).hidden=true);
+  const map={ok:'photo-search',notDetermined:'photo-ask',denied:'photo-denied'};
+  $(map[state.auth]).hidden=false;
   const hasPlace = f.place.value.trim().length>0;
   $('radius-row').classList.toggle('is-muted',!hasPlace);
   $('radius-row').querySelectorAll('.chip').forEach(c=>{ c.disabled=!hasPlace; c.setAttribute('aria-checked',String(+c.dataset.radius===state.radius)); });
@@ -720,7 +819,10 @@ function renderPhotoView(){
   renderAdvSummary();
   const selected=[...state.selected.values()], n=selected.length;
   $('selection-bar').hidden = !(state.mode==='photo' && state.auth==='ok' && n>0);
-  $('selection-title').textContent=`已选 ${n} 张`;
+  const full = n>=MAX_PHOTOS;
+  $('selection-bar').classList.toggle('is-full',full);
+  $('selection-title').textContent=`已选 ${n} / ${MAX_PHOTOS} 张${full?' · 已达上限':''}`;
+  $('selection-sub').textContent = full ? '一条记录最多 50 张，取消几张后才能继续选' : '下一步圈选人物、让 AI 串成故事，照片原文件不会被改动';
   $('selection-stack').innerHTML = selected.slice(-4).map(p=>`<img src="${IMG(p.img)}" alt="" style="object-position:${p.pos}">`).join('');
 }
 function advItems(){
@@ -792,7 +894,19 @@ function renderResults(){
     return `<li class="photo-tile${sel?' is-selected':''}" data-id="${p.id}"><button type="button" class="photo-tile-main" role="checkbox" aria-checked="${sel}" aria-label="选择照片：${p.name}，${p.date}"><img src="${IMG(p.img)}" alt="" style="object-position:${p.pos}" loading="lazy"><span class="photo-tile-check">${icon('check',14)}</span></button><button type="button" class="photo-tile-zoom" data-zoom="${p.id}" aria-label="放大照片：${p.name}">${icon('zoom',16)}</button>${cap}</li>`;
   }).join('');
   $('more-btn').parentElement.hidden = state.shown>=photos.length;
-  renderPhotoView();
+  syncTiles(); renderPhotoView();
+}
+function syncTiles(){
+  const full=state.selected.size>=MAX_PHOTOS;
+  $('photo-grid').querySelectorAll('.photo-tile[data-id]').forEach(t=>{
+    const sel=state.selected.has(t.dataset.id), capped=full&&!sel;
+    t.classList.toggle('is-selected',sel); t.classList.toggle('is-capped',capped);
+    const m=t.querySelector('.photo-tile-main'); m.setAttribute('aria-checked',String(sel)); m.setAttribute('aria-disabled',String(capped));
+  });
+}
+let limitTimer;
+function flashLimit(){
+  $('limit-note').hidden=false; clearTimeout(limitTimer); limitTimer=setTimeout(()=>{ $('limit-note').hidden=true; },3200);
 }
 $('photo-grid').addEventListener('click',e=>{
   const dl=e.target.closest('[data-download]');
@@ -803,16 +917,91 @@ $('photo-grid').addEventListener('click',e=>{
 });
 function toggleSelect(id){
   const p=photos.find(x=>x.id===id);
-  state.selected.has(id)?state.selected.delete(id):state.selected.set(id,p);
-  const tile=$('photo-grid').querySelector(`[data-id="${id}"]`);
-  if(tile){ tile.classList.toggle('is-selected',state.selected.has(id)); tile.querySelector('.photo-tile-main').setAttribute('aria-checked',String(state.selected.has(id))); }
-  renderPhotoView(); renderTabs();
+  if(state.selected.has(id)) state.selected.delete(id);
+  else{
+    if(state.selected.size>=MAX_PHOTOS){ flashLimit(); return; }
+    state.selected.set(id,p);
+  }
+  $('limit-note').hidden=true;
+  syncTiles(); renderPhotoView(); renderTabs();
 }
-$('selection-clear').addEventListener('click',()=>{ state.selected.clear(); renderResults(); renderTabs(); });
-$('selection-add').addEventListener('click',()=>{
-  state.selected.forEach(p=>{ if(!state.atts.some(a=>a.id===p.id)) state.atts.push({type:'photo',id:p.id,img:p.img,name:p.name,date:p.date,pos:p.pos}); });
-  state.selected.clear(); renderResults(); setMode('write'); renderWrite(); renderStatus(); draft.focus();
-});
+$('selection-clear').addEventListener('click',()=>{ state.selected.clear(); $('limit-note').hidden=true; renderResults(); renderTabs(); });
+$('selection-add').addEventListener('click',()=>openFlow('confirm'));
+
+/* ───────── 带去整理：照片记忆流程（沿用“带一段记录进来”弹窗 + 照片记忆工作区） ───────── */
+const flow = { stage:'confirm', title:'', story:'', generating:false, named:false };
+const flowDlg = $('flow-dialog');
+const selectedList = () => [...state.selected.values()];
+const storyDraft = '9 月底的周末，我们一家去了富阳。早上雾还没散，湖边很安静，爸妈第一次爬那座山，走得比我想象中稳。中午在山脚的小店吃了一桌热腾腾的饭，妈妈笑着说，这是今年吃得最香的一顿。';
+function flowStepper(active){
+  const items=[['照片',`${state.selected.size} 张`],['确认位置','']];
+  return `<ol class="flow-stepper" aria-label="导入步骤"><li class="done"><span>${icon('check',12)}</span>照片 · ${state.selected.size} 张</li><i class="line"></i><li class="${active===2?'active':''}"><span>2</span>确认位置</li></ol>`;
+}
+function flowProgress(step){
+  return `<nav aria-label="照片记忆步骤"><ol class="photo-progress"><li class="${step===2?'current':'done'}">1 认人</li><li class="${step===3?'current':''}">2 讲故事</li></ol></nav>`;
+}
+function memoryHead(){
+  const list=selectedList(), cover=list[0]||photos[0];
+  return `<div class="memory-head"><img src="${IMG(cover.img)}" alt=""><div><h3>${esc(flow.title||'杭州富阳 · 周末')}</h3><p>${list.length} 张照片 · 原图保留在本地</p></div></div>`;
+}
+function openFlow(stage){
+  if(!state.selected.size) [0,1,3,4].forEach(i=>state.selected.set(photos[i].id,photos[i]));
+  flow.stage=stage; renderFlow(); if(!flowDlg.open) flowDlg.showModal();
+}
+function renderFlow(){
+  const list=selectedList(), n=list.length, st=flow.stage, body=$('flow-body'), foot=$('flow-foot');
+  $('flow-stepper-slot').innerHTML = st==='confirm' ? flowStepper(2) : '';
+  if(st==='confirm'){
+    $('flow-title').textContent='带一段记录进来'; $('flow-sub').textContent='确认这些照片要保留到哪里。';
+    body.innerHTML = `<div class="import-grid">
+      <div class="import-fields">
+        <div><h4>已选照片</h4><ul class="import-thumbs">${list.slice(0,11).map(p=>`<li><img src="${IMG(p.img)}" alt="" style="object-position:${p.pos}"></li>`).join('')}${n>11?`<li class="more">+${n-11}</li>`:''}</ul><p class="field-help" style="margin-top:8px">要增减照片，请返回“找照片”调整选择，最多 ${MAX_PHOTOS} 张。</p></div>
+        <label class="source-field"><span>这段记忆叫什么</span><input type="text" id="flow-name" value="${esc(flow.title)}" placeholder="例如：杭州富阳 · 周末"></label>
+        <div><h4>保存位置</h4><ul class="folder-list"><li>${icon('folder',16)}生活记录</li><li class="is-child is-selected">${icon('folder',16)}照片记忆</li><li class="is-child">${icon('plus',16)}新建文件夹</li></ul></div>
+      </div>
+      <aside class="import-summary"><h3>确认这批材料</h3><dl><div><dt>类型</dt><dd>照片</dd></div><div><dt>文件数</dt><dd>${n} 个</dd></div><div><dt>大小</dt><dd>${(n*3.2).toFixed(1)} MB</dd></div><div><dt>保存到</dt><dd>生活记录 / 照片记忆</dd></div></dl><p>系统照片库里的 HEIC 会自动导出为 JPG 后导入，无需手动转换。照片保留在本地，点“AI 帮你写”前不会发送给 AI。</p></aside>
+    </div>`;
+    foot.innerHTML = `<button type="button" class="desktop-secondary foot-left" id="flow-back">返回选照片</button><button type="button" class="desktop-primary" id="flow-next">开始认人物${icon('arrow',14)}</button>`;
+    $('flow-back').onclick=()=>flowDlg.close();
+    $('flow-next').onclick=()=>{ flow.title=$('flow-name').value.trim()||'杭州富阳 · 周末'; flow.stage='people'; renderFlow(); };
+  }
+  if(st==='people'){
+    $('flow-title').textContent='照片记忆'; $('flow-sub').textContent='照���已导入，可以随时回来继续。';
+    body.innerHTML = `${memoryHead()}${flowProgress(2)}<div class="stage">
+      <header class="stage-heading"><div><h3>照片里有谁？</h3><p>点人物框后直接拖动或缩放；点框上的姓名标签再填写人物。认出一个人，同组照片会一起更新。</p></div><button type="button" class="desktop-secondary">${icon('plus',14)}圈选漏掉的人</button></header>
+      <div class="face-stage"><img src="${IMG(4)}" alt="两位正在笑的朋友围坐在生日蛋糕旁">
+        <div class="face-box" style="left:36%;top:16%;width:15%;height:20%"><button type="button" class="face-label">小林</button></div>
+        <div class="face-box is-pending" style="left:64%;top:14%;width:15%;height:21%"><button type="button" class="face-label">填写人物</button></div>
+      </div>
+      <p class="stage-help">实线是已标注人物，虚线是待认领人物。点框调整范围，点姓名标签填写人物。</p></div>`;
+    foot.innerHTML = `<button type="button" class="text-action" disabled>上一步</button><span class="foot-note">${n} 张照片 · 不想认人也可以直接跳过</span><button type="button" class="text-action" id="flow-skip">跳过这步</button><button type="button" class="desktop-primary" id="flow-next">下一步${icon('arrow',14)}</button>`;
+    $('flow-skip').onclick=$('flow-next').onclick=()=>{ flow.stage='story'; renderFlow(); };
+  }
+  if(st==='story'){
+    $('flow-title').textContent='照片记忆'; $('flow-sub').textContent='AI 起草的内容请核对后再保存。';
+    const hasStory=flow.story.trim().length>0;
+    body.innerHTML = `${memoryHead()}${flowProgress(3)}<div class="stage">
+      <div class="story-gallery" role="group" aria-label="一起讲故事的照片">${list.slice(0,14).map(p=>`<img src="${IMG(p.img)}" alt="" style="object-position:${p.pos}">`).join('')}${n>14?`<span class="chip" style="align-self:center">+${n-14}</span>`:''}</div>
+      <header class="stage-heading" style="margin-bottom:0"><div><h3>这些照片里的故事 <span class="chip" style="margin-left:6px;font-weight:400">${n} 张照片 · 一篇故事</span></h3><p id="story-hint" aria-live="polite">${flow.generating?'AI 正在把这些照片串成一个故事…':hasStory?'故事已经写下来了，随时可以接着改。':'把这些照片里的经历，一起写成一个故事。'}</p></div></header>
+      <div class="assist"><div class="assist-row"><input type="text" placeholder="补充一点照片背后的线索，比如和谁一起、那天发生了什么特别的事……" ${flow.generating?'disabled':''}><button type="button" class="desktop-primary" id="ai-write" ${flow.generating?'disabled':''}>${icon('spark',16)}${flow.generating?'正在写…':'AI 帮你写'}</button></div><div class="assist-context"><span class="chip" style="cursor:default">已认出：小林</span><span class="chip" style="cursor:default">${n} 张照片</span></div></div>
+      <label class="story-label" for="flow-story">故事</label><textarea class="story-text" id="flow-story" placeholder="这些照片串起了我的哪段经历？当时和谁在一起，发生了什么？" ${flow.generating?'disabled':''}>${esc(flow.story)}</textarea>
+      ${hasStory?'<p class="photo-help">收进理解前请核对并修改，尤其是 AI 起草的内容。</p>':''}</div>`;
+    foot.innerHTML = `<button type="button" class="text-action" id="flow-prev">上一步</button><span class="foot-note"></span><button type="button" class="desktop-primary" id="flow-collect" ${hasStory&&!flow.generating?'':'disabled'}>收进理解${icon('arrow',14)}</button>`;
+    $('flow-prev').onclick=()=>{ flow.story=$('flow-story').value; flow.stage='people'; renderFlow(); };
+    $('flow-story').addEventListener('input',e=>{ flow.story=e.target.value; $('flow-collect').disabled=!flow.story.trim(); });
+    $('ai-write').onclick=()=>{ flow.generating=true; renderFlow(); setTimeout(()=>{ flow.generating=false; flow.story=storyDraft; if(flowDlg.open) renderFlow(); },1400); };
+    $('flow-collect').onclick=finishFlow;
+  }
+  $('flow-foot').hidden=false;
+}
+function finishFlow(){
+  const n=state.selected.size;
+  flowDlg.close(); state.selected.clear(); flow.story=''; flow.stage='confirm';
+  renderResults(); renderTabs();
+  $('saved').innerHTML = `已生成生活记录「${esc(flow.title||'杭州富阳 · 周末')}」，${n} 张照片已收进理解。<a href="#" onclick="return false">查看记录 ${icon('arrow',14)}</a>`;
+  $('saved').hidden=false;
+}
+$('flow-close').addEventListener('click',()=>flowDlg.close());
 
 /* preview dialog */
 let previewId=null;
@@ -822,7 +1011,10 @@ function openPreview(id){
   $('preview-title').textContent=p.date; $('preview-meta').textContent=`${p.name}${p.loc?' · 有位置信息':''}`;
   $('preview-img').src=IMG(p.img); $('preview-img').alt=p.name; syncPreviewBtn(); dlg.showModal();
 }
-const syncPreviewBtn=()=>{ $('preview-select').textContent = state.selected.has(previewId)?'取消选择':'选择这张'; };
+const syncPreviewBtn=()=>{
+  const sel=state.selected.has(previewId), capped=!sel&&state.selected.size>=MAX_PHOTOS;
+  $('preview-select').textContent = sel?'取消选择':capped?'已达 50 张上限':'选择这张'; $('preview-select').disabled=capped;
+};
 $('preview-select').addEventListener('click',()=>{ toggleSelect(previewId); syncPreviewBtn(); });
 ['preview-close','preview-close-2'].forEach(id=>$(id).addEventListener('click',()=>dlg.close()));
 
@@ -844,19 +1036,26 @@ $('event-add').addEventListener('click',()=>{
 /* ───────── Scenarios ───────── */
 function resetAll(){
   clearTimeout(searchTimer); if(state.recording){ clearInterval(recTimer); clearInterval(waveTimer); state.recording=false; $('listening').hidden=true; $('speak-btn').hidden=false; draft.hidden=false; $('live-editor').hidden=true; }
-  Object.assign(state,{mode:'write',future:false,paused:false,atts:[],auth:'ok',shown:24,photoStatus:'idle',radius:30}); state.selected.clear(); state.eventsSel.clear();
+  Object.assign(state,{platform:'mac',mode:'write',future:false,paused:false,atts:[],auth:'ok',shown:24,photoStatus:'idle',radius:30}); state.selected.clear(); state.eventsSel.clear();
+  if(flowDlg.open) flowDlg.close();
+  Object.assign(flow,{stage:'confirm',title:'',story:'',generating:false}); $('limit-note').hidden=true;
   draft.value=''; $('saved').hidden=true; clearFilters(); $('adv-toggle').setAttribute('aria-expanded','false'); $('adv-panel').hidden=true;
   $('event-list').querySelectorAll('input').forEach(i=>i.checked=false); $('event-bar').hidden=true;
   renderResults();
 }
 const pick = ids => ids.map(i=>{ const p=photos[i]; return p; });
 const scenarios = {
+  'platform-mac'(){ resetAll(); setMode('write'); renderTabs(); },
+  'platform-other'(){ resetAll(); state.platform='other'; setMode('write'); renderTabs(); },
   'write-empty'(){ resetAll(); setMode('write'); },
   'write-recording'(){ resetAll(); draft.value='下午在公司楼下散了会儿步。'; renderWrite(); setMode('write'); startRec(); },
-  'write-attached'(){ resetAll(); draft.value='周末和家人去了富阳，爸妈第一次爬那座山，走得比我想象中稳。'; pick([0,1,2,4]).forEach(p=>state.atts.push({type:'photo',id:p.id,img:p.img,name:p.name,date:p.date,pos:p.pos})); setMode('write'); renderWrite(); renderStatus(); },
   'photo-ask'(){ resetAll(); state.auth='notDetermined'; setMode('photo'); },
   'photo-denied'(){ resetAll(); state.auth='denied'; setMode('photo'); },
-  'photo-unavailable'(){ resetAll(); state.auth='unavailable'; setMode('photo'); },
+  'photo-limit'(){ resetAll(); f.time.value='去年'; f.place.value='云南'; setMode('photo'); state.photoStatus='results'; state.shown=60; photos.filter(p=>!p.cloud).slice(0,MAX_PHOTOS).forEach(p=>state.selected.set(p.id,p)); renderResults(); renderTabs(); },
+  'flow-confirm'(){ resetAll(); setMode('photo'); state.photoStatus='results'; [0,1,3,4,5,6,8,9,10,12,13,15].forEach(i=>state.selected.set(photos[i].id,photos[i])); renderResults(); renderTabs(); openFlow('confirm'); },
+  'flow-people'(){ scenarios['flow-confirm'](); flow.title='杭州富阳 · 周末'; flow.stage='people'; renderFlow(); },
+  'flow-story'(){ scenarios['flow-confirm'](); flow.title='杭州富阳 · 周末'; flow.stage='story'; renderFlow(); },
+  'flow-done'(){ scenarios['flow-confirm'](); flow.title='杭州富阳 · 周末'; flow.story=storyDraft; finishFlow(); },
   'photo-filters'(){ resetAll(); f.time.value='最近30天'; f.place.value='浙江杭州富阳'; f.album.value='杭州之行'; f.fav.checked=true; $('adv-toggle').setAttribute('aria-expanded','true'); $('adv-panel').hidden=false; setMode('photo'); },
   'photo-loading'(){ resetAll(); f.time.value='去年'; f.place.value='杭州'; setMode('photo'); state.photoStatus='loading'; renderResults(); clearTimeout(searchTimer); },
   'photo-results'(){ resetAll(); f.time.value='最近30天'; f.place.value='浙江杭州富阳'; f.type.value='all'; f.album.value='杭州之行'; setMode('photo'); state.photoStatus='results'; [0,1,3].forEach(i=>state.selected.set(photos[i].id,photos[i])); renderResults(); renderTabs(); },
