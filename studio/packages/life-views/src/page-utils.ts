@@ -1,4 +1,4 @@
-import type { WikiLink, WikiPage, WikiPageSummary } from "@the-way-here/shared";
+import type { WikiLink, WikiPageSummary } from "@the-way-here/shared";
 import { type WikiIndex } from "@the-way-here/wiki-core";
 
 function normalizeDate(value?: string): string {
@@ -18,8 +18,8 @@ export function intrinsicDate(page: WikiPageSummary): string {
   return normalizeDate(page.end) || normalizeDate(page.start) || normalizeDate(page.title);
 }
 
-export function resolveLink(index: WikiIndex, link: WikiLink): WikiPage | undefined {
-  return index.get(link.resolvedId || link.target);
+export function resolveLink(index: WikiIndex, link: WikiLink): WikiPageSummary | undefined {
+  return index.getSummary(link.resolvedId || link.target);
 }
 
 export function uniquePages(pages: Array<WikiPageSummary | undefined>): WikiPageSummary[] {

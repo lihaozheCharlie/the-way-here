@@ -159,6 +159,12 @@ export class WikiIndex {
       .sort((a, b) => a.title.localeCompare(b.title, "zh-CN"));
   }
 
+  getSummary(id: string): WikiPageSummary | undefined {
+    const normalized = withoutExtension(toPosix(id).replace(/^\/+/, ""));
+    const page = this.pages.get(normalized);
+    return page ? this.summary(page) : undefined;
+  }
+
   get(id: string): WikiPage | undefined {
     const normalized = withoutExtension(toPosix(id).replace(/^\/+/, ""));
     const page = this.pages.get(normalized);

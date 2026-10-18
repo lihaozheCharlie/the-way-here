@@ -74,8 +74,7 @@ export function buildQuotes(index: WikiIndex): QuotesView | undefined {
 }
 
 export function buildLetters(index: WikiIndex): LettersView {
-  const pages = index
-    .list({ category: "letters" })
+  const pages = index.list({ category: "letters" })
     .filter((page) => !page.title.includes("总览"))
     .sort((a, b) => semanticDate(b).localeCompare(semanticDate(a)));
   const themeCategories: PageCategory[] = ["personal-lines", "cycles", "systems", "mental-models", "life-stages", "relationship-roles", "entities"];

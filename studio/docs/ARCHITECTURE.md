@@ -26,6 +26,12 @@ Finder 显示与移到废纸篓由服务端调用 macOS `open -R` / Finder Apple
 
 匿名验证及明确未覆盖的原生行为见 [source-tree-and-outline-checklist.md](source-tree-and-outline-checklist.md)。
 
+## 视图摘要与正文边界
+
+`WikiIndex.getSummary(id)` 与 `list()` 使用同一字段白名单，只返回 `WikiPageSummary`；`get(id)` 供文档阅读和正文解析使用。`life-views` 的关联链接统一经 `resolveLink` 读取摘要，人生阶段与代表事件同样读取摘要，避免 TypeScript 结构兼容把 `WikiPage` 全文带入摘要字段。此刻、状态详情、人生轨迹、人与世界和回信列表的关联页面不包含正文、章节、属性或链接集合；文档详情、思维模型、金句与结构卡片按其契约保留所需正文。
+
+匿名长文回归覆盖上述视图的关联关系和响应体积，防止同一主题的全文随多个引用重复传输，触发桌面端响应大小上限。
+
 ## macOS 桌面架构（2026-09）
 
 ```text

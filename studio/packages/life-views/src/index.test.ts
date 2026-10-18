@@ -63,7 +63,7 @@ describe("personal growth views", () => {
       [overview.id]: { ...overview, markdown: "# 总览\n\n## 阶段地图\n\n| 阶段 | 时间 | 核心问题 | 入口 |\n|---|---|---|---|\n| [[wiki/02/学生|学生]] | 2013-2017 | 学习 | |\n| [[wiki/02/工作|工作]] | 2017 至今 | 职业 | |\n| [[wiki/02/家庭|家庭]] | 2024 至今 | 家庭 | |", outgoingLinks: [] },
       [student.id]: { ...student, outgoingLinks: [] }, [work.id]: { ...work, outgoingLinks: [] }, [family.id]: { ...family, outgoingLinks: [] },
     };
-    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), get: (id: string) => pages[id] } as any;
+    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const view = buildLifeMap(index);
     expect(view.stages.map((stage) => stage.page.title)).toEqual(["学生阶段", "工作阶段", "家庭阶段"]);
     expect(view.stages.map((stage) => stage.lane)).toEqual([0, 0, 1]);
@@ -89,7 +89,7 @@ describe("personal growth views", () => {
       [familyEvent.id]: { ...familyEvent, outgoingLinks: [{ target: family.id, resolvedId: family.id }] },
       [recentEvent.id]: { ...recentEvent, outgoingLinks: [] },
     };
-    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), get: (id: string) => pages[id] } as any;
+    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const view = buildLifeMap(index);
     const assigned = view.stages.flatMap((stage) => stage.relatedEvents.map((event) => event.id));
     expect(assigned).toHaveLength(view.events.length);
@@ -105,7 +105,7 @@ describe("personal growth views", () => {
     const pages: Record<string, any> = {
       [roles.id]: { ...roles, renderedMarkdown: "# 支持者\n\n## 定义\n内容" }, [colleague.id]: colleague, [family.id]: family,
     };
-    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), get: (id: string) => pages[id] } as any;
+    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const view = buildRelationships(index);
     expect(view.totalPeople).toBe(2);
     expect(view.groups.map((group) => group.name).sort()).toEqual(["亲人", "工作"].sort());
@@ -118,7 +118,7 @@ describe("personal growth views", () => {
       [letter.id]: { ...letter, properties: { evidence_sources: ["sources/2026-08-18.md"] }, outgoingLinks: [{ target: theme.id, resolvedId: theme.id }] },
       [theme.id]: { ...theme, outgoingLinks: [] },
     };
-    const index = { list: ({ category }: any) => Object.values(pages).filter((page: any) => page.category === category), get: (id: string) => pages[id] } as any;
+    const index = { list: ({ category }: any = {}) => Object.values(pages).filter((page: any) => !category || page.category === category), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const view = buildLetters(index);
     expect(semanticDate(letter as any)).toBe("2026-08-18");
     expect(view.letters[0]).toMatchObject({ letterDate: "2026-08-18", evidenceFrom: "2026-06-28", evidenceTo: "2026-08-18", evidenceSources: ["sources/2026-08-18.md"] });
@@ -132,7 +132,7 @@ describe("personal growth views", () => {
       [state.id]: { ...state, sections: [{ level: 2, heading: "当前追踪面板", body: "| 追踪项 | 类型 | 当前判断 | 观察信号 | 关联页面 |\n|---|---|---|---|---|\n| 焦虑 | 需要关注 | 2026-05-01 有反复 | 继续观察 | [[wiki/01/主线]] |\n| 注意力 | 需要关注 | 2026-08-18 有新变化 | 记录中断 | [[wiki/01/主线]] |" }], outgoingLinks: [] },
       [theme.id]: { ...theme, outgoingLinks: [], incomingLinks: [] },
     };
-    const index = { list: ({ category, sources }: any) => Object.values(pages).filter((page: any) => (!category || page.category === category) && (sources !== false || !page.isSource)), get: (id: string) => pages[id] } as any;
+    const index = { list: ({ category, sources }: any) => Object.values(pages).filter((page: any) => (!category || page.category === category) && (sources !== false || !page.isSource)), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const today = buildToday(index);
     expect(today.focusCandidates[0]!.name).toBe("注意力");
     expect(today.guidingQuestion).toContain("2026-08-18");
@@ -144,7 +144,7 @@ describe("personal growth views", () => {
     const pages: Record<string, any> = {
       [state.id]: { ...state, sections: [{ level: 2, heading: "当前追踪面板", body: "| 追踪项 | 类型 | 当前判断 | 观察信号 | 关联页面 |\n|---|---|---|---|---|\n| 启动阻力 | 需要关注 | 容易把计划变成考试 | 散步后能开始行动 | |" }], outgoingLinks: [] },
     };
-    const index = { list: ({ category, sources }: any) => Object.values(pages).filter((page: any) => (!category || page.category === category) && (sources !== false || !page.isSource)), get: (id: string) => pages[id] } as any;
+    const index = { list: ({ category, sources }: any) => Object.values(pages).filter((page: any) => (!category || page.category === category) && (sources !== false || !page.isSource)), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const today = buildToday(index);
     expect(today.focusCandidates[0]!.reason).toBe("状态面板标记为需要关注，并连接 0 个知识页面");
     expect(today.focusCandidates[0]!.reason).not.toContain("undefined");
@@ -161,7 +161,7 @@ describe("personal growth views", () => {
       c: { ...c, outgoingLinks: [] },
       d: { ...d, outgoingLinks: [] },
     };
-    const index = { list: () => Object.values(pages), get: (id: string) => pages[id] } as any;
+    const index = { list: () => Object.values(pages), getSummary: (id: string) => pages[id], get: (id: string) => pages[id] } as any;
     const graph = buildGraph(index, 20, "a");
     expect(graph.nodes.map((node) => node.id).sort()).toEqual(["a", "b", "c"]);
     expect(graph.nodes.find((node) => node.id === "c")?.distance).toBe(2);

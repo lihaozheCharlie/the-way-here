@@ -57,7 +57,7 @@ export function buildLifeMap(index: WikiIndex): LifeMapView {
     if (cells.length < 3) continue;
     const stageLink = extractWikiLinks(cells[0] || "")[0];
     if (!stageLink) continue;
-    const page = index.get(stageLink.target);
+    const page = index.getSummary(stageLink.target);
     if (!page) continue;
     const range = stripMarkdown(cells[1] || "待补充");
     const interval = yearRange(range);
@@ -68,7 +68,7 @@ export function buildLifeMap(index: WikiIndex): LifeMapView {
       laneEnds[lane] = interval.end;
     }
     const representativeLink = extractWikiLinks(cells[3] || "")[0];
-    const representative = representativeLink ? index.get(representativeLink.target) : undefined;
+    const representative = representativeLink ? index.getSummary(representativeLink.target) : undefined;
     stages.push({
       page,
       range,

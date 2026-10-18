@@ -73,6 +73,10 @@ describe("wiki parser", () => {
     await index.rebuild();
 
     expect(index.list({ sources: true })[0]).toMatchObject({ importChannel: "claude" });
+    expect(index.getSummary("/sources/conversation.md")).toEqual(index.list({ sources: true })[0]);
+    expect(index.getSummary("sources/missing")).toBeUndefined();
+    expect(index.getSummary("sources/conversation")).not.toHaveProperty("markdown");
+    expect(index.get("sources/conversation")?.markdown).toContain("Claude conversation");
   });
 
   test("uses the source filename as its title instead of a legacy Markdown heading", async () => {
