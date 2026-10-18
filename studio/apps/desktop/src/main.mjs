@@ -115,6 +115,7 @@ function registerIPC() {
   handle('desktop:connect-codex', connectCodex);
   handle('desktop:privacy', async () => { openWindow('/privacy', 'reader'); });
   handle('desktop:photos-status', sender => photosFor(sender).status(), true);
+  handle('desktop:photos-filters', sender => photosFor(sender).filters(), true);
   handle('desktop:photos-authorize', sender => photosFor(sender).authorize(), true);
   handle('desktop:photos-search', (sender, input) => photosFor(sender).search(input), true);
   handle('desktop:photos-image', (sender, input) => photosFor(sender).image(input), true);

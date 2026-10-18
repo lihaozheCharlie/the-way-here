@@ -90,7 +90,7 @@ export {
   type WikiRun,
   type DeletedAgentConversation,
 } from "./runs.js";
-export type { PhotoLibraryAuthorization, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult, LibraryPhoto } from "./photo-library.js";
+export type { PhotoLibraryAuthorization, PhotoLibraryFilters, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult, LibraryPhoto } from "./photo-library.js";
 export type { UnderstandingScore, PredictionView } from "./predictions.js";
 
 export type { LifeDimension, LifeEvidence, LifeScenario, LifePredictionReport, PredictionThoughtKind } from "./predictions.js";

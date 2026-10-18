@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('desktop', {
   connectCodexCLI: () => ipcRenderer.invoke('desktop:connect-codex'),
   openPrivacy: () => ipcRenderer.invoke('desktop:privacy'),
   photoLibraryStatus: () => ipcRenderer.invoke('desktop:photos-status'),
+  photoLibraryFilters: () => ipcRenderer.invoke('desktop:photos-filters'),
   authorizePhotoLibrary: () => ipcRenderer.invoke('desktop:photos-authorize'),
   searchPhotoLibrary: (input) => ipcRenderer.invoke('desktop:photos-search', input),
   photoLibraryImage: (input) => ipcRenderer.invoke('desktop:photos-image', input),

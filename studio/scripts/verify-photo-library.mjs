@@ -41,6 +41,7 @@ try {
     globalThis.photoTest = state;
     const handle = (name, fn) => { ipcMain.removeHandler(name); ipcMain.handle(name, fn); };
     handle('desktop:photos-status', () => state.status);
+    handle('desktop:photos-filters', () => ({ supportsAddedDate: true, albums: [{ id: 'anonymous-album', title: '匿名旅行相册' }] }));
     handle('desktop:photos-authorize', () => state.status = 'authorized');
     handle('desktop:photos-close', () => { state.closes += 1; });
     handle('desktop:photos-settings', () => {});
@@ -49,7 +50,7 @@ try {
       if (state.scenario === 'error') throw new Error('匿名测试：照片库暂时不可用，请重试');
       if (state.scenario === 'slow') return new Promise(resolve => { state.finishSearch = resolve; });
       const photos = state.scenario === 'empty' ? [] : [{ id: input.cursor ? 'next' : 'demo-photo', name: '匿名演示照片.jpg', createdAt: '2024-05-01T04:00:00.000Z', hasLocation: true, width: 1200, height: 800 }, ...(!input.cursor ? [{ id: 'cloud-photo', name: '匿名云端照片.heic', createdAt: '2024-05-02T04:00:00.000Z', hasLocation: false, width: 1200, height: 800 }] : [])];
-      return { photos, summary: '匿名界面验证 · 2024年5月', ...(!input.cursor && photos.length ? { nextCursor: '00000000-0000-4000-8000-000000000000' } : {}), ...(input.kind === 'place' ? { place: { name: '浙江省 · 杭州市 · 富阳区', latitude: 30.05, longitude: 119.95, radiusKm: 30 } } : {}) };
+      return { photos, summary: '匿名界面验证 · 2024年5月', ...(!input.cursor && photos.length ? { nextCursor: '00000000-0000-4000-8000-000000000000' } : {}), ...(Boolean(input.place) ? { place: { name: '浙江省 · 杭州市 · 富阳区', latitude: 30.05, longitude: 119.95, radiusKm: input.radiusKm } } : {}) };
     });
     handle('desktop:photos-image', (_event, input) => {
       state.cloud.push(input);
@@ -65,7 +66,12 @@ try {
   expect(await application.evaluate(() => globalThis.photoTest.requests.length)).toBe(0);
   await card.screenshot({ path: path.join(captures, 'permission.png') });
   await card.getByRole('button', { name: '允许访问照片库' }).click();
-  await card.getByLabel('关键词或日期', { exact: true }).fill('2024年5月');
+  await expect(card.getByRole('combobox', { name: '相册', exact: true })).toBeEnabled();
+  await card.getByLabel('时间（可选）', { exact: true }).fill('2024年5月');
+  await card.getByRole('combobox', { name: '时间依据', exact: true }).selectOption('added');
+  await card.getByRole('combobox', { name: '相册', exact: true }).selectOption('anonymous-album');
+  await card.getByRole('combobox', { name: '照片类型', exact: true }).selectOption('live');
+  await card.getByLabel('仅看收藏').check();
   await card.getByRole('button', { name: '搜索照片' }).click();
   await expect(card.locator('.photo-library-grid img')).toHaveCount(1);
   await expect(card).toContainText('照片在 iCloud');
@@ -73,7 +79,11 @@ try {
   expect(await application.evaluate(() => globalThis.photoTest.cloud.some(input => input.network))).toBe(false);
   await card.getByRole('button', { name: '下载预览' }).click();
   await expect(card.locator('.photo-library-grid img')).toHaveCount(2);
+  await card.getByLabel('仅看收藏').uncheck();
   await card.getByRole('button', { name: '显示更多照片' }).click();
+  const inputs = await application.evaluate(() => globalThis.photoTest.requests);
+  expect(inputs[0]).toMatchObject({ dateBasis: 'added', albumId: 'anonymous-album', photoType: 'live', favoritesOnly: true });
+  expect(inputs[1]).toMatchObject({ dateBasis: 'added', albumId: 'anonymous-album', photoType: 'live', favoritesOnly: true, cursor: '00000000-0000-4000-8000-000000000000' });
   await expect(card.locator('.photo-library-grid img')).toHaveCount(3);
   await card.getByRole('button', { name: /放大照片/ }).first().click();
   await expect(card.locator('.photo-library-full-image')).toBeVisible();
@@ -84,10 +94,16 @@ try {
     await card.screenshot({ path: path.join(captures, `results-${width}.png`) });
     expect(await card.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   }
-  await card.getByLabel('查找方式').selectOption('place');
-  await card.getByLabel('地点或日期 + 地点', { exact: true }).fill('去年 杭州富阳');
+  await card.getByRole('button', { name: '清除筛选' }).click();
+  await expect(card.getByLabel('时间（可选）', { exact: true })).toHaveValue('');
+  await expect(card.getByRole('combobox', { name: '相册', exact: true })).toHaveValue('');
+  await expect(card.getByRole('combobox', { name: '照片类型', exact: true })).toHaveValue('all');
+  await expect(card.getByRole('combobox', { name: '时间依据', exact: true })).toHaveValue('taken');
+  await card.getByLabel('时间（可选）', { exact: true }).fill('去年');
+  await card.getByLabel('拍摄地点（可选）', { exact: true }).fill('杭州富阳');
+  await card.getByRole('combobox', { name: '地点附近范围', exact: true }).selectOption('5');
   await card.getByRole('button', { name: '搜索照片' }).click();
-  await expect(card).toContainText('附近 30 公里');
+  await expect(card).toContainText('附近 5 公里');
   await expect(card).toContainText('浙江省 · 杭州市 · 富阳区');
   await card.screenshot({ path: path.join(captures, 'place.png') });
   await application.evaluate(() => globalThis.photoTest.scenario = 'empty');
@@ -119,7 +135,7 @@ try {
   await expect(card.getByRole('button', { name: '找照片', exact: true })).toBeVisible();
   await expect(card.locator('img')).toHaveCount(0);
   expect(errors).toEqual([]);
-  console.log('Photo library UI verification passed: authorization, previews, cloud opt-in, pagination, place, empty/error, cancellation, revocation and knowledge-base isolation.');
+  console.log('Photo library UI verification passed: authorization, previews, cloud opt-in, pagination with frozen combined filters, reset, native album/type/favorites/date selection, place radius, empty/error, cancellation, revocation and knowledge-base isolation.');
 } finally {
   if (application) {
     const child = application.process();

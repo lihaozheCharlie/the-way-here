@@ -42,6 +42,7 @@ export class PhotoLibrary {
     child.once('exit', () => { if (this.child === child) this.close('照片服务已停止，请重试'); });
   }
   status() { return this.request({ command: 'status' }); }
+  filters() { return this.request({ command: 'filters' }); }
   authorize() { return this.request({ command: 'authorize' }); }
   search(input) { return this.request(photoQuery(input)); }
   image(input) {

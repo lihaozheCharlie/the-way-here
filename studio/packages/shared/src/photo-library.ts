@@ -2,10 +2,19 @@
 export type PhotoLibraryAuthorization = "notDetermined" | "authorized" | "denied" | "restricted";
 export interface PhotoLibrarySearchInput {
   query: string;
-  kind: "text" | "place";
+  dateBasis?: "taken" | "added";
+  place?: string;
+  radiusKm?: number;
+  albumId?: string;
+  favoritesOnly?: boolean;
+  photoType?: "all" | "live" | "screenshot" | "panorama" | "portrait" | "raw" | "burst";
   from?: string;
   through?: string;
   cursor?: string;
+}
+export interface PhotoLibraryFilters {
+  albums: { id: string; title: string }[];
+  supportsAddedDate: boolean;
 }
 export interface LibraryPhoto {
   id: string;

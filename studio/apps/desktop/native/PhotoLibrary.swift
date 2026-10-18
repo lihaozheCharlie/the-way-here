@@ -36,15 +36,18 @@ func requireAccess(_ id: String) -> Bool {
 }
 final class Search {
     let assets: PHFetchResult<PHAsset>
-    let keyword: String
-    let albumIDs: Set<String>
+    let orderedAssets: [PHAsset]?
+    let allowedIDs: Set<String>?
+    let radiusKm: Double
     let center: CLLocation?
     let summary: String
     let place: [String: Any]?
+    var count: Int { orderedAssets?.count ?? assets.count }
+    func asset(at index: Int) -> PHAsset { orderedAssets?[index] ?? assets.object(at: index) }
     var offset = 0
     var issued = Set<String>()
-    init(assets: PHFetchResult<PHAsset>, keyword: String, albumIDs: Set<String>, center: CLLocation?, summary: String, place: [String: Any]?) {
-        self.assets = assets; self.keyword = keyword; self.albumIDs = albumIDs
+    init(assets: PHFetchResult<PHAsset>, orderedAssets: [PHAsset]?, allowedIDs: Set<String>?, radiusKm: Double, center: CLLocation?, summary: String, place: [String: Any]?) {
+        self.assets = assets; self.orderedAssets = orderedAssets; self.allowedIDs = allowedIDs; self.radiusKm = radiusKm
         self.center = center; self.summary = summary; self.place = place
     }
 }
@@ -56,21 +59,21 @@ func filename(_ asset: PHAsset) -> String {
 }
 func page(_ id: String, token: String, search: Search) {
     var photos = [[String: Any]]()
-    while search.offset < search.assets.count && photos.count < 36 {
-        let asset = search.assets.object(at: search.offset); search.offset += 1
+    while search.offset < search.count && photos.count < 36 {
+        let asset = search.asset(at: search.offset); search.offset += 1
         autoreleasepool {
+            if let allowedIDs = search.allowedIDs, !allowedIDs.contains(asset.localIdentifier) { return }
             if let center = search.center {
-                guard let location = asset.location, location.distance(from: center) <= 30_000 else { return }
+                guard let location = asset.location, location.distance(from: center) <= search.radiusKm * 1_000 else { return }
             }
             let name = filename(asset)
-            if search.center == nil && !search.keyword.isEmpty && !search.albumIDs.contains(asset.localIdentifier) && !name.localizedStandardContains(search.keyword) { return }
             var photo: [String: Any] = ["id": asset.localIdentifier, "name": name, "hasLocation": asset.location != nil, "width": asset.pixelWidth, "height": asset.pixelHeight]
             if let date = asset.creationDate { photo["createdAt"] = iso.string(from: date) }
             photos.append(photo); search.issued.insert(asset.localIdentifier)
         }
     }
     var result: [String: Any] = ["photos": photos, "summary": search.summary]
-    if search.offset < search.assets.count { result["nextCursor"] = token }
+    if search.offset < search.count { result["nextCursor"] = token }
     if let place = search.place { result["place"] = place }
     guard requireAccess(id) else { return }
     respond(id, result)
@@ -78,28 +81,68 @@ func page(_ id: String, token: String, search: Search) {
 func beginSearch(_ id: String, input: [String: Any], center: CLLocation? = nil, place: [String: Any]? = nil) {
     work.async {
         guard requireAccess(id) else { return }
-        let keyword = input["keyword"] as? String ?? ""
+        let dateBasis = input["dateBasis"] as? String ?? "taken"
+        let dateKey: String
+        if dateBasis == "added" {
+            if #available(macOS 26, *) { dateKey = "addedDate" }
+            else { respond(id, error: "按加入图库时间筛选需要 macOS 26 或更新版本"); return }
+        } else { dateKey = "creationDate" }
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.includeHiddenAssets = false
         var predicates = [NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)]
         for key in ["start", "end"] {
-            if let raw = input[key] as? String {
+            if dateBasis == "taken", let raw = input[key] as? String {
                 guard let date = iso.date(from: raw) else { respond(id, error: "日期条件无效"); return }
-                predicates.append(NSPredicate(format: key == "start" ? "creationDate >= %@" : "creationDate < %@", date as NSDate))
+                predicates.append(NSPredicate(format: key == "start" ? "%K >= %@" : "%K < %@", dateKey, date as NSDate))
             }
+        }
+        if input["favoritesOnly"] as? Bool == true { predicates.append(NSPredicate(format: "favorite == YES")) }
+        let type = input["photoType"] as? String ?? "all"
+        let subtypes: [String: PHAssetMediaSubtype] = ["live": .photoLive, "screenshot": .photoScreenshot, "panorama": .photoPanorama, "portrait": .photoDepthEffect]
+        if let subtype = subtypes[type] {
+            predicates.append(NSPredicate(format: "(mediaSubtypes & %d) != 0", subtype.rawValue))
+        }
+        var typeCollection: PHAssetCollection?
+        var allowedIDs: Set<String>?
+        if type == "raw" || type == "burst" {
+            typeCollection = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: type == "raw" ? .smartAlbumRAW : .smartAlbumBursts, options: nil).firstObject
+            var ids = Set<String>()
+            if let collection = typeCollection {
+                PHAsset.fetchAssets(in: collection, options: nil).enumerateObjects { asset, _, _ in ids.insert(asset.localIdentifier) }
+            }
+            allowedIDs = ids
         }
         options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-        var albumIDs = Set<String>()
-        if center == nil && !keyword.isEmpty {
-            let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
-            albums.enumerateObjects { album, _, _ in
-                if album.localizedTitle?.localizedStandardContains(keyword) == true {
-                    PHAsset.fetchAssets(in: album, options: options).enumerateObjects { asset, _, _ in albumIDs.insert(asset.localIdentifier) }
-                }
+        let assets: PHFetchResult<PHAsset>
+        var albumTitle: String?
+        if let albumID = input["albumId"] as? String, !albumID.isEmpty {
+            guard let album = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [albumID], options: nil).firstObject,
+                  album.assetCollectionType == .album, album.assetCollectionSubtype != .albumCloudShared else { respond(id, error: "这个相册已移除或不可访问，请刷新相册后重试"); return }
+            albumTitle = album.localizedTitle ?? "未命名相册"
+            assets = PHAsset.fetchAssets(in: album, options: options)
+        } else if type == "raw" || type == "burst" {
+            assets = typeCollection.map { PHAsset.fetchAssets(in: $0, options: options) } ?? PHAsset.fetchAssets(withLocalIdentifiers: [], options: options)
+            allowedIDs = nil
+        } else { assets = PHAsset.fetchAssets(with: options) }
+        // Read addedDate through its public property. Property availability alone
+        // does not establish support as a PHFetchOptions predicate/sort key.
+        var orderedAssets: [PHAsset]?
+        if dateBasis == "added", #available(macOS 26, *) {
+            let start = (input["start"] as? String).flatMap { iso.date(from: $0) }
+            let end = (input["end"] as? String).flatMap { iso.date(from: $0) }
+            var matched = [PHAsset]()
+            assets.enumerateObjects { asset, _, _ in
+                if let start = start, asset.addedDate < start { return }
+                if let end = end, asset.addedDate >= end { return }
+                if let ids = allowedIDs, !ids.contains(asset.localIdentifier) { return }
+                matched.append(asset)
             }
+            matched.sort { $0.addedDate == $1.addedDate ? $0.localIdentifier < $1.localIdentifier : $0.addedDate > $1.addedDate }
+            orderedAssets = matched
         }
-        let search = Search(assets: PHAsset.fetchAssets(with: options), keyword: keyword, albumIDs: albumIDs, center: center, summary: input["summary"] as? String ?? "全部日期", place: place)
+        let summary = (input["summary"] as? String ?? "全部日期") + (albumTitle.map { " · 相册：" + $0 } ?? "")
+        let search = Search(assets: assets, orderedAssets: orderedAssets, allowedIDs: allowedIDs, radiusKm: input["radiusKm"] as? Double ?? 30, center: center, summary: summary, place: place)
         let token = UUID().uuidString
         sessions[token] = search; sessionOrder.append(token)
         while sessionOrder.count > 4 { sessions.removeValue(forKey: sessionOrder.removeFirst()) }
@@ -111,9 +154,9 @@ func beginSearch(_ id: String, input: [String: Any], center: CLLocation? = nil, 
 var geocoders = [String: CLGeocoder]()
 func search(_ id: String, input: [String: Any]) {
     guard authorization() == "authorized" else { respond(id, error: "请先允许访问照片库"); return }
-    if input["kind"] as? String != "place" { beginSearch(id, input: input); return }
+    if (input["place"] as? String ?? "").isEmpty { beginSearch(id, input: input); return }
     let geocoder = CLGeocoder(); geocoders[id] = geocoder
-    geocoder.geocodeAddressString(input["keyword"] as? String ?? "", in: nil, preferredLocale: Locale(identifier: "zh_CN")) { places, error in
+    geocoder.geocodeAddressString(input["place"] as? String ?? "", in: nil, preferredLocale: Locale(identifier: "zh_CN")) { places, error in
         geocoders.removeValue(forKey: id)
         guard error == nil, let places = places, let first = places.first, let location = first.location else {
             respond(id, error: "未能定位这个地点，请联网后使用更完整的地名，例如“浙江杭州富阳”。"); return
@@ -122,7 +165,24 @@ func search(_ id: String, input: [String: Any]) {
             respond(id, error: "这个地名对应多个地点，请加上省市或具体地址后重试。"); return
         }
         let name = [first.administrativeArea, first.locality, first.subLocality, first.name].compactMap { $0 }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }.joined(separator: " · ")
-        beginSearch(id, input: input, center: location, place: ["name": name, "latitude": location.coordinate.latitude, "longitude": location.coordinate.longitude, "radiusKm": 30])
+        beginSearch(id, input: input, center: location, place: ["name": name, "latitude": location.coordinate.latitude, "longitude": location.coordinate.longitude, "radiusKm": input["radiusKm"] as? Double ?? 30])
+    }
+}
+func filters(_ id: String) {
+    work.async {
+        guard requireAccess(id) else { return }
+        var albums = [[String: String]]()
+        PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil).enumerateObjects { album, _, _ in
+            // Shared albums have a separate scope; expose regular user albums here.
+            if album.assetCollectionSubtype != .albumCloudShared {
+                albums.append(["id": album.localIdentifier, "title": album.localizedTitle ?? "未命名相册"])
+            }
+        }
+        albums.sort { ($0["title"] ?? "").localizedStandardCompare($1["title"] ?? "") == .orderedAscending }
+        let supportsAddedDate: Bool
+        if #available(macOS 26, *) { supportsAddedDate = true } else { supportsAddedDate = false }
+        guard requireAccess(id) else { return }
+        respond(id, ["albums": albums, "supportsAddedDate": supportsAddedDate])
     }
 }
 func image(_ id: String, input: [String: Any]) {
@@ -161,6 +221,7 @@ func receive(_ input: [String: Any]) {
         if status != "authorized" { work.async { sessions.removeAll(); sessionOrder.removeAll(); imageManager.stopCachingImagesForAllAssets() } }
         respond(id, status)
     case "authorize": PHPhotoLibrary.requestAuthorization(for: .readWrite) { _ in respond(id, authorization()) }
+    case "filters": filters(id)
     case "search": search(id, input: input)
     case "more": work.async {
         guard requireAccess(id) else { return }

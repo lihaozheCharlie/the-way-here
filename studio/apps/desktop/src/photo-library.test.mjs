@@ -13,7 +13,7 @@ function harness() {
 test('routes fragmented/out-of-order responses to their own request', async () => {
   const { child, library, messages } = harness();
   try {
-    const first = library.status(), second = library.search({ query: '去年', kind: 'text' });
+    const first = library.status(), second = library.search({ query: '去年', favoritesOnly: true, photoType: 'screenshot' });
     child.stdout.write(JSON.stringify({ id: messages[1].id, result: { photos: [], summary: 'last year' } }) + '\n');
     child.stdout.write('{"id":"' + messages[0].id + '","result":"auth');
     child.stdout.write('orized"}\n');

@@ -8,15 +8,23 @@ function day(value) {
 function plusDay(value) { return new Date(value.getFullYear(), value.getMonth(), value.getDate() + 1); }
 const label = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-/** One date expression plus optional literal album/file keyword or place. No model calls. */
+/** Calendar dates and combinable native Photos filters. No model calls. */
 export function photoQuery(input, now = new Date()) {
-  if (!input || typeof input !== 'object' || Array.isArray(input) || typeof input.query !== 'string' || input.query.length > 120 || !['text', 'place'].includes(input.kind)) throw new Error('照片搜索条件无效');
+  if (!input || typeof input !== 'object' || Array.isArray(input) || typeof input.query !== 'string' || input.query.length > 120) throw new Error('照片搜索条件无效');
   if (input.cursor !== undefined) {
     if (typeof input.cursor !== 'string' || !/^[a-f0-9-]{36}$/i.test(input.cursor)) throw new Error('照片分页已失效，请重新搜索');
     return { command: 'more', cursor: input.cursor };
   }
+  const photoTypes = { all: '全部照片', live: '实况照片', screenshot: '截屏', panorama: '全景', portrait: '人像模式', raw: 'RAW', burst: '连拍' };
+  if (input.kind !== undefined || (input.dateBasis !== undefined && !['taken', 'added'].includes(input.dateBasis))
+    || (input.photoType !== undefined && !Object.hasOwn(photoTypes, input.photoType))
+    || (input.from !== undefined && typeof input.from !== 'string') || (input.through !== undefined && typeof input.through !== 'string')
+    || (input.favoritesOnly !== undefined && typeof input.favoritesOnly !== 'boolean')
+    || (input.albumId !== undefined && (typeof input.albumId !== 'string' || input.albumId.length > 256))
+    || (input.place !== undefined && (typeof input.place !== 'string' || input.place.length > 120))
+    || (input.radiusKm !== undefined && (!Number.isFinite(input.radiusKm) || input.radiusKm < 1 || input.radiusKm > 500))) throw new Error('照片筛选条件无效');
   let keyword = input.query.trim(), start, end;
-  const expression = /最近\s*(\d{1,3})\s*天|今天|昨天|今年|去年|本月|上个月|\d{4}年(?:\d{1,2}月(?:\d{1,2}[日号])?)?|\d{4}-\d{2}(?:-\d{2})?/g;
+  const expression = /最近\s*(\d{1,3})\s*天|今天|昨天|今年|去年|本月|上个月|\d{4}年(?:\d{1,2}月(?:\d{1,2}[日号])?)?|\d{4}-\d{2}(?:-\d{2})?|\d{4}/g;
   const matches = [...keyword.matchAll(expression)];
   if (matches.length > 1) throw new Error('多个日期请用下方的起止日期选择');
   if (matches.length) {
@@ -46,7 +54,12 @@ export function photoQuery(input, now = new Date()) {
     if (input.through) end = plusDay(day(input.through));
   }
   if (start && end && start >= end) throw new Error('结束日期不能早于开始日期');
-  if (input.kind === 'place' && !keyword) throw new Error('请输入拍摄地点，如“杭州富阳”');
+  if (keyword) throw new Error('时间只支持今天、昨天、去年、最近30天或年月日；地点请填写在拍摄地点中');
   const dates = start || end ? `${start ? label(start) : '最早'} 至 ${end ? label(new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1)) : '现在'}` : '全部日期';
-  return { command: 'search', keyword, kind: input.kind, start: start?.toISOString(), end: end?.toISOString(), summary: `${dates}${keyword ? ` · ${input.kind === 'place' ? '地点' : '相册 / 文件名'}：${keyword}` : ' · 按日期从新到旧'}` };
+  const place = input.place?.trim() ?? '';
+  const dateBasis = input.dateBasis ?? 'taken', photoType = input.photoType ?? 'all';
+  const radiusKm = input.radiusKm ?? 30;
+  return { command: 'search', dateBasis, place, radiusKm, albumId: input.albumId || undefined, favoritesOnly: input.favoritesOnly ?? false, photoType,
+    start: start?.toISOString(), end: end?.toISOString(),
+    summary: `${dateBasis === 'added' ? '加入图库时间' : '拍摄时间'}：${dates} · ${photoTypes[photoType]}${input.favoritesOnly ? ' · 仅收藏' : ''}${place ? ` · ${place}附近${radiusKm}公里` : ''} · 从新到旧` };
 }

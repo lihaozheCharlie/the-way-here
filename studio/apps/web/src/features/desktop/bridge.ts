@@ -1,11 +1,12 @@
 export type DesktopCommand = "search" | "inspector" | "capture" | "settings" | "detach" | "focus" | "import" | "back" | "forward" | `knowledge-base:${number}`;
-import type { PhotoLibraryAuthorization, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult } from "@the-way-here/shared";
+import type { PhotoLibraryAuthorization, PhotoLibraryFilters, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult } from "@the-way-here/shared";
 export interface DesktopBridge {
   platform: string;
   isMacAppStore?: boolean;
   connectCodexCLI?: () => Promise<boolean>;
   openPrivacy?: () => Promise<void>;
   photoLibraryStatus?: () => Promise<PhotoLibraryAuthorization>;
+  photoLibraryFilters?: () => Promise<PhotoLibraryFilters>;
   authorizePhotoLibrary?: () => Promise<PhotoLibraryAuthorization>;
   searchPhotoLibrary?: (input: PhotoLibrarySearchInput) => Promise<PhotoLibrarySearchResult>;
   photoLibraryImage?: (input: { assetId: string; size: "thumbnail" | "preview"; network: boolean }) => Promise<PhotoLibraryImage>;
