@@ -40,7 +40,10 @@ export class StudioApplication {
     const predictions = new PredictionService(knowledge, runtimes, app.log);
     registerPredictionRoutes(app, knowledge, predictions);
     const imports = new ImportStore(knowledge);
-    registerContentRoutes(app, knowledge, imports, () => runtimes.catalog(), async (knowledgeBaseId) => await runs.hasActiveKnowledgeBaseRun(knowledgeBaseId) || await predictions.hasActive(knowledgeBaseId));
+    registerContentRoutes(app, knowledge, {
+      runtimeCatalog: () => runtimes.catalog(),
+      hasActiveKnowledgeBaseRun: async (id) => await runs.hasActiveKnowledgeBaseRun(id) || await predictions.hasActive(id),
+    });
     registerImportRoutes(app, imports, runs);
     registerRunRoutes(app, runs);
     const sourceConnections = new SourceConnections(knowledge, runs);

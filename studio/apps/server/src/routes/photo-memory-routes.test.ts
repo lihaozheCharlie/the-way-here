@@ -21,7 +21,7 @@ async function fixture() {
   const runs = { hasActiveKnowledgeBaseRun, list: vi.fn(async () => []) } as unknown as RunCoordinator;
   const imports = new ImportStore(knowledge);
   registerPhotoMemoryRoutes(app, knowledge, runs);
-  registerContentRoutes(app, knowledge, imports, async () => [], hasActiveKnowledgeBaseRun);
+  registerContentRoutes(app, knowledge, { runtimeCatalog: async () => [], hasActiveKnowledgeBaseRun });
   registerImportRoutes(app, imports, runs);
   cleanups.push(async () => { await app.close(); await knowledge.close(); await rm(root, { recursive: true, force: true }); });
   const bytes = await sharp({ create: { width: 10, height: 12, channels: 3, background: "white" } }).png().toBuffer();

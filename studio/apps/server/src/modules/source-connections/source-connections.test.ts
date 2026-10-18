@@ -266,8 +266,7 @@ it("rolls back a move when import bookkeeping fails", async () => {
 it("rejects a move requested for a different library before touching files", async () => {
   const f = await fixture();
   const { registerContentRoutes } = await import("../../routes/content-routes.js");
-  const { ImportStore } = await import("../imports/import-store.js");
-  registerContentRoutes(f.app, f.knowledge, new ImportStore(f.knowledge), async () => [], async () => false);
+  registerContentRoutes(f.app, f.knowledge, { runtimeCatalog: async () => [], hasActiveKnowledgeBaseRun: async () => false });
   const page = (await new PageWriter(f.knowledge).createSource("今天", "随手记", "保留原文"))!;
   const result = await f.app.inject({ method: "POST", url: "/api/sources/move", payload: { knowledgeBaseId: "two", pageId: page.id, folder: "日记", expectedModifiedAt: page.modifiedAt } });
   expect(result.statusCode).toBe(409);

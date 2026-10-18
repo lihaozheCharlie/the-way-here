@@ -1,185 +1,22 @@
-import { storagePolicy } from "../services/storage-policy.js";
-import { CaptureHistoryStore } from "../modules/content/capture-history-store.js";
-import { CompanionshipStore } from "../runtime/companionship-store.js";
-import type { FastifyInstance, FastifyReply } from "fastify";
-import type { AgentRuntimeDescriptor, PageCategory } from "@the-way-here/shared";
-import { buildCards, buildFocusWorkspace, buildGraph, buildLetters, buildLifeMap, buildMentalModels, buildQuotes, buildRelationships, buildTimeline, buildToday } from "@the-way-here/life-views";
-import { listBuildSkills } from "../modules/skills/skill-catalog.js";
-import { listReasoningLenses } from "../modules/skills/lens-catalog.js";
-import { readSkillFile, readSkillTree, SkillFileRequestError } from "../modules/skills/skill-files.js";
-import { ContentRequestError, PageWriter } from "../modules/content/page-writer.js";
-import { listSourceFolders, listSourceFolderChildren } from "../modules/content/source-folder-catalog.js";
-import { ImportRequestError, ImportStore } from "../modules/imports/import-store.js";
-import { KnowledgeBaseRequestError } from "../modules/knowledge-bases/knowledge-base-manager.js";
-import { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
-import { PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
+import type { FastifyInstance } from "fastify";
+import type { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
+import type { AgentRuntimeDescriptor } from "@the-way-here/shared";
+import { registerKnowledgeBaseRoutes } from "./knowledge-base-routes.js";
+import { registerPageRoutes } from "./page-routes.js";
+import { registerCaptureRoutes } from "./capture-routes.js";
+import { registerSkillRoutes } from "./skill-routes.js";
+import { registerViewRoutes } from "./view-routes.js";
 
-export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, _imports: ImportStore, runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
-  const contentWorkspace = () => ({ vaultRoot: knowledge.vaultRoot, index: knowledge.index, events: knowledge.events, refreshSources: knowledge.refreshSources });
-  const writer = () => {
-    const bound = contentWorkspace();
-    return new PageWriter(bound, (previousPath, storedPath) => new ImportStore(bound).renameSource(previousPath, storedPath));
-  };
-  app.get("/api/storage/policy", async () => storagePolicy(knowledge.vaultRoot, knowledge.index.config));
-  app.get("/api/health", async () => ({ ok: true, vaultRoot: knowledge.vaultRoot, indexedAt: knowledge.index.lastIndexedAt }));
-  const companionship = new CompanionshipStore(knowledge.vaultRoot);
-  app.get("/api/vault", async () => {
-    const vault = knowledge.vaultInfo();
-    const [runtimes, companionshipStartedAt] = await Promise.all([runtimeCatalog(), companionship.startedAt(vault.knowledgeBaseId)]);
-    return { ...vault, runtimes, agentAvailable: runtimes.some(runtime => runtime.available), companionshipStartedAt };
-  });
-  app.post<{ Body: { name?: string } }>("/api/vault", async (request, reply) => {
-    try {
-      const created = await knowledge.createKnowledgeBase(request.body?.name);
-      return reply.code(201).send({ ...created, knowledgeBaseId: created.id });
-    } catch (error) {
-      if (error instanceof KnowledgeBaseRequestError) return reply.code(error.statusCode).send({ error: error.message });
-      throw error;
-    }
-  });
-  app.patch<{ Params: { knowledgeBaseId: string }; Body: { name?: unknown } }>("/api/vault/:knowledgeBaseId", async (request, reply) => {
-    try { return await knowledge.renameKnowledgeBase(request.params.knowledgeBaseId, request.body?.name); }
-    catch (error) { if (error instanceof KnowledgeBaseRequestError) return reply.code(error.statusCode).send({ error:error.message }); throw error; }
-  });
-  app.delete<{ Params: { knowledgeBaseId: string } }>("/api/vault/:knowledgeBaseId", async (request, reply) => {
-    try {
-      if (await hasActiveKnowledgeBaseRun(request.params.knowledgeBaseId)) return reply.code(409).send({ error: "这个知识库还有 Agent 任务正在运行，请结束任务后再删除" });
-      return await knowledge.deleteKnowledgeBase(request.params.knowledgeBaseId);
-    } catch (error) {
-      if (error instanceof KnowledgeBaseRequestError) return reply.code(error.statusCode).send({ error: error.message });
-      throw error;
-    }
-  });
-  app.post<{ Body: { knowledgeBaseId?: string } }>("/api/vault/select", async (request, reply) => {
-    const nextId = request.body?.knowledgeBaseId?.trim();
-    if (!nextId) return reply.code(400).send({ error: "请选择要打开的知识库" });
-    try {
-      await knowledge.activate(nextId);
-      return { ok: true, knowledgeBaseId: knowledge.index.config.knowledgeBaseId };
-    } catch (error: any) {
-      return reply.code(404).send({ error: error.message || "知识库不存在" });
-    }
-  });
+export type ContentRouteServices = {
+  runtimeCatalog: () => Promise<AgentRuntimeDescriptor[]>;
+  hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>;
+};
 
-  app.get<{ Querystring: { category?: PageCategory; sources?: string } }>("/api/pages", async (request) => {
-    const sources = request.query.sources === undefined ? undefined : request.query.sources === "true";
-    return knowledge.index.list({ category: request.query.category, sources });
-  });
-  app.get<{ Params: { "*": string } }>("/api/pages/*", async (request, reply) => {
-    const page = knowledge.index.get(decodeURIComponent(request.params["*"]));
-    return page || reply.code(404).send({ error: "页面不存在" });
-  });
-  app.get<{ Querystring: { q?: string; sources?: string } }>("/api/search", async (request) => request.query.sources === "true" ? knowledge.index.search(request.query.q || "", Number.MAX_SAFE_INTEGER).filter(page => page.isSource) : knowledge.index.search(request.query.q || ""));
-
-  app.get<{ Querystring: { parent?: string } }>("/api/sources/folders", async (request, reply) => handleContent(reply, () => request.query.parent === undefined ? listSourceFolders(knowledge) : listSourceFolderChildren(contentWorkspace(), request.query.parent)));
-  app.post<{ Body: { folder?: unknown; action?: unknown; name?: unknown; modifiedAt?: unknown; knowledgeBaseId?: unknown } }>("/api/sources/folder-action", async (request, reply) => {
-    const bound = contentWorkspace();
-    return handleContent(reply, () => knowledge.serializeMutation(async () => {
-      if (request.body?.knowledgeBaseId !== bound.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请刷新后重试");
-      return new PageWriter(bound, (before, after) => new ImportStore(bound).renameSource(before, after)).folderAction(request.body);
-    }));
-  });
-  app.post<{ Body: { folder?: unknown; knowledgeBaseId?: unknown } }>("/api/sources/folders", async (request, reply) => {
-    const bound = contentWorkspace();
-    return handleContent(reply, () => knowledge.serializeMutation(async () => {
-      if (request.body?.knowledgeBaseId !== undefined && request.body.knowledgeBaseId !== bound.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请刷新后重试");
-      return new PageWriter(bound).createSourceFolder(request.body?.folder);
-    }), 201);
-  });
-  app.post<{ Body: { title?: string; folder?: string } }>("/api/sources", async (request, reply) => handleContent(reply, async () => {
-    const bound = contentWorkspace();
-    const page = await new PageWriter(bound).createSource(request.body?.title, request.body?.folder);
-    if (page && !page.externalSource) await new ImportStore(bound).trackCreatedSource(page);
-    return page;
-  }, 201));
-  const captures = new CaptureHistoryStore(knowledge.vaultRoot);
-  app.get<{ Querystring: { knowledgeBaseId?: string } }>("/api/capture/history", async (request, reply) => handleContent(reply, async () => {
-    if (request.query.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请重新打开随手记");
-    const boundIndex = knowledge.index;
-    await captures.importCompleted(request.query.knowledgeBaseId, boundIndex);
-    const { entries, defaultFolder } = await captures.list(request.query.knowledgeBaseId);
-    return { entries, defaultFolder };
-  }));
-  app.put<{ Body: { knowledgeBaseId?: unknown } }>("/api/capture/draft", async (request, reply) => handleContent(reply, async () => {
-    const id = knowledge.index.config.knowledgeBaseId;
-    if (request.body?.knowledgeBaseId !== id) throw new ContentRequestError(409, "知识库已切换，草稿仍已留在本机");
-    return captures.put(id, request.body);
-  }));
-  app.put<{ Body: { knowledgeBaseId?: unknown; folder?: unknown } }>("/api/capture/default-folder", async (request, reply) => handleContent(reply, async () => {
-    const id = knowledge.index.config.knowledgeBaseId;
-    if (request.body?.knowledgeBaseId !== id) throw new ContentRequestError(409, "知识库已切换，请重试");
-    return captures.setDefault(id, request.body?.folder);
-  }));
-  app.delete<{ Params: { id: string }; Body: { knowledgeBaseId?: unknown; revision?: unknown } }>("/api/capture/history/:id", async (request, reply) => handleContent(reply, async () => {
-    const id = knowledge.index.config.knowledgeBaseId;
-    if (request.body?.knowledgeBaseId !== id) throw new ContentRequestError(409, "知识库已切换，请重试");
-    if (await hasActiveKnowledgeBaseRun(id)) throw new ContentRequestError(409, "请等整理完成后再删除历史记录");
-    return captures.remove(id, request.params.id, request.body?.revision);
-  }));
-  app.post<{ Body: { title?: string; markdown?: string; knowledgeBaseId?: string } }>("/api/capture", async (request, reply) => handleContent(reply, async () => {
-    const body = request.body;
-    if (!body || typeof body.title !== "string" || body.title.length > 180 || /[\\/]/.test(body.title) || typeof body.markdown !== "string" || !body.markdown.trim() || body.markdown.length > 200_000) return reply.code(400).send({ error: "请填写有效的记录标题和正文" });
-    if (body.knowledgeBaseId !== knowledge.index.config.knowledgeBaseId) return reply.code(409).send({ error: "知识库已经切换，请重新打开随手记后保存" });
-    const boundWorkspace = contentWorkspace();
-    const boundWriter = new PageWriter(boundWorkspace);
-    const page = await boundWriter.createSource(body.title, "随手记", body.markdown);
-    if (page) await new ImportStore(boundWorkspace).trackCreatedSource(page);
-    return page;
-  }, 201));
-  app.delete<{ Body: { pageId?: string; expectedModifiedAt?: string } }>("/api/sources/file", async (request, reply) => handleContent(reply, () => writer().deleteSource(request.body?.pageId, request.body?.expectedModifiedAt)));
-  app.delete<{ Body: { pageId?: unknown; expectedModifiedAt?: unknown } }>("/api/pages/file", async (request, reply) => handleContent(reply, () => writer().deleteWikiPage(request.body?.pageId, request.body?.expectedModifiedAt)));
-  app.delete<{ Body: { folder?: string; expectedFileCount?: number } }>("/api/sources/folder", async (request, reply) => handleContent(reply, () => writer().deleteSourceFolder(request.body?.folder, request.body?.expectedFileCount)));
-  app.post<{ Body: { pageId?: string } }>("/api/files/reveal", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId, true)));
-  app.post<{ Body: { pageId?: string } }>("/api/files/open-in-editor", async (request, reply) => handleContent(reply, () => writer().openInEditor(request.body?.pageId)));
-  app.post<{ Body: { pageId?: unknown; folder?: unknown; expectedModifiedAt?: unknown; knowledgeBaseId?: unknown } }>("/api/sources/move", async (request, reply) => {
-    const bound = contentWorkspace();
-    return handleContent(reply, () => knowledge.serializeMutation(async () => {
-      if (!request.body || request.body.knowledgeBaseId !== bound.index.config.knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，请刷新后重试");
-      if (await hasActiveKnowledgeBaseRun(bound.index.config.knowledgeBaseId)) throw new ContentRequestError(409, "请等当前 AI 任务结束后再移动文件");
-      return new PageWriter(bound, (before, after) => new ImportStore(bound).renameSource(before, after)).move(request.body);
-    }));
-  });
-  app.post<{ Body: { pageId?: string; fileName?: string; expectedModifiedAt?: string } }>("/api/pages/rename", async (request, reply) => handleContent(reply, () => writer().rename(request.body?.pageId, request.body?.fileName, request.body?.expectedModifiedAt)));
-  app.put<{ Params: { "*": string }; Body: { markdown?: string; expectedModifiedAt?: string } }>("/api/pages/*", async (request, reply) => handleContent(reply, () => writer().save(decodeURIComponent(request.params["*"]), request.body?.markdown, request.body?.expectedModifiedAt)));
-
-  app.get("/api/build/skills", async () => listBuildSkills(knowledge.vaultRoot, knowledge.index));
-  app.get("/api/build/skill-tree", async () => readSkillTree(knowledge.vaultRoot, knowledge.index));
-  app.get<{ Querystring: { path?: string } }>("/api/build/skill-file", async (request, reply) => {
-    try {
-      return await readSkillFile(knowledge.vaultRoot, knowledge.index, request.query.path || "");
-    } catch (error) {
-      if (error instanceof SkillFileRequestError) return reply.code(error.statusCode).send({ error: error.message });
-      throw error;
-    }
-  });
-  app.get("/api/lenses", async () => listReasoningLenses(knowledge.vaultRoot, knowledge.index));
-  app.get("/api/views/today", async () => buildToday(knowledge.index));
-  app.get("/api/views/focus/:signalId", async (request, reply) => {
-    const view = buildFocusWorkspace(knowledge.index, decodeURIComponent((request.params as { signalId: string }).signalId));
-    return view || reply.code(404).send({ error: "当前没有可展开的状态问题" });
-  });
-  app.get("/api/views/timeline", async () => buildTimeline(knowledge.index));
-  app.get("/api/views/life-map", async () => buildLifeMap(knowledge.index));
-  app.get("/api/views/relationships", async () => {
-    const index = knowledge.index;
-    return new PhotoMemoryStore(knowledge.vaultRoot).decorate(index.config, buildRelationships(index), index);
-  });
-  app.get("/api/views/letters", async () => buildLetters(knowledge.index));
-  app.get("/api/views/graph", async (request) => buildGraph(knowledge.index, 120, (request.query as { focus?: string }).focus));
-  app.get("/api/views/mental-models", async (_request, reply) => buildMentalModels(knowledge.index) || reply.code(404).send({ error: "暂无思维模型页面" }));
-  app.get("/api/views/quotes", async (_request, reply) => buildQuotes(knowledge.index) || reply.code(404).send({ error: "暂无金句页面" }));
-  app.get<{ Params: { category: PageCategory } }>("/api/views/cards/:category", async (request) => buildCards(knowledge.index, request.params.category));
-}
-
-async function handleContent<T>(reply: FastifyReply, action: () => Promise<T>, successCode = 200): Promise<T | FastifyReply> {
-  try {
-    const result = await action();
-    return successCode === 200 ? result : reply.code(successCode).send(result);
-  } catch (error) {
-    if (error instanceof ContentRequestError) return reply.code(error.statusCode).send({ error: error.message });
-    if (error instanceof ImportRequestError) return reply.code(error.statusCode).send({ error: error.message });
-    if (["EACCES", "EPERM"].includes((error as NodeJS.ErrnoException)?.code || "")) return reply.code(403).send({ error: "无法读写文件，请重新授权文件夹访问权限", permissionRequired: true });
-    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return reply.code(404).send({ error: "原文件夹不可用，请重新连接" });
-    throw error;
-  }
+/** Compose content APIs shared by the HTTP host and the private desktop host. */
+export function registerContentRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, services: ContentRouteServices): void {
+  registerKnowledgeBaseRoutes(app, knowledge, services.runtimeCatalog, services.hasActiveKnowledgeBaseRun);
+  registerPageRoutes(app, knowledge, services.hasActiveKnowledgeBaseRun);
+  registerCaptureRoutes(app, knowledge, services.hasActiveKnowledgeBaseRun);
+  registerSkillRoutes(app, knowledge);
+  registerViewRoutes(app, knowledge);
 }

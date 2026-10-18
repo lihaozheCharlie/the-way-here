@@ -4,7 +4,6 @@ import path from "node:path";
 import Fastify from "fastify";
 import { expect, it } from "vitest";
 import { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
-import { ImportStore } from "../modules/imports/import-store.js";
 import { registerContentRoutes } from "./content-routes.js";
 
 it("searches full source bodies beyond the command-search cap without returning Wiki pages", async () => {
@@ -15,7 +14,7 @@ it("searches full source bodies beyond the command-search cap without returning 
     await Promise.all(Array.from({ length: 35 }, (_, i) => writeFile(path.join(root, "sources", `${i}.md`), `# 匿名记录 ${i}\n\n${"其他文字。".repeat(300)}\n\n只在正文深处的搜索词`)));
     await writeFile(path.join(root, "wiki", "understanding.md"), "# 只在正文深处的搜索词\n\n已有理解");
     knowledge = await KnowledgeRuntime.create(root, undefined);
-    registerContentRoutes(app, knowledge, new ImportStore(knowledge), async () => [], async () => false);
+    registerContentRoutes(app, knowledge, { runtimeCatalog: async () => [], hasActiveKnowledgeBaseRun: async () => false });
     const query = encodeURIComponent("只在正文深处的搜索词");
     const normal = await app.inject(`/api/search?q=${query}`);
     expect(normal.json()).toHaveLength(30);

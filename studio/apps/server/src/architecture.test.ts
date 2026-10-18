@@ -1,12 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isBuiltin } from "node:module";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
 const allowedPackages: Record<string, string[]> = {
   "apps/web": ["shared"],
+  "apps/desktop": ["shared"],
   "apps/server": ["shared", "wiki-core", "life-views", "run-manager", "codex-bridge"],
   "packages/shared": [],
   "packages/wiki-core": ["shared"],
@@ -19,7 +21,7 @@ function sourceFiles(directory: string): string[] {
   return readdirSync(path.join(root, directory), { withFileTypes: true }).flatMap((entry) => {
     const relative = `${directory}/${entry.name}`;
     if (entry.isDirectory()) return sourceFiles(relative);
-    return /\.tsx?$/.test(relative) && !/\.(?:test|d)\.tsx?$/.test(relative) ? [relative] : [];
+    return /\.(?:tsx?|[cm]js)$/.test(relative) && !/\.(?:test|d)\.(?:tsx?|[cm]js)$/.test(relative) ? [relative] : [];
   });
 }
 
@@ -36,7 +38,7 @@ function dependencies(file: string, runtimeOnly = false): string[] {
   const imports: string[] = [];
   function visit(node: ts.Node): void {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) imports.push(node.moduleSpecifier.text);
-    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) imports.push(node.arguments[0].text);
+    if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require") && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) imports.push(node.arguments[0].text);
     if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteral(node.argument.literal)) imports.push(node.argument.literal.text);
     if (ts.isNewExpression(node) && node.expression.getText(source) === "URL" && node.arguments?.[0] && ts.isStringLiteral(node.arguments[0])) imports.push(node.arguments[0].text);
     ts.forEachChild(node, visit);
@@ -53,8 +55,8 @@ function resolve(file: string, specifier: string): string | undefined {
   if (!specifier.startsWith(".")) return undefined;
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier));
   const stem = base.replace(/\.js$/, "");
-  return [base, `${stem}.ts`, `${stem}.tsx`, `${stem}/index.ts`, `${stem}/index.tsx`]
-    .find((candidate) => existsSync(path.join(root, candidate)) && /\.tsx?$/.test(candidate));
+  return [base, `${stem}.ts`, `${stem}.tsx`, `${stem}.mjs`, `${stem}.cjs`, `${stem}/index.ts`, `${stem}/index.tsx`]
+    .find((candidate) => existsSync(path.join(root, candidate)) && /\.(?:tsx?|[cm]js)$/.test(candidate));
 }
 
 const edges = new Map(files.map((file) => [file, dependencies(file)]));
@@ -67,7 +69,7 @@ describe("Studio dependency boundaries", () => {
       const target = resolve(file, specifier);
       if (specifier.startsWith("@the-way-here/") && !allowedPackages[owner]!.includes(specifier.slice("@the-way-here/".length))) violations.push(`${file} -> ${specifier}`);
       if (target && ownerOf(target) !== owner && !specifier.startsWith("@the-way-here/")) violations.push(`${file} bypasses a package entry: ${specifier}`);
-      if ((owner === "apps/web" || owner === "packages/shared") && /^(?:node:|fs$|path$|child_process$)/.test(specifier)) violations.push(`${file} uses Node: ${specifier}`);
+      if ((owner === "apps/web" || owner === "packages/shared") && (isBuiltin(specifier) || specifier === "electron")) violations.push(`${file} uses a native API: ${specifier}`);
     }
     expect(violations).toEqual([]);
   });
@@ -119,6 +121,39 @@ describe("Studio dependency boundaries", () => {
     expect(cycles).toEqual([]);
   });
 
+  it("keeps the private desktop runtime independent of the Web network and static host", () => {
+    const reached = new Set<string>();
+    function visit(file: string): void {
+      if (reached.has(file)) return;
+      reached.add(file);
+      for (const specifier of edges.get(file) || []) {
+        expect(specifier, file).not.toBe("@fastify/static");
+        const target = resolve(file, specifier);
+        if (target) visit(target);
+      }
+    }
+    visit("apps/server/src/desktop.ts");
+    expect(reached.has("apps/server/src/studio-application.ts")).toBe(true);
+    expect(reached.has("apps/server/src/studio-server.ts")).toBe(false);
+  });
+
+  it("keeps read-only document rendering independent of editing and API writes", () => {
+    const reached = new Set<string>();
+    function visit(file: string): void {
+      if (reached.has(file)) return;
+      reached.add(file);
+      for (const specifier of edges.get(file) || []) {
+        const target = resolve(file, specifier);
+        if (target) visit(target);
+      }
+    }
+    visit("apps/web/src/shared/DocumentFrame.tsx");
+    for (const file of ["api.ts", "shared/EditableDocument.tsx", "shared/MarkdownEditor.tsx"]) {
+      expect(reached.has(`apps/web/src/${file}`), file).toBe(false);
+    }
+    expect(edges.get("apps/web/src/shared/document-model.ts")).toEqual([]);
+  });
+
   it("has no orphan source files outside the application and worker entry graphs", () => {
     const reached = new Set<string>();
     function visit(file: string): void {
@@ -133,6 +168,8 @@ describe("Studio dependency boundaries", () => {
     visit("apps/server/src/index.ts");
     visit("apps/server/src/desktop.ts");
     visit("apps/server/src/cli/search-wiki.ts");
+    visit("apps/desktop/src/main.mjs");
+    visit("apps/desktop/src/preload.cjs");
     expect(files.filter((file) => !reached.has(file))).toEqual([]);
   });
 });

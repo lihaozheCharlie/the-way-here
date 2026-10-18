@@ -14,7 +14,7 @@ async function fixture() {
   const knowledge = await KnowledgeRuntime.create(root, undefined);
   const app = Fastify();
   const imports = new ImportStore(knowledge);
-  registerContentRoutes(app, knowledge, imports, async () => [], async () => false);
+  registerContentRoutes(app, knowledge, { runtimeCatalog: async () => [], hasActiveKnowledgeBaseRun: async () => false });
   cleanup.push(async () => { await app.close(); await knowledge.close(); await rm(root, { recursive:true, force:true }); await rm(stateRootForVault(root), { recursive:true, force:true }); });
   return { app, knowledge, imports, root };
 }

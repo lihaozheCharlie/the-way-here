@@ -7,3 +7,13 @@ export interface ContentWorkspace {
   readonly index: WikiIndex;
   readonly events: { broadcast(event: string, data: unknown): void };
 }
+
+/** Freeze the active index before a queued mutation can outlive a library switch. */
+export function bindContentWorkspace(workspace: ContentWorkspace): ContentWorkspace {
+  return {
+    vaultRoot: workspace.vaultRoot,
+    index: workspace.index,
+    events: workspace.events,
+    refreshSources: workspace.refreshSources,
+  };
+}

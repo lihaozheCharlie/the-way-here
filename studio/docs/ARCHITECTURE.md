@@ -69,6 +69,14 @@ apps/web
 
 以下章节记录保留的领域与数据能力。
 
+## 代码职责与依赖检查
+
+`StudioApplication` 组合 Web 与桌面端共用的业务运行时。`routes/content-routes.ts` 仅组合内容 API：知识库生命周期在 `knowledge-base-routes.ts`，页面读写与来源目录在 `page-routes.ts`，草稿和随手记在 `capture-routes.ts`，Skill 浏览在 `skill-routes.ts`，派生视图在 `view-routes.ts`。这些模块共用内容错误映射，不相互注册路由；运行中的任务检查由组合层注入。异步内容操作通过 `bindContentWorkspace` 捕获本次索引，不在排队后重新读取活动库。
+
+前端保留 `shared/markdown.tsx` 作为兼容入口，实现分为纯文本转换 `document-model.ts`、正文渲染 `MarkdownBody`、目录导航 `DocumentOutline`、属性展示 `DocumentProperties`、阅读容器 `DocumentFrame` 和编辑保存 `EditableDocument`。底层模块直接依赖所需模块，不反向导入聚合入口。只读阅读不依赖编辑器或 API 写入，Web 和桌面端使用同一套组件。
+
+`apps/server/src/architecture.test.ts` 检查 TypeScript、ESM 和 CommonJS 的包边界、运行时依赖环与入口可达性，覆盖 Electron 主进程及 preload。浏览器和共享契约禁止导入 Node 内置模块或 Electron；桌面业务入口不得依赖 Web 网络和静态资源宿主。宿主集成测试通过无端口请求验证两种入口注册相同的内容 API。
+
 
 ## 工作区与知识库模型
 
