@@ -27,6 +27,16 @@ export function cleanSourcePath(relativePath: string): string {
   return logical.join("/");
 }
 
+export function sourcePageMatchesRequest(page: Pick<WikiPageSummary, "id" | "relativePath" | "externalSource">, requested: string): boolean {
+  const normalized = requested.replace(/\\/g, "/").replace(/\.md$/i, "");
+  if (!normalized) return false;
+  if (page.id === requested || page.id === normalized) return true;
+  const relative = page.relativePath.replace(/\\/g, "/");
+  if (relative === requested || relative.replace(/\.md$/i, "") === normalized) return true;
+  const logical = sourcePagePath(page);
+  return logical === normalized || logical.replace(/\.md$/i, "") === normalized;
+}
+
 export function sourcePagePath(page: Pick<WikiPageSummary, "relativePath" | "externalSource">): string {
   const external = page.externalSource;
   return external?.originalRelativePath ? `外部来源/${external.connectionId}/${external.originalRelativePath}` : cleanSourcePath(page.relativePath);

@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { isTerminalRunStatus, type WikiRun } from "@the-way-here/shared";
 import { api } from "../../api";
 import { TextArea } from "../../shared/form-controls";
-import { pageHref } from "../../shared/routing";
+import { pageHref, returnContextFor } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
 import { openContextAgent } from "../collaboration/model";
 import { wikiPageIdFromChange } from "../collaboration/wiki-change-link";
@@ -124,10 +124,10 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
     </form>
     <p className="capture-trust">整理成日记会把这段文字发给当前模型，只用来写成一篇日记。只存原文则留在本机，不发送。模型可以在<button type="button" onClick={openPreferences}>偏好设置</button>里更换或停用。</p>
     {(error || capture.error) && <p className="capture-error" role="alert">{error || capture.error}</p>}
-    {savedOriginalId && <p role="status" className="capture-saved">原文已留在本机，没有发给模型。<NavLink to={pageHref(savedOriginalId)}>查看记录 <Icon name="arrow" size={14} /></NavLink></p>}
-    {run?.status === "completed" && run.result?.outputPageId && <p role="status" className="capture-saved">已整理成日记并保存在本机。<NavLink to={pageHref(run.result.outputPageId)}>查看记录 <Icon name="arrow" size={14} /></NavLink>{(run.changes || []).filter((change) => change.kind !== "deleted" && wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)).map((change) => {
+    {savedOriginalId && <p role="status" className="capture-saved">原文已留在本机，没有发给模型。<NavLink to={pageHref(savedOriginalId)} state={returnContextFor(standalone ? "/capture" : "/")}>查看记录 <Icon name="arrow" size={14} /></NavLink></p>}
+    {run?.status === "completed" && run.result?.outputPageId && <p role="status" className="capture-saved">已整理成日记并保存在本机。<NavLink to={pageHref(run.result.outputPageId)} state={returnContextFor(standalone ? "/capture" : "/")}>查看记录 <Icon name="arrow" size={14} /></NavLink>{(run.changes || []).filter((change) => change.kind !== "deleted" && wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)).map((change) => {
       const pageId = wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)!;
-      return <NavLink key={change.path} to={pageHref(pageId)}>理解有更新</NavLink>;
+      return <NavLink key={change.path} to={pageHref(pageId)} state={returnContextFor(standalone ? "/capture" : "/")}>理解有更新</NavLink>;
     })}</p>}
     {dialog === "history" && <CaptureHistoryDialog entries={capture.history} restore={capture.restore} remove={capture.remove} close={() => setDialog(null)} />}
     {dialog === "folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={draft.folder} defaultFolder={capture.defaultFolder} choose={capture.chooseFolder} close={() => setDialog(null)} />}

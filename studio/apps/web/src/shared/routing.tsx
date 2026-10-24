@@ -25,10 +25,29 @@ export function pageDestination(page: Pick<WikiPageSummary, "id" | "category"> &
   return `${pageHref(page.id)}${page.isSource ? "?from=source" : ""}`;
 }
 
+function readerPageId(pathname: string): string {
+  if (!pathname.startsWith("/page/")) return "";
+  return pathname.slice("/page/".length).split("/").map((segment) => {
+    try { return decodeURIComponent(segment); }
+    catch { return segment; }
+  }).join("/");
+}
+
 export function isSourceSectionPage(pathname: string, search: string, state: ReturnContext | null | undefined): boolean {
   if (!pathname.startsWith("/page/")) return false;
+  const pageId = readerPageId(pathname);
+  if (pageId === "sources" || pageId.startsWith("sources/")) return true;
+  if (pageId === "wiki" || pageId.startsWith("wiki/")) return false;
   if (new URLSearchParams(search).get("from") === "source") return true;
-  return Boolean(state?.returnTo.startsWith("/sources"));
+  return Boolean(state?.returnTo.split("?")[0]?.startsWith("/sources"));
+}
+
+export function mentalModelHref(heading: string): string {
+  return `/mental-models?${new URLSearchParams({ model: heading })}`;
+}
+
+export function returnContextFor(pathname: string, search = ""): ReturnContext {
+  return { returnTo: `${pathname}${search}`, returnLabel: returnLabelForPath(pathname) };
 }
 
 export function useReturnContext(): ReturnContext {
@@ -45,8 +64,10 @@ function returnLabelForPath(pathname: string): string {
   if (pathname === "/") return "返回此刻";
   if (pathname === "/questions" || pathname.startsWith("/focus/")) return "返回值得聊聊";
   if (pathname === "/insights") return "返回理解自己";
-  if (pathname === "/timeline") return "返回人生地图";
+  if (pathname === "/timeline") return "返回人生轨迹";
   if (pathname === "/letters") return "返回近况回信";
+  if (pathname === "/predict-self") return "返回看见未来";
+  if (pathname === "/capture") return "返回随手记";
   if (pathname === "/relationships") return "返回人与世界";
   if (pathname === "/mental-models") return "返回思维模型";
   if (pathname.startsWith("/sources")) return "返回生活记录";

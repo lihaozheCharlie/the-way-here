@@ -11,7 +11,7 @@ import { orderLifeStagesFromPresent } from "./life-atlas";
 export function Timeline({ revision }: { revision: number }) {
   const { data, loading, error } = useApi<LifeMapView>("/api/views/life-map", revision);
   const [params, setParams] = useSearchParams();
-  if (loading) return <Loading label="正在展开人生地图" />;
+  if (loading) return <Loading label="正在展开人生轨迹" />;
   if (error || !data) return <Empty>{error || "暂无人生阶段"}</Empty>;
   const orderedStages = orderLifeStagesFromPresent(data.stages);
   const selected = orderedStages.find((stage) => stage.page.id === params.get("stage")) || orderedStages.find((stage) => stage.current && stage.lane === 0) || orderedStages[0];
@@ -30,7 +30,7 @@ export function Timeline({ revision }: { revision: number }) {
       </section>
 
       {selected && <StageFocus key={selected.page.id} stage={selected} revision={revision} />}
-      <PageAgentContext context={{ scope: "人生地图", title: selected?.page.title || "人生阶段", pageId: selected?.page.id, summary: selected?.focus, defaultMode: "write", suggestions: ["我想起一件属于这个阶段的重要经历，请帮我判断应该补充到哪里。", "结合这个阶段的证据，帮我梳理它如何影响了后来的选择。", "这个阶段还有一条并行的人生线没有记录，请帮我补充。"] }} />
+      <PageAgentContext context={{ scope: "人生轨迹", title: selected?.page.title || "人生阶段", pageId: selected?.page.id, summary: selected?.focus, defaultMode: "write", suggestions: ["我想起一件属于这个阶段的重要经历，请帮我判断应该补充到哪里。", "结合这个阶段的证据，帮我梳理它如何影响了后来的选择。", "这个阶段还有一条并行的人生线没有记录，请帮我补充。"] }} />
     </div>
   );
 }

@@ -18,7 +18,9 @@ import type { VaultInfo } from "@the-way-here/shared";
 import { api } from "../api";
 import { useApi } from "../shared/use-api";
 import { navigation } from "./config";
-import { isSourceSectionPage, type ReturnContext } from "../shared/routing";
+import { activeKnowledgeChild, isSourceDocument, pageIdFromPathname, type LoadedReader } from "./navigation-state";
+import { ReaderLocationProvider } from "../features/knowledge/reader-location";
+import { type ReturnContext } from "../shared/routing";
 import { shortcutSuppressed } from "./shortcut-guards";
 import { ConfirmDeleteDialog } from "../shared/ConfirmDeleteDialog";
 import { TruncatedTextTooltip } from "../shared/TruncatedTextTooltip";
@@ -104,7 +106,9 @@ export function AppShell({ revision }: { revision: number }) {
   const navigationType = useNavigationType();
   useDesktopNotifications(location.pathname);
   const readerReturnContext = location.state as ReturnContext | null;
-  const isSourceReader = isSourceSectionPage(location.pathname, location.search, readerReturnContext);
+  const [readerLocation, setReaderLocation] = useState<LoadedReader>();
+  const loadedReader = readerLocation?.pageId === pageIdFromPathname(location.pathname) ? readerLocation : undefined;
+  const isSourceReader = isSourceDocument(location.pathname, loadedReader, readerReturnContext?.returnTo, location.search);
   const searchWindow = useRememberedWindow("command-palette");
   const [inspectorByMenu, setInspectorByMenu] = useState<Record<string, boolean>>({});
   const [suspendedInspectorMenu, setSuspendedInspectorMenu] = useState<string>();
@@ -132,7 +136,7 @@ export function AppShell({ revision }: { revision: number }) {
   }
 
   function childItemActive(child: { readonly to: string; readonly active: readonly string[] }): boolean {
-    return child.active.some((prefix) => location.pathname.startsWith(prefix));
+    return child.active.some((prefix) => location.pathname.startsWith(prefix)) || activeKnowledgeChild(location.pathname, readerReturnContext?.returnTo, loadedReader) === child.to;
   }
 
   const activeSection = navigation.find((item) => mainItemActive(item));
@@ -220,6 +224,7 @@ export function AppShell({ revision }: { revision: number }) {
       else if (value === "capture") openCapture();
       else if (value === "settings") openPreferences();
       else if (value === "import") navigate("/sources?import=true");
+      else if (value === "predict-self") navigate("/predict-self");
       else if (value === "back") navigate(-1);
       else if (value === "forward") navigate(1);
       else if (value === "focus") {
@@ -264,11 +269,11 @@ export function AppShell({ revision }: { revision: number }) {
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
   return (
-    <div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
+    <ReaderLocationProvider publish={setReaderLocation}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <header className="desktop-titlebar">
         <div className="desktop-window-space" aria-hidden="true" />
-        <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
+        <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${location.pathname === "/search" ? "搜索" : activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
         {!utilityWindow ? <><button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={searchWindow.show}><Icon name="search" size={17} /></button>
         {!localConversation && !detached ? <button ref={agentToggleRef} className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
       </header>
@@ -299,7 +304,7 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">正在打开知识库…</p>} />
             <Route path="/" element={<Today revision={revision} />} />
-            <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : null} />
+            <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : <p role="status">正在打开知识库…</p>} />
             <Route path="/questions" element={<QuestionsHub revision={revision} />} />
             <Route path="/sources" element={<OrganizedSources revision={revision} />} />
             <Route path="/sources/materials" element={<OrganizedSources revision={revision} />} />
@@ -332,6 +337,6 @@ export function AppShell({ revision }: { revision: number }) {
         onConfirm={deleteKnowledgeBase}
       /> : null}
       <TruncatedTextTooltip />
-    </div>
+    </div></ReaderLocationProvider>
   );
 }

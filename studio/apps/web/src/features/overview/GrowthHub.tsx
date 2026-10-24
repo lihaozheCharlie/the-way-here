@@ -7,6 +7,8 @@ import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
 import { Empty, Icon, Loading } from "../../shared/ui";
+import { mentalModelHref } from "../../shared/routing";
+import { resolveThinkingModels } from "../knowledge/thinking-models";
 import { insightCardDetail, insightCoreJudgment, insightExcerpt, insightSectionText, mentalModelPanels } from "./insights-model";
 
 type InsightSectionKind = "line" | "cycle" | "system" | "model";
@@ -23,7 +25,7 @@ function InsightSectionMark({ kind }: { kind: InsightSectionKind }) {
 }
 
 function insightItemHref(route: { to: string; key: string }, item: { id: string }): string {
-  return route.key === "mental-models" ? route.to : `${route.to}?item=${encodeURIComponent(item.id)}`;
+  return route.key === "mental-models" ? mentalModelHref(item.id) : `${route.to}?item=${encodeURIComponent(item.id)}`;
 }
 
 export function GrowthHub({ revision }: { revision: number }) {
@@ -31,17 +33,18 @@ export function GrowthHub({ revision }: { revision: number }) {
   const cycles = useApi<StructuredCard[]>("/api/views/cards/cycles", revision);
   const systems = useApi<StructuredCard[]>("/api/views/cards/systems", revision);
   const models = useApi<SectionedPageView>("/api/views/mental-models", revision);
+  const modelCards = useApi<StructuredCard[]>("/api/views/cards/mental-models", revision);
   const [expandedLines, setExpandedLines] = useState<Set<string>>(() => new Set());
   const [expandedCycles, setExpandedCycles] = useState<Set<string>>(() => new Set());
   const [selectedSystemId, setSelectedSystemId] = useState("");
   const [modelViews, setModelViews] = useState<Record<string, "summary" | "calibration">>({});
-  if (personalLines.loading || cycles.loading || systems.loading || models.loading) return <Loading label="正在把经历整理成可用的理解路径" />;
-  const modelSections = models.data?.sections.filter((section) => /^[一二三四五六七]、/.test(section.heading)) || [];
+  if (personalLines.loading || cycles.loading || systems.loading || models.loading || modelCards.loading) return <Loading label="正在把经历整理成可用的理解路径" />;
+  const thinkingModels = resolveThinkingModels(modelCards.data, models.data);
   const routes: Array<{ to: string; key: string; title: string; note: string; items: StructuredCard[] }> = [
     { to: "/cards/personal-lines", key: "personal-lines", title: "个人主线", note: "这一生反复在解决什么，以及它怎样穿过不同阶段", items: personalLines.data || [] },
     { to: "/cards/cycles", key: "cycles", title: "反复循环", note: "看见触发、惯性反应、代价与真实有效的中断方式", items: cycles.data || [] },
     { to: "/cards/systems", key: "systems", title: "现实系统", note: "职业、家庭、身体、资产、注意力与表达怎样共同运行", items: systems.data || [] },
-    { to: "/mental-models", key: "mental-models", title: "思维模型", note: "带着边界、反例和校准使用的判断工具", items: modelSections.map((section, index) => ({ id: String(index), title: section.heading.replace(/^[一二三四五六七]、/, ""), excerpt: insightExcerpt(section.body, 120), sections: [{ heading: "模型说明", body: section.body }] })) },
+    { to: "/mental-models", key: "mental-models", title: "思维模型", note: "带着边界、反例和校准使用的判断工具", items: thinkingModels.map((model) => ({ id: model.key, title: model.title, excerpt: insightExcerpt(model.body, 120), sections: model.sections })) },
   ];
   const total = routes.reduce((sum, route) => sum + route.items.length, 0);
   const datedItems = routes.flatMap((route) => route.items.map((item) => ({ ...item, route }))).filter((item) => item.updatedAt).sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
@@ -135,13 +138,12 @@ export function GrowthHub({ revision }: { revision: number }) {
 
     <section className="insights-section insights-section--model" id="insights-models" aria-labelledby="insights-models-title">
       <header className="insights-section-head"><div><InsightSectionMark kind="model" /><div><h2 id="insights-models-title">{modelRoute.title}</h2><p>{modelRoute.note}</p></div></div><NavLink to={modelRoute.to} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>查看全部 {modelRoute.items.length} 条 <Icon name="arrow" size={14} /></NavLink></header>
-      {modelSections.length ? <div className="insights-model-grid">
-        {modelSections.slice(0, 3).map((section, index) => {
-          const id = `model-${index}`;
-          const view = modelViews[id] || "summary";
-          const panels = mentalModelPanels(section.body);
-          return <article className="insights-model-card" key={section.heading}><div><InsightSectionMark kind="model" /><h3><NavLink to="/mental-models" state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>{section.heading.replace(/^[一二三四五六七]、/, "")}</NavLink></h3></div><p>{insightExcerpt(panels.summary, 145)}</p>
-            <SegmentedTabs<"summary" | "calibration"> className="insights-model-toggles" label={`${section.heading}的查看方式`} value={view} options={[{value:"summary",label:"摘要"},{value:"calibration",label:"校准"}]} onChange={next => setModelViews(current => ({...current,[id]:next}))} />
+      {thinkingModels.length ? <div className="insights-model-grid">
+        {thinkingModels.slice(0, 3).map((model) => {
+          const view = modelViews[model.key] || "summary";
+          const panels = mentalModelPanels(model.body);
+          return <article className="insights-model-card" key={model.key}><div><InsightSectionMark kind="model" /><h3><NavLink to={mentalModelHref(model.key)} state={{ returnTo: "/insights", returnLabel: "返回理解自己" }}>{model.title}</NavLink></h3></div><p>{insightExcerpt(panels.summary, 145)}</p>
+            <SegmentedTabs<"summary" | "calibration"> className="insights-model-toggles" label={`${model.title}的查看方式`} value={view} options={[{value:"summary",label:"摘要"},{value:"calibration",label:"校准"}]} onChange={next => setModelViews(current => ({...current,[model.key]:next}))} />
             <div className="insights-model-panel" aria-live="polite">{insightExcerpt(view === "summary" ? panels.summary : panels.calibration, 240)}</div>
           </article>;
         })}

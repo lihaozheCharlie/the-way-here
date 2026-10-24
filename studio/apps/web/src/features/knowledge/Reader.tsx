@@ -3,17 +3,19 @@ import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { SourceImportBatch, WikiPage } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { graphCategoryNames } from "../../shared/categories";
-import { type ReturnContext } from "../../shared/routing";
+import { type ReturnContext, apiPageHref } from "../../shared/routing";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
 import { EditableDocument, ReadOnlyDocument } from "../../shared/markdown";
 import { PageLink, pageHref } from "../../shared/routing";
 import { Empty, Icon, Loading } from "../../shared/ui";
+import { usePublishReaderLocation } from "./reader-location";
 
 export function Reader({ revision }: { revision: number }) {
   const params = useParams();
   const pageId = params["*"] || "";
-  const { data: page, loading, error } = useApi<WikiPage>(`/api/pages/${pageId}`, revision);
+  const { data: page, loading, error } = useApi<WikiPage>(pageId ? apiPageHref(pageId) : "", revision);
+  usePublishReaderLocation(page && pageId ? { pageId, isSource: page.isSource, category: page.category } : undefined);
   const { data: importBatches } = useApi<SourceImportBatch[]>(pageId ? "/api/imports" : "", revision);
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,14 +43,14 @@ export function Reader({ revision }: { revision: number }) {
 
   function goBack() {
     if (returnContext?.returnTo) navigate(returnContext.returnTo);
-    else navigate(page?.isSource ? "/sources/materials" : "/knowledge", { replace: true });
+    else navigate(page?.isSource ? "/sources" : "/knowledge", { replace: true });
   }
 
   return (
     <div className="reader-layout">
       <article className="reader">
         <button className="context-back" onClick={goBack}><Icon name="back" size={16} />{returnContext?.returnLabel || (page.isSource ? "返回生活记录" : "返回已有理解")}</button>
-        <div className="reader-meta"><span>{page.category}</span><time>{page.end || page.start || ""}</time></div>
+        <div className="reader-meta"><span>{graphCategoryNames[page.category] || (page.isSource ? "生活记录" : page.category)}</span><time>{page.end || page.start || ""}</time></div>
         {new URLSearchParams(location.search).has("detached") ? <ReadOnlyDocument readOnlyReason="此页面已与原文件断开" relations={relations} page={page} id={page.id} markdown={page.renderedMarkdown} /> : <EditableDocument relations={relations} page={page} onRenamed={(renamed) => navigate(`${pageHref(renamed.id)}${page.isSource ? "?from=source" : ""}`, { replace: true, state: returnContext })} />}
       </article>
       <PageAgentContext context={{ scope: `${page.isSource ? "原始材料" : "知识页面"} · ${graphCategoryNames[page.category] || page.category}`, title: page.title, pageId: page.id, summary: page.excerpt, defaultMode: page.isSource ? "read" : "write", suggestions: page.isSource ? ["这份原始记录可以支持哪些已有判断？请区分直接证据和推断。", "这份记录与哪些人生阶段、人物或反复循环有关？"] : ["我想补充一段与当前页面有关的新经历，请按现有规则更新。", "请检查当前页面是否缺少来源、反例、关联或状态追踪。"] }} />

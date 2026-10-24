@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SourceImportBatch, WikiPageSummary } from "@the-way-here/shared";
-import { buildableSourceRecordForPage, countRecentSources, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceMonthOptions, sourceRecordMonth, sourceRecordType } from "./source-model";
+import { buildableSourceRecordForPage, countRecentSources, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceMonthOptions, sourcePageMatchesRequest, sourceRecordMonth, sourceRecordType } from "./source-model";
 
 function page(overrides: Partial<WikiPageSummary>): WikiPageSummary {
   return {
@@ -20,6 +20,14 @@ function page(overrides: Partial<WikiPageSummary>): WikiPageSummary {
 }
 
 describe("life record presentation model", () => {
+  it("opens the life record named by either its page id or stored path", () => {
+    const record = page({ id: "sources/日记/今天", relativePath: "vault/demo/sources/日记/今天.md" });
+    expect(sourcePageMatchesRequest(record, "sources/日记/今天")).toBe(true);
+    expect(sourcePageMatchesRequest(record, "vault/demo/sources/日记/今天.md")).toBe(true);
+    expect(sourcePageMatchesRequest(record, "vault/demo/sources/日记/另一天.md")).toBe(false);
+    expect(sourcePageMatchesRequest(record, "")).toBe(false);
+  });
+
   it("classifies the supported source families from their durable metadata", () => {
     expect(sourceRecordType(page({ relativePath: "sources/AI聊天记录/ChatGPT/对话.md" }))).toBe("ai");
     expect(sourceRecordType(page({ relativePath: "sources/AI聊天记录/Claude/对话.md" }))).toBe("ai");

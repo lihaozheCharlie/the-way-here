@@ -32,7 +32,7 @@ import { SourceMemoryCards, SourceMemoryDialog } from "./SourceMemories";
 import { clearPendingPhotoMemory, readPendingPhotoMemory } from "../overview/photo-library-handoff";
 import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords } from "./source-memory-model";
 import { sourceFolderOptions, useSourceFolders } from "./source-folders";
-import { buildableSourceRecordForPage, cleanSourcePath, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
+import { buildableSourceRecordForPage, cleanSourcePath, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourcePageMatchesRequest, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
 
 function sourceBuildTitle(record: SourceBuildRecord): string {
   return cleanSourcePath(record.file.storedPath).split("/").at(-1)?.replace(/\.md$/i, "") || record.file.originalName;
@@ -321,7 +321,8 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const requestedLimit = Number.parseInt(params.get("limit") || "120", 10);
   const visibleLimit = Number.isFinite(requestedLimit) ? Math.max(120, requestedLimit) : 120;
   const visiblePages = filtered.slice(0, visibleLimit);
-  const selected = filtered.find((page) => page.id === params.get("file")) || filtered[0];
+  const requestedFile = params.get("file") || "";
+  const selected = (requestedFile ? pages.find((page) => sourcePageMatchesRequest(page, requestedFile)) : undefined) || filtered[0];
   const selectedBuildRecord = selected ? sourceBuildRecordForPage(selected, buildRecords) : undefined;
   const photoBatch = selectedBuildRecord?.batch.channel === "photos" ? selectedBuildRecord.batch : undefined;
   const filteredPaths = new Set(filtered.map((page) => sourcePagePath(page)));

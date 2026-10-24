@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { UnderstandingScore } from "@the-way-here/shared";
-import { pageHref } from "../../shared/routing";
+import { pageHref, returnContextFor } from "../../shared/routing";
 
 export function PredictionProgress({ score }: { score: UnderstandingScore }) {
   const current = score.scanStatus === "running" || (!score.scannedAt && !score.unlocked) ? 0 : score.unlocked ? 2 : 1;
@@ -22,7 +22,7 @@ export function UnderstandingDetails({ score, compact = false }: { score: Unders
           <summary>查看判断与缺口</summary>
           {facet.reason && <p>{facet.reason}</p>}
           {facet.gaps?.map((gap, index) => <p key={index}>{gap}</p>)}
-          {facet.evidence?.map((evidence, index) => <blockquote key={index}>{evidence.quote} <Link to={pageHref(evidence.pageId)}>查看 Wiki 依据 →</Link></blockquote>)}
+          {facet.evidence?.map((evidence, index) => <blockquote key={index}>{evidence.quote} <Link to={pageHref(evidence.pageId)} state={returnContextFor("/predict-self")}>查看 Wiki 依据 →</Link></blockquote>)}
         </details> : null}
       </div>)}
       <p>这是资料覆盖程度，不是对你的评价，也不代表预测准确率；根据各维度的具体内容与依据评估，达到 {score.threshold} 分开启预测，不计入字数或记录条数。</p>

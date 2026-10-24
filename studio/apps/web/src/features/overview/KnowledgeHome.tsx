@@ -18,7 +18,7 @@ export function KnowledgeHome({ revision }: { revision: number }) {
   const peopleCount = (vault.categories.entities || 0) + (vault.categories["relationship-roles"] || 0);
   const groups = [
     { to: "/insights", tone: "self" as const, title: "理解自己", description: "把个人主线、反复循环、现实系统与思维模型放在同一张判断地图里。", count: selfCount, label: "条自我理解" },
-    { to: "/timeline", tone: "life" as const, title: "人生轨迹", description: "沿着阶段与转折，回到一段经历当时真实的处境。", count: lifeCount, label: "个阶段与片段" },
+    { to: "/timeline", tone: "life" as const, title: "人生轨迹", description: "沿着阶段与转折，回到一段经历当时真实的处境。", count: lifeCount, label: "个阶段与转折" },
     { to: "/letters", tone: "letter" as const, title: "近况回信", description: "从过去的记录回望此刻，让当时的经历与现在重新发生联系。", count: letterCount, label: "封近况回信" },
     { to: "/relationships", tone: "people" as const, title: "人与世界", description: "看见具体的人，也看见一段关系在生命中长期承担的功能。", count: peopleCount, label: "个人与关系页面" },
   ];
