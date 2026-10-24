@@ -36,6 +36,8 @@
 .context-agent-panel .context-run-answer strong{font-weight:600}
 .context-agent-panel .context-run-answer blockquote{margin:4px 0 16px;padding:14px 16px;border:0;border-radius:var(--radius-card-small);color:var(--accent-ink);background:var(--agent-accent-soft);font-size:13.5px}
 .context-agent-panel .context-run-answer blockquote p:last-child{margin-bottom:0}
+.agent-understanding-receipt{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0;color:var(--ink-soft);font-size:13px;line-height:1.6}
+.agent-understanding-receipt a{color:var(--accent-primary)}
 .agent-wiki-update{border:1px solid var(--agent-line);border-radius:var(--radius-panel);background:var(--agent-surface);overflow:hidden}
 .agent-wiki-update>summary{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;list-style:none}
 .agent-wiki-update>summary::-webkit-details-marker,.context-run-details>summary::-webkit-details-marker{display:none}

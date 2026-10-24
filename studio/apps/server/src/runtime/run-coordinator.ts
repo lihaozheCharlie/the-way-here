@@ -1,7 +1,7 @@
 import { canWriteRun, isTerminalRunStatus } from "@the-way-here/shared";
 import path from "node:path";
 import { RunOutputs } from "../services/run-outputs.js";
-import { RunRequestError, type StartRunInput } from "../services/run-request.js";
+import { assertRunStaysInActiveLibrary, RunRequestError, type StartRunInput } from "../services/run-request.js";
 import type { FastifyBaseLogger } from "fastify";
 import { RunStore } from "@the-way-here/run-manager";
 import type {
@@ -83,6 +83,7 @@ export class RunCoordinator {
     for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId], ["contextTopicId", input.contextTopicId], ["sourceModule", input.sourceModule]] as const) {
       if (value !== undefined && typeof value !== "string") throw new RunRequestError(400, `${field} 必须是字符串`);
     }
+    assertRunStaysInActiveLibrary(this.knowledge.index.config.knowledgeBaseId, input.knowledgeBaseId, suggestionForRunId);
     const prompt = input.prompt?.trim();
     const mode = parseRunMode(input.mode || "read");
     if (!mode) throw new RunRequestError(400, "任务模式无效");

@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { LibraryPhoto, PhotoLibraryFilters, PhotoLibraryAuthorization, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult } from "@the-way-here/shared";
+import { useNavigate } from "react-router-dom";
+import type { LibraryPhoto, PhotoLibraryFilters, PhotoLibraryAuthorization, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult, SourceImportBatch } from "@the-way-here/shared";
+import { api } from "../../api";
 import type { DesktopBridge } from "../desktop/bridge";
+import { photoDraftKey } from "../sources/photo-draft";
 import { Icon } from "../../shared/ui";
+import { photoHandoffDraft, photoPreviewPayload, stagePendingPhotoMemory } from "./photo-library-handoff";
 import { photoImageQueue } from "./photo-library-images";
 import "./photo-library.css";
 
@@ -11,22 +15,22 @@ function photoDate(photo: LibraryPhoto) {
   return photo.createdAt ? new Date(photo.createdAt).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" }) : "日期未知";
 }
 
-export function PhotoLibraryCard() {
+export function PhotoLibraryCard({ knowledgeBaseId }: { knowledgeBaseId: string }) {
   const [open, setOpen] = useState(false);
   const desktop = typeof window === "undefined" ? undefined : window.desktop;
   const available = desktop?.platform === "darwin" && desktop.photoLibraryFilters && desktop.searchPhotoLibrary && desktop.photoLibraryStatus && desktop.authorizePhotoLibrary && desktop.photoLibraryImage && desktop.closePhotoLibrary && desktop.openPhotoLibrarySettings;
   return <section className="photo-library-card" aria-labelledby="photo-library-title">
     <div className="photo-library-intro">
       <Icon name="image" size={22} />
-      <div><h2 id="photo-library-title">从一张照片想起</h2><p>按时间、地点、相册或收藏，找找最近或以前的照片。</p></div>
+      <div><h2 id="photo-library-title">从一张照片想起</h2><p>按时间、地点、相册或收藏，找找最近或以前的照片。选中后再确认人物和一句短注，才会收进生活记录。</p></div>
       {available && <button type="button" className="desktop-secondary" aria-expanded={open} aria-controls="photo-library-search" onClick={() => setOpen(value => !value)}>{open ? "收起" : "找照片"}<Icon name={open ? "up" : "search"} size={15} /></button>}
     </div>
     {!available && <p className="photo-library-note">请在 macOS 桌面应用中连接系统照片库。其他照片仍可从“生活记录”导入。</p>}
-    {open && available && <PhotoLibrarySearch bridge={desktop as PhotosBridge} />}
+    {open && available && <PhotoLibrarySearch bridge={desktop as PhotosBridge} knowledgeBaseId={knowledgeBaseId} />}
   </section>;
 }
 
-function PhotoLibrarySearch({ bridge }: { bridge: PhotosBridge }) {
+function PhotoLibrarySearch({ bridge, knowledgeBaseId }: { bridge: PhotosBridge; knowledgeBaseId: string }) {
   const [authorization, setAuthorization] = useState<PhotoLibraryAuthorization>();
   const [query, setQuery] = useState("");
   const [dateBasis, setDateBasis] = useState<NonNullable<PhotoLibrarySearchInput["dateBasis"]>>("taken");
@@ -145,18 +149,47 @@ function PhotoLibrarySearch({ bridge }: { bridge: PhotosBridge }) {
       {result && <>
         <div className="photo-library-result-head"><p>{result.summary}</p><span>已显示 {result.photos.length} 张{result.nextCursor ? " · 还有更多" : ""}</span></div>
         {result.place && <p className="photo-library-note">匹配地点：{result.place.name}（{result.place.latitude.toFixed(3)}, {result.place.longitude.toFixed(3)}），附近 {result.place.radiusKm} 公里。</p>}
-        {result.photos.length ? <PhotoResults key={searchId} photos={result.photos} bridge={bridge} /> : <p className="photo-library-empty">没有找到符合条件的照片。试试放宽时间、地点范围，或清除部分筛选条件。</p>}
+        {result.photos.length ? <PhotoResults key={searchId} photos={result.photos} bridge={bridge} knowledgeBaseId={knowledgeBaseId} /> : <p className="photo-library-empty">没有找到符合条件的照片。试试放宽时间、地点范围，或清除部分筛选条件。</p>}
         {result.nextCursor && <button type="button" className="desktop-secondary photo-library-more" disabled={busy} onClick={() => void search(true)}>显示更多照片</button>}
       </>}
-      <p className="photo-library-note photo-library-privacy">仅浏览系统照片库，不改动照片，不发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需点击下载预览。</p>
+      <p className="photo-library-note photo-library-privacy">仅浏览系统照片库，不改动照片。保存到生活记录前会请你确认人物和短注，这一步不发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需先下载预览。</p>
     </>}
     {error && <div role="alert" className="photo-library-error"><p>{error}</p>{!authorization && <button type="button" className="desktop-secondary" disabled={busy} onClick={() => void access()}>重新检查</button>}</div>}
   </div>;
 }
 
 type ImageQueue = ReturnType<typeof photoImageQueue>;
-function PhotoResults({ photos, bridge }: { photos: LibraryPhoto[]; bridge: PhotosBridge }) {
+function PhotoResults({ photos, bridge, knowledgeBaseId }: { photos: LibraryPhoto[]; bridge: PhotosBridge; knowledgeBaseId: string }) {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<LibraryPhoto>();
+  const [picked, setPicked] = useState<string[]>([]);
+  const [people, setPeople] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [handoffError, setHandoffError] = useState("");
+  function toggle(photo: LibraryPhoto) {
+    setHandoffError("");
+    setPicked((current) => current.includes(photo.id) ? current.filter((id) => id !== photo.id) : current.length >= 10 ? current : [...current, photo.id]);
+  }
+  async function saveSelection() {
+    const chosen = photos.filter((photo) => picked.includes(photo.id)).slice(0, 10);
+    if (!chosen.length || saving) return;
+    setSaving(true); setHandoffError("");
+    try {
+      const files = [];
+      for (const photo of chosen) {
+        const image = await bridge.photoLibraryImage({ assetId: photo.id, size: "preview", network: false });
+        if (!image.dataUrl) throw new Error(image.cloudOnly ? `「${photo.name}」还在 iCloud。请先下载预览，再保存。不会自动联网，也不会发给模型。` : `「${photo.name}」没有可保存的预览。`);
+        files.push(photoPreviewPayload(image.dataUrl, photo.name));
+      }
+      const batch = await api<SourceImportBatch>("/api/imports/photos", { method: "POST", body: JSON.stringify({ knowledgeBaseId, title: note.trim() || people.trim() || "照片记忆", targetFolder: "照片记忆", files }) });
+      const draft = photoHandoffDraft(people, note);
+      if (draft) localStorage.setItem(photoDraftKey(knowledgeBaseId, batch.id), JSON.stringify(draft));
+      stagePendingPhotoMemory(batch);
+      navigate(`/sources?memory=${encodeURIComponent(batch.id)}`);
+    } catch (reason) { setHandoffError(reason instanceof Error ? reason.message : "照片还在本机，没有保存成功。"); }
+    finally { setSaving(false); }
+  }
   const queue = useMemo(() => photoImageQueue((assetId, size, network) => bridge.photoLibraryImage({ assetId, size, network })), [bridge]);
   const lifecycle = useRef(0);
   useEffect(() => {
@@ -167,7 +200,16 @@ function PhotoResults({ photos, bridge }: { photos: LibraryPhoto[]; bridge: Phot
   }, [queue]);
   return <div className="photo-library-results">
     {selected && <figure className="photo-library-preview"><div className="photo-library-preview-head"><figcaption>{photoDate(selected)} · {selected.name}</figcaption><button type="button" className="desktop-secondary" onClick={() => setSelected(undefined)} aria-label="关闭大图"><Icon name="close" size={16} /></button></div><PhotoImage key={selected.id} photo={selected} queue={queue} size="preview" /></figure>}
-    <div className="photo-library-grid">{photos.map(photo => <figure key={photo.id}><PhotoImage photo={photo} queue={queue} size="thumbnail" onOpen={() => setSelected(photo)} /><figcaption><time dateTime={photo.createdAt} title="拍摄时间">{photoDate(photo)}</time>{photo.hasLocation && <Icon name="pin" size={12} />}<span title={photo.name}>{photo.name}</span></figcaption></figure>)}</div>
+    <div className="photo-library-grid">{photos.map(photo => <figure key={photo.id}><PhotoImage photo={photo} queue={queue} size="thumbnail" onOpen={() => setSelected(photo)} /><figcaption><time dateTime={photo.createdAt} title="拍摄时间">{photoDate(photo)}</time>{photo.hasLocation && <Icon name="pin" size={12} />}<span title={photo.name}>{photo.name}</span><button type="button" className={picked.includes(photo.id) ? "photo-library-select is-selected" : "photo-library-select"} aria-pressed={picked.includes(photo.id)} onClick={() => toggle(photo)}>{picked.includes(photo.id) ? "已选" : "选择"}</button></figcaption></figure>)}</div>
+    {picked.length > 0 && <form className="photo-library-handoff" onSubmit={(event) => { event.preventDefault(); void saveSelection(); }}>
+      <h3>收进生活记录</h3>
+      <p>已选 {picked.length} 张，最多 10 张。先写下你认识的人和一句短注。原图留在本机，这一步不发给模型；下一页会在本地圈出人物，你可以再改。</p>
+      <label><span>照片里的人</span><input value={people} maxLength={200} disabled={saving} onChange={(event) => setPeople(event.target.value)} placeholder="例如：小林、妈妈" /></label>
+      <label><span>一句短注</span><textarea value={note} maxLength={500} rows={3} disabled={saving} onChange={(event) => setNote(event.target.value)} placeholder="这是什么时候、在做什么" /></label>
+      {picked.length >= 10 && <p className="photo-library-note">一次最多保存 10 张。</p>}
+      <div className="photo-library-actions"><button type="submit" className="desktop-primary" disabled={saving}>{saving ? "正在保存到本机…" : "保存到生活记录"}</button><button type="button" className="desktop-secondary" disabled={saving} onClick={() => { setPicked([]); setHandoffError(""); }}>取消选择</button></div>
+      {handoffError && <p className="photo-library-error" role="alert">{handoffError}</p>}
+    </form>}
   </div>;
 }
 function PhotoImage({ photo, queue, size, onOpen }: { photo: LibraryPhoto; queue: ImageQueue; size: "thumbnail" | "preview"; onOpen?: () => void }) {

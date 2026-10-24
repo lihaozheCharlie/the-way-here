@@ -11,7 +11,7 @@ import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useRememberedWindow } from "../../shared/use-remembered-preview";
 import { AgentComposerSettings, reasoningLabels, useAgentSelection, type AgentSettingsController } from "./AgentSettings";
 import { AgentAnswer } from "./AgentAnswer";
-import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, abandonedRunOnContextChange, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
 import { useAgentStream } from "./use-agent-stream";
 
 type DockView = "compose" | "history";
@@ -65,6 +65,9 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const restoredContextRef = useRef("");
+  const runIdRef = useRef(initialRunId);
+  const runStatusRef = useRef<{ id: string; status: WikiRun["status"] } | undefined>(undefined);
+  runIdRef.current = runId;
   const submittingRef = useRef(false);
   const pendingAutoSubmissionRef = useRef<AgentAutoSubmission | undefined>(undefined);
   const threads = groupAgentThreads(runList || []);
@@ -126,7 +129,14 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
   useEffect(() => () => { topicRequestRef.current += 1; }, []);
   const previousKnowledgeBaseRef = useRef<string | undefined>(undefined);
   useEffect(() => {
+    const current = runList?.find((candidate) => candidate.id === runId);
+    if (current) runStatusRef.current = { id: current.id, status: current.status };
+  }, [runList, runId]);
+
+  useEffect(() => {
     if (previousKnowledgeBaseRef.current && previousKnowledgeBaseRef.current !== vault?.knowledgeBaseId) {
+      const interruptId = abandonedRunOnContextChange({ previousContext: previousKnowledgeBaseRef.current, previousRunId: runIdRef.current, nextRunId: "", status: runStatusRef.current?.id === runIdRef.current ? runStatusRef.current.status : undefined });
+      if (interruptId) void api(`/api/runs/${encodeURIComponent(interruptId)}/interrupt`, { method: "POST" }).catch(() => undefined);
       topicRequestRef.current += 1;
       setTopicRestore(undefined);
       setRunId("");
@@ -143,7 +153,13 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
 
   useEffect(() => {
     if (runsLoading || restoredContextRef.current === contextIdentity) return;
+    const previousContext = restoredContextRef.current;
+    const abandonedId = runIdRef.current;
+    const nextRunId = initialRunId || boundRunId;
+    const abandonedStatus = runList?.find((candidate) => candidate.id === abandonedId)?.status || (runStatusRef.current?.id === abandonedId ? runStatusRef.current.status : undefined);
     restoredContextRef.current = contextIdentity;
+    const interruptId = abandonedRunOnContextChange({ previousContext, previousRunId: abandonedId, nextRunId, status: abandonedId ? abandonedStatus : undefined });
+    if (interruptId) void api(`/api/runs/${encodeURIComponent(interruptId)}/interrupt`, { method: "POST" }).catch(() => undefined);
     setDraft("");
     setAttachedContext(undefined);
     setRunId(initialRunId || boundRunId);
@@ -240,6 +256,8 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
         }),
       });
       setRunListRevision((value) => value + 1);
+      runIdRef.current = run.id;
+      runStatusRef.current = { id: run.id, status: run.status };
       setRunId(run.id);
       setView("history");
       setDraft("");

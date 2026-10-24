@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WikiRun } from "@the-way-here/shared";
-import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, contextPrompt, continuationModelSelection, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, abandonedRunOnContextChange, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, contextPrompt, continuationModelSelection, groupAgentThreads, isJourneyWrapUpRun, letterRunVersions, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer } from "./model";
 
 describe("collaboration model", () => {
   it("hides photo payloads, including a partial streaming block", () => {
@@ -172,6 +172,19 @@ describe("topic conversation restoration", () => {
     expect(boundAgentThreadForTopic([{ ...legacy, prompt: "同标题的其他任务" }], topic, "demo")).toBeUndefined();
     expect(boundAgentThreadForTopic([{ ...legacy, contextTopicId: "different" }], topic, "demo")).toBeUndefined();
   });
+});
+
+it("interrupts the visible in-progress chat when its page context is abandoned", () => {
+  const base = { previousContext: "surface:此刻:从此刻说起", previousRunId: "chat", nextRunId: "", status: "running" as const };
+  expect(abandonedRunOnContextChange(base)).toBe("chat");
+  expect(abandonedRunOnContextChange({ ...base, status: "preparing" })).toBe("chat");
+  expect(abandonedRunOnContextChange({ ...base, status: "waiting-approval" })).toBe("chat");
+  expect(abandonedRunOnContextChange({ ...base, nextRunId: "chat" })).toBeUndefined();
+  expect(abandonedRunOnContextChange({ ...base, previousContext: "" })).toBeUndefined();
+  expect(abandonedRunOnContextChange({ ...base, status: "validating" })).toBeUndefined();
+  expect(abandonedRunOnContextChange({ ...base, status: "completed" })).toBeUndefined();
+  expect(abandonedRunOnContextChange({ ...base, status: "interrupted" })).toBeUndefined();
+  expect(abandonedRunOnContextChange({ ...base, status: undefined })).toBeUndefined();
 });
 
 it("uses newly selected models for continuation and preserves the runtime boundary", () => {

@@ -65,7 +65,7 @@ export class AgentNotificationTracker {
     this.notify({
       title: `【看见未来】${event.job === "scan" ? "了解度扫描" : "预测"}${completed ? "已完成" : "未完成"}`,
       body: completed ? "点击查看结果。" : "点击查看原因并重试。",
-      route: "/predictions",
+      route: "/predict-self",
     });
   }
 }

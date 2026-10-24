@@ -18,7 +18,8 @@ import type { VaultInfo } from "@the-way-here/shared";
 import { api } from "../api";
 import { useApi } from "../shared/use-api";
 import { navigation } from "./config";
-import { type ReturnContext } from "../shared/routing";
+import { isSourceSectionPage, type ReturnContext } from "../shared/routing";
+import { shortcutSuppressed } from "./shortcut-guards";
 import { ConfirmDeleteDialog } from "../shared/ConfirmDeleteDialog";
 import { TruncatedTextTooltip } from "../shared/TruncatedTextTooltip";
 import { Icon } from "../shared/ui";
@@ -90,9 +91,11 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
 export function AppShell({ revision }: { revision: number }) {
   const { data: vault } = useApi<VaultInfo>("/api/vault", revision);
   const initialKnowledgeBase = useRef<string | undefined>(undefined);
+  const explicitKnowledgeBaseNavigation = useRef(false);
   useEffect(() => {
     if (!vault) return;
     if (initialKnowledgeBase.current && initialKnowledgeBase.current !== vault.knowledgeBaseId) {
+      if (explicitKnowledgeBaseNavigation.current) return;
       window.location.replace(location.pathname === "/capture" ? "/capture" : location.pathname === "/preferences" ? "/preferences" : "/");
     } else initialKnowledgeBase.current = vault.knowledgeBaseId;
   }, [vault?.knowledgeBaseId]);
@@ -101,7 +104,7 @@ export function AppShell({ revision }: { revision: number }) {
   const navigationType = useNavigationType();
   useDesktopNotifications(location.pathname);
   const readerReturnContext = location.state as ReturnContext | null;
-  const isSourceReader = location.pathname.startsWith("/page/") && readerReturnContext?.returnTo.startsWith("/sources");
+  const isSourceReader = isSourceSectionPage(location.pathname, location.search, readerReturnContext);
   const searchWindow = useRememberedWindow("command-palette");
   const [inspectorByMenu, setInspectorByMenu] = useState<Record<string, boolean>>({});
   const [suspendedInspectorMenu, setSuspendedInspectorMenu] = useState<string>();
@@ -157,6 +160,7 @@ export function AppShell({ revision }: { revision: number }) {
     setKnowledgeBaseSwitching(true);
     setSwitchingKnowledgeBaseName(nextKnowledgeBase?.name || "所选空间");
     setKnowledgeBaseError("");
+    explicitKnowledgeBaseNavigation.current = true;
     try {
       await api<{ ok: boolean; knowledgeBaseId: string }>("/api/vault/select", {
         method: "POST",
@@ -167,6 +171,7 @@ export function AppShell({ revision }: { revision: number }) {
       else if (destination.startsWith("/focus/")) destination = "/questions";
       window.location.assign(destination);
     } catch (reason: any) {
+      explicitKnowledgeBaseNavigation.current = false;
       setKnowledgeBaseSwitching(false);
       setKnowledgeBaseError(reason.message);
     }
@@ -176,6 +181,7 @@ export function AppShell({ revision }: { revision: number }) {
     setKnowledgeBaseSwitching(true);
     setSwitchingKnowledgeBaseName(name);
     setKnowledgeBaseError("");
+    explicitKnowledgeBaseNavigation.current = true;
     try {
       await api<{ id: string; name: string; knowledgeBaseId: string }>("/api/vault", {
         method: "POST",
@@ -183,6 +189,7 @@ export function AppShell({ revision }: { revision: number }) {
       });
       window.location.assign("/");
     } catch (reason: any) {
+      explicitKnowledgeBaseNavigation.current = false;
       setKnowledgeBaseSwitching(false);
       throw reason;
     }
@@ -190,8 +197,14 @@ export function AppShell({ revision }: { revision: number }) {
 
   async function deleteKnowledgeBase() {
     if (!deleteKnowledgeBaseTarget) return;
-    await api<{ id: string; name: string; fallbackId: string }>(`/api/vault/${encodeURIComponent(deleteKnowledgeBaseTarget.id)}`, { method: "DELETE" });
-    window.location.assign("/");
+    explicitKnowledgeBaseNavigation.current = true;
+    try {
+      await api<{ id: string; name: string; fallbackId: string }>(`/api/vault/${encodeURIComponent(deleteKnowledgeBaseTarget.id)}`, { method: "DELETE" });
+      window.location.assign("/");
+    } catch (reason) {
+      explicitKnowledgeBaseNavigation.current = false;
+      throw reason;
+    }
   }
 
   function closeDeleteKnowledgeBaseDialog() {
@@ -201,6 +214,7 @@ export function AppShell({ revision }: { revision: number }) {
 
   useEffect(() => {
     function command(value: DesktopCommand) {
+      if (shortcutSuppressed(value, document.activeElement)) return;
       if (value === "search") searchWindow.show();
       else if (value === "inspector") { if(localConversation) document.querySelector(".context-agent-panel")?.scrollIntoView({block:"nearest"}); else toggleInspector(); }
       else if (value === "capture") openCapture();
@@ -237,7 +251,10 @@ export function AppShell({ revision }: { revision: number }) {
       if (event.key === "Enter") action = "detach";
       if (event.shiftKey && event.key.toLowerCase() === "f") action = "focus";
       if (/^[1-9]$/.test(event.key)) action = `knowledge-base:${Number(event.key)}`;
-      if (action) { event.preventDefault(); command(action); }
+      if (!action) return;
+      event.preventDefault();
+      if (shortcutSuppressed(action, event.target)) return;
+      command(action);
     };
     // Native accelerators are handled by the application menu, once per key press.
     if (!window.desktop) window.addEventListener("keydown", keyboard);

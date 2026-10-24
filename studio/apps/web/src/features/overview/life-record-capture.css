@@ -13,7 +13,11 @@
 .capture-live-editor { white-space:pre-wrap; overflow-wrap:anywhere; max-height:340px; overflow:auto; }
 .capture-temporary-text { color:var(--muted); }
 .capture-primary-actions .desktop-primary { display:inline-flex; align-items:center; justify-content:center; gap:7px; border:0; border-radius:11px; padding:11px 17px; min-height:42px; white-space:nowrap; font-size:14px; font-weight:600; box-shadow:none; }
-.capture-stash { border:0; background:transparent; color:var(--ink-soft); padding:10px 7px; min-height:40px; font-size:14px; }
+.capture-primary-actions { flex-wrap:wrap; justify-content:flex-end; }
+.capture-chat,.capture-stash { border:0; background:transparent; color:var(--ink-soft); padding:10px 7px; min-height:40px; font-size:14px; }
+.capture-chat { color:var(--ink); }
+.capture-trust { margin:0; padding:0 26px 16px; color:var(--ink-soft); font-size:12px; line-height:1.6; }
+.capture-trust button { border:0; padding:0; background:transparent; color:var(--accent-primary); text-decoration:underline; }
 .capture-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 26px; border-top:1px solid var(--line); background:var(--surface-tinted); color:var(--ink-soft); font-size:12px; }
 .capture-destination { display:flex; align-items:center; gap:7px; min-width:0; border:0; background:transparent; padding:0; color:var(--ink-soft); font-size:12px; text-align:left; }
 .capture-destination > span { overflow-wrap:anywhere; }

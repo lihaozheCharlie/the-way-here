@@ -130,3 +130,8 @@ export function talkingQuestions(data: TodayView, recentJourney?: PaymentJourney
     evidenceCount: 0,
   }];
 }
+
+/** One concrete opener for 此刻. Evidence-backed questions win; otherwise a single cold-start question. */
+export function selectHomeQuestion(data: TodayView, recentJourney?: PaymentJourneySummary) {
+  return talkingQuestions(data, recentJourney)[0]!;
+}

@@ -25,7 +25,7 @@ export function KnowledgeHome({ revision }: { revision: number }) {
   return <div className="knowledge-home understanding-overview">
     <header className="understanding-overview-lede">
       <h1>已有理解</h1>
-      <p>这里汇总系统从你的生活记录中持续读出的理解：关于你自己的判断、人生轨迹、近况回信，以及关于身边人与关系的记录。</p>
+      <p>我目前这样理解你：关于你自己的判断、人生轨迹、近况回信，以及身边的人。不像就纠正我。</p>
       <span>{vault.pageCount} 条理解 · 来自 {vault.sourceCount} 份生活记录</span>
     </header>
     <section className="understanding-entry-grid" aria-label="已有理解分类">

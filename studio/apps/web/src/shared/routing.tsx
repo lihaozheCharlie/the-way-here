@@ -20,9 +20,15 @@ export function apiPageHref(id: string): string {
   return `/api/pages/${id.split("/").map(encodeURIComponent).join("/")}`;
 }
 
-export function pageDestination(page: Pick<WikiPageSummary, "id" | "category">): string {
+export function pageDestination(page: Pick<WikiPageSummary, "id" | "category"> & { isSource?: boolean }): string {
   if (page.category === "letters") return `/letters?${new URLSearchParams({ letter: page.id })}`;
-  return pageHref(page.id);
+  return `${pageHref(page.id)}${page.isSource ? "?from=source" : ""}`;
+}
+
+export function isSourceSectionPage(pathname: string, search: string, state: ReturnContext | null | undefined): boolean {
+  if (!pathname.startsWith("/page/")) return false;
+  if (new URLSearchParams(search).get("from") === "source") return true;
+  return Boolean(state?.returnTo.startsWith("/sources"));
 }
 
 export function useReturnContext(): ReturnContext {

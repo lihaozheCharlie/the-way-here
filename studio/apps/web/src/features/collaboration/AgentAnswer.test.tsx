@@ -16,11 +16,14 @@ describe("Wiki update disclosure", () => {
     expect(html).toContain("匿名新线索");
     expect(html).toContain("需要继续观察");
     expect(html).toContain("未写入");
+    expect(html).not.toContain("理解有更新");
   });
   it("uses actual file changes and validation rather than prose claims for status", () => {
     const html = renderToStaticMarkup(<MemoryRouter><AgentAnswer answer="完成了。" run={{ ...run, changes: [{ path: "demo/wiki/note.md", kind: "modified", diff: "+ new" }], validation: [{ command: ["check"], exitCode: 1, output: "failed" }] } as WikiRun} /></MemoryRouter>);
     expect(html).toContain("检查未通过");
     expect(html).toContain("demo/wiki/note.md");
+    expect(html).toContain("理解有更新");
+    expect(html).toContain('href="/page/wiki/note"');
     expect(html).not.toContain("以上内容尚未写入");
   });
   it("does not turn incidental mentions or code samples into hidden attachments", () => {
@@ -40,6 +43,7 @@ it("keeps a following non-Wiki section in the visible response", () => {
 it("does not create a Wiki artifact for changes confined to source reports", () => {
   const html = renderToStaticMarkup(<MemoryRouter><AgentAnswer answer="报告已保存。" run={{ ...run, changes: [{ path: "demo/sources/journey.md", kind: "modified", diff: "+ report" }] } as WikiRun} /></MemoryRouter>);
   expect(html).not.toContain('class="agent-wiki-update"');
+  expect(html).not.toContain("理解有更新");
   expect(html).toContain("报告已保存");
   expect(wikiUpdateFields("## Wiki 更新\n\n### 当前理解\n完整内容")).toEqual(["\n### 当前理解\n完整内容"]);
 });

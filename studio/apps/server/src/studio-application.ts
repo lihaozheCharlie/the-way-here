@@ -32,7 +32,7 @@ export class StudioApplication {
     const knowledge = await KnowledgeRuntime.create(options.vaultRoot, options.knowledgeBaseId);
     app.addHook("onRequest", async (request, reply) => {
       const expected = request.headers["x-twh-knowledge-base"];
-      const contentWrite = !["GET", "HEAD", "OPTIONS"].includes(request.method) && !/^\/api\/(?:vault|runs|agent-)/.test(request.url);
+      const contentWrite = !["GET", "HEAD", "OPTIONS"].includes(request.method) && !/^\/api\/(?:vault|agent-)/.test(request.url);
       if (contentWrite && expected && expected !== knowledge.index.config.knowledgeBaseId) return reply.code(409).send({ error: "知识库已切换，请重新打开页面后再修改；原草稿尚未写入其他知识库。" });
     });
     const runtimes = await AgentRuntimeRegistry.create(knowledge.index.config.agents, knowledge.vaultRoot);

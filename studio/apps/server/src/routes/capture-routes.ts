@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
-import { CaptureHistoryStore } from "../modules/content/capture-history-store.js";
+import { CaptureHistoryStore, captureFolder } from "../modules/content/capture-history-store.js";
 import { ContentRequestError, PageWriter } from "../modules/content/page-writer.js";
 import { bindContentWorkspace } from "../modules/content/content-workspace.js";
 import { ImportStore } from "../modules/imports/import-store.js";
@@ -40,5 +41,43 @@ export function registerCaptureRoutes(app: FastifyInstance, knowledge: Knowledge
     const page = await boundWriter.createSource(body.title, "随手记", body.markdown);
     if (page) await new ImportStore(boundWorkspace).trackCreatedSource(page);
     return page;
+  }, 201));
+  app.post<{ Body: { knowledgeBaseId?: unknown; id?: unknown; revision?: unknown; text?: unknown; folder?: unknown; diaryDate?: unknown } }>("/api/capture/original", async (request, reply) => handleContent(reply, async () => {
+    const body = request.body;
+    const knowledgeBaseId = knowledge.index.config.knowledgeBaseId;
+    if (body?.knowledgeBaseId !== knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，原文仍留在本机");
+    if (await hasActiveKnowledgeBaseRun(knowledgeBaseId)) throw new ContentRequestError(409, "请等当前整理完成后再保存原文");
+    if (typeof body?.text !== "string" || !body.text.trim() || body.text.length > 50_000) throw new ContentRequestError(400, "请先写下要保存的原文");
+    if (typeof body.id !== "string" || !/^[a-zA-Z0-9-]{1,100}$/.test(body.id) || !Number.isInteger(body.revision) || Number(body.revision) < 1) throw new ContentRequestError(400, "请先暂存后再保存原文");
+    const folder = captureFolder(body.folder);
+    if (typeof body.diaryDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.diaryDate)) throw new ContentRequestError(400, "日期无效");
+    const captureId = body.id;
+    const revision = body.revision as number;
+    const text = body.text;
+    const diaryDate = body.diaryDate;
+    const markdown = `# ${diaryDate} 原文\n\n${text.trim()}\n`;
+    return captures.mutate(knowledgeBaseId, async state => {
+      const entry = state.entries.find((item) => item.id === captureId);
+      if (!entry || entry.revision !== revision || entry.text !== text || entry.folder !== folder || entry.diaryDate !== diaryDate) throw new ContentRequestError(409, "草稿已经变化，请重新保存原文");
+      if (entry.status === "saved") throw new ContentRequestError(409, "这份已经保存过。继续整理会更新原文件；只存原文不会覆盖它。");
+      const title = `原文 ${diaryDate} ${captureId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)}`;
+      const bound = bindContentWorkspace(knowledge);
+      const page = await new PageWriter(bound).createSource(title, folder, markdown);
+      if (!page) throw new ContentRequestError(500, "原文没有写入生活记录");
+      await new ImportStore(bound).trackCreatedSource(page);
+      const savedAt = new Date().toISOString();
+      Object.assign(entry, {
+        status: "saved",
+        text,
+        originalText: text,
+        content: text.trim(),
+        pageId: page.id,
+        storedPath: page.relativePath,
+        fileHash: createHash("sha256").update(markdown).digest("hex"),
+        updatedAt: savedAt,
+        revision: entry.revision + 1,
+      });
+      return page;
+    });
   }, 201));
 }

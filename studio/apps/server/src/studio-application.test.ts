@@ -28,6 +28,12 @@ it.each([
       expect((await runtime.app.inject(url)).statusCode, url).toBe(200);
     }
     expect((await runtime.app.inject('/')).statusCode).toBe(404);
+    const active = (await runtime.app.inject("/api/vault")).json().knowledgeBaseId as string;
+    const stale = await runtime.app.inject({ method: "POST", url: "/api/runs", headers: { "x-twh-knowledge-base": "stale-tab" }, payload: { mode: "read", prompt: "不要写入", knowledgeBaseId: active } });
+    expect(stale.statusCode).toBe(409);
+    const cross = await runtime.app.inject({ method: "POST", url: "/api/runs", payload: { mode: "read", prompt: "不要写入", knowledgeBaseId: "other-library" } });
+    expect(cross.statusCode).toBe(409);
+    expect((await runtime.app.inject({ method: "GET", url: "/api/runs", headers: { "x-twh-knowledge-base": "stale-tab" } })).statusCode).toBe(200);
     expect(runtime.app.server.listening).toBe(false);
   } finally {await runtime?.close();await rm(root,{recursive:true,force:true});await rm(stateRootForVault(root),{recursive:true,force:true});}
 });

@@ -56,3 +56,18 @@ it("keeps capture history library-bound, validates revisions and never resurrect
   expect((await app.inject({method:"GET",url:`/api/capture/history?knowledgeBaseId=${id}`})).json().entries).toEqual([]);
   expect((await app.inject({method:"PUT",url:"/api/capture/draft",payload:input})).statusCode).toBe(409);
 });
+
+it("saves original words into life records without calling a model", async () => {
+  const { app, knowledge, root } = await fixture();
+  const id = knowledge.index.config.knowledgeBaseId;
+  const draft = { knowledgeBaseId: id, id: "original-note", revision: 0, text: "原话留在这里。", folder: "随手记", diaryDate: "2026-10-24" };
+  const saved = await app.inject({ method: "PUT", url: "/api/capture/draft", payload: draft });
+  expect(saved.statusCode).toBe(200);
+  const reply = await app.inject({ method: "POST", url: "/api/capture/original", payload: { ...draft, revision: saved.json().revision } });
+  expect(reply.statusCode).toBe(201);
+  const markdown = await readFile(path.join(root, reply.json().relativePath), "utf8");
+  expect(markdown).toBe("# 2026-10-24 原文\n\n原话留在这里。\n");
+  const history = await app.inject({ method: "GET", url: `/api/capture/history?knowledgeBaseId=${id}` });
+  expect(history.json().entries[0]).toMatchObject({ status: "saved", text: draft.text, pageId: reply.json().id });
+  expect((await app.inject({ method: "POST", url: "/api/capture/original", payload: { ...draft, revision: saved.json().revision } })).statusCode).toBe(409);
+});

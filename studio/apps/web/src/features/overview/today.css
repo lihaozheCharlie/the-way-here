@@ -3,6 +3,19 @@
 .today-companion-badge { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border-radius:var(--radius-pill); background:var(--paper); color:var(--accent-ink); font-size:14px; font-weight:650; }
 .desktop-shell .today-simple .today-companion-card h1 { margin:20px 0 14px; color:var(--ink); font-family:var(--font-ui); font-size:clamp(28px, 3vw, 36px); font-weight:750; line-height:1.35; letter-spacing:-.02em; }
 .desktop-shell .today-simple .today-companion-card p { margin:0; color:var(--ink-soft); font-size:16px; line-height:1.85; }
+.today-vault-status,.today-prompt-status,.today-prompt-fallback { margin:0; color:var(--ink-soft); font-size:13px; line-height:1.6; }
+.today-prompt { padding:24px 26px; border:1px solid var(--line); border-radius:var(--radius-card); background:var(--paper); }
+.today-prompt-kicker { margin:0 0 8px; color:var(--accent-ink); font-size:13px; font-weight:650; }
+.today-prompt h2 { margin:0 0 8px; font-size:22px; line-height:1.45; }
+.today-prompt p { margin:0; color:var(--ink-soft); line-height:1.7; }
+.today-prompt-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:16px; }
+.today-prompt-actions a { color:var(--accent-primary); }
+.today-prompt-trust { margin-top:12px; font-size:12px; }
+.today-prompt-trust button { border:0; padding:0; background:transparent; color:var(--accent-primary); text-decoration:underline; }
+.today-letter-card { padding:20px 24px; border:1px solid var(--line); border-radius:var(--radius-card-small); background:var(--surface); }
+.today-letter-card h2 { margin:0 0 8px; font-size:17px; }
+.today-letter-card p { margin:0 0 12px; color:var(--ink-soft); line-height:1.7; }
+.today-letter-card a { display:inline-flex; align-items:center; gap:4px; color:var(--accent-primary); }
 .today-capture { min-width:0; }
 .today-capture h2 { margin:0 0 8px; font-size:17px; font-weight:600; }
 .today-capture > p { margin:0 0 16px; color:var(--ink-soft); }

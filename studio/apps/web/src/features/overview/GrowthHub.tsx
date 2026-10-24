@@ -66,7 +66,7 @@ export function GrowthHub({ revision }: { revision: number }) {
   });
   return <div className="growth-hub understanding-self-page">
     <header className="insights-page-head">
-      <div><h1>理解自己</h1><p>这里不是一组给你下结论的标签，而是能够回到经历、证据与反例继续修正的判断。先看结论，再决定要不要展开证据。</p></div>
+      <div><h1>理解自己</h1><p>我目前这样理解你，不像就纠正。这些判断能回到经历、证据与反例，先看结论，再决定要不要展开。</p></div>
       <div className="insights-head-stat"><b>{new Intl.NumberFormat("zh-CN").format(total)}</b><span>条判断与模型</span></div>
     </header>
 

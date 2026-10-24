@@ -23,10 +23,10 @@ export function LockedUnderstanding({ score, scan, busy }: {
       <rect x="11" y="21" width="26" height="21" rx="4" />
       <path d="M16 21v-7a8 8 0 0 1 16 0v7M24 29v5" strokeLinecap="round" />
     </svg>}
-    <h2 id="prediction-lock-heading">{scanned ? `还差一点，目标是 ${score.threshold} 分` : "先了解你一点，再看见未来"}</h2>
+    <h2 id="prediction-lock-heading">{scanned ? `材料还不够，目标是 ${score.threshold} 分` : "先看看记录够不够，再谈以后"}</h2>
     <p>{scanned
-      ? `${gapSummary || "目前的资料还不足以支持预测"}。补充相关文档并收进已有理解后，再重新扫描。`
-      : `还没有扫描过资料。点一下开始，我会阅读 Wiki 里健康、工作、娱乐、爱四个维度的记录，评估现在是否足够了解你——这不是对你的评价，达到 ${score.threshold} 分就能开始预测。`}</p>
+      ? `${gapSummary || "目前的资料还不足以支持预测"}。这不是算命，也不是给你打分。补充相关文档并收进已有理解后，再重新扫描。`
+      : `还没有扫描过资料。点一下开始，我会阅读 Wiki 里健康、工作、娱乐、爱四个维度的记录，看现有材料够不够谈后面的路。这不是算命，也不是对你的评价；材料达到 ${score.threshold} 分才开始推测可能的路。`}</p>
     <div className="prediction-lock-actions">
       {scanned && <Link className="prediction-cta" to="/sources">补充文档 →</Link>}
       <button className={scanned ? "prediction-refresh" : "prediction-cta"} type="button" disabled={busy} onClick={scan}>

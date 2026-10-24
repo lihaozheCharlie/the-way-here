@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pageDestination } from "./routing";
+import { isSourceSectionPage, pageDestination } from "./routing";
 
 describe("page destinations", () => {
   it("opens a recent letter in the dedicated letter reader", () => {
@@ -11,5 +11,13 @@ describe("page destinations", () => {
 
   it("keeps ordinary knowledge pages in the standalone reader", () => {
     expect(pageDestination({ id: "wiki/01 个人主线/选择", category: "personal-lines" })).toBe("/page/wiki/01%20%E4%B8%AA%E4%BA%BA%E4%B8%BB%E7%BA%BF/%E9%80%89%E6%8B%A9");
+  });
+
+  it("marks source pages so the sidebar stays on life records after reload", () => {
+    expect(pageDestination({ id: "sources/日记/今天", category: "sources", isSource: true })).toBe("/page/sources/%E6%97%A5%E8%AE%B0/%E4%BB%8A%E5%A4%A9?from=source");
+    expect(isSourceSectionPage("/page/sources/today", "?from=source", null)).toBe(true);
+    expect(isSourceSectionPage("/page/sources/today", "", { returnTo: "/sources", returnLabel: "返回生活记录" })).toBe(true);
+    expect(isSourceSectionPage("/page/wiki/note", "", { returnTo: "/search", returnLabel: "返回搜索结果" })).toBe(false);
+    expect(isSourceSectionPage("/knowledge", "?from=source", null)).toBe(false);
   });
 });

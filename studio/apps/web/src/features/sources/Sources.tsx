@@ -29,6 +29,7 @@ import { ImportMaterialsModal } from "./ImportMaterialsModal";
 import { PhotoMemoryPanel } from "./PhotoMemoryPanel";
 import { BillMemoryPanel } from "./BillMemoryPanel";
 import { SourceMemoryCards, SourceMemoryDialog } from "./SourceMemories";
+import { clearPendingPhotoMemory, readPendingPhotoMemory } from "../overview/photo-library-handoff";
 import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords } from "./source-memory-model";
 import { sourceFolderOptions, useSourceFolders } from "./source-folders";
 import { buildableSourceRecordForPage, cleanSourcePath, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
@@ -241,6 +242,25 @@ export function OrganizedSources({ revision }: { revision: number }) {
     if (pending.size !== deletedSourcePaths.size) setDeletedSourcePaths(pending);
   }, [data, importBatches, deletedSourcePaths]);
   const memoryWindow = useRememberedPreview("source-memory");
+  useEffect(() => {
+    const staged = readPendingPhotoMemory();
+    if (staged && staged.id !== recentBatch?.id) {
+      setRecentBatch(staged);
+      setRecentBatchAcknowledged(false);
+    }
+  }, [recentBatch?.id]);
+  useEffect(() => {
+    const memoryId = params.get("memory");
+    if (!memoryId) return;
+    const known = mergeSourceBatches(importBatches || [], recentBatch, recentBatchAcknowledged).find((batch) => batch.id === memoryId);
+    const record = known && importedMemoryRecord(known);
+    if (!record) return;
+    memoryWindow.open(memoryRecordKey(record));
+    clearPendingPhotoMemory();
+    const next = new URLSearchParams(params);
+    next.delete("memory");
+    setParams(next, { replace: true });
+  }, [importBatches, params, recentBatch, recentBatchAcknowledged, setParams]);
   const [busyBuildPath, setBusyBuildPath] = useState<string>();
   const [buildError, setBuildError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "file"; page: WikiPageSummary } | { kind: "folder"; folder: string; count: number }>();
@@ -516,7 +536,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       <div className="source-toolbar-right">
       <SearchField className="source-global-search" name="organized-source-search" autoComplete="off" aria-label="搜索生活记录标题或内容" value={query} onChange={(event) => { setCreatedPageId(undefined); update({ q: event.target.value || undefined, file: undefined, limit: undefined }); }} placeholder="搜索标题或内容…" />
       </div>
-      <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />导入资料</button></div></div>
+      <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />导入资料</button><p className="source-bills-hint">账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。</p></div></div>
     </section>
 
     <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label="生活记录工作区">

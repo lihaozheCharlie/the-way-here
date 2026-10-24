@@ -35,4 +35,5 @@ it("notifies for both prediction and initial understanding scan completion", () 
   tracker.observePrediction({ knowledgeBaseId: "demo", job: "prediction", startedAt, status: "running" });
   tracker.observePrediction({ knowledgeBaseId: "demo", job: "prediction", startedAt, status: "failed" });
   expect(notify.mock.calls.map(([message]) => message.title)).toEqual(["【看见未来】了解度扫描已完成", "【看见未来】预测未完成"]);
+  expect(notify.mock.calls.map(([message]) => message.route)).toEqual(["/predict-self", "/predict-self"]);
 });

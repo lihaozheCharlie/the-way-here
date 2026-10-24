@@ -25,7 +25,7 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
     return () => { clearTimeout(timer); controller.abort(); };
   }, [query]);
 
-  const commands = [ ...routes.filter((item) => !query || item.title.includes(query)).map((item) => ({ title: item.title, detail: "前往栏目", action: () => navigate(item.to) })), ...[{ title: "新建随手记", detail: "⌘N", action: onCapture }, { title: "打开偏好设置", detail: "⌘,", action: onSettings }].filter(item => !query || item.title.includes(query)), ...results.slice(0, 12).map((page) => ({ title: page.title, detail: page.isSource ? "生活记录" : "已有理解", action: () => navigate(pageDestination(page)) })) ];
+  const commands = [ ...routes.filter((item) => !query || item.title.includes(query)).map((item) => ({ title: item.title, detail: "前往栏目", action: () => navigate(item.to) })), ...[{ title: "新建随手记", detail: "⌘N", action: onCapture }, { title: "打开偏好设置", detail: "⌘,", action: onSettings }].filter(item => !query || item.title.includes(query)), ...results.slice(0, 12).map((page) => ({ title: page.title, detail: page.isSource ? "生活记录" : "已有理解", action: () => navigate(pageDestination(page), { state: page.isSource ? { returnTo: "/sources", returnLabel: "返回生活记录" } : { returnTo: "/knowledge", returnLabel: "返回已有理解" } }) })) ];
   useEffect(() => { document.getElementById(`command-${selected}`)?.scrollIntoView({ block:"nearest" }); }, [selected]);
   function choose(index: number) { commands[index]?.action(); onClose(); }
   return <div className="desktop-modal-backdrop command-palette-layer">

@@ -14,7 +14,8 @@ describe("prediction page states", () => {
     expect(html).not.toContain('超过 60 分');
     expect(html).not.toContain('写满 40 字');
     expect(html).toContain('开始扫描');
-    expect(html).toContain('先了解你一点，再看见未来');
+    expect(html).toContain('先看看记录够不够，再谈以后');
+    expect(html).toContain('这不是算命');
     expect(html).not.toContain('textarea');
   });
   it("focuses on one prediction action after unlocking and keeps thoughts optional", () => {

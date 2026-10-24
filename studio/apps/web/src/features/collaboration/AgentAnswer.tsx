@@ -3,7 +3,8 @@ import remarkGfm from "remark-gfm";
 import { NavLink } from "react-router-dom";
 import type { WikiRun } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
-import { useReturnContext } from "../../shared/routing";
+import { pageHref, useReturnContext } from "../../shared/routing";
+import { wikiPageIdFromChange } from "./wiki-change-link";
 import { ReadOnlyPageDialog } from "../knowledge/ReadOnlyPageDialog";
 import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { localWikiHref } from "./local-page-link";
@@ -23,17 +24,24 @@ export function AgentMarkdown({ text, onCitation }: { text: string; onCitation?:
 
 export function AgentAnswer({ answer, run, revision = 0 }: { answer: string; run: WikiRun; revision?: number }) {
   const citation = useRememberedPreview(`agent-citation:${run.id}`);
+  const returnContext = useReturnContext();
   const { prose, wiki } = splitWikiUpdate(answer);
   const wikiRoot = run.configSnapshot?.paths.wiki.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/$/, "");
   const changes = (run.changes || []).filter((change) => {
     const changedPath = change.path.replace(/\\/g, "/").replace(/^\.\//, "");
     return wikiRoot && changedPath.startsWith(`${wikiRoot}/`);
   });
+  const savedChanges = changes.filter((change) => change.kind !== "deleted");
   const failed = run.validation?.some((check) => check.exitCode !== 0);
   const pending = ["preparing", "running", "waiting-approval", "validating"].includes(run.status);
   const status = changes.length ? failed ? "检查未通过" : pending ? "待检查" : "已写入" : pending ? "处理中" : "未写入";
   return <>
     {prose && <article className="context-run-answer"><AgentMarkdown text={prose} onCitation={citation.open} /></article>}
+    {run.status === "completed" && savedChanges.length > 0 && <p className="agent-understanding-receipt" role="status"><Icon name="library" size={15} /><span>理解有更新。</span>{savedChanges.map((change) => {
+      const pageId = wikiPageIdFromChange(change.path, wikiRoot);
+      const label = change.path.split("/").at(-1)?.replace(/\.md$/i, "") || "查看";
+      return pageId ? <NavLink key={change.path} to={pageHref(pageId)} state={returnContext}>{label}</NavLink> : <span key={change.path}>{label}</span>;
+    })}</p>}
     {(wiki || changes.length > 0) && <details className="agent-wiki-update">
       <summary><span className="agent-artifact-icon"><Icon name="library" size={17} /></span><span className="agent-artifact-heading"><b>Wiki 更新</b><small>{changes.length ? `${changes.length} 个文件变化` : "本轮提出的更新内容"}</small></span><span className={`agent-artifact-badge ${!changes.length || failed ? "warning" : ""}`}>{status}</span><Icon name="down" size={16} /></summary>
       <div className="agent-artifact-fields">
