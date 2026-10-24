@@ -39,6 +39,10 @@ identity 填多张证书共有的姓名/Team ID 匹配部分，不带 Apple Deve
 
 ## 分发包
 
+MAS 打包在知识运行环境准备后，对固定 CPython 应用官方 App Store 合规补丁的 URL 解析部分，移除未使用的 `itms-services` 协议支持，并使对应的缓存字节码失效。此处理仅用于商店渠道，不改写系统 Python。依据：[CPython 的合规说明](https://docs.python.org/3.14/using/mac.html#app-store-compliance)及[上游补丁](https://github.com/python/cpython/blob/v3.13.0/Mac/Resources/app-store-compliance.patch)。协议过滤不等同于任意代码下载能力的审计；客户端外链仍须维持 HTTP/HTTPS/mailto 白名单，不能调用安装协议。
+
+最终 `verify-mas-apis.mjs` 会遍历所有普通文件（包括 Python 源文件和缓存字节码）检查该安装协议残留，并对原生二进制检查私有 API、压缩库依赖及不需要的服务端监听权限。必须检查最终签名应用，不能仅扫描源码或通过隐藏字符串绕过检查。
+
 开发包全部通过后，设置 `TWH_APPLE_PROFILE` 为对应的**商店分发** profile，保持最终版本与资源一致，执行：
 
 ```sh

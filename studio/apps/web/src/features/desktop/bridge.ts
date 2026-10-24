@@ -10,6 +10,9 @@ export interface DesktopBridge {
   authorizePhotoLibrary?: () => Promise<PhotoLibraryAuthorization>;
   searchPhotoLibrary?: (input: PhotoLibrarySearchInput) => Promise<PhotoLibrarySearchResult>;
   photoLibraryImage?: (input: { assetId: string; size: "thumbnail" | "preview"; network: boolean }) => Promise<PhotoLibraryImage>;
+  cancelPhotoLibrarySearch?: () => Promise<boolean>;
+  retainPhotoLibrary?: (assetIds: string[]) => Promise<boolean>;
+  exportPhotoLibrary?: (input: { assetId: string }) => Promise<{ dataUrl: string; cloudOnly: false }>;
   closePhotoLibrary?: () => Promise<void>;
   openPhotoLibrarySettings?: () => Promise<void>;
   pathForDroppedFile?: (file: File) => string;

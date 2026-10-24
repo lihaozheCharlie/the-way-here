@@ -18,5 +18,13 @@ describe("local page links in Agent answers", () => {
     expect(localWikiHref("/page/wiki/existing")).toBe("/page/wiki/existing");
     expect(localWikiHref("https://example.com/report.md")).toBeUndefined();
     expect(localWikiHref("/broken/%E0%A4%A")).toBeUndefined();
+    expect(localWikiHref("https://example.com/app/demo/sources/test.md")).toBeUndefined();
+    expect(localWikiHref("//example.com/vault/demo/wiki/test.md")).toBeUndefined();
+    expect(localWikiHref("app/demo/sources/../outside.md")).toBeUndefined();
+  });
+  it("opens managed app-space and source-relative citations from model answers", () => {
+    expect(localWikiHref("app/demo/sources/随手记/示例.md")).toBe("/page/sources/%E9%9A%8F%E6%89%8B%E8%AE%B0/%E7%A4%BA%E4%BE%8B");
+    expect(localWikiHref("sources/随手记/示例.md:12")).toBe("/page/sources/%E9%9A%8F%E6%89%8B%E8%AE%B0/%E7%A4%BA%E4%BE%8B");
+    expect(localWikiHref("app/demo/wiki/入口.md")).toBe("/page/wiki/%E5%85%A5%E5%8F%A3");
   });
 });

@@ -84,7 +84,7 @@ export class PhotoMemoryStore {
   }
 
   async create(config: VaultConfig, request: any): Promise<SourceImportBatch> {
-    if (!Array.isArray(request.files) || !request.files.length || request.files.length > 10) throw new PhotoMemoryError(400, "每批请选择 1–10 张照片");
+    if (!Array.isArray(request.files) || !request.files.length || request.files.length > 50) throw new PhotoMemoryError(400, "每批请选择 1–50 张照片");
     const title = textField(request.title || "照片记忆", 100, "记忆标题");
     if (!title || /[\r\n]/.test(title)) throw new PhotoMemoryError(400, "请输入一行记忆标题");
     if (request.targetFolder !== undefined && typeof request.targetFolder !== "string") throw new PhotoMemoryError(400, "文件夹无效");
@@ -138,7 +138,7 @@ export class PhotoMemoryStore {
       if (request.photos !== undefined && request.photoId !== undefined) throw new PhotoMemoryError(400, "人物修改不能同时指定单张和多张照片");
       if (request.photos !== undefined && !Array.isArray(request.photos)) throw new PhotoMemoryError(400, "照片修改列表无效");
       const updates = request.photos ?? (request.photoId !== undefined ? [{ photoId: request.photoId, people: request.people }] : []);
-      if (!Array.isArray(updates) || updates.length > 10 || new Set(updates.map((item: any) => item?.photoId)).size !== updates.length) throw new PhotoMemoryError(400, "照片修改列表无效");
+      if (!Array.isArray(updates) || updates.length > 50 || new Set(updates.map((item: any) => item?.photoId)).size !== updates.length) throw new PhotoMemoryError(400, "照片修改列表无效");
       // Validate the entire group before mutating any photo; one revision commits all members.
       const validated = updates.map((item: any) => {
         const photo = memory.photos.find((p) => p.id === item?.photoId);

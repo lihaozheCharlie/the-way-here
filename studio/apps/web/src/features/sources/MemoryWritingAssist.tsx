@@ -4,14 +4,18 @@ import { Icon, type IconName } from "../../shared/ui";
 import "./memory-writing-assist.css";
 
 /** Both memory editors own their drafts; disclosure never discards background text. */
-export function MemoryWritingAssist({ background, onBackground, context = [], placeholder, disabled, generating, onGenerate }: {
+export function MemoryWritingAssist({ background, onBackground, context = [], placeholder, disabled, generating, onGenerate, inline = false }: {
   background: string; onBackground: (value: string) => void; context?: { text: string; icon: IconName }[]; placeholder: string;
-  disabled: boolean; generating: boolean; onGenerate: () => void;
+  inline?: boolean; disabled: boolean; generating: boolean; onGenerate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const id = useId();
   const input = useRef<HTMLTextAreaElement>(null);
   const filled = Boolean(background.trim());
+  if (inline) return <section className="memory-writing-assist memory-writing-assist--inline" aria-label="AI 写作助手" aria-busy={generating}>
+    <div className="memory-inline-row"><label className="sr-only" htmlFor={`${id}-clues`}>照片背后的线索（可选）</label><input id={`${id}-clues`} type="text" maxLength={10000} value={background} disabled={disabled || generating} placeholder={placeholder} onChange={event => onBackground(event.target.value)} /><button type="button" className="memory-writing-generate" disabled={disabled || generating} onClick={onGenerate}><Icon name="spark" size={15} />{generating ? "正在写…" : "AI 帮你写"}</button></div>
+    <div className="memory-writing-context">{context.map(({text, icon}) => <span className="memory-context-chip" key={text}><Icon name={icon} size={14} /><span>{text}</span></span>)}</div>
+  </section>;
   return <section className="memory-writing-assist" aria-label="AI 写作助手" aria-busy={generating}>
     <div className="memory-writing-toolbar">
       <button type="button" className={`memory-background-toggle${filled ? " is-filled" : ""}`} aria-expanded={expanded} aria-controls={id} onClick={() => { setExpanded(!expanded); if (!expanded) requestAnimationFrame(() => input.current?.focus()); }}>

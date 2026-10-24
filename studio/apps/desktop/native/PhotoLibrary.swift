@@ -27,14 +27,16 @@ func authorization() -> String {
 }
 func requireAccess(_ id: String) -> Bool {
     guard authorization() == "authorized" else {
-        sessions.removeAll(); sessionOrder.removeAll()
+        sessions.removeAll(); sessionOrder.removeAll(); retainedAssets.removeAll(); downloadApproved.removeAll()
         imageManager.stopCachingImagesForAllAssets()
         respond(id, error: "照片库访问未获授权，请在系统设置 → 隐私与安全性 → 照片中允许访问。")
         return false
     }
     return true
 }
+var searchEpoch = 0
 final class Search {
+    let epoch = searchEpoch
     let assets: PHFetchResult<PHAsset>
     let orderedAssets: [PHAsset]?
     let allowedIDs: Set<String>?
@@ -53,13 +55,15 @@ final class Search {
 }
 var sessions = [String: Search]()
 var sessionOrder = [String]()
+var retainedAssets = Set<String>()
+var downloadApproved = Set<String>()
 
 func filename(_ asset: PHAsset) -> String {
     PHAssetResource.assetResources(for: asset).first(where: { $0.type == .photo || $0.type == .fullSizePhoto })?.originalFilename ?? "照片"
 }
 func page(_ id: String, token: String, search: Search) {
     var photos = [[String: Any]]()
-    while search.offset < search.count && photos.count < 36 {
+    while search.epoch == searchEpoch && search.offset < search.count && photos.count < 36 {
         let asset = search.asset(at: search.offset); search.offset += 1
         autoreleasepool {
             if let allowedIDs = search.allowedIDs, !allowedIDs.contains(asset.localIdentifier) { return }
@@ -72,6 +76,7 @@ func page(_ id: String, token: String, search: Search) {
             photos.append(photo); search.issued.insert(asset.localIdentifier)
         }
     }
+    guard search.epoch == searchEpoch else { respond(id, error: "查找已取消"); return }
     var result: [String: Any] = ["photos": photos, "summary": search.summary]
     if search.offset < search.count { result["nextCursor"] = token }
     if let place = search.place { result["place"] = place }
@@ -79,8 +84,10 @@ func page(_ id: String, token: String, search: Search) {
     respond(id, result)
 }
 func beginSearch(_ id: String, input: [String: Any], center: CLLocation? = nil, place: [String: Any]? = nil) {
+    let epoch = searchEpoch
     work.async {
         guard requireAccess(id) else { return }
+        guard epoch == searchEpoch else { respond(id, error: "查找已取消"); return }
         let dateBasis = input["dateBasis"] as? String ?? "taken"
         let dateKey: String
         if dateBasis == "added" {
@@ -142,6 +149,7 @@ func beginSearch(_ id: String, input: [String: Any], center: CLLocation? = nil, 
             orderedAssets = matched
         }
         let summary = (input["summary"] as? String ?? "全部日期") + (albumTitle.map { " · 相册：" + $0 } ?? "")
+        guard epoch == searchEpoch else { respond(id, error: "查找已取消"); return }
         let search = Search(assets: assets, orderedAssets: orderedAssets, allowedIDs: allowedIDs, radiusKm: input["radiusKm"] as? Double ?? 30, center: center, summary: summary, place: place)
         let token = UUID().uuidString
         sessions[token] = search; sessionOrder.append(token)
@@ -188,13 +196,15 @@ func filters(_ id: String) {
 func image(_ id: String, input: [String: Any]) {
     work.async {
         guard requireAccess(id), let assetID = input["assetId"] as? String else { return }
-        guard sessions.values.contains(where: { $0.issued.contains(assetID) }) else { respond(id, error: "照片结果已过期，请重新搜索"); return }
+        guard retainedAssets.contains(assetID) || sessions.values.contains(where: { $0.issued.contains(assetID) }) else { respond(id, error: "照片结果已过期，请重新搜索"); return }
         guard let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil).firstObject else { respond(id, error: "这张照片已移除或暂时不可用"); return }
         let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = input["network"] as? Bool == true
+        if input["network"] as? Bool == true { downloadApproved.insert(assetID) }
+        options.isNetworkAccessAllowed = input["network"] as? Bool == true || downloadApproved.contains(assetID)
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .fast
-        let side = input["size"] as? String == "preview" ? 1600 : 360
+        let exporting = input["command"] as? String == "export"
+        let side = exporting ? 7000 : (input["size"] as? String == "preview" ? 1600 : 360)
         imageManager.requestImage(for: asset, targetSize: CGSize(width: side, height: side), contentMode: .aspectFit, options: options) { image, info in
             if info?[PHImageResultIsDegradedKey] as? Bool == true { return }
             guard authorization() == "authorized" else { respond(id, error: "照片库授权已撤回"); return }
@@ -209,6 +219,7 @@ func image(_ id: String, input: [String: Any]) {
             guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { respond(id, error: "无法生成照片预览"); return }
             context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
             guard let resized = context.makeImage(), let data = NSBitmapImageRep(cgImage: resized).representation(using: .jpeg, properties: [.compressionFactor: 0.8]) else { respond(id, error: "无法生成照片预览"); return }
+            if data.count > 8_000_000 { respond(id, error: "照片导出过大，请从系统照片导出较小的 JPG 后导入。"); return }
             respond(id, ["dataUrl": "data:image/jpeg;base64," + data.base64EncodedString(), "cloudOnly": false])
         }
     }
@@ -218,9 +229,13 @@ func receive(_ input: [String: Any]) {
     switch input["command"] as? String {
     case "status":
         let status = authorization()
-        if status != "authorized" { work.async { sessions.removeAll(); sessionOrder.removeAll(); imageManager.stopCachingImagesForAllAssets() } }
+        if status != "authorized" { work.async { sessions.removeAll(); sessionOrder.removeAll(); retainedAssets.removeAll(); downloadApproved.removeAll(); imageManager.stopCachingImagesForAllAssets() } }
         respond(id, status)
     case "authorize": PHPhotoLibrary.requestAuthorization(for: .readWrite) { _ in respond(id, authorization()) }
+    case "cancel":
+        searchEpoch += 1
+        for geocoder in geocoders.values { geocoder.cancelGeocode() }
+        respond(id, true)
     case "filters": filters(id)
     case "search": search(id, input: input)
     case "more": work.async {
@@ -228,13 +243,21 @@ func receive(_ input: [String: Any]) {
         guard let token = input["cursor"] as? String, let current = sessions[token] else { respond(id, error: "照片分页已失效，请重新搜索"); return }
         page(id, token: token, search: current)
     }
-    case "image": image(id, input: input)
+    case "retain": work.async {
+        guard requireAccess(id) else { return }
+        guard let ids = input["assetIds"] as? [String], ids.count <= 50,
+              ids.allSatisfy({ assetID in retainedAssets.contains(assetID) || sessions.values.contains(where: { $0.issued.contains(assetID) }) }) else {
+            respond(id, error: "照片选择已过期，请重新搜索后选择"); return
+        }
+        retainedAssets = Set(ids); respond(id, true)
+    }
+    case "image", "export": image(id, input: input)
     default: respond(id, error: "未知照片操作")
     }
 }
 DispatchQueue.global().async {
     while let line = readLine() {
-        guard line.utf8.count < 4096, let data = line.data(using: .utf8), let input = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { continue }
+        guard line.utf8.count < 16384, let data = line.data(using: .utf8), let input = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { continue }
         DispatchQueue.main.async { receive(input) }
     }
     exit(0)

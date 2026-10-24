@@ -39,6 +39,9 @@ it("shows all photos with one shared story input and batch drafting", () => {
   const empty = renderToStaticMarkup(<PhotoNarration {...props} />);
   expect(empty.match(/<img /g)).toHaveLength(2);
   expect(empty.match(/<textarea /g)).toHaveLength(1);
+  expect(empty).toContain("照片背后的线索（可选）");
+  expect(empty).toContain("memory-inline-row");
+  expect(empty).not.toContain("补充背景信息");
   expect(empty).toContain("一篇故事"); expect(empty).toContain("AI 帮你写");
   expect(empty).not.toContain("还没写"); expect(empty).not.toContain("aria-pressed");
   const done = renderToStaticMarkup(<PhotoNarration {...props} story="我的完整回忆" />);
@@ -62,4 +65,12 @@ it("adopts published page links while preserving unsaved crop edits", () => {
   const reconciled = reconcilePhotoDrafts(memory, current, { p1: memory.photos[0]!.people, p2: [edited] });
   expect(reconciled.p1![0]!.pageId).toBe("published-page");
   expect(reconciled.p2![0]).toEqual(edited);
+});
+
+it("keeps fifty-photo stories compact and offers an explicit full-gallery expansion", () => {
+  const large={...memory,photos:Array.from({length:50},(_,i)=>({...memory.photos[0]!,id:`photo-${i}`}))};
+  const html=renderToStaticMarkup(<PhotoNarration memory={large} story="" locked={false} generating={false} onStory={()=>{}} onGenerate={()=>{}} />);
+  expect(html.match(/<img /g)).toHaveLength(14);
+  expect(html).toContain("+36 张 · 展开全部");
+  expect(html).toContain("50 张照片 · 一篇故事");
 });

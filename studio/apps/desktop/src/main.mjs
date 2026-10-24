@@ -119,6 +119,9 @@ function registerIPC() {
   handle('desktop:photos-authorize', sender => photosFor(sender).authorize(), true);
   handle('desktop:photos-search', (sender, input) => photosFor(sender).search(input), true);
   handle('desktop:photos-image', (sender, input) => photosFor(sender).image(input), true);
+  handle('desktop:photos-cancel', sender => photosFor(sender).cancelSearch(), true);
+  handle('desktop:photos-retain', (sender, input) => photosFor(sender).retain(input), true);
+  handle('desktop:photos-export', (sender, input) => photosFor(sender).export(input), true);
   handle('desktop:photos-close', sender => { photoLibraries.get(sender)?.close(); photoLibraries.delete(sender); }, true);
   handle('desktop:photos-settings', () => shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Photos'));
   handle('desktop:folder-permission', async () => {

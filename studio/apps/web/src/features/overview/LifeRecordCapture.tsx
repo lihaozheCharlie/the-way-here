@@ -10,17 +10,27 @@ import { wikiPageIdFromChange } from "../collaboration/wiki-change-link";
 import { CaptureVoice } from "../desktop/CaptureVoice";
 import { CaptureFolderDialog, CaptureHistoryDialog } from "./CaptureDialogs";
 import { useCaptureDraft } from "./useCaptureDraft";
+import { PhotoCaptureHistory } from "./PhotoCaptureHistory";
+import { PhotoLibrarySearch, photoLibraryBridge } from "./PhotoLibraryCard";
+import "./capture-sources.css";
 import "./today.css";
 import "./life-record-capture.css";
 
 export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { knowledgeBaseId: string; standalone?: boolean }) {
+  const [source, setSource] = useState<"write" | "photo">("write");
+  const [photoCount, setPhotoCount] = useState(0);
+  const photoFolderKey = `photo-capture.folder.${knowledgeBaseId}`;
+  const [photoDefaultFolder, setPhotoDefaultFolder] = useState(() => localStorage.getItem(photoFolderKey) || "照片记忆");
+  const [photoFolder, setPhotoFolder] = useState(photoDefaultFolder);
+  const [photoStatus, setPhotoStatus] = useState("照片库不会被改动，也不会发送给 AI");
+  const photosBridge = !standalone ? photoLibraryBridge() : undefined;
   const legacyKey = `${standalone ? "desktop" : "today"}.capture.${knowledgeBaseId}`;
   const capture = useCaptureDraft(knowledgeBaseId, legacyKey);
   const { draft, key } = capture;
   const [runId, setRunId] = useState(() => localStorage.getItem(`${key}.run`) || localStorage.getItem(`${legacyKey}.run`) || "");
   const [run, setRun] = useState<WikiRun>();
   const [starting, setStarting] = useState(false), [voiceActive, setVoiceActive] = useState(false), [preview, setPreview] = useState("");
-  const [dialog, setDialog] = useState<"history" | "folder" | null>(null), [error, setError] = useState("");
+  const [dialog, setDialog] = useState<"history" | "folder" | "photo-folder" | null>(null), [error, setError] = useState("");
   const [savingOriginal, setSavingOriginal] = useState(false), [savedOriginalId, setSavedOriginalId] = useState("");
   const submitting = useRef(false), input = useRef<HTMLTextAreaElement>(null), transcriptView = useRef<HTMLDivElement>(null);
   const voiceRange = useRef({ start: 0, end: 0, text: "" });
@@ -97,9 +107,18 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
     finally { submitting.current = false; setStarting(false); }
   }
   const pendingCount = capture.history.filter(e => e.status === "draft" || e.text !== (e.originalText ?? e.content)).length;
-  const badge = draft.status === "saved" ? "补充中" : draft.text.trim() ? "待整理" : "新记录";
+  const badge = draft.status === "saved" ? "补充中" : (draft.text.trim() || photoCount) ? "待整理" : "新记录";
   return <section className="today-capture life-record-capture" aria-labelledby={headingId}>
     <header className="capture-heading"><div>{standalone ? <h1 id={headingId}>随手记</h1> : <h2 id={headingId}>随手记</h2>}<span className="capture-badge">{badge}</span></div><button type="button" className="capture-history-trigger" disabled={busy || voiceActive || !capture.ready} onClick={() => { void capture.flush().then(() => capture.refresh()).then(() => setDialog("history")).catch(capture.fail); }}><Icon name="history" size={17} />历史记录{pendingCount > 0 && <span>{pendingCount} 待整理</span>}</button></header>
+    {photosBridge && <div className="capture-sources" role="tablist" aria-label="记录方式" onKeyDown={event => {
+      if (voiceActive || busy || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault(); const next = event.key === "Home" ? "write" : event.key === "End" ? "photo" : source === "write" ? "photo" : "write";
+      setSource(next); document.getElementById(`${headingId}-tab-${next}`)?.focus();
+    }}>
+      <span className={`capture-sources-indicator${source === "photo" ? " is-photo" : ""}`} aria-hidden="true" />
+      {([['write','说或写','edit'],['photo','找照片','image']] as const).map(([id,label,icon]) => <button key={id} type="button" role="tab" id={`${headingId}-tab-${id}`} aria-selected={source === id} aria-controls={`${headingId}-panel-${id}`} tabIndex={source === id ? 0 : -1} disabled={voiceActive || busy} onClick={() => setSource(id)}><Icon name={icon} size={16} />{label}{id === "photo" && photoCount > 0 && <span className="capture-source-count">{photoCount}</span>}</button>)}
+    </div>}
+    <div hidden={source !== "write"} role={photosBridge ? "tabpanel" : undefined} id={`${headingId}-panel-write`} aria-labelledby={photosBridge ? `${headingId}-tab-write` : undefined}>
     <form onSubmit={event => { event.preventDefault(); void submit(); }}>
       <div className="capture-editor-body">
         {voiceActive ? <div className="capture-live-editor" ref={transcriptView} role="textbox" aria-label="此刻的记录，语音临时转写" aria-readonly="true" tabIndex={0}>{voiceRange.current.text.slice(0,voiceRange.current.start)}<span className="capture-temporary-text">{preview || "正在听…"}</span>{voiceRange.current.text.slice(voiceRange.current.end)}</div> : <TextArea ref={input} voice={false} rows={5} maxLength={50_000} disabled={busy} aria-label="此刻的记录" placeholder="此刻发生了什么？写下来，或说一段……" value={draft.text} onChange={event => { capture.setText(event.target.value); setRun(undefined); setSavedOriginalId(""); }} onKeyDown={event => {
@@ -123,13 +142,19 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       <footer className="capture-footer"><button type="button" disabled={busy || voiceActive || !capture.ready || draft.status === "saved"} className="capture-destination" title={draft.status === "saved" ? "继续补充将更新原文件；移动文件请在生活记录中操作" : "选择保存目录"} onClick={() => setDialog("folder")}><Icon name="folder" size={16} /><span>保存到 <span>生活记录 / <strong>{draft.folder}</strong></span></span>{draft.status !== "saved" && <Icon name="down" size={13} />}</button><span role="status">{voiceActive ? "浅灰文字为临时转写，完成录音后会校准" : busy ? "正在整理，原话已保留" : capture.status}</span></footer>
     </form>
     <p className="capture-trust">整理成日记会把这段文字发给当前模型，只用来写成一篇日记。只存原文则留在本机，不发送。模型可以在<button type="button" onClick={openPreferences}>偏好设置</button>里更换或停用。</p>
+    </div>
+    {photosBridge && <div hidden={source !== "photo"} role="tabpanel" id={`${headingId}-panel-photo`} aria-labelledby={`${headingId}-tab-photo`}>
+      <div className="capture-editor-body"><PhotoLibrarySearch bridge={photosBridge} knowledgeBaseId={knowledgeBaseId} destination={photoFolder} onDestination={setPhotoFolder} onStatus={setPhotoStatus} onSelectionCount={setPhotoCount} active={source === "photo"} /></div>
+      <footer className="capture-footer"><button type="button" className="capture-destination" disabled={busy} title="选择照片记忆保存目录" onClick={() => setDialog("photo-folder")}><Icon name="folder" size={16} /><span>保存到 <span>生活记录 / <strong>{photoFolder}</strong></span></span><Icon name="down" size={13} /></button><span role="status">{photoStatus}</span></footer>
+    </div>}
     {(error || capture.error) && <p className="capture-error" role="alert">{error || capture.error}</p>}
     {savedOriginalId && <p role="status" className="capture-saved">原文已留在本机，没有发给模型。<NavLink to={pageHref(savedOriginalId)} state={returnContextFor(standalone ? "/capture" : "/")}>查看记录 <Icon name="arrow" size={14} /></NavLink></p>}
     {run?.status === "completed" && run.result?.outputPageId && <p role="status" className="capture-saved">已整理成日记并保存在本机。<NavLink to={pageHref(run.result.outputPageId)} state={returnContextFor(standalone ? "/capture" : "/")}>查看记录 <Icon name="arrow" size={14} /></NavLink>{(run.changes || []).filter((change) => change.kind !== "deleted" && wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)).map((change) => {
       const pageId = wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)!;
       return <NavLink key={change.path} to={pageHref(pageId)} state={returnContextFor(standalone ? "/capture" : "/")}>理解有更新</NavLink>;
     })}</p>}
-    {dialog === "history" && <CaptureHistoryDialog entries={capture.history} restore={capture.restore} remove={capture.remove} close={() => setDialog(null)} />}
+    {dialog === "history" && <CaptureHistoryDialog photoHistory={!standalone ? <PhotoCaptureHistory knowledgeBaseId={knowledgeBaseId} closeHistory={() => setDialog(null)} /> : undefined} entries={capture.history} restore={capture.restore} remove={capture.remove} close={() => setDialog(null)} />}
+    {dialog === "photo-folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={photoFolder} defaultFolder={photoDefaultFolder} choose={async (folder, makeDefault) => { setPhotoFolder(folder); if (makeDefault) { localStorage.setItem(photoFolderKey, folder); setPhotoDefaultFolder(folder); } }} close={() => setDialog(null)} />}
     {dialog === "folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={draft.folder} defaultFolder={capture.defaultFolder} choose={capture.chooseFolder} close={() => setDialog(null)} />}
   </section>;
 }

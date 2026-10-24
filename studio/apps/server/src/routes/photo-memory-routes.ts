@@ -1,3 +1,4 @@
+import { ImportStore } from "../modules/imports/import-store.js";
 import { readFile } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import { PhotoMemoryError, PhotoMemoryStore } from "../modules/imports/photo-memory-store.js";
@@ -10,6 +11,13 @@ export function registerPhotoMemoryRoutes(app: FastifyInstance, knowledge: Knowl
     if (typeof id !== "string" || !id.trim()) throw new PhotoMemoryError(400, "请指定照片所属知识库");
     return knowledge.resolve(id);
   }
+  app.get<{ Querystring: { knowledgeBaseId?: string } }>("/api/photo-memories", async (request, reply) => {
+    try {
+      const { index } = await resolve(request.query.knowledgeBaseId);
+      const imports = new ImportStore({ vaultRoot: knowledge.vaultRoot, index, events: knowledge.events });
+      return (await imports.list(await runs.list())).filter(batch => batch.channel === "photos");
+    } catch (error: any) { return reply.code(error instanceof PhotoMemoryError ? error.statusCode : 400).send({ error: error.message }); }
+  });
   app.post<{ Body: any }>("/api/imports/photos", { bodyLimit: 145 * 1024 * 1024 }, async (request, reply) => {
     try {
       const { config } = await resolve((request.body as any)?.knowledgeBaseId);

@@ -5,6 +5,7 @@ directories:
   output: .runtime/releases
 files:
   - src/**
+  - '!src/**/*.test.mjs'
   - package.json
 asar: true
 extraResources:

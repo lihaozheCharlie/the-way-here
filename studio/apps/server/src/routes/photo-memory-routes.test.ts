@@ -36,6 +36,8 @@ describe("photo-memory HTTP boundaries", () => {
     const created = await app.inject({ method: "POST", url: "/api/imports/photos", payload });
     expect(created.statusCode).toBe(201);
     const id = created.json().id;
+    expect((await app.inject("/api/photo-memories")).statusCode).toBe(400);
+    expect((await app.inject("/api/photo-memories?knowledgeBaseId=default")).json().map((batch: any) => batch.id)).toEqual([id]);
     expect((await app.inject(`/api/photo-memories/${id}`)).statusCode).toBe(400);
     const base = `/api/photo-memories/${id}/assets/photo-1`;
     const preview = await app.inject(`${base}/preview?knowledgeBaseId=default`);

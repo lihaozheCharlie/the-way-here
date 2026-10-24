@@ -8,7 +8,6 @@ import { PageAgentContext } from "../desktop/InspectorContext";
 import { companionshipDays } from "./companionship";
 import { HomePrompt } from "./HomePrompt";
 import { LifeRecordCapture } from "./LifeRecordCapture";
-import { PhotoLibraryCard } from "./PhotoLibraryCard";
 import { selectHomeQuestion } from "./talking-questions";
 import "./today.css";
 
@@ -41,7 +40,6 @@ export function Today({ revision }: { revision: number }) {
     <HomePrompt revision={revision} />
     <LifeRecordCapture key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} />
     {today?.latestLetter ? <RecentLetterCard letter={today.latestLetter} /> : null}
-    <PhotoLibraryCard key={`photos:${vault.knowledgeBaseId}`} knowledgeBaseId={vault.knowledgeBaseId} />
     <PageAgentContext context={{ scope: "此刻", title: question?.question || "从此刻说起", summary: question?.reason || "听听最近发生的事，一起把生活慢慢理清。", defaultMode: "read", suggestions: [question?.agentPrompt || "我想聊聊最近发生的一件事。"] }} />
   </div>;
 }

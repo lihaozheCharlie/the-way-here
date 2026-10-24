@@ -19,15 +19,17 @@ export interface PhotoLocalDraft {
   skipped?: string[];
   answer?: string;
   detectionVersion?: number;
+  detectionComplete?: boolean;
   background?: string;
   pendingDraftRunId?: string;
+  pendingBuildRunId?: string;
 }
 export function photoDraftKey(knowledgeBaseId: string, memoryId: string) {
   return `the-way-here:photo-draft:${encodeURIComponent(knowledgeBaseId)}:${encodeURIComponent(memoryId)}`;
 }
 export function parsePhotoDraft(raw: string | null): PhotoLocalDraft | undefined {
   try {
-    if (!raw || raw.length > 256_000) return undefined;
+    if (!raw || raw.length > 2_000_000) return undefined;
     const value = JSON.parse(raw);
     if (!Number.isInteger(value.revision) || typeof value.photoId !== "string" || typeof value.story !== "string" || value.story.length > 60_000
       || typeof value.peopleDirty !== "boolean" || typeof value.storyDirty !== "boolean" || !Array.isArray(value.people) || value.people.length > 40) return undefined;
@@ -41,21 +43,22 @@ export function parsePhotoDraft(raw: string | null): PhotoLocalDraft | undefined
       ids.add(person.id);
     }
     if (value.photoDrafts !== undefined) {
-      if (!value.photoDrafts || typeof value.photoDrafts !== "object" || Array.isArray(value.photoDrafts) || Object.keys(value.photoDrafts).length > 10) return undefined;
+      if (!value.photoDrafts || typeof value.photoDrafts !== "object" || Array.isArray(value.photoDrafts) || Object.keys(value.photoDrafts).length > 50) return undefined;
       for (const [photoId, people] of Object.entries(value.photoDrafts)) {
         if (!parsePhotoDraft(JSON.stringify({ revision: value.revision, photoId, people, peopleDirty: true, story: "", storyDirty: false }))) return undefined;
       }
     }
     if (value.background !== undefined && (typeof value.background !== "string" || value.background.length > 10000)) return undefined;
     if (value.pendingDraftRunId !== undefined && (typeof value.pendingDraftRunId !== "string" || !/^[a-z0-9-]{1,80}$/i.test(value.pendingDraftRunId))) return undefined;
+    if (value.pendingBuildRunId !== undefined && (typeof value.pendingBuildRunId !== "string" || !/^[a-z0-9-]{1,80}$/i.test(value.pendingBuildRunId))) return undefined;
     if (value.groupStory !== undefined && (typeof value.groupStory !== "string" || value.groupStory.length > 60000)) return undefined;
     if (value.legacyStory !== undefined && (typeof value.legacyStory !== "string" || value.legacyStory.length > 60000)) return undefined;
-    if (value.photoStories !== undefined && (!value.photoStories || typeof value.photoStories !== "object" || Array.isArray(value.photoStories) || Object.keys(value.photoStories).length > 10 || !Object.values(value.photoStories).every((story) => typeof story === "string" && story.length <= 10000))) return undefined;
+    if (value.photoStories !== undefined && (!value.photoStories || typeof value.photoStories !== "object" || Array.isArray(value.photoStories) || Object.keys(value.photoStories).length > 50 || !Object.values(value.photoStories).every((story) => typeof story === "string" && story.length <= 10000))) return undefined;
     if (value.faceGroups !== undefined) {
-      if (!Array.isArray(value.faceGroups) || value.faceGroups.length > 200) return undefined;
+      if (!Array.isArray(value.faceGroups) || value.faceGroups.length > 1000) return undefined;
       const grouped = new Set<string>();
       for (const group of value.faceGroups) {
-        if (!Array.isArray(group) || group.length < 2 || group.length > 10) return undefined;
+        if (!Array.isArray(group) || group.length < 2 || group.length > 2000) return undefined;
         for (const id of group) {
           if (typeof id !== "string" || !/^[a-z0-9-]{1,80}$/i.test(id) || grouped.has(id)) return undefined;
           grouped.add(id);
@@ -63,10 +66,11 @@ export function parsePhotoDraft(raw: string | null): PhotoLocalDraft | undefined
       }
     }
     if (value.step !== undefined && ![1, 2, 3, 4, 5].includes(value.step)) return undefined;
+    if (value.detectionComplete !== undefined && typeof value.detectionComplete !== "boolean") return undefined;
     if (value.detectionVersion !== undefined && (!Number.isInteger(value.detectionVersion) || value.detectionVersion < 1 || value.detectionVersion > 100)) return undefined;
     if (value.answer !== undefined && (typeof value.answer !== "string" || value.answer.length > 10000)) return undefined;
-    if (value.skipped !== undefined && (!Array.isArray(value.skipped) || value.skipped.length > 10 || !value.skipped.every((id: unknown) => typeof id === "string"))) return undefined;
-    if (value.answers !== undefined && (!Array.isArray(value.answers) || value.answers.length > 10 || !value.answers.every((entry: any) => entry && typeof entry.photoId === "string" && typeof entry.question === "string" && entry.question.length <= 10000 && typeof entry.answer === "string" && entry.answer.length <= 10000))) return undefined;
+    if (value.skipped !== undefined && (!Array.isArray(value.skipped) || value.skipped.length > 50 || !value.skipped.every((id: unknown) => typeof id === "string"))) return undefined;
+    if (value.answers !== undefined && (!Array.isArray(value.answers) || value.answers.length > 50 || !value.answers.every((entry: any) => entry && typeof entry.photoId === "string" && typeof entry.question === "string" && entry.question.length <= 10000 && typeof entry.answer === "string" && entry.answer.length <= 10000))) return undefined;
     return value;
   } catch { return undefined; }
 }

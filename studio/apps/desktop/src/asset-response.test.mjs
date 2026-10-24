@@ -12,7 +12,11 @@ test('packaged assets support history navigation and reject escapes, missing ass
     await writeFile(path.join(outside,'private.txt'),'must not read');await symlink(path.join(outside,'private.txt'),path.join(root,'escape.txt'));
     const read=async url=>new Response(url,{headers:{'content-type':'text/html'}});
     const load=(route,method='GET')=>assetResponse(new Request(`https://workspace-test.localhost${route}`,{method}),root,read);
-    assert.match(await (await load('/timeline')).text(),/index.html$/);
+    const page=await load('/timeline');
+    assert.match(await page.text(),/index.html$/);
+    assert.match(page.headers.get('content-security-policy'),/img-src 'self' data: blob:/);
+    assert.match(page.headers.get('content-security-policy'),/script-src 'self';/);
+    assert.match(page.headers.get('content-security-policy'),/connect-src 'self';/);
     assert.match(await (await load('/app.js')).text(),/app.js$/);
     assert.equal((await load('/missing.js')).status,404);
     assert.equal((await load('/escape.txt')).status,403);

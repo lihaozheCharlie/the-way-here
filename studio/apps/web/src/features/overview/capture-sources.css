@@ -1,0 +1,79 @@
+.capture-sources{position:relative;display:flex;width:max-content;margin:2px 26px 14px;padding:4px;border-radius:var(--radius-pill);background:var(--surface-tinted);isolation:isolate}
+.capture-sources button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;width:120px;padding:7px 14px;border:0;border-radius:var(--radius-pill);background:transparent;color:var(--ink-soft);font-size:13px;cursor:pointer}
+.capture-sources button[aria-selected=true]{color:var(--accent-ink);font-weight:600}
+.capture-sources button:disabled{opacity:.5;cursor:default}
+.capture-sources-indicator{position:absolute;top:4px;bottom:4px;left:4px;width:120px;background:var(--paper);border-radius:var(--radius-pill);box-shadow:0 1px 3px color-mix(in srgb,var(--shadow-ink) 8%,transparent);transition:transform 200ms cubic-bezier(.22,.61,.36,1)}
+.capture-sources-indicator.is-photo{transform:translateX(120px)}
+.life-record-capture [hidden]{display:none!important}
+.life-record-capture .photo-library-search{margin:0;padding:0;border:0}
+.photo-library-search .source-lead{display:flex;gap:8px;align-items:center;margin:0 0 20px;color:var(--ink-soft);font-size:13px}
+.photo-filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.photo-filter-grid>div{min-width:0}
+.photo-library-search input,.photo-library-search select{height:38px}
+.photo-library-search button{cursor:pointer}
+.photo-library-search button:disabled{cursor:default;opacity:.5}
+.photo-chip-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;color:var(--ink-soft);font-size:12px}
+.photo-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:var(--radius-pill);padding:3px 9px;background:var(--paper);color:var(--ink-soft);font:inherit;font-size:12px}
+.photo-chip[aria-pressed=true],.photo-advanced-row .photo-chip{color:var(--accent-ink);background:var(--accent-soft);border-color:var(--accent-soft)}
+.photo-chip:hover:not(:disabled){background:var(--surface-tinted)}
+.photo-advanced-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0 12px}
+.photo-advanced-toggle{display:flex;align-items:center;gap:7px;padding:0;border:0;background:transparent;color:var(--ink-soft);font-size:13px}
+.photo-advanced-toggle>.icon:last-child{transition:transform 200ms}
+.photo-advanced-toggle[aria-expanded=true]>.icon:last-child{transform:rotate(180deg)}
+.capture-source-count{padding:1px 6px;border-radius:var(--radius-pill);background:var(--accent-soft);color:var(--accent-ink);font-size:11px}
+.photo-advanced-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px;border:1px solid var(--line);border-radius:var(--radius-card-small);background:var(--record-canvas)}
+.photo-album-field{grid-column:span 2;display:flex;gap:8px;align-items:end}
+.photo-album-field label{flex:1;min-width:0}
+.photo-library-search label.photo-library-favorite{display:flex;align-items:center;gap:8px;grid-column:1 / -1}
+.photo-library-search .photo-library-favorite input{width:16px;height:16px;accent-color:var(--accent-primary)}
+.photo-library-result-scroll{max-height:372px;overflow:auto;scrollbar-color:var(--line-strong) transparent;scrollbar-width:thin}
+.photo-library-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:14px 10px;padding:3px}
+.photo-library-tile{position:relative}
+.photo-library-search .photo-library-thumbnail{position:relative;display:block;width:100%;aspect-ratio:1;padding:0;overflow:hidden;border:2px solid transparent;border-radius:10px;background:var(--surface-tinted)}
+.photo-library-tile.is-selected .photo-library-thumbnail{border-color:var(--accent-primary)}
+.photo-library-tile.is-capped .photo-library-thumbnail{opacity:.45}
+.photo-tile-check{position:absolute;left:7px;top:7px;display:grid;place-items:center;width:20px;height:20px;border:1.5px solid var(--paper);border-radius:50%;background:color-mix(in srgb,var(--ink) 20%,transparent);color:transparent}
+.is-selected .photo-tile-check{background:var(--accent-primary);color:var(--paper)}
+.photo-library-zoom{position:absolute;right:6px;bottom:33px;display:grid;place-items:center;width:27px;height:27px;border:0;border-radius:7px;background:color-mix(in srgb,var(--ink) 70%,transparent);color:var(--paper)}
+.photo-selection-bar{position:sticky;bottom:0;z-index:2;display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:18px 0 0;padding:14px;border:1px solid var(--line-strong);border-radius:14px;background:var(--paper);box-shadow:0 4px 18px color-mix(in srgb,var(--shadow-ink) 8%,transparent)}
+.photo-selection-copy{flex:1;min-width:180px;display:grid;gap:3px;font-size:13px}
+.photo-selection-copy span{color:var(--ink-soft);font-size:11px}
+.photo-link-button{background:transparent;color:var(--accent-ink);border:0;padding:6px;font-size:13px}
+.photo-limit-note{color:var(--warm-ink);background:var(--warm-soft);padding:10px 12px;border-radius:8px;font-size:13px}
+.photo-library-skeletons{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:18px}
+.photo-library-skeletons>div{aspect-ratio:1;background:var(--surface-tinted);border-radius:10px}
+.photo-library-preview-dialog{width:min(820px,90vw)}
+.photo-preview-body{padding:18px 24px}
+.photo-preview-body>p{font-size:13px;color:var(--ink-soft)}
+.photo-capture-dialog{width:min(1040px,94vw);max-height:90vh}
+.photo-capture-dialog .photo-memory{border:0;box-shadow:none;margin:0}
+.photo-capture-intro{margin:14px 24px 0;color:var(--ink-soft);font-size:13px}
+.photo-memory-history{margin-top:18px;color:var(--ink-soft);font-size:13px}
+.photo-memory-history summary{cursor:pointer}
+.photo-history-item{display:flex;align-items:center;gap:8px;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left}
+.photo-history-item span{margin-left:auto;font-size:12px;color:var(--ink-soft)}
+@media(prefers-reduced-motion:reduce){.capture-sources-indicator,.photo-advanced-toggle>.icon:last-child{transition:none}}
+.capture-photo-history{padding:14px 24px 0;color:var(--ink-soft);font-size:13px}
+.capture-photo-history summary{cursor:pointer}
+.photo-library-preview-dialog > footer{padding:16px 24px}
+.photo-selection-stack{display:flex;flex:none;padding-left:5px}
+.photo-selection-stack img{width:36px;height:40px;margin-left:-5px;object-fit:cover;border:2px solid var(--paper);border-radius:7px}
+.photo-capture-dialog .photo-memory-footer .primary-action{border-color:transparent;background:var(--accent-primary);color:var(--paper)}
+.capture-sources button{white-space:nowrap;flex-shrink:0}
+.capture-sources .icon{flex:none}
+.photo-library-search .desktop-primary,.photo-library-search .desktop-secondary{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:none;min-height:34px;padding:7px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);color:var(--ink);font:inherit;font-size:13px;white-space:nowrap;box-shadow:none}
+.photo-library-search .desktop-primary{border-color:transparent;background:var(--accent-primary);color:var(--paper)}
+.photo-library-search .desktop-secondary:hover:not(:disabled){background:var(--surface-tinted)}
+.photo-library-search :is(button,input,select):focus-visible{outline:2px solid var(--accent-primary);outline-offset:3px}
+
+body .import-modal.import-modal--library-photos{width:min(920px,calc(100vw - 80px));max-width:920px}
+body .import-modal--library-photos .import-destination-step{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(240px,1fr);gap:20px}
+body .import-modal--library-photos .import-summary{padding:20px;background:var(--record-canvas)}
+body .import-modal--library-photos .import-summary dl{display:block}
+body .import-modal--library-photos .import-summary p{font-size:13px;line-height:1.8;color:var(--ink-soft)}
+.photo-capture-dialog[open]{display:flex;flex-direction:column;height:min(900px,calc(100dvh - 48px))}
+.photo-capture-dialog > header,.photo-capture-intro,.photo-capture-dialog .photo-memory-head,.photo-capture-dialog .photo-progress,.photo-capture-dialog .photo-memory-footer{flex-shrink:0}
+.photo-capture-dialog .photo-memory{display:flex;flex-direction:column;flex:1;min-height:0}
+.photo-capture-dialog .photo-memory-body{flex:1;min-height:0;overflow:auto;scrollbar-color:var(--line-strong) transparent;scrollbar-width:thin}
+.photo-capture-dialog .photo-memory-footer{padding:16px 26px}
+.desktop-shell .today-capture.life-record-capture,.life-record-capture{overflow:clip}

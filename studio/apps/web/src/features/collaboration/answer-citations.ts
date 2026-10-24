@@ -7,7 +7,7 @@ const wikiCitation = /\(\s*\[\[([^\[\]\n]+)\]\]\s*\)|（\s*\[\[([^\[\]\n]+)\]\]\
 export function citationPageId(raw: string): string | undefined {
   const target = raw.split("|")[0]?.split("#")[0]?.trim().replace(/\\/g, "/").replace(/^\.\//, "");
   if (!target) return undefined;
-  const vaultRelative = /(?:^|\/)vault\/[^/]+\/(.+)$/.exec(target)?.[1];
+  const vaultRelative = /(?:^|\/)(?:vault|app)\/[^/]+\/(.+)$/.exec(target)?.[1];
   const pageId = (vaultRelative || target).replace(/\.md(?::\d+(?::\d+)?)?$/i, "").replace(/^\/+/, "");
   if (!pageId || pageId.split("/").some((part) => part === ".." || part === ".") || /[?#\0]/.test(pageId)) return undefined;
   return pageId;

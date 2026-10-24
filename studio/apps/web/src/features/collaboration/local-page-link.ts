@@ -3,11 +3,13 @@ import { pageHref } from "../../shared/routing";
 type LocalPagePath = { area: "wiki" | "sources"; relativePath: string };
 
 function localPagePath(value: string): LocalPagePath | undefined {
+  if (/^(?!file:)[a-z][a-z\d+.-]*:|^\/\//i.test(value)) return undefined;
   const normalized = value.replace(/\\/g, "/").replace(/^file:\/\//i, "");
-  const current = /(?:^|\/)vault\/[^/]+\/(wiki|sources)\/(.+?)\.md(?::\d+(?::\d+)?)?(?:[?#].*)?$/.exec(normalized);
-  const legacy = /(?:^|\/)vault\/(wiki|sources)\/(.+?)\.md(?::\d+(?::\d+)?)?(?:[?#].*)?$/.exec(normalized);
+  const current = /(?:^|\/)(?:vault|app)\/[^/]+\/(wiki|sources)\/(.+?)\.md(?::\d+(?::\d+)?)?(?:[?#].*)?$/.exec(normalized);
+  const legacy = /(?:^|\/)(?:vault\/)?(wiki|sources)\/(.+?)\.md(?::\d+(?::\d+)?)?(?:[?#].*)?$/.exec(normalized);
   const match = current || legacy;
   if (!match) return undefined;
+  if (match[2]!.split('/').some(part => part === '..' || part === '.')) return undefined;
   return { area: match[1] as LocalPagePath["area"], relativePath: match[2]! };
 }
 

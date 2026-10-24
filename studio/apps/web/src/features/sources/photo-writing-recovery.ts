@@ -1,8 +1,8 @@
 import { isTerminalRunStatus, type WikiRun } from "@the-way-here/shared";
 
 /** A completion event must not make a pending output disappear before it is applied. */
-export function photoRunToReconcile(runs: WikiRun[], finished: string[], started?: WikiRun, pendingDraftRunId?: string): WikiRun | undefined {
-  return runs.find((run) => !finished.includes(run.id) && (run.id === pendingDraftRunId || run.id === started?.id || !isTerminalRunStatus(run.status)))
+export function photoRunToReconcile(runs: WikiRun[], finished: string[], started?: WikiRun, pendingDraftRunId?: string, pendingBuildRunId?: string): WikiRun | undefined {
+  return runs.find((run) => !finished.includes(run.id) && (run.id === pendingDraftRunId || run.id === pendingBuildRunId || run.id === started?.id || !isTerminalRunStatus(run.status)))
     ?? (started && !finished.includes(started.id) ? started : undefined);
 }
 

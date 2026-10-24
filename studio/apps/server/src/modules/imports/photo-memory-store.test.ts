@@ -135,9 +135,18 @@ describe("photo memories", () => {
     expect((await store.read(config, batch.id)).revision).toBe(1);
   });
 
+  it("imports fifty photos and accepts annotations on the whole batch", async () => {
+    const { store, config, file, index } = await fixture();
+    const batch = await store.create(config, { files: Array.from({ length: 50 }, (_, i) => ({ ...file, name: `anonymous-${i}.png` })) });
+    const memory = await store.read(config, batch.id);
+    expect(memory.photos).toHaveLength(50);
+    const updated = await store.update(config, batch.id, { revision: memory.revision, photos: memory.photos.map(photo => ({ photoId: photo.id, people: [person] })) }, index);
+    expect(updated.photos.every(photo => photo.people.length === 1)).toBe(true);
+  });
+
   it("validates photos, crop boxes, IDs, batches, and knowledge-base ownership", async () => {
     const { store, config, file, batch, target } = await fixture();
-    await expect(store.create(config, { files: Array(11).fill(file) })).rejects.toThrow("1–10");
+    await expect(store.create(config, { files: Array(51).fill(file) })).rejects.toThrow("1–50");
     await expect(store.create(config, { files: [{ ...file, name: "bad.heic" }] })).rejects.toThrow("HEIC");
     await expect(store.create(config, { files: [{ ...file, content: Buffer.from("not an image").toString("base64") }] })).rejects.toThrow("解码");
     await expect(store.create(config, { files: [file], targetFolder: "../escape" })).rejects.toThrow();

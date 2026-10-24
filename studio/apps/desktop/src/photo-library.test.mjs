@@ -43,3 +43,15 @@ test('malformed native output fails closed rather than hanging', async () => {
   await assert.rejects(pending, /响应无效/);
   assert.equal(child.killed, true);
 });
+
+test('exports only validated asset identifiers without arbitrary renderer commands or paths', async () => {
+  const { child, library, messages } = harness();
+  try {
+    assert.throws(() => library.export({ assetId: '' }), /无效/);
+    assert.throws(() => library.retain(Array(51).fill('asset')), /无效/);
+    const pending = library.export({ assetId: 'anonymous-asset', network: true, command: 'delete', path: '/ignored' });
+    assert.deepEqual(messages[0], { command: 'export', assetId: 'anonymous-asset', network: false, id: '1' });
+    child.stdout.write(JSON.stringify({ id: '1', result: { dataUrl: 'data:image/jpeg;base64,AA==', cloudOnly: false } }) + '\n');
+    assert.equal((await pending).cloudOnly, false);
+  } finally { library.close(); }
+});

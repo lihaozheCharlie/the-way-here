@@ -25,7 +25,13 @@ describe("agent answer citations", () => {
 
   it("uses indexed page ids for vault paths and rejects traversal", () => {
     expect(citationPageId("vault/demo/sources/日记/示例.md:12|示例")).toBe("sources/日记/示例");
+    expect(citationPageId("app/demo/sources/日记/示例.md")).toBe("sources/日记/示例");
     expect(citationFromHref("/page/sources/%E6%97%A5%E8%AE%B0/%E7%A4%BA%E4%BE%8B?agentCitation=%E7%A4%BA%E4%BE%8B")).toEqual({ pageId: "sources/日记/示例", fileName: "示例" });
     expect(citationPageId("../other-library/secret")).toBeUndefined();
+  });
+  it("routes managed-space Markdown references to the original record", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><AgentAnswer answer="[来源](app/demo/sources/日记/示例.md)" run={run} /></MemoryRouter>);
+    expect(html).toContain('href="/page/sources/%E6%97%A5%E8%AE%B0/%E7%A4%BA%E4%BE%8B"');
+    expect(html).not.toContain('href="app/demo/');
   });
 });

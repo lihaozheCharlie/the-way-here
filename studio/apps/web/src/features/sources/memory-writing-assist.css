@@ -19,3 +19,8 @@
 .memory-writing-background p, .memory-writing-assist .memory-writing-note { margin: 12px 0 0; color:var(--ink-soft); font-size: 12px; line-height: 1.8; }
 .bill-clue-panel.is-brief { gap: 16px; }
 .bill-clue-panel .memory-writing-assist { margin: 8px 0 10px; background: var(--paper); }
+.memory-writing-assist--inline{margin:18px 0;padding:16px;background:var(--record-canvas)}
+.memory-inline-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.memory-inline-row input{flex:1;min-width:0;height:38px;padding:8px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:var(--paper);color:var(--ink);font:inherit;font-size:14px}
+.memory-inline-row input:focus-visible{outline:2px solid var(--accent-primary);outline-offset:3px}
+.memory-writing-assist--inline .memory-writing-generate{min-height:38px;white-space:nowrap;border-radius:var(--radius-control)}

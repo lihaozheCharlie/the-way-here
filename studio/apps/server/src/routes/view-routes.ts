@@ -12,8 +12,10 @@ export function registerViewRoutes(app: FastifyInstance, knowledge: KnowledgeRun
   });
   app.get("/api/views/timeline", async () => buildTimeline(knowledge.index));
   app.get("/api/views/life-map", async () => buildLifeMap(knowledge.index));
-  app.get("/api/views/relationships", async () => {
-    const index = knowledge.index;
+  app.get<{ Querystring: { knowledgeBaseId?: string } }>("/api/views/relationships", async (request, reply) => {
+    let index;
+    try { index = (await knowledge.resolve(request.query.knowledgeBaseId)).index; }
+    catch (error) { return reply.code(400).send({ error: error instanceof Error ? error.message : "知识库不存在" }); }
     return new PhotoMemoryStore(knowledge.vaultRoot).decorate(index.config, buildRelationships(index), index);
   });
   app.get("/api/views/letters", async () => buildLetters(knowledge.index));

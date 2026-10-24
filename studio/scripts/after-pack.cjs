@@ -7,4 +7,5 @@ module.exports = async function afterPack(context) {
     ? path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, 'Contents', 'Resources')
     : path.join(context.appOutDir, 'resources');
   await fs.cp(path.join(context.packager.projectDir, '.runtime/package/server/node_modules'), path.join(resources, 'server/node_modules'), { recursive:true, verbatimSymlinks:true });
+  if (context.packager.config?.mas?.type) require('./mas-bundle-metadata.cjs')(path.dirname(path.dirname(resources)));
 };

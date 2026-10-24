@@ -8,7 +8,7 @@ test('desktop windows only accept local content routes', () => {
 test('links cannot launch local files or executable protocols', () => {
   assert.equal(allowedExternal('https://example.com'),true);
   assert.equal(allowedExternal('mailto:hello@example.com'),true);
-  for (const value of ['file:///private/data','javascript:alert(1)','smb://server/share','obsidian://open']) assert.equal(allowedExternal(value),false);
+  for (const value of ['file:///private/data','javascript:alert(1)','smb://server/share','obsidian://open','itms-services://?action=download-manifest&url=https://example.com/app','ITMS-SERVICES://example.com']) assert.equal(allowedExternal(value),false);
 });
 test('IPC requires exact local origin including ephemeral port', () => {
   assert.equal(trustedSender('http://127.0.0.1:4000/page/a','http://127.0.0.1:4000'),true);

@@ -7,6 +7,7 @@ import { packageKnowledge } from './package-knowledge.mjs';
 import { packageServer } from './package-server.mjs';
 import { packageCodex } from './package-codex.mjs';
 import { packageLicenses } from './package-licenses.mjs';
+import { applyPythonAppStoreCompliance } from './python-app-store-compliance.mjs';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = process.env;
@@ -88,6 +89,7 @@ run('pnpm',['build']);
 run(process.execPath,['scripts/build-desktop-native.mjs']);
 await packageServer(studio,path.join(studio,'.runtime/package/server'));
 await packageKnowledge(studio);
+await applyPythonAppStoreCompliance(path.join(studio, '.runtime/package/python'));
 await packageCodex(studio);
 await packageLicenses(studio);
 env.TWH_MAS_SIGNING_IDENTITY = signingHash;

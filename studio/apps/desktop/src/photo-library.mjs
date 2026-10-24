@@ -49,6 +49,15 @@ export class PhotoLibrary {
     if (!input || typeof input.assetId !== 'string' || input.assetId.length > 256 || !['thumbnail', 'preview'].includes(input.size) || typeof input.network !== 'boolean') throw new Error('照片预览条件无效');
     return this.request({ command: 'image', assetId: input.assetId, size: input.size, network: input.network });
   }
+  cancelSearch() { return this.request({ command: 'cancel' }); }
+  retain(input) {
+    if (!Array.isArray(input) || input.length > 50 || input.some(id => typeof id !== 'string' || !id || id.length > 256)) throw new Error('照片选择无效');
+    return this.request({ command: 'retain', assetIds: input });
+  }
+  export(input) {
+    if (!input || typeof input.assetId !== 'string' || !input.assetId || input.assetId.length > 256) throw new Error('照片导出条件无效');
+    return this.request({ command: 'export', assetId: input.assetId, network: false });
+  }
   close(message = '照片服务已关闭') {
     const child = this.child; this.child = undefined;
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error(message)); }

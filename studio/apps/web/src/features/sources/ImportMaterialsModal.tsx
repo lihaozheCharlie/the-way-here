@@ -96,7 +96,7 @@ async function droppedFiles(transfer: DataTransfer): Promise<SelectedImportFile[
   return selectedFiles(transfer.files);
 }
 
-export function ImportMaterialsModal({ folders, initialRoute, onClose, onImported, onJourney }: { folders: string[]; currentFolder: string; initialRoute?: ImportRoute; onClose: () => void; onImported: (batch: SourceImportBatch) => void; onConnected: () => void; onJourney: (journey: PaymentJourneySummary) => void }) {
+export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onClose, onImported, onJourney, initialPhotoFiles, knowledgeBaseId }: { initialPhotoFiles?: File[]; knowledgeBaseId?: string; folders: string[]; currentFolder: string; initialRoute?: ImportRoute; onClose: () => void; onImported: (batch: SourceImportBatch) => void; onConnected: () => void; onJourney: (journey: PaymentJourneySummary) => void }) {
   const { data: vault } = useApi<VaultInfo>("/api/vault");
   const [memoryTitle, setMemoryTitle] = useState("");
   const preparation = useRef<AbortController | undefined>(undefined);
@@ -106,13 +106,13 @@ export function ImportMaterialsModal({ folders, initialRoute, onClose, onImporte
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [route, setRoute] = useState<ImportRoute>(() => initialRoute || rememberedImportRoute("chat"));
   const [provider, setProvider] = useState<ChatImportProvider>(rememberedImportProvider);
-  const [step, setStep] = useState<1 | 2>(1);
-  const [files, setFiles] = useState<SelectedImportFile[]>([]);
+  const [step, setStep] = useState<1 | 2>(initialPhotoFiles ? 2 : 1);
+  const [files, setFiles] = useState<SelectedImportFile[]>(() => initialPhotoFiles?.map(file => ({ file, relativePath: file.name })) || []);
   function existingDestination(kind: ImportRoute): string {
     const preferred = kind === "photos" ? "照片记忆" : kind === "bill" ? "消费账单" : folders.includes("聊天记录") ? "聊天记录" : "AI聊天记录";
-    return folders.includes(preferred) ? preferred : "";
+    return kind === "photos" ? preferred : folders.includes(preferred) ? preferred : "";
   }
-  const [targetFolder, setTargetFolder] = useState(() => existingDestination(initialRoute || rememberedImportRoute("chat")));
+  const [targetFolder, setTargetFolder] = useState(() => initialPhotoFiles ? currentFolder : existingDestination(initialRoute || rememberedImportRoute("chat")));
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [draggingMaterials, setDraggingMaterials] = useState(false);
@@ -290,7 +290,7 @@ export function ImportMaterialsModal({ folders, initialRoute, onClose, onImporte
         encoding: /\.zip$/i.test(file.name) || route === "bill" || route === "photos" ? "base64" as const : "utf8" as const,
         mimeType: file.type || undefined,
       });
-      const batch = await api<SourceImportBatch>(route === "photos" ? "/api/imports/photos" : "/api/imports/files", { method: "POST", ...(route === "photos" ? { signal: AbortSignal.timeout(120_000) } : {}), body: JSON.stringify({ files: payload, channel, targetFolder: destination, ...(route === "photos" ? { title: memoryTitle.trim() || "照片记忆", knowledgeBaseId: vault?.knowledgeBaseId } : {}) }) });
+      const batch = await api<SourceImportBatch>(route === "photos" ? "/api/imports/photos" : "/api/imports/files", { method: "POST", ...(route === "photos" ? { signal: AbortSignal.timeout(120_000) } : {}), body: JSON.stringify({ files: payload, channel, targetFolder: destination, ...(route === "photos" ? { title: memoryTitle.trim() || "照片记忆", knowledgeBaseId: knowledgeBaseId || vault?.knowledgeBaseId } : {}) }) });
       if (batch.journey) onJourney(batch.journey);
       onClose();
       onImported(batch);
@@ -302,7 +302,7 @@ export function ImportMaterialsModal({ folders, initialRoute, onClose, onImporte
   }
 
   return createPortal(<div className="import-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !importing) onClose(); }}>
-    <section ref={dialogRef} className="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <section ref={dialogRef} className={`import-modal${initialPhotoFiles ? " import-modal--library-photos" : ""}`} role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
       <header className="import-modal-header"><div><h2 id="import-modal-title">带一段记录进来</h2><p>{step === 1 ? "先说说材料来自哪里，再把它放进来。" : "确认这些记录要保留到哪里。"}</p></div><button type="button" onClick={onClose} disabled={importing} aria-label="关闭记录导入窗口"><Icon name="close" size={18} /></button></header>
       <form onSubmit={submit}>
         {<ol className="import-stepper" aria-label="导入进度">
@@ -316,7 +316,7 @@ export function ImportMaterialsModal({ folders, initialRoute, onClose, onImporte
 
               <button type="button" disabled={importing} data-autofocus={route === "chat" ? "true" : undefined} aria-pressed={route === "chat"} className={route === "chat" ? "active" : ""} onClick={() => { if (route !== "chat") changeRoute("chat"); }}><span className="import-type-icon"><Icon name="message" size={18} /></span><b>聊天记录</b><small>ChatGPT、Claude、豆包等平台的导出文件</small></button>
               <button type="button" disabled={importing} data-autofocus={route === "bill" ? "true" : undefined} aria-pressed={route === "bill"} className={route === "bill" ? "active" : ""} onClick={() => { if (route !== "bill") changeRoute("bill"); }}><span className="import-type-icon"><Icon name="receipt" size={18} /></span><b>消费账单</b><small>支付宝导出的 CSV 账单</small></button>
-              <button type="button" disabled={importing} data-autofocus={route === "photos" ? "true" : undefined} aria-pressed={route === "photos"} className={route === "photos" ? "active" : ""} onClick={() => { if (route !== "photos") changeRoute("photos"); }}><span className="import-type-icon"><Icon name="image" size={18} /></span><b>照片</b><small>JPG / PNG / WebP，每批最多 10 张</small></button>
+              <button type="button" disabled={importing} data-autofocus={route === "photos" ? "true" : undefined} aria-pressed={route === "photos"} className={route === "photos" ? "active" : ""} onClick={() => { if (route !== "photos") changeRoute("photos"); }}><span className="import-type-icon"><Icon name="image" size={18} /></span><b>照片</b><small>JPG / PNG / WebP，每批最多 50 张</small></button>
             </div>
             <div className="import-material-zone">
               <header><b>添加材料</b><span>{routeLabel}</span></header>
@@ -331,7 +331,7 @@ export function ImportMaterialsModal({ folders, initialRoute, onClose, onImporte
               >
                 <span className="import-drop-icon"><Icon name="up" size={20} /></span>
                 <b>{draggingMaterials ? "放在这里" : route === "photos" ? "选择或拖入照片" : "选择或拖入材料"}</b>
-                <span>{route === "photos" ? "JPG / PNG / WebP · 最多 10 张 · 超过 20 MB 自动压缩，单张上限 100 MB · 不接收动图，HEIC 请先导出 JPG" : route === "bill" ? "支付宝导出的 CSV · 单次一份，最多 100 MB" : "ZIP / JSON / HTML / TXT / Markdown，或包含它们的文件夹 · 单次最多 100 MB"}</span>
+                <span>{route === "photos" ? "JPG / PNG / WebP · 最多 50 张 · 超过 20 MB 自动压缩，单张上限 100 MB · 不接收动图，HEIC 请先导出 JPG" : route === "bill" ? "支付宝导出的 CSV · 单次一份，最多 100 MB" : "ZIP / JSON / HTML / TXT / Markdown，或包含它们的文件夹 · 单次最多 100 MB"}</span>
                 <div className="import-file-picker-controls">
 
                   <button type="button" disabled={Boolean(preparing) || importing} onClick={() => fileInputRef.current?.click()}>{route === "photos" ? files.length ? "继续添加照片" : "选择照片" : route === "bill" ? "选择 CSV" : "选择文件"}</button>
@@ -349,13 +349,14 @@ export function ImportMaterialsModal({ folders, initialRoute, onClose, onImporte
             <div className="import-folder-nudge"><Icon name="folder" size={22} /><div><b>要读日记或笔记？不用导入</b></div><button type="button" onClick={() => { onClose(); window.setTimeout(() => window.dispatchEvent(new Event("open-source-folder")), 0); }}>打开文件夹…</button></div>
           </section> : <section className="import-destination-step" aria-label="确认保存位置">
             <div className="import-destination-options">
+              {route === "photos" && initialPhotoFiles && <div><b>已选照片</b><div className="import-photo-selection">{thumbnails.slice(0, 11).map((url, i) => <figure key={url}><img src={url} alt={files[i]?.file.name} /></figure>)}{files.length > 11 && <span>+{files.length - 11}</span>}</div><p>要增减照片，请返回“找照片”调整选择，最多 50 张。</p></div>}
               {route === "photos" ? <label className="import-folder-field"><span>这段记忆叫什么</span><TextInput value={memoryTitle} maxLength={100} disabled={importing} onChange={(event) => setMemoryTitle(event.target.value)} placeholder="例如：云南之旅 · 2026" /></label> : null}
               <b>保存位置</b><div className="import-folder-picker" inert={importing}><FolderTree internalOnly selected={targetFolder} onSelect={setTargetFolder} /></div><p className="import-selected-path">已选：{targetFolder || "应用资料根目录"}</p>
             </div>
-            <aside className="import-summary" aria-label="这批材料摘要"><h3>确认这批材料</h3><dl><div><dt>类型</dt><dd>{routeLabel}</dd></div>{route === "chat" ? <div><dt>平台</dt><dd>{chatImportProviders.find((item) => item.id === provider)?.label}</dd></div> : null}<div><dt>文件数</dt><dd>{files.length} 个</dd></div><div><dt>大小</dt><dd>{formatImportBytes(totalBytes)}</dd></div><div><dt>保存到</dt><dd>{destination || "应用资料根目录"}</dd></div></dl>{route === "photos" ? <p>照片保留在本地；超过 20 MB 的大图压缩后保存，电脑原文件不变。只有点击“AI 帮你写”时，这组所有照片的预览才会一起发送给模型。</p> : null}</aside>
+            <aside className="import-summary" aria-label="这批材料摘要"><h3>确认这批材料</h3><dl><div><dt>类型</dt><dd>{routeLabel}</dd></div>{route === "chat" ? <div><dt>平台</dt><dd>{chatImportProviders.find((item) => item.id === provider)?.label}</dd></div> : null}<div><dt>文件数</dt><dd>{files.length} 个</dd></div><div><dt>大小</dt><dd>{formatImportBytes(totalBytes)}</dd></div><div><dt>保存到</dt><dd>{destination || "应用资料根目录"}</dd></div></dl>{route === "photos" ? <p>系统照片库的 HEIC 自动导出为 JPG。照片保留在本地；超过 20 MB 的大图压缩后保存，电脑原文件不变。只有点击“AI 帮你写”时，这组所有照片的预览才会一起发送给模型。</p> : null}</aside>
           </section>}
         </div>
-        <footer className="import-modal-footer"><div aria-live="polite">{preparing ? <span role="status">{preparing}</span> : error ? <span role="alert">{error}</span> : photoPreparationNote || (step === 1 ? files.length ? `已选 ${files.length} 个文件 · 共 ${formatImportBytes(totalBytes)}` : route === "photos" ? "照片保留在本地，最多 10 张。大图会在本地压缩。" : route === "bill" ? "仅支持支付宝导出的 CSV；单次选择一份。" : "支持文件、文件夹和 ZIP；只会保留支持的记录格式。" : `共 ${files.length} 个文件，不会改动电脑上的原文件`)}</div><div>{step === 1 ? <><button type="button" className="secondary-action" onClick={onClose}>取消</button>{<button className="primary-action" disabled={!files.length || Boolean(preparing)}>下一步<Icon name="arrow" size={14} /></button>}</> : <><button type="button" className="secondary-action" onClick={() => { setStep(1); setError(""); }} disabled={importing}><Icon name="back" size={14} />上一步</button><button className="primary-action" disabled={importing || (route === "photos" && !vault)}>{importing ? route === "photos" ? "正在保留照片…" : "正在带进来…" : <>{route === "photos" ? "开始认人物" : `导入 ${files.length} 个文件`}<Icon name="arrow" size={14} /></>}</button></>}</div></footer>
+        <footer className="import-modal-footer"><div aria-live="polite">{preparing ? <span role="status">{preparing}</span> : error ? <span role="alert">{error}</span> : photoPreparationNote || (step === 1 ? files.length ? `已选 ${files.length} 个文件 · 共 ${formatImportBytes(totalBytes)}` : route === "photos" ? "照片保留在本地，最多 50 张。大图会在本地压缩。" : route === "bill" ? "仅支持支付宝导出的 CSV；单次选择一份。" : "支持文件、文件夹和 ZIP；只会保留支持的记录格式。" : `共 ${files.length} 个文件，不会改动电脑上的原文件`)}</div><div>{step === 1 ? <><button type="button" className="secondary-action" onClick={onClose}>取消</button>{<button className="primary-action" disabled={!files.length || Boolean(preparing)}>下一步<Icon name="arrow" size={14} /></button>}</> : <><button type="button" className="secondary-action" onClick={() => { if (initialPhotoFiles) onClose(); else { setStep(1); setError(""); } }} disabled={importing}><Icon name="back" size={14} />{initialPhotoFiles ? "返回选照片" : "上一步"}</button><button className="primary-action" disabled={importing || (route === "photos" && !knowledgeBaseId && !vault)}>{importing ? route === "photos" ? "正在保留照片…" : "正在带进来…" : <>{route === "photos" ? "开始认人物" : `导入 ${files.length} 个文件`}<Icon name="arrow" size={14} /></>}</button></>}</div></footer>
       </form>
     </section>
   </div>, document.body);

@@ -39,3 +39,12 @@ it("recovers the submitted background for drafts made before background persiste
   expect(parsePhotoDraft(JSON.stringify({ ...local, background: "x".repeat(10001) }))).toBeUndefined();
   expect(parsePhotoDraft(JSON.stringify({ ...local, pendingDraftRunId: {} }))).toBeUndefined();
 });
+
+it("reconciles completed and failed builds after the editor was closed", () => {
+  const build={...completed,id:"build-1",outputTarget:undefined,sourceContext:{importId:"memory-1",operation:"build",flow:"dialogue",storedPath:"sources/memory.md"}} as WikiRun;
+  const restored=parsePhotoDraft(JSON.stringify({...local,pendingDraftRunId:undefined,pendingBuildRunId:build.id}))!;
+  expect(photoRunToReconcile([build],[],undefined,undefined,restored.pendingBuildRunId)).toBe(build);
+  expect(photoRunToReconcile([build],[build.id],undefined,undefined,restored.pendingBuildRunId)).toBeUndefined();
+  const failed={...build,status:"failed"} as WikiRun;
+  expect(photoRunToReconcile([failed],[],undefined,undefined,restored.pendingBuildRunId)).toBe(failed);
+});
