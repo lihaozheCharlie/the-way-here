@@ -6,7 +6,7 @@ Tell it what's been happening lately, and it shapes your notes into a personal l
 
 > Over the past ten-plus years I've written more than 600 diary entries and taken tens of thousands of photos. Yet whenever I try to look back, all I find are a few blurry moments.
 
-With English selected (`desktop.locale=en`), titles, buttons, menus, and empty states are English, and the bundled demo library displays as **The Way Here demo**. Window titles look like `Now · The Way Here demo`. Chinese remains available (`desktop.locale=zh`). What you already stored can stay Chinese while the shell is English.
+In English, the shell and the bundled demo are English — the demo shows as **The Way Here demo**, and window titles look like `Now · The Way Here demo`. Your own notes can stay Chinese. Switch with `desktop.locale` (`en` / `zh`).
 
 ![Now page: jotting down a note about recent days](docs/images/now.png)
 
@@ -14,13 +14,13 @@ With English selected (`desktop.locale=en`), titles, buttons, menus, and empty s
 
 ## What it does
 
-**Jot down what's been happening.** On **Now**, the **Quick note** is where you type, or just speak (recognized on-device, desktop only). Keep it raw with **Save raw, organize later**, or tap **Turn into a diary entry** and let it tidy things up.
+**Jot down what's been happening.** Type in **Now** under **Quick note**, or just speak (recognized on-device, desktop only). Keep it raw with **Save raw, organize later**, or tap **Turn into a diary entry** and let it tidy things up.
 
 **No diary that day? Start from photos.** On **Now**, tap **Find photos**, pick a set from your Mac Photos library and mark who's in them. It drafts the story behind them, and you edit before saving it into **Life records** (macOS desktop only).
 
 ![A set of photos, with people marked, turned into a story](docs/images/photo-memory.png)
 
-**Look back and understand yourself.** **Understanding** organizes your records into a picture of who you are, the arc of your life, and the people and places in it. Want its take on how you've been lately? Read it in **Recent letters**. **See ahead** looks forward from what that library already understands. Something unclear? Keep asking in the panel on the right.
+**Look back and understand yourself.** **Understanding** organizes your records into a picture of who you are, the arc of your life, and the people and places in it. Want its take on how you've been lately? Ask for a letter in **Recent letters**. **See ahead** looks forward from what Understanding already knows. Something unclear? Keep asking in the panel on the right.
 
 ![Reading a recent-days letter](docs/images/letter.png)
 
