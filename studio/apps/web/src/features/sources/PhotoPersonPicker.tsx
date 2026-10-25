@@ -12,7 +12,7 @@ export function matchingPhotoPeople(people: PhotoPersonOption[], query: string) 
   return people.filter((person) => person.title.toLocaleLowerCase().includes(term) || matchingPhotoAliases(person, query).length > 0);
 }
 
-export function PhotoPersonPicker({ person, people, onChange }: { person: PhotoPerson; people: PhotoPersonOption[]; onChange: (patch: Partial<PhotoPerson>) => void }) {
+export function PhotoPersonPicker({ person, people, onChange, displayName }: { person: PhotoPerson; people: PhotoPersonOption[]; onChange: (patch: Partial<PhotoPerson>) => void; displayName?: string }) {
   const id = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -44,7 +44,7 @@ export function PhotoPersonPicker({ person, people, onChange }: { person: PhotoP
     <div className="photo-person-picker" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
       <label htmlFor={id}>搜索或填写称呼</label>
       <TextInput ref={inputRef} id={id} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={open ? `${id}-list` : undefined} aria-activedescendant={open && options.length ? `${id}-option-${activeIndex}` : undefined}
-        value={open ? query : person.name} placeholder="搜索姓名、别名，或填写新称呼" autoComplete="off" maxLength={100}
+        value={open ? query : (displayName ?? person.name)} placeholder="搜索姓名、别名，或填写新称呼" autoComplete="off" maxLength={100}
         onFocus={showOptions} onClick={showOptions}
         onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }}
         onKeyDown={(event) => {
@@ -65,7 +65,7 @@ export function PhotoPersonPicker({ person, people, onChange }: { person: PhotoP
         </div>
         {query.trim() ? <div role="group" aria-labelledby={`${id}-new`} className="photo-person-new-group"><p className="photo-person-group-title" id={`${id}-new`}>使用称呼</p><button type="button" role="option" id={`${id}-option-${matches.length}`} aria-selected={activeIndex === matches.length} tabIndex={-1} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(matches.length)}><span>使用新称呼「{query.trim()}」</span><small>构建时由模型匹配已有档案</small></button></div> : null}
       </div> : null}
-      {person.name.trim() ? <p className="photo-person-selection" role="status"><b>{person.pageId ? "已选择已有人物" : "已选择称呼，构建时匹配"}</b><span>{person.name}</span>{!person.pageId && matches.some((match) => [match.title, ...(match.aliases ?? [])].some((name) => name.toLocaleLowerCase() === person.name.trim().toLocaleLowerCase())) ? <small>有姓名或别名相同的人物；如是同一人，请从上方选择关联。</small> : null}</p> : null}
+      {person.name.trim() ? <p className="photo-person-selection" role="status"><b>{person.pageId ? "已选择已有人物" : "已选择称呼，构建时匹配"}</b><span>{displayName ?? person.name}</span>{!person.pageId && matches.some((match) => [match.title, ...(match.aliases ?? [])].some((name) => name.toLocaleLowerCase() === person.name.trim().toLocaleLowerCase())) ? <small>有姓名或别名相同的人物；如是同一人，请从上方选择关联。</small> : null}</p> : null}
     </div>
   </>;
 }

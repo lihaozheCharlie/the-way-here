@@ -277,9 +277,12 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   const properties = pageNoteProperties(page);
   const propertiesPinned = true;
   const documentBody = editableMarkdownDocument(draft, page.isSource || showIdentity).body;
-  const indexedMarkdown = draft === page.markdown
-    ? editableMarkdownDocument(page.renderedMarkdown, page.isSource || showIdentity).body
-    : documentBody;
+  const savedEnglish = draft === page.markdown ? demo.englishDocument(page.relativePath, page.markdown, page.outgoingLinks) : undefined;
+  const indexedMarkdown = savedEnglish
+    ? editableMarkdownDocument(savedEnglish, page.isSource || showIdentity).body
+    : draft === page.markdown
+      ? editableMarkdownDocument(page.renderedMarkdown, page.isSource || showIdentity).body
+      : documentBody;
   const readingMarkdown = page.isSource ? markdownWithoutSourceRelations(indexedMarkdown) : indexedMarkdown;
   const saveError = /失败|不能为空|别处更新/.test(saveState);
   const statusMessage = saveError ? saveState : saveNotice !== "hidden" ? "已保存" : /正在/.test(saveState) ? saveState : "";

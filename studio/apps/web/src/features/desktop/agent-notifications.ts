@@ -65,8 +65,10 @@ export class AgentNotificationTracker {
     const completed = event.job === "scan" ? event.status === "idle" || event.status === "ready" : event.status === "ready";
     if (previous === event.status || !completed && event.status !== "failed") return;
     if (previous === undefined && Date.parse(event.startedAt) < this.startedAt) return;
+    const status = tr(completed ? "已完成" : "未完成");
+    const gap = currentLocale() === "en" && status && !/^\s/.test(status) ? " " : "";
     this.notify({
-      title: `【${tr("看见未来")}】${tr(event.job === "scan" ? "了解度扫描" : "预测")}${tr(completed ? "已完成" : "未完成")}`,
+      title: `【${tr("看见未来")}】${tr(event.job === "scan" ? "了解度扫描" : "预测")}${gap}${status}`,
       body: completed ? tr("点击查看结果。") : tr("点击查看原因并重试。"),
       route: "/predict-self",
     });

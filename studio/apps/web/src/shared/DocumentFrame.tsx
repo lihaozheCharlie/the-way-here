@@ -28,7 +28,9 @@ export function ReadOnlyDocument({ id, markdown, toolbar, page, headerContent, h
   const demo = useDemoLabels();
   const { t, locale } = useI18n();
   const identity = page ? documentIdentity(page.externalSource?.originalPath || page.relativePath) : undefined;
-  const content = page ? editableMarkdownDocument(markdown, true).body : markdown;
+  const activeDocument = Boolean(page && (markdown === page.renderedMarkdown || markdown === page.markdown));
+  const source = page && activeDocument ? demo.englishDocument(page.relativePath, page.markdown, page.outgoingLinks) ?? markdown : markdown;
+  const content = page ? editableMarkdownDocument(source, true).body : source;
   const body = page?.isSource ? markdownWithoutSourceRelations(content) : content;
   const recordHeader = page?.isSource && identity ? <header className="record-document-header"><div className="record-document-path" title={page.externalSource?.originalPath || page.relativePath}><span>{demo.folderPath(identity.folder)}</span><Icon name="arrow" size={12} /><b>{demo.file((page.externalSource?.originalPath || page.relativePath).split("/").at(-1) || identity.fileName)}</b></div><span>{t("修改于 ${date}", { date: new Date(page.modifiedAt).toLocaleDateString(locale === "en" ? "en" : "zh-CN", { year: "numeric", month: "long", day: "numeric" }) })}</span></header> : undefined;
   return <DocumentFrame readOnly recordHeader={recordHeader} recordStyle={Boolean(page?.isSource)} variant="preview" showIdentity={Boolean(page)} showOutline={showOutline} relations={relations} markdown={body} headingPrefix={headingPrefix}>

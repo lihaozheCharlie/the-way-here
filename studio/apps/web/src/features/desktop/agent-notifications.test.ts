@@ -1,4 +1,4 @@
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import type { WikiRun } from "@the-way-here/shared";
 import { AgentNotificationTracker } from "./agent-notifications";
 
@@ -37,3 +37,25 @@ it("notifies for both prediction and initial understanding scan completion", () 
   expect(notify.mock.calls.map(([message]) => message.title)).toEqual(["【看见未来】了解度扫描已完成", "【看见未来】预测未完成"]);
   expect(notify.mock.calls.map(([message]) => message.route)).toEqual(["/predict-self", "/predict-self"]);
 });
+
+it("inserts a space before English prediction status words", () => {
+  const store = new Map<string, string>([["desktop.locale", "en"]]);
+  vi.stubGlobal("localStorage", { getItem: (key: string) => store.get(key) ?? null, setItem: () => undefined, removeItem: () => undefined });
+  try {
+    const notify = vi.fn();
+    const tracker = new AgentNotificationTracker(notify);
+    const startedAt = new Date().toISOString();
+    tracker.observePrediction({ knowledgeBaseId: "demo", job: "scan", startedAt, status: "running" });
+    tracker.observePrediction({ knowledgeBaseId: "demo", job: "scan", startedAt, status: "ready" });
+    tracker.observePrediction({ knowledgeBaseId: "demo", job: "prediction", startedAt, status: "running" });
+    tracker.observePrediction({ knowledgeBaseId: "demo", job: "prediction", startedAt, status: "failed" });
+    expect(notify.mock.calls.map(([message]) => message.title)).toEqual([
+      "【See ahead】Understanding scan finished",
+      "【See ahead】Prediction not finished",
+    ]);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+afterEach(() => vi.unstubAllGlobals());

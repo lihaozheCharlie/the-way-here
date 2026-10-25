@@ -1,5 +1,6 @@
 import type { AppLocale } from "./locale";
 import { useActiveLibraryId, useI18n } from "./locale";
+import { demoEnglishDocument, type DemoBodyLink } from "./demo-body";
 
 /** Display-only English for the demo library.
  *
@@ -140,5 +141,6 @@ export function useDemoLabels() {
     folder: (value: string) => demoFolderLabel(libraryId, locale, value),
     folderPath: (value: string) => demoFolderPath(libraryId, locale, value),
     file: (value: string) => demoFileLabel(libraryId, locale, value),
+    englishDocument: (relativePath: string, fileMarkdown: string, links?: DemoBodyLink[]) => demoEnglishDocument(libraryId, locale, relativePath, fileMarkdown, links),
   };
 }

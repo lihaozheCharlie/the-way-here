@@ -29,6 +29,14 @@ describe("translate", () => {
     expect(translate("en", "3–12 个月 · 扛压期")).toBe("3–12 months · Pressure");
     expect(translate("en", "3–5 年 · 分化期")).toBe("3–5 years · Divergence");
     expect(translate("en", "删除知识库")).toBe("Delete library");
+    expect(translate("en", "AI 设置")).toBe("AI settings");
+    expect(translate("en", "任务已完成")).toBe("Task finished");
+    expect(translate("en", "任务未完成")).toBe("Task not finished");
+    expect(translate("en", "已完成")).toBe("finished");
+    expect(translate("en", "未完成")).toBe("not finished");
+    expect(translate("en", "正在停止")).toBe("Stopping");
+    expect(translate("en", "正在停止…")).toBe("Stopping…");
+    expect(translate("en", "近况回信")).toBe("Recent letters");
     expect(translate("en", "语言")).toBe("Language");
     expect(translate("en", "全景")).toBe("Wide");
     expect(translate("en", "暂存失败，当前文字已留在本机")).toBe("Couldn’t park it. Your current text stays on this computer.");
@@ -37,7 +45,7 @@ describe("translate", () => {
 
   it("fills placeholders and falls back to Chinese when English is missing", () => {
     expect(translate("en", "从 ${from}", { from: "2020-01-01" })).toBe("From 2020-01-01");
-    expect(translate("en", "${progress} / 100，目标 ${score.threshold} 分", { progress: 40, "score.threshold": 60 })).toBe("40 / 100, goal 60");
+    expect(translate("en", "${progress} / 100，目标 ${score.threshold} 分", { progress: 40, "score.threshold": 60 })).toBe("40 / 100, target 60");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     expect(translate("en", "这段还没有英文")).toBe("这段还没有英文");
     if (import.meta.env.DEV) expect(warn).toHaveBeenCalledWith("[i18n] missing en: 这段还没有英文");

@@ -19,6 +19,7 @@ import { PhotoNarration } from "./PhotoNarration";
 import "./photo-memory.css";
 import { photoRunToReconcile, photoWritingBackground } from "./photo-writing-recovery";
 import { startMemoryWriting } from "./memory-writing";
+import { useDemoJsonText } from "../../shared/i18n";
 
 const PHOTO_DETECTION_VERSION = 2;
 
@@ -60,6 +61,8 @@ export function BoundPhotoMemory({ batch, knowledgeBaseId, revision, onCompleted
   const { data: pendingDraftRun, error: pendingDraftError } = useApi<WikiRun>(pendingDraftRunId ? `/api/runs/${encodeURIComponent(pendingDraftRunId)}` : "", pendingLookupRevision);
   const { data: pendingBuildRun, error: pendingBuildError } = useApi<WikiRun>(pendingBuildRunId ? `/api/runs/${encodeURIComponent(pendingBuildRunId)}` : "", pendingLookupRevision);
   const [groupStory, setGroupStory] = useState<string>();
+  const [storyFocused, setStoryFocused] = useState(false);
+  const demoText = useDemoJsonText();
   const [selectedPhotoId, setSelectedPhotoId] = useState("");
   const [storyDirty, setStoryDirty] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -153,6 +156,14 @@ export function BoundPhotoMemory({ batch, knowledgeBaseId, revision, onCompleted
     setDetectionRunning(false);
   }, [groupingRevision]);
   const story = groupStory ?? (memory ? restoreGroupStory(memory) : "");
+  const memoryFile = memory ? `sources/.photo-memories/${memory.id}/memory.json` : "";
+  const displayStory = !memory || storyFocused || storyDirty
+    ? story
+    : story === memory.confirmedStory
+      ? demoText(memoryFile, "$.confirmedStory", story)
+      : story === memory.draft
+        ? demoText(memoryFile, "$.draft", story)
+        : story;
   const pendingPeople = memory ? pendingPhotoPersonEdits(memory, photoDrafts).length : 0;
   const anyDirty = pendingPeople > 0;
   const unsaved = anyDirty || storyDirty;
@@ -332,11 +343,11 @@ export function BoundPhotoMemory({ batch, knowledgeBaseId, revision, onCompleted
   const completedSteps: PhotoStep[] = [...(allPeople.length && allPeople.every((person) => person.confirmed) && !detectionRunning ? [2 as const] : [])];
   const generating = active?.outputTarget?.kind === "photo-memory" && active.outputTarget.phase === "draft";
   return <section ref={panelRef} className="photo-memory photo-memory-redesign" aria-label="照片记忆工作区">
-    <header className="photo-memory-head"><img className="photo-memory-cover" src={photoAssetUrl(knowledgeBaseId, memory.id, memory.photos[0]!.id)} alt="" /><div><h2>{memory.title}</h2><p>{memory.photos.length} 张照片 · 原图保留在本地</p></div></header>
+    <header className="photo-memory-head"><img className="photo-memory-cover" src={photoAssetUrl(knowledgeBaseId, memory.id, memory.photos[0]!.id)} alt="" /><div><h2>{demoText(memoryFile, "$.title", memory.title)}</h2><p>{memory.photos.length} 张照片 · 原图保留在本地</p></div></header>
     <PhotoProgress step={step} completed={completedSteps} disabled={locked} onStep={navigateStep} />
     <div className="photo-memory-body">
       {step === 2 ? <PhotoPersonQueue memory={memory} drafts={photoDrafts} groups={faceGroups} onDetach={(id) => void separateFace(id)} groupingError={Object.values(detection).find((status) => status.groupingError)?.groupingError} selectedId={selectedId} photoId={selectedPhotoId} people={people} locked={locked} onSelect={setSelectedId} onPhoto={(id) => { setSelectedPhotoId(id); setSelectedId(""); }} onChange={editPerson} onAdd={addPerson} onConfirm={(id, person) => void resolvePerson(id, person, false)} onCommitBox={(id, person) => void resolvePerson(id, person, false, true)} onSkip={(id, person) => void resolvePerson(id, person, true)} detecting={detectionRunning} detectionLabel={detectionProgressLabel(memory.photos, detection)} detectionError={Object.values(detection).find((status) => status.state === "failed")?.error} onRetry={() => { for (const [id, status] of Object.entries(detection)) if (status.state === "failed") completedDetections.current.delete(id); setDetectionRetry((value) => value + 1); }} /> :
-        <PhotoNarration background={background} onBackground={editBackground} memory={memory} story={story} locked={locked} generating={generating} onStory={editStory} onGenerate={() => void generateStory()} />}
+        <PhotoNarration background={background} onBackground={editBackground} memory={memory} story={displayStory} locked={locked} generating={generating} onStory={editStory} onStoryFocus={() => setStoryFocused(true)} onStoryBlur={() => setStoryFocused(false)} onGenerate={() => void generateStory()} />}
       {unresolvedPending && <p className="photo-feedback" role={pendingLookupError ? "alert" : "status"}>{pendingLookupError ? `暂时无法确认上次任务状态：${pendingLookupError}。确认前不会重复发起。` : "正在恢复上次任务，请稍候…"}{pendingLookupError && <button type="button" onClick={() => setPendingLookupRevision(value => value + 1)}>重试进度</button>}</p>}
       {active ? <p className="photo-feedback" role="status">{generating ? "生成后会自动填回这组照片的故事。" : "正在把这段记忆收进理解…"}<button type="button" onClick={() => openContextAgent({ runId: active.id })}>查看进度</button></p> : null}
       {cleanPublished ? <p className="photo-feedback" role="status">这段记忆已经收进理解。<Link to="/relationships">查看人物与世界图谱</Link></p> : null}

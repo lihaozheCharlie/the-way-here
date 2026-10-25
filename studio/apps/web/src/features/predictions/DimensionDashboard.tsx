@@ -65,7 +65,7 @@ export function DimensionDashboard({ report, scenario }: { report: LifePredictio
               <div className="dim-actions-head"><h3>{t("想走稳这条路，${label}上要注意", { label: id === "love" ? t("关系") : t(labels[id]) })} <span>· {t("共 ${count} 条行动", { count: actions.length })}</span></h3>{actions.length > 0 && <span>{t("点行动项查看详情")}</span>}</div>
               {conditions.map((note,i) => <div className="dim-premise" key={i}><b>{t("前提：${title}", { title: note.title })}</b><p>{note.detail}</p></div>)}
               <div className="dim-step-list">{actions.map((action,i) => <details className={`dim-step${i === 0 ? " current" : ""}`} key={`${i}-${action.action}`} open={i === 0}>
-                <summary className="dim-step-summary"><span className="dim-step-num">{i+1}</span><span className="dim-step-body">{action.reviewAfter && <span className="dim-step-time">{action.reviewAfter}回看</span>}<span className="dim-step-text">{action.action}</span></span><span className="dim-step-chevron"><Mark kind="chevron"/></span></summary>
+                <summary className="dim-step-summary"><span className="dim-step-num">{i+1}</span><span className="dim-step-body">{action.reviewAfter && <span className="dim-step-time">{t("${when}回看", { when: action.reviewAfter })}</span>}<span className="dim-step-text">{action.action}</span></span><span className="dim-step-chevron"><Mark kind="chevron"/></span></summary>
                 <p className="dim-step-detail"><b>{t("观察重点：")}</b>{action.observation || t("尚未给出观察重点。")}</p>
               </details>)}</div>
               {!actions.length && <p className="dim-empty">{t("这份报告尚未给出此维度的具体行动。")}</p>}
