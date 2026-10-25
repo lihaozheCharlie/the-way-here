@@ -1,4 +1,4 @@
-import { tr } from "../../shared/i18n";
+import { tr, useDemoLabels } from "../../shared/i18n";
 import { FileMenu, FileListRow } from "../../shared/FileMenu";
 import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import React, { useState } from "react";
@@ -30,6 +30,7 @@ function insightItemHref(route: { to: string; key: string }, item: { id: string 
 }
 
 export function GrowthHub({ revision }: { revision: number }) {
+  const demo = useDemoLabels();
   const personalLines = useApi<StructuredCard[]>("/api/views/cards/personal-lines", revision);
   const cycles = useApi<StructuredCard[]>("/api/views/cards/cycles", revision);
   const systems = useApi<StructuredCard[]>("/api/views/cards/systems", revision);
@@ -40,11 +41,20 @@ export function GrowthHub({ revision }: { revision: number }) {
   const [selectedSystemId, setSelectedSystemId] = useState("");
   const [modelViews, setModelViews] = useState<Record<string, "summary" | "calibration">>({});
   if (personalLines.loading || cycles.loading || systems.loading || models.loading || modelCards.loading) return <Loading label={tr("正在把经历整理成可用的理解路径")} />;
-  const thinkingModels = resolveThinkingModels(modelCards.data, models.data);
+  const present = (item: StructuredCard): StructuredCard => {
+    const sections = demo.sections(item.id, item.excerpt);
+    return { ...item, title: demo.heading(item.id, item.excerpt) || demo.title(item.title), excerpt: demo.excerpt(item.id, item.excerpt), sections: sections ?? item.sections };
+  };
+  const thinkingModels = resolveThinkingModels(modelCards.data, models.data).map((model) => {
+    const card = (modelCards.data || []).find((item) => item.id === model.pageId);
+    const sections = card ? demo.sections(card.id, card.excerpt) : undefined;
+    const title = (card && demo.heading(card.id, card.excerpt)) || demo.title(model.title);
+    return sections ? { ...model, title, sections, body: sections.map((section) => `${section.heading}\n${section.body}`).join("\n\n") } : { ...model, title };
+  });
   const routes: Array<{ to: string; key: string; title: string; note: string; items: StructuredCard[] }> = [
-    { to: "/cards/personal-lines", key: "personal-lines", title: tr("个人主线"), note: tr("这一生反复在解决什么，以及它怎样穿过不同阶段"), items: personalLines.data || [] },
-    { to: "/cards/cycles", key: "cycles", title: tr("反复循环"), note: tr("看见触发、惯性反应、代价与真实有效的中断方式"), items: cycles.data || [] },
-    { to: "/cards/systems", key: "systems", title: tr("现实系统"), note: tr("职业、家庭、身体、资产、注意力与表达怎样共同运行"), items: systems.data || [] },
+    { to: "/cards/personal-lines", key: "personal-lines", title: tr("个人主线"), note: tr("这一生反复在解决什么，以及它怎样穿过不同阶段"), items: (personalLines.data || []).map(present) },
+    { to: "/cards/cycles", key: "cycles", title: tr("反复循环"), note: tr("看见触发、惯性反应、代价与真实有效的中断方式"), items: (cycles.data || []).map(present) },
+    { to: "/cards/systems", key: "systems", title: tr("现实系统"), note: tr("职业、家庭、身体、资产、注意力与表达怎样共同运行"), items: (systems.data || []).map(present) },
     { to: "/mental-models", key: "mental-models", title: tr("思维模型"), note: tr("带着边界、反例和校准使用的判断工具"), items: thinkingModels.map((model) => ({ id: model.key, title: model.title, excerpt: insightExcerpt(model.body, 120), sections: model.sections })) },
   ];
   const total = routes.reduce((sum, route) => sum + route.items.length, 0);

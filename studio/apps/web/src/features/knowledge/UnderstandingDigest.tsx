@@ -1,4 +1,4 @@
-import { tr } from "../../shared/i18n";
+import { tr, useDemoLabels } from "../../shared/i18n";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import type { PageCategory, StructuredCard, WikiPage, WikiPageSummary } from "@the-way-here/shared";
@@ -47,6 +47,7 @@ function ModelDigest({ page, revision }: { page: WikiPageSummary; revision: numb
 }
 
 export function UnderstandingDigest({ revision }: { revision: number }) {
+  const demo = useDemoLabels();
   const pages = useApi<WikiPageSummary[]>("/api/pages?sources=false", revision);
   const cycles = useApi<StructuredCard[]>("/api/views/cards/cycles", revision);
   const [cycleOpen, setCycleOpen] = useState(false);
@@ -59,8 +60,8 @@ export function UnderstandingDigest({ revision }: { revision: number }) {
       return <article className="understanding-digest-card" key={group.category}>
         <header><h2>{tr(group.title)}</h2><NavLink to={group.to}>{tr("查看全部")}</NavLink></header>
         {page ? <>
-          <PageLink page={page} className="digest-title">{page.title}</PageLink>
-          <p>{page.excerpt}</p><TagSummary tags={page.tags} />
+          <PageLink page={page} className="digest-title">{demo.heading(page.relativePath, page.excerpt) || demo.title(page.title)}</PageLink>
+          <p>{demo.excerpt(page.relativePath, page.excerpt)}</p><TagSummary tags={page.tags.map((tag) => demo.title(tag))} />
         </> : <p>{pages.loading ? tr("正在读取…") : pages.error ? tr(pages.error) : tr("还没有形成这类理解。")}</p>}
         {group.category === "cycles" && cycle && <>
           <button type="button" className="digest-disclosure" aria-expanded={cycleOpen}

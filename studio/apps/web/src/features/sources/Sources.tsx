@@ -17,7 +17,7 @@ import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { graphCategoryNames } from "../../shared/categories";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { tr, useDemoLabels, useI18n } from "../../shared/i18n";
 import { pageDestination, pageHref, type ReturnContext } from "../../shared/routing";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
@@ -163,6 +163,7 @@ function ImportedBatchGuide({ batch, busyPath, onStart, onStartAll, onDefer }: {
 
 export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
   const { t } = useI18n();
+  const demo = useDemoLabels();
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
   const related = (page.relatedPages || []).filter((item) => item.category !== "maintenance");
@@ -174,15 +175,15 @@ export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
   return <details className="source-knowledge-connections">
     <summary>{t("查看关联结果 · ${count}", { count: related.length })}</summary>
     {letter && <NavLink className="source-letter-feature" to={pageDestination(letter)} state={returnContext}>
-      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{letter.title}</h3><p>{letter.excerpt || t("沿着这篇记录，留下一封可以从未来回看的信。")}</p></div>
+      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{demo.heading(letter.relativePath, letter.excerpt) || demo.title(letter.title)}</h3><p>{(letter.excerpt && demo.excerpt(letter.relativePath, letter.excerpt)) || t("沿着这篇记录，留下一封可以从未来回看的信。")}</p></div>
       <i><Icon name="arrow" size={17} /></i>
     </NavLink>}
     {shown.length > 0 && <nav className="source-related-knowledge" aria-label={t("这篇原始记录关联的页面")}>
       {shown.map((item) => <NavLink key={item.id} to={pageHref(item.id)} state={returnContext}>
         <span>{t(graphCategoryNames[item.category] || item.category)}</span>
-        <b>{item.title}</b>
+        <b>{demo.heading(item.relativePath, item.excerpt) || demo.title(item.title)}</b>
         <i><Icon name="arrow" size={14} /></i>
-        <p className="source-related-peek" data-overflow-tooltip="off">{item.excerpt || t("打开页面继续阅读完整内容。")}</p>
+        <p className="source-related-peek" data-overflow-tooltip="off">{(item.excerpt && demo.excerpt(item.relativePath, item.excerpt)) || t("打开页面继续阅读完整内容。")}</p>
       </NavLink>)}
     </nav>}
     {knowledge.length > 8 && <button type="button" className="source-related-more" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>{expanded ? t("收起部分页面") : t("查看全部 ${count} 个关联页面", { count: knowledge.length })}<Icon name={expanded ? "back" : "arrow"} size={14} /></button>}

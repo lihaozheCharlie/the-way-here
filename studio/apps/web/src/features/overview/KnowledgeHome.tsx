@@ -38,7 +38,7 @@ export function KnowledgeHome({ revision }: { revision: number }) {
         return <NavLink className={`understanding-entry understanding-entry--${group.tone}`} to={group.to} key={group.to}>
           <header><UnderstandingGlyph tone={group.tone} size="small" /><h2>{t(group.title)}</h2><b aria-label={`${group.count} ${t(group.label)}`}>{group.count}</b></header>
           <p>{t(group.description)}</p>
-          <div className="understanding-latest">{latest ? <><b>{t("最新：${title}", { title: demo.title(latest.title) })}</b><p>{latest.excerpt || t("打开分类，回到完整理解与来源。")}</p></> : <p>{pagesLoading ? t("正在读取最新理解…") : pagesError ? t("最新理解暂时无法读取，仍可打开分类。") : t("这类理解还在慢慢积累。")}</p>}</div>
+          <div className="understanding-latest">{latest ? <><b>{t("最新：${title}", { title: demo.heading(latest.relativePath, latest.excerpt) || demo.title(latest.title) })}</b><p>{(latest.excerpt && demo.excerpt(latest.relativePath, latest.excerpt)) || t("打开分类，回到完整理解与来源。")}</p></> : <p>{pagesLoading ? t("正在读取最新理解…") : pagesError ? t("最新理解暂时无法读取，仍可打开分类。") : t("这类理解还在慢慢积累。")}</p>}</div>
           <footer>{t("查看全部")} <Icon name="arrow" size={15} /></footer>
         </NavLink>;
       })}

@@ -1,4 +1,4 @@
-import { tr } from "./i18n";
+import { tr, useDemoLabels } from "./i18n";
 import { useDismissLayer } from "./use-dismiss-layer";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -9,7 +9,7 @@ import { Icon } from "./ui";
 import "./file-menu.css";
 
 type FileEntry = Pick<WikiPageSummary, "id" | "title"> & Partial<WikiPageSummary>;
-export type FileAction = { label: string; onSelect: () => void };
+export type FileAction = { label: string; onSelect: () => void; danger?: boolean };
 export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, onRenamed, onDeleted }: {
   page: FileEntry; extraActions?: FileAction[]; onRename?: () => void; onDelete?: () => void;
   onRenamed?: (page: WikiPage) => void; onDeleted?: () => void;
@@ -26,7 +26,9 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
   const menu = useRef<HTMLDivElement>(null);
   const renameDialog = useRef<HTMLDialogElement>(null);
   useDismissLayer(open, () => { setOpen(false); trigger.current?.focus(); });
+  const demo = useDemoLabels();
   const fileName = (page.externalSource?.originalPath || page.relativePath)?.split("/").at(-1)?.replace(/\.(md|txt)$/i, "") || page.title;
+  const shownName = demo.heading(page.relativePath || page.id || "", page.excerpt) || demo.title(fileName);
   useEffect(() => {
     if (!open) return;
     const rect = trigger.current!.getBoundingClientRect();
@@ -72,16 +74,16 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
     ...extraActions,
     { label: tr("重命名"), onSelect: () => { if (onRename) onRename(); else { setName(fileName); setDialog("rename"); } } },
     { label: tr("打开原始目录"), onSelect: () => void reveal() },
-    { label: tr("删除"), onSelect: () => onDelete ? onDelete() : setDialog("delete") },
+    { label: tr("删除"), danger: true, onSelect: () => onDelete ? onDelete() : setDialog("delete") },
   ];
   return <>
-    <button ref={trigger} type="button" className="file-menu-trigger" aria-label={tr("更多文件操作：${fileName}", { "fileName": fileName })} aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={(event) => { event.stopPropagation(); void toggleMenu(); }}><Icon name="more" size={16} /></button>
-    {open && createPortal(<div ref={menu} className="file-menu-popover" role="menu" aria-label={tr("${fileName}的文件操作", { "fileName": fileName })} style={position} onKeyDown={event => {
+    <button ref={trigger} type="button" className="file-menu-trigger" aria-label={tr("更多文件操作：${fileName}", { "fileName": shownName })} aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={(event) => { event.stopPropagation(); void toggleMenu(); }}><Icon name="more" size={16} /></button>
+    {open && createPortal(<div ref={menu} className="file-menu-popover" role="menu" aria-label={tr("${fileName}的文件操作", { "fileName": shownName })} style={position} onKeyDown={event => {
       if (event.key === "Tab") { setOpen(false); trigger.current?.focus(); }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); const buttons = [...menu.current!.querySelectorAll<HTMLButtonElement>("button")]; const index = buttons.indexOf(document.activeElement as HTMLButtonElement); buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus(); }
-    }}>{actions.map(action => <button role="menuitem" type="button" className={action.label === "删除" ? "danger" : ""} key={action.label} onClick={() => { setOpen(false); trigger.current?.focus(); action.onSelect(); }}>{action.label}</button>)}</div>, document.body)}
+    }}>{actions.map(action => <button role="menuitem" type="button" className={action.danger ? "danger" : ""} key={action.label} onClick={() => { setOpen(false); trigger.current?.focus(); action.onSelect(); }}>{action.label}</button>)}</div>, document.body)}
     {dialog === "rename" && createPortal(<dialog ref={renameDialog} className="file-rename-dialog" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}><form onSubmit={event => { event.preventDefault(); void rename(); }}><h2>{tr("重命名文件")}</h2><label>{tr("文件名")}<input autoFocus value={name} disabled={busy} onFocus={event => event.currentTarget.select()} onChange={event => setName(event.target.value)} /></label>{error && <p role="alert">{tr(error)}</p>}<footer><button type="button" disabled={busy} onClick={closeDialog}>{tr("取消")}</button><button type="submit" disabled={busy || !name.trim()}>{busy ? tr("正在保存…") : tr("保存")}</button></footer></form></dialog>, document.body)}
-    {dialog === "delete" && createPortal(<ConfirmDeleteDialog title={tr("删除这个文件？")} description={tr("文件会从当前知识库中永久移除。")} itemName={fileName} impact={tr("引用此文件的页面不会一并删除；此操作不能撤销。")} confirmLabel={tr("删除文件")} onClose={closeDialog} onConfirm={async () => { await api(page.isSource ? "/api/sources/file" : "/api/pages/file", { method: "DELETE", body: JSON.stringify({ pageId: page.id, expectedModifiedAt: page.modifiedAt }) }); onDeleted?.(); }} />, document.body)}
+    {dialog === "delete" && createPortal(<ConfirmDeleteDialog title={tr("删除这个文件？")} description={tr("文件会从当前知识库中永久移除。")} itemName={shownName} impact={tr("引用此文件的页面不会一并删除；此操作不能撤销。")} confirmLabel={tr("删除文件")} onClose={closeDialog} onConfirm={async () => { await api(page.isSource ? "/api/sources/file" : "/api/pages/file", { method: "DELETE", body: JSON.stringify({ pageId: page.id, expectedModifiedAt: page.modifiedAt }) }); onDeleted?.(); }} />, document.body)}
     {error && !dialog && createPortal(<div className="file-menu-error" role="alert">{tr(error)}<button type="button" onClick={() => setError("")}>{tr("关闭")}</button></div>, document.body)}
   </>;
 }

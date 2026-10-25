@@ -1,4 +1,4 @@
-import { tr } from "../../shared/i18n";
+import { tr, useDemoLabels } from "../../shared/i18n";
 import { StageFocus } from "./StageFocus";
 import { FileListRow } from "../../shared/FileMenu";
 import { useSearchParams } from "react-router-dom";
@@ -10,6 +10,7 @@ import { UnderstandingBanner } from "./UnderstandingLayout";
 import { orderLifeStagesFromPresent } from "./life-atlas";
 
 export function Timeline({ revision }: { revision: number }) {
+  const demo = useDemoLabels();
   const { data, loading, error } = useApi<LifeMapView>("/api/views/life-map", revision);
   const [params, setParams] = useSearchParams();
   if (loading) return <Loading label={tr("正在展开人生轨迹")} />;
@@ -25,7 +26,7 @@ export function Timeline({ revision }: { revision: number }) {
         {orderedStages.map((stage) => {
           const isSelected = selected?.page.id === stage.page.id;
           return <FileListRow key={stage.page.id} page={stage.page} onRenamed={page => selectStage(page.id)}><button type="button" className={`understanding-timeline-item${isSelected ? " is-selected" : ""}${stage.relatedEvents.length ? " is-turning" : ""}${stage.lane > 0 ? " is-parallel" : ""}`} onClick={() => selectStage(stage.page.id)}>
-            <i /><div><span>{stage.range}</span><b>{stage.page.title}</b><p>{stage.focus}</p><small>{stage.lane > 0 ? tr("并行人生线") : tr("人生主线")}{stage.relatedEvents.length ? tr(" · ${stage.relatedEvents.length} 个转折", { "stage.relatedEvents.length": stage.relatedEvents.length }) : ""}</small></div>
+            <i /><div><span>{stage.range === "待补充" ? tr("待补充") : stage.range}</span><b>{demo.heading(stage.page.relativePath, stage.focus) || demo.title(stage.page.title)}</b><p>{demo.excerpt(stage.page.relativePath, stage.focus)}</p><small>{stage.lane > 0 ? tr("并行人生线") : tr("人生主线")}{stage.relatedEvents.length ? tr(" · ${stage.relatedEvents.length} 个转折", { "stage.relatedEvents.length": stage.relatedEvents.length }) : ""}</small></div>
           </button></FileListRow>;
         })}
       </section>

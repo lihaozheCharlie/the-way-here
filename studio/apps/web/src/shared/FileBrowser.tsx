@@ -27,7 +27,7 @@ export function FileBrowserItem({ page, active, onSelect, selection, actions, ch
 }) {
   const demo = useDemoLabels();
   const storedName = (page.externalSource?.originalPath || page.relativePath).replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
-  const fileName = demo.file(storedName);
+  const fileName = demo.heading(page.relativePath, page.excerpt) || demo.file(storedName);
   return <article draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragEnd={onDragEnd} className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""} file-browser-item`}>
     {selection}
     <button type="button" className="source-file-select" aria-label={fileName} aria-current={active ? "true" : undefined} onClick={onSelect}>

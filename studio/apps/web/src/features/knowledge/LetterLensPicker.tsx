@@ -29,13 +29,16 @@ function LensChoice({ lens, onSelect, selected = false }: { lens: ReasoningLens;
     document.addEventListener("scroll", scroll, true);
     return () => { window.removeEventListener("resize", scroll); document.removeEventListener("scroll", scroll, true); };
   }, [visible]);
-  const summary = lens.attention.split(/[。；;]/)[0];
+  const displayName = tr(lens.displayName);
+  const attention = tr(lens.attention);
+  const summary = attention.split(/[。；;.]/)[0];
+  const initial = displayName.split(/\s+/).at(-1)?.slice(0, 1) || displayName.slice(0, 1);
   return <>
     <button ref={trigger} className="letter-lens-choice" type="button" aria-pressed={selected} aria-describedby={visible ? id : undefined} data-overflow-tooltip="off" onPointerEnter={() => { clearTimeout(timer.current); timer.current = setTimeout(() => setVisible(true), 180); }} onPointerLeave={leave} onFocus={event => { if (event.currentTarget.matches(":focus-visible")) setVisible(true); }} onBlur={hide} onClick={() => { hide(); onSelect(); }}>
-      <span className="letter-lens-avatar" aria-hidden="true">{lens.displayName.split(/[·・]/).at(-1)?.slice(0, 1)}</span>
-      <span className="letter-lens-copy"><b>{lens.displayName}</b><small>{summary}</small></span>
+      <span className="letter-lens-avatar" aria-hidden="true">{initial}</span>
+      <span className="letter-lens-copy"><b>{displayName}</b><small>{summary}</small></span>
     </button>
-    {visible && createPortal(<div id={id} ref={tooltip} role="tooltip" className="letter-lens-tooltip" style={position} onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave}><b>{lens.displayName}</b><p>{lens.attention}</p>{lens.helperUse && <p>{lens.helperUse}</p>}{Boolean(lens.signals?.length) && <p>{tr("关注：")}{lens.signals.join(tr("、"))}</p>}</div>, document.body)}
+    {visible && createPortal(<div id={id} ref={tooltip} role="tooltip" className="letter-lens-tooltip" style={position} onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave}><b>{displayName}</b><p>{attention}</p>{lens.helperUse && <p>{tr(lens.helperUse)}</p>}{Boolean(lens.signals?.length) && <p>{tr("关注：")}{lens.signals.map((signal) => tr(signal)).join(tr("、"))}</p>}</div>, document.body)}
   </>;
 }
 

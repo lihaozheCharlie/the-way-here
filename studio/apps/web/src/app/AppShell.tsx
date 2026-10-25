@@ -330,6 +330,16 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/mental-models" element={<MentalModels revision={revision} />} />
             <Route path="/search" element={<SearchResults revision={revision} />} />
             <Route path="/page/*" element={<Reader revision={revision} />} />
+            <Route path="/wiki" element={<Navigate to="/knowledge" replace />} />
+            <Route path="/understanding" element={<Navigate to="/knowledge" replace />} />
+            <Route path="/understanding/overview" element={<Navigate to="/knowledge" replace />} />
+            <Route path="/understanding/self" element={<Navigate to="/insights" replace />} />
+            <Route path="/understanding/life" element={<Navigate to="/timeline" replace />} />
+            <Route path="/understanding/people" element={<Navigate to="/relationships" replace />} />
+            <Route path="/understanding/ahead" element={<Navigate to="/predict-self" replace />} />
+            <Route path="/settings" element={<Navigate to="/preferences" replace />} />
+            <Route path="/models" element={<Navigate to="/preferences?tab=ai" replace />} />
+            <Route path="/collaboration" element={<Navigate to="/conversation" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

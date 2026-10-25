@@ -1,6 +1,6 @@
 import type { AppLocale } from "./locale";
 import { translate, translateInterpolated, useActiveLibraryId, useI18n } from "./locale";
-import { demoEnglishDocument, demoListExcerpt, type DemoBodyLink } from "./demo-body";
+import { demoEnglishDocument, demoEnglishHeading, demoEnglishSections, demoListExcerpt, type DemoBodyLink } from "./demo-body";
 
 /** Display-only English for the demo library.
  *
@@ -146,15 +146,28 @@ export function demoFolderPath(libraryId: string | null | undefined, locale: App
 }
 
 export function demoFileLabel(libraryId: string | null | undefined, locale: AppLocale, fileName: string): string {
-  const generated = translateInterpolated(locale, fileName);
-  if (generated !== fileName) return generated;
   const match = /^(.*?)(\.(?:md|txt))$/i.exec(fileName);
   const stem = match?.[1] ?? fileName;
   const ext = match?.[2] ?? "";
   const mapped = demoTitleLabel(libraryId, locale, stem);
   if (mapped !== stem) return `${mapped}${ext}`;
+  const generated = translateInterpolated(locale, fileName);
+  if (generated !== fileName) return generated;
   const folder = chromeFolderLabel(libraryId, locale, stem);
   return folder === stem.trim() ? fileName : `${folder}${ext}`;
+}
+
+/** Tooltip path. Folder and file segments use the same display names as the tree and the file list. */
+export function demoPathTooltip(libraryId: string | null | undefined, locale: AppLocale, value: string): string {
+  if (!value || locale !== "en") return value;
+  return value.split("/").map((part) => {
+    if (!part) return part;
+    if (/\.[A-Za-z0-9]+$/.test(part)) {
+      const file = demoFileLabel(libraryId, locale, part);
+      if (file !== part) return file;
+    }
+    return chromeFolderLabel(libraryId, locale, part);
+  }).join("/");
 }
 
 export function useDemoLabels() {
@@ -169,6 +182,9 @@ export function useDemoLabels() {
     library: (value: string) => demoLibraryLabel(libraryId, locale, value),
     file: (value: string) => demoFileLabel(libraryId, locale, value),
     excerpt: (relativePath: string, excerpt: string) => demoListExcerpt(libraryId, locale, relativePath, excerpt),
+    heading: (relativePath: string, excerpt?: string) => demoEnglishHeading(libraryId, locale, relativePath, excerpt),
+    sections: (relativePath: string, excerpt: string) => demoEnglishSections(libraryId, locale, relativePath, excerpt),
+    path: (value: string) => demoPathTooltip(libraryId, locale, value),
     libraryName: (id: string | null | undefined, name: string) => demoLibraryLabel(id, locale, name),
     englishDocument: (relativePath: string, fileMarkdown: string, links?: DemoBodyLink[]) => demoEnglishDocument(libraryId, locale, relativePath, fileMarkdown, links),
   };

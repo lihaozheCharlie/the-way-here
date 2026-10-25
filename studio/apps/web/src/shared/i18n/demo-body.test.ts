@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { demoBodies } from "./demo-body-data";
-import { demoEnglishDocument, demoExcerptFromMarkdown, demoFingerprint, demoListExcerpt } from "./demo-body";
+import { demoEnglishDocument, demoEnglishHeading, demoExcerptFromMarkdown, demoFingerprint, demoListExcerpt } from "./demo-body";
 import { demoLibraryLabel } from "./demo-overlay";
 import { demoSeedExcerpts } from "./demo-excerpt-data";
 import { demoJsonStrings } from "./demo-json-data";
@@ -42,6 +42,10 @@ describe("demo markdown overlay", () => {
     expect(demoFingerprint(markdown)).toBe(demoBodies[path]!.fingerprint);
     const english = demoListExcerpt("demo", "en", path, demoSeedExcerpts[path]!);
     expect(english.startsWith("This is a fully fictional demo photo memory.")).toBe(true);
+    const letter = "wiki/12 近况对话/2026-09-20 芒格视角：别让掌声替你决定投入.md";
+    expect(demoEnglishHeading("demo", "en", letter, demoSeedExcerpts[letter])).toBe("Munger lens: don't let applause decide what you invest in");
+    expect(demoListExcerpt("demo", "en", letter, demoSeedExcerpts[letter]!)).not.toMatch(/[\u4e00-\u9fff]/);
+    expect(demoEnglishHeading("demo", "en", letter, "我改过的摘要")).toBeUndefined();
     expect(english).not.toMatch(/[\u4e00-\u9fff]/);
     expect(demoListExcerpt("personal", "en", path, demoSeedExcerpts[path]!)).toBe(demoSeedExcerpts[path]);
     expect(demoListExcerpt("demo", "zh", path, demoSeedExcerpts[path]!)).toBe(demoSeedExcerpts[path]);

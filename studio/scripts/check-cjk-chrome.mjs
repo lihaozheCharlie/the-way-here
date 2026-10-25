@@ -1,7 +1,7 @@
 /**
  * Report Chinese that can still reach the English UI.
  *
- * Resolved catalog keys, agent prompts, demo body tables, and tests are excluded.
+ * Resolved catalog keys, agent prompts, demo body and excerpt seed tables, and tests are excluded.
  * Everything else is a failure unless it is on the explicit whitelist.
  *
  *   node studio/scripts/check-cjk-chrome.mjs
@@ -18,6 +18,7 @@ const roots = ["apps/web/src", "apps/desktop/src", "apps/server/src"].map((dir) 
 const CJK = /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/;
 const skipFiles = new Set([
   "apps/web/src/shared/i18n/demo-body-data.ts",
+  "apps/web/src/shared/i18n/demo-excerpt-data.ts",
   "apps/web/src/shared/i18n/demo-json-data.ts",
   "apps/web/src/shared/i18n/demo-overlay.ts",
   "apps/web/src/shared/i18n/en-messages.ts",

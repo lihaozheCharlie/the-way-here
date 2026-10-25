@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseLocale, translate } from "./locale";
-import { chromeFolderLabel, demoFileLabel, demoFolderLabel, demoLibraryLabel, demoTitleLabel } from "./demo-overlay";
+import { chromeFolderLabel, demoFileLabel, demoFolderLabel, demoLibraryLabel, demoPathTooltip, demoTitleLabel } from "./demo-overlay";
 
 describe("translate", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -125,6 +125,8 @@ describe("demo overlay", () => {
     expect(chromeFolderLabel("personal", "en", "知识库")).toBe("Library");
     expect(demoTitleLabel("personal", "en", "未命名")).toBe("Untitled");
     expect(chromeFolderLabel("demo", "en", "照片记忆")).toBe("Photo memories");
+    expect(demoPathTooltip("demo", "en", "/vault/demo/sources/照片记忆/一张新城市餐桌的照片.md")).toBe("/vault/demo/sources/Photo memories/A photo of a table in the new city.md");
+    expect(demoPathTooltip("personal", "en", "sources/照片记忆")).toBe("sources/照片记忆");
     expect(chromeFolderLabel("personal", "en", "照片记忆")).toBe("照片记忆");
     expect(demoLibraryLabel("demo", "en", "The Way Here 演示 Wiki")).toBe("The Way Here demo");
     expect(demoLibraryLabel("personal", "en", "The Way Here 演示 Wiki")).toBe("The Way Here 演示 Wiki");
