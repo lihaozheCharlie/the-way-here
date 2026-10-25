@@ -56,7 +56,7 @@ describe("translate", () => {
     expect(translate("en", "搜索标题或内容…")).toBe("Search titles or text…");
     expect(translate("en", "导入资料")).toBe("Import materials");
     expect(translate("en", "打开照片记忆")).toBe("Open photo memory");
-    expect(translate("en", "通过“打开照片记忆”修改人物和讲述")).toBe("Edit people and the telling from “Open photo memory”.");
+    expect(translate("en", "通过“打开照片记忆”修改人物和讲述")).toBe("Edit people and the telling via “Open photo memory”");
     expect(translate("en", "让 The Way Here 先认识你的思考方式")).toBe("Let The Way Here learn how you think");
     expect(translate("en", "思考深度关闭")).toBe("Off");
     expect(translate("en", "关闭")).toBe("Close");
