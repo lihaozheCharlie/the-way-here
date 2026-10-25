@@ -93,7 +93,7 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
 }
 
 export function AppShell({ revision }: { revision: number }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: vault } = useApi<VaultInfo>("/api/vault", revision);
   const initialKnowledgeBase = useRef<string | undefined>(undefined);
   const explicitKnowledgeBaseNavigation = useRef(false);
@@ -165,7 +165,7 @@ export function AppShell({ revision }: { revision: number }) {
     if (!vault || knowledgeBaseId === vault.knowledgeBaseId || knowledgeBaseSwitching) return;
     const nextKnowledgeBase = vault.knowledgeBases.find((item) => item.id === knowledgeBaseId);
     setKnowledgeBaseSwitching(true);
-    setSwitchingKnowledgeBaseName(nextKnowledgeBase?.name || t("所选空间"));
+    setSwitchingKnowledgeBaseName(nextKnowledgeBase?.name ? demoLibraryLabel(nextKnowledgeBase.id, locale, nextKnowledgeBase.name) : t("所选空间"));
     setKnowledgeBaseError("");
     explicitKnowledgeBaseNavigation.current = true;
     try {
@@ -274,7 +274,7 @@ export function AppShell({ revision }: { revision: number }) {
   const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
   const windowTitle = utilityWindow
     ? (location.pathname === "/capture" ? t("随手记") : t("偏好设置"))
-    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${vault?.name || "The Way Here"}`;
+    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${demoLibraryLabel(vault?.knowledgeBaseId, locale, vault?.name || "The Way Here")}`;
   return (
     <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">{t("跳到主要内容")}</a>

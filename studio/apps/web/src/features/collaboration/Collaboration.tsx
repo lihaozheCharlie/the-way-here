@@ -13,7 +13,7 @@ import { AgentComposerSettings, reasoningLabel, useAgentSelection, type AgentSet
 import { AgentAnswer } from "./AgentAnswer";
 import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, abandonedRunOnContextChange, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
 import { useAgentStream } from "./use-agent-stream";
-import { useI18n, currentLocale, translate } from "../../shared/i18n";
+import { useI18n, currentLocale, demoLibraryLabel, translate } from "../../shared/i18n";
 
 function tr(message: string, params?: Record<string, string | number | null | undefined>): string {
   return translate(currentLocale(), message, params);
@@ -282,7 +282,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
   }
 
   const selectedRun = runList?.find((candidate) => candidate.id === runId);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const panelTitle = runId ? selectedRun?.title || t("处理：${title}", { title: context.title }) : view === "history" ? t("聊过的事") : t("一起往下想");
   const closeDock = () => embedded ? startNewQuestion() : new URLSearchParams(window.location.search).has("detached") ? window.close() : window.dispatchEvent(new Event("hide-inspector"));
   const submitDisabled = submitting || (mode !== "validate" && !draft.trim()) || vaultLoading || (mode !== "validate" && agent.loading) || !vault?.agentAvailable;
@@ -301,7 +301,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
             {!embedded && <button type="button" className="context-agent-icon-button" aria-label={t("关闭对话窗口")} onClick={closeDock}><Icon name="close" size={17} /></button>}
           </div>
         </header>
-        {topicRestore === "loading" ? <Loading label={tr("正在找回这个话题的聊天记录")} /> : topicRestore === "error" ? <p role="alert">{error}。请关闭后重新打开这个话题。</p> : runId ? <ContextualRunPanel agent={agent} runId={runId} revision={revision} runList={runList || []} onRunId={setRunId} onNew={startNewQuestion} onClose={closeDock} /> : view === "history" ? <AgentHistory threads={threads} loading={runsLoading} error={runsError} knowledgeBaseName={vault?.name} onOpen={setRunId} onNew={startNewQuestion} onDelete={deleteConversation} /> : <form className="context-agent-compose" onSubmit={submit}>
+        {topicRestore === "loading" ? <Loading label={tr("正在找回这个话题的聊天记录")} /> : topicRestore === "error" ? <p role="alert">{error}。请关闭后重新打开这个话题。</p> : runId ? <ContextualRunPanel agent={agent} runId={runId} revision={revision} runList={runList || []} onRunId={setRunId} onNew={startNewQuestion} onClose={closeDock} /> : view === "history" ? <AgentHistory threads={threads} loading={runsLoading} error={runsError} knowledgeBaseName={vault?.name ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : undefined} onOpen={setRunId} onNew={startNewQuestion} onDelete={deleteConversation} /> : <form className="context-agent-compose" onSubmit={submit}>
           <div className={`context-agent-compose-body${draft ? " has-draft" : ""}`}>
             {outputTarget?.kind === "letter-version" && <div className="context-output-target"><Icon name="library" size={15} /><div><b>将保留为「{outputTarget.label}」</b><span>完成后会成为这封回信的最新版本，原始回信仍可随时切换查看。</span></div></div>}
             {(outputTarget?.kind === "journey-report" || outputTarget?.kind === "photo-memory") && <div className="context-output-target is-journey"><Icon name="receipt" size={15} /><div><b>只更新「{outputTarget.label}」</b><span>会查阅已有 Wiki 帮你理解线索，但这段对话不会构建或修改 Wiki。</span></div></div>}
