@@ -10,6 +10,7 @@ import { Icon } from "./ui";
 import { TextInput } from "./form-controls";
 import { api } from "../api";
 import { apiPageHref, pageHref } from "./routing";
+import { useDemoLabels, useI18n } from "./i18n";
 
 type SavePageResult = { ok: boolean; modifiedAt?: string };
 
@@ -21,6 +22,8 @@ export function EditableDocument(props: Parameters<typeof EditableDocumentEditor
 
 function EditableDocumentEditor({ page, variant = "reader", startEditing = false, showOutline = true, showIdentity = true, showMetadata = true, headerContent, headerActions, identityActions, fileNameFocusToken = 0, beforeContent, afterContent, onRenamed, relations }: { page: WikiPage; variant?: "reader" | "preview"; startEditing?: boolean; showOutline?: boolean; showIdentity?: boolean; showMetadata?: boolean; headerContent?: ReactNode; headerActions?: ReactNode; identityActions?: ReactNode; fileNameFocusToken?: number; beforeContent?: ReactNode; afterContent?: ReactNode; relations?: ReactNode; onRenamed?: (page: WikiPage) => void }) {
   const identity = documentIdentity(page.externalSource?.originalPath || page.relativePath);
+  const demo = useDemoLabels();
+  const { t, locale } = useI18n();
   const [editing, setEditing] = useState(startEditing);
   const [draft, setDraft] = useState(page.markdown);
   const [fileName, setFileName] = useState(identity.fileName);
@@ -284,11 +287,13 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   const propertyPanel = showMetadata && propertiesPinned && Object.keys(properties).length > 0 && <div className="editable-document-properties">{page.isSource && variant === "preview" ? <SourceProperties key={page.id} properties={properties} /> : <NoteProperties properties={properties} compact />}</div>;
 
   const recordStyle = page.isSource && variant === "preview";
-  const recordHeader = recordStyle ? <header className={`record-document-header${editing ? " editing" : ""}`}><div className="record-document-path" title={page.externalSource?.originalPath || page.relativePath}>{identity.folder.split("/").map(part => part.trim()).filter(Boolean).map((part, index) => <React.Fragment key={index}><span>{part}</span><Icon name="arrow" size={12} /></React.Fragment>)}<b>{fileName}{/\.[^./]+$/.exec(page.externalSource?.originalPath || page.relativePath)?.[0] || ""}</b></div><span className={saveError ? "error" : ""} role="status">{statusMessage || (editing ? "编辑中 · Esc 完成" : `修改于 ${new Date(expectedModifiedAtRef.current).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}`)}</span></header> : undefined;
+  const savedFileName = lastSavedFileNameRef.current;
+  const shownFileName = fileName === savedFileName ? demo.title(fileName) : fileName;
+  const recordHeader = recordStyle ? <header className={`record-document-header${editing ? " editing" : ""}`}><div className="record-document-path" title={page.externalSource?.originalPath || page.relativePath}>{identity.folder.split("/").map(part => part.trim()).filter(Boolean).map((part, index) => <React.Fragment key={index}><span>{demo.folder(part)}</span><Icon name="arrow" size={12} /></React.Fragment>)}<b>{shownFileName}{/\.[^./]+$/.exec(page.externalSource?.originalPath || page.relativePath)?.[0] || ""}</b></div><span className={saveError ? "error" : ""} role="status">{statusMessage ? t(statusMessage) : (editing ? t("编辑中 · Esc 完成") : t("修改于 ${date}", { date: new Date(expectedModifiedAtRef.current).toLocaleDateString(locale === "en" ? "en" : "zh-CN", { year: "numeric", month: "long", day: "numeric" }) }))}</span></header> : undefined;
   return <DocumentFrame recordStyle={recordStyle} recordHeader={recordHeader} variant={variant} showIdentity={showIdentity} showOutline={showOutline} relations={relations} onNavigate={editing ? navigateEditor : undefined} activeLine={editing ? activeLine : undefined} markdown={editing ? documentBody : readingMarkdown} headingPrefix={headingPrefix}>
 
     {showIdentity && <header className="editable-document-identity">
-      <div className="document-identity-copy"><label className={`document-file-name${recordStyle ? " record-document-title" : ""}`}><span className="sr-only">文件名</span><TextInput ref={fileNameInputRef} name={`file-name-${page.id}`} autoComplete="off" aria-label={`${page.title} ${recordStyle ? "标题" : "文件名"}`} style={{ width: `${Math.min(Math.max(fileName.length * 1.08 + 2, 12), 37)}em` }} value={fileName} onChange={(event) => changeFileName(event.target.value)} onBlur={() => void persistFileName(fileNameRef.current)} onKeyDown={(event) => { if (event.nativeEvent.isComposing) return; if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") { event.preventDefault(); changeFileName(lastSavedFileNameRef.current); event.currentTarget.blur(); } }} spellCheck={false} /></label>{showMetadata && !recordStyle && <div className="document-meta-row"><small>{identity.folder}</small><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span>{identityActions}</div>}{recordStyle && identityActions}</div>
+      <div className="document-identity-copy"><label className={`document-file-name${recordStyle ? " record-document-title" : ""}`}><span className="sr-only">{t("文件名")}</span><TextInput ref={fileNameInputRef} name={`file-name-${page.id}`} autoComplete="off" aria-label={`${demo.title(page.title)} ${recordStyle ? t("标题") : t("文件名")}`} style={{ width: `${Math.min(Math.max(shownFileName.length * 1.08 + 2, 12), 37)}em` }} value={shownFileName} onChange={(event) => { const next = event.target.value; const saved = lastSavedFileNameRef.current; changeFileName(next === demo.title(saved) ? saved : next); }} onBlur={() => void persistFileName(fileNameRef.current)} onKeyDown={(event) => { if (event.nativeEvent.isComposing) return; if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") { event.preventDefault(); changeFileName(lastSavedFileNameRef.current); event.currentTarget.blur(); } }} spellCheck={false} /></label>{showMetadata && !recordStyle && <div className="document-meta-row"><small>{demo.folderPath(identity.folder)}</small><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span>{identityActions}</div>}{recordStyle && identityActions}</div>
       {headerActions && <div className="document-header-actions">{headerActions}</div>}
     </header>}
     {headerContent && <div className="document-header-content">{headerContent}</div>}

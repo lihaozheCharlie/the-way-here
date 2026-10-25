@@ -5,6 +5,7 @@ import type { WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { pageDestination, returnContextFor } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
+import { useDemoLabels, useI18n } from "../../shared/i18n";
 export function CommandPalette({ onClose, onCapture, onSettings, routes }: { routes: Array<{ title: string; to: string }>; onClose: () => void; onCapture: () => void; onSettings: () => void }) {
   const panel = useRef<HTMLElement>(null);
   useDismissLayer(true, onClose, { priority: 1, element: panel, outside: true });
@@ -13,6 +14,8 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(0);
+  const { t } = useI18n();
+  const demo = useDemoLabels();
   const navigate = useNavigate();
   const location = useLocation();
   const input = useRef<HTMLInputElement>(null);
@@ -27,17 +30,18 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
   }, [query]);
 
   const arrival = returnContextFor(location.pathname, location.search);
-  const commands = [ ...routes.filter((item) => !query || item.title.includes(query)).map((item) => ({ title: item.title, detail: "前往栏目", action: () => navigate(item.to) })), ...[{ title: "新建随手记", detail: "⌘N", action: onCapture }, { title: "打开偏好设置", detail: "⌘,", action: onSettings }].filter(item => !query || item.title.includes(query)), ...results.slice(0, 12).map((page) => ({ title: page.title, detail: page.isSource ? "生活记录" : "已有理解", action: () => navigate(pageDestination(page), { state: arrival }) })), ...(query.trim() ? [{ title: "查看全部搜索结果", detail: `“${query.trim()}”`, action: () => navigate(`/search?${new URLSearchParams({ q: query.trim() })}`) }] : []) ];
+  const matches = (title: string) => { const q = query.trim().toLocaleLowerCase(); return !q || title.toLocaleLowerCase().includes(q) || t(title).toLocaleLowerCase().includes(q); };
+  const commands = [ ...routes.filter((item) => matches(item.title)).map((item) => ({ title: t(item.title), detail: t("前往栏目"), action: () => navigate(item.to) })), ...[{ title: t("新建随手记"), detail: "⌘N", action: onCapture }, { title: t("打开偏好设置"), detail: "⌘,", action: onSettings }].filter(item => matches(item.title) || item.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), ...results.slice(0, 12).map((page) => ({ title: demo.title(page.title), detail: page.isSource ? t("生活记录") : t("已有理解"), action: () => navigate(pageDestination(page), { state: arrival }) })), ...(query.trim() ? [{ title: t("查看全部搜索结果"), detail: `“${query.trim()}”`, action: () => navigate(`/search?${new URLSearchParams({ q: query.trim() })}`) }] : []) ];
   useEffect(() => { document.getElementById(`command-${selected}`)?.scrollIntoView({ block:"nearest" }); }, [selected]);
   function choose(index: number) { commands[index]?.action(); onClose(); }
   return <div className="desktop-modal-backdrop command-palette-layer">
-    <section ref={panel} className="command-palette" role="dialog" aria-label="搜索与命令" onKeyDown={(e) => {
+    <section ref={panel} className="command-palette" role="dialog" aria-label={t("搜索与命令")} onKeyDown={(e) => {
       if (e.key === "Tab") { e.preventDefault(); input.current?.focus(); }
       if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setSelected((value) => Math.max(0, Math.min(commands.length - 1, value + (e.key === "ArrowDown" ? 1 : -1)))); }
       if (e.key === "Enter" && !e.nativeEvent.isComposing && commands.length) { e.preventDefault(); choose(selected); }
     }}>
-      <div className="command-input"><Icon name="search" size={20} /><input ref={input} role="combobox" aria-label="搜索记录、理解或命令" aria-expanded="true" aria-controls="command-results" aria-activedescendant={commands.length ? `command-${selected}` : undefined} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索记录、理解，或前往…" /><button onClick={onClose}>esc</button></div>
-      <div id="command-results" className="command-results" role="listbox">{commands.map((item, index) => <button id={`command-${index}`} tabIndex={-1} role="option" aria-selected={index === selected} className={index === selected ? "selected" : ""} key={`${item.title}-${index}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(index)}><span>{item.title}</span><small>{item.detail}</small></button>)}{loading ? <p role="status">正在查找…</p> : error ? <p role="alert">{error}</p> : !commands.length ? <p>没有找到相关内容，试试其他关键词。</p> : null}</div>
+      <div className="command-input"><Icon name="search" size={20} /><input ref={input} role="combobox" aria-label={t("搜索记录、理解或命令")} aria-expanded="true" aria-controls="command-results" aria-activedescendant={commands.length ? `command-${selected}` : undefined} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("搜索记录、理解，或前往…")} /><button onClick={onClose}>esc</button></div>
+      <div id="command-results" className="command-results" role="listbox">{commands.map((item, index) => <button id={`command-${index}`} tabIndex={-1} role="option" aria-selected={index === selected} className={index === selected ? "selected" : ""} key={`${item.title}-${index}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(index)}><span>{item.title}</span><small>{item.detail}</small></button>)}{loading ? <p role="status">{t("正在查找…")}</p> : error ? <p role="alert">{error}</p> : !commands.length ? <p>{t("没有找到相关内容，试试其他关键词。")}</p> : null}</div>
     </section>
   </div>;
 }

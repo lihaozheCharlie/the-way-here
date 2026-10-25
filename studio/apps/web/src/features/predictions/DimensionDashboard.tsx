@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { LifeDimension, LifePredictionReport, LifeScenario } from "@the-way-here/shared";
+import { useI18n } from "../../shared/i18n";
 
 const dimensions = ["health", "work", "play", "love"] as const;
 const labels = { health: "健康", love: "爱", play: "娱乐", work: "工作" };
@@ -21,9 +22,10 @@ function Mark({ kind }: { kind: "gain" | "risk" | "arrow" | "chevron" }) {
 }
 
 export function DimensionDashboard({ report, scenario }: { report: LifePredictionReport; scenario?: LifeScenario }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState<LifeDimension | null>("health");
-  return <section className="life-dimensions" aria-label="四个维度">
-    <header className="dim-section-head"><h2>四个维度：{scenario ? "会怎样变化，以及要怎么做才能走到这里" : "现在的你，以及想去的方向"}</h2><span>点标题行折叠 · 点行动项展开详情</span></header>
+  return <section className="life-dimensions" aria-label={t("四个维度")}>
+    <header className="dim-section-head"><h2>{scenario ? t("四个维度：会怎样变化，以及要怎么做才能走到这里") : t("四个维度：现在的你，以及想去的方向")}</h2><span>{t("点标题行折叠 · 点行动项展开详情")}</span></header>
     {dimensions.map(id => {
       const current = report.dimensions.find(d => d.id === id);
       const future = scenario?.dimensions.find(d => d.id === id);
@@ -34,44 +36,44 @@ export function DimensionDashboard({ report, scenario }: { report: LifePredictio
       return <details className="dim-row" key={id} open={expanded === id}>
         <summary className="dim-row-summary" onClick={event => { event.preventDefault(); setExpanded(expanded === id ? null : id); }}>
           <DimensionIcon id={id}/>
-          <span className="dim-row-main"><span className="dim-row-top"><b>{labels[id]}</b><span className={`dim-row-verdict ${future?.verdict?.tone ?? "mixed"}`}><i aria-hidden="true"/>{future?.verdict?.label ?? (future ? "收益与代价" : current ? "当前状态" : "待补充")}</span></span>
-            <span className="dim-row-line">{future?.future ?? current?.current ?? "重新预测后补充此维度"}</span>
+          <span className="dim-row-main"><span className="dim-row-top"><b>{t(labels[id])}</b><span className={`dim-row-verdict ${future?.verdict?.tone ?? "mixed"}`}><i aria-hidden="true"/>{future?.verdict?.label ?? (future ? t("收益与代价") : current ? t("当前状态") : t("待补充"))}</span></span>
+            <span className="dim-row-line">{future?.future ?? current?.current ?? t("重新预测后补充此维度")}</span>
           </span>
           {future && <span className="dim-row-meta">
-            {share == null ? <span className="dim-balance-empty">权衡依据待补充</span> : <>
-              <span className="dim-row-bar" role="img" aria-label={`收益权衡 ${share}%，代价权衡 ${100-share}%`}><i className="gain" style={{width:`${share}%`}}/><i className="cost" style={{width:`${100-share}%`}}/></span>
-              <span className="dim-balance-labels"><span><i className="gain"/>收益 {share}%</span><span><i className="cost"/>代价 {100-share}%</span></span>
+            {share == null ? <span className="dim-balance-empty">{t("权衡依据待补充")}</span> : <>
+              <span className="dim-row-bar" role="img" aria-label={t("收益权衡 ${share}%，代价权衡 ${cost}%", { share, cost: 100 - share })}><i className="gain" style={{width:`${share}%`}}/><i className="cost" style={{width:`${100-share}%`}}/></span>
+              <span className="dim-balance-labels"><span><i className="gain"/>{t("收益 ${share}%", { share })}</span><span><i className="cost"/>{t("代价 ${cost}%", { cost: 100 - share })}</span></span>
             </>}
           </span>}
           <span className="dim-row-chev"><Mark kind="chevron"/></span>
         </summary>
         <div className="dim-row-body" key={scenario?.id ?? "current"}>
           <div className="dim-timeline">
-            <div className="dim-time-block"><span className="dim-time-tag">现在</span><p>{current?.current ?? "尚待了解"}</p></div>
+            <div className="dim-time-block"><span className="dim-time-tag">{t("现在")}</span><p>{current?.current ?? t("尚待了解")}</p></div>
             <span className="dim-time-arrow"><Mark kind="arrow"/></span>
-            <div className="dim-time-block future"><span className="dim-time-tag">{scenario ? "未来" : "想要"}</span><p>{future?.future ?? (scenario ? "尚待补充独立分析" : current?.desired ?? "尚待了解")}</p></div>
+            <div className="dim-time-block future"><span className="dim-time-tag">{scenario ? t("未来") : t("想要")}</span><p>{future?.future ?? (scenario ? t("尚待补充独立分析") : current?.desired ?? t("尚待了解"))}</p></div>
           </div>
           {future && <div className="dim-factors">
-            <section className="dim-factor gain"><h3><Mark kind="gain"/>有利因素</h3>{future.gains.length ? <ul>{future.gains.map((text,i) => <li key={i}><Mark kind="gain"/><span>{text}</span></li>)}</ul> : <p>暂未给出有利因素。</p>}</section>
-            <section className="dim-factor risk"><h3><Mark kind="risk"/>需要关注</h3>{future.costs.length || risks.length ? <ul>
+            <section className="dim-factor gain"><h3><Mark kind="gain"/>{t("有利因素")}</h3>{future.gains.length ? <ul>{future.gains.map((text,i) => <li key={i}><Mark kind="gain"/><span>{text}</span></li>)}</ul> : <p>{t("暂未给出有利因素。")}</p>}</section>
+            <section className="dim-factor risk"><h3><Mark kind="risk"/>{t("需要关注")}</h3>{future.costs.length || risks.length ? <ul>
               {future.costs.map((text,i) => <li key={`cost-${i}`}><Mark kind="risk"/><span>{text}</span></li>)}
               {risks.map((note,i) => <li key={`risk-${i}`}><Mark kind="risk"/><span><b>{note.title}</b><span className="dim-factor-detail">{note.detail}</span></span></li>)}
-            </ul> : <p>暂未给出需要关注的因素。</p>}</section>
+            </ul> : <p>{t("暂未给出需要关注的因素。")}</p>}</section>
           </div>}
           <div className="dim-actions">
             {scenario ? <>
-              <div className="dim-actions-head"><h3>想走稳这条路，{id === "love" ? "关系" : labels[id]}上要注意 <span>· 共 {actions.length} 条行动</span></h3>{actions.length > 0 && <span>点行动项查看详情</span>}</div>
-              {conditions.map((note,i) => <div className="dim-premise" key={i}><b>前提：{note.title}</b><p>{note.detail}</p></div>)}
+              <div className="dim-actions-head"><h3>{t("想走稳这条路，${label}上要注意", { label: id === "love" ? t("关系") : t(labels[id]) })} <span>· {t("共 ${count} 条行动", { count: actions.length })}</span></h3>{actions.length > 0 && <span>{t("点行动项查看详情")}</span>}</div>
+              {conditions.map((note,i) => <div className="dim-premise" key={i}><b>{t("前提：${title}", { title: note.title })}</b><p>{note.detail}</p></div>)}
               <div className="dim-step-list">{actions.map((action,i) => <details className={`dim-step${i === 0 ? " current" : ""}`} key={`${i}-${action.action}`} open={i === 0}>
                 <summary className="dim-step-summary"><span className="dim-step-num">{i+1}</span><span className="dim-step-body">{action.reviewAfter && <span className="dim-step-time">{action.reviewAfter}回看</span>}<span className="dim-step-text">{action.action}</span></span><span className="dim-step-chevron"><Mark kind="chevron"/></span></summary>
-                <p className="dim-step-detail"><b>观察重点：</b>{action.observation || "尚未给出观察重点。"}</p>
+                <p className="dim-step-detail"><b>{t("观察重点：")}</b>{action.observation || t("尚未给出观察重点。")}</p>
               </details>)}</div>
-              {!actions.length && <p className="dim-empty">这份报告尚未给出此维度的具体行动。</p>}
-            </> : <><h3>当前的限制与牵挂</h3>{current?.constraints.length ? current.constraints.map((text,i) => <p className="dim-empty" key={i}>{text}</p>) : <p className="dim-empty">尚待了解。</p>}</>}
+              {!actions.length && <p className="dim-empty">{t("这份报告尚未给出此维度的具体行动。")}</p>}
+            </> : <><h3>{t("当前的限制与牵挂")}</h3>{current?.constraints.length ? current.constraints.map((text,i) => <p className="dim-empty" key={i}>{text}</p>) : <p className="dim-empty">{t("尚待了解。")}</p>}</>}
           </div>
         </div>
       </details>;
     })}
-    {scenario && <p className="dim-balance-note">收益与代价为五档主观权衡，不是健康或幸福评分；依据不足时留空。</p>}
+    {scenario && <p className="dim-balance-note">{t("收益与代价为五档主观权衡，不是健康或幸福评分；依据不足时留空。")}</p>}
   </section>;
 }

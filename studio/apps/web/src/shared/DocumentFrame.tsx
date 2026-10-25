@@ -5,6 +5,7 @@ import { documentHeadingPrefix, documentIdentity, editableMarkdownDocument, mark
 import { DocumentOutline } from "./DocumentOutline";
 import { NoteProperties, pageNoteProperties } from "./DocumentProperties";
 import { MarkdownBody } from "./MarkdownBody";
+import { useDemoLabels, useI18n } from "./i18n";
 
 export function DocumentFrame({ variant, showIdentity = false, showOutline, markdown, headingPrefix, children, relations, onNavigate, activeLine, readOnly = false, recordStyle = false, recordHeader }: { variant: "reader" | "preview"; showIdentity?: boolean; showOutline: boolean; markdown: string; headingPrefix: string; children: ReactNode; relations?: ReactNode; onNavigate?: (line: number) => void; activeLine?: number; readOnly?: boolean; recordStyle?: boolean; recordHeader?: ReactNode }) {
   const preferenceKey = recordStyle ? "the-way-here.record-outline-open" : "the-way-here.outline-pinned";
@@ -24,11 +25,14 @@ export function DocumentFrame({ variant, showIdentity = false, showOutline, mark
 // Snapshots share the document layout without acquiring file-save behavior.
 export function ReadOnlyDocument({ id, markdown, toolbar, page, headerContent, headerActions, showMetadata = true, showOutline = true, relations, afterContent }: { id: string; markdown: string; toolbar?: ReactNode; page?: WikiPage; showMetadata?: boolean; headerContent?: ReactNode; headerActions?: ReactNode; showOutline?: boolean; relations?: ReactNode; readOnlyReason?: string; afterContent?: ReactNode }) {
   const headingPrefix = documentHeadingPrefix(id);
+  const demo = useDemoLabels();
+  const { t, locale } = useI18n();
+  const identity = page ? documentIdentity(page.externalSource?.originalPath || page.relativePath) : undefined;
   const content = page ? editableMarkdownDocument(markdown, true).body : markdown;
   const body = page?.isSource ? markdownWithoutSourceRelations(content) : content;
-  const recordHeader = page?.isSource ? <header className="record-document-header"><div className="record-document-path" title={page.externalSource?.originalPath || page.relativePath}><span>{documentIdentity(page.externalSource?.originalPath || page.relativePath).folder}</span><Icon name="arrow" size={12} /><b>{(page.externalSource?.originalPath || page.relativePath).split("/").at(-1)}</b></div><span>修改于 {new Date(page.modifiedAt).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}</span></header> : undefined;
+  const recordHeader = page?.isSource && identity ? <header className="record-document-header"><div className="record-document-path" title={page.externalSource?.originalPath || page.relativePath}><span>{demo.folderPath(identity.folder)}</span><Icon name="arrow" size={12} /><b>{demo.file((page.externalSource?.originalPath || page.relativePath).split("/").at(-1) || identity.fileName)}</b></div><span>{t("修改于 ${date}", { date: new Date(page.modifiedAt).toLocaleDateString(locale === "en" ? "en" : "zh-CN", { year: "numeric", month: "long", day: "numeric" }) })}</span></header> : undefined;
   return <DocumentFrame readOnly recordHeader={recordHeader} recordStyle={Boolean(page?.isSource)} variant="preview" showIdentity={Boolean(page)} showOutline={showOutline} relations={relations} markdown={body} headingPrefix={headingPrefix}>
-    {page ? <header className="editable-document-identity"><div className="document-identity-copy"><h1 className="document-readonly-title">{documentIdentity(page.externalSource?.originalPath || page.relativePath).fileName}</h1>{showMetadata && <div className="document-meta-row"><span>{documentIdentity(page.externalSource?.originalPath || page.relativePath).folder}</span><span>· {new Date(page.modifiedAt).toLocaleDateString("zh-CN")} 更新</span></div>}</div>{headerActions && <div className="document-header-actions">{headerActions}</div>}</header> : null}
+    {page && identity ? <header className="editable-document-identity"><div className="document-identity-copy"><h1 className="document-readonly-title">{demo.title(identity.fileName)}</h1>{showMetadata && <div className="document-meta-row"><span>{demo.folderPath(identity.folder)}</span><span>· {t("${date} 更新", { date: new Date(page.modifiedAt).toLocaleDateString(locale === "en" ? "en" : "zh-CN") })}</span></div>}</div>{headerActions && <div className="document-header-actions">{headerActions}</div>}</header> : null}
     {headerContent && <div className="document-header-content">{headerContent}</div>}
     {toolbar && <div className="editable-document-toolbar">{toolbar}</div>}
     {showMetadata && page && Object.keys(pageNoteProperties(page)).length ? <div className="editable-document-properties"><NoteProperties properties={pageNoteProperties(page)} compact /></div> : null}

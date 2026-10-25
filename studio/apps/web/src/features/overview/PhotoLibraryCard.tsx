@@ -11,6 +11,7 @@ import { NavLink } from "react-router-dom";
 import { pageHref } from "../../shared/routing";
 import type { SourceImportBatch } from "@the-way-here/shared";
 import "./photo-library.css";
+import { useI18n } from "../../shared/i18n";
 
 export type PhotosBridge = Required<Pick<DesktopBridge, "photoLibraryFilters" | "photoLibraryStatus" | "authorizePhotoLibrary" | "searchPhotoLibrary" | "photoLibraryImage" | "closePhotoLibrary" | "openPhotoLibrarySettings">>;
 const message = (error: unknown) => error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "") : "照片读取失败，请重试";
@@ -21,6 +22,7 @@ export function photoLibraryBridge(): PhotosBridge | undefined {
   return d?.platform === "darwin" && d.photoLibraryFilters && d.searchPhotoLibrary && d.photoLibraryStatus && d.authorizePhotoLibrary && d.photoLibraryImage && d.closePhotoLibrary && d.openPhotoLibrarySettings ? d as PhotosBridge : undefined;
 }
 export function PhotoLibrarySearch({ bridge, knowledgeBaseId, onSelectionCount, onStatus, destination = "照片记忆", onDestination, active = true }: { bridge: PhotosBridge; knowledgeBaseId: string; onSelectionCount?: (count: number) => void; onStatus?: (status: string) => void; destination?: string; onDestination?: (folder: string) => void; active?: boolean }) {
+  const { t, locale } = useI18n();
   const [advanced, setAdvanced] = useState(false);
   const [selected, setSelected] = useState<Map<string, LibraryPhoto>>(new Map());
   const [thumbnails, setThumbnails] = useState<Map<string, string>>(new Map());
@@ -62,16 +64,16 @@ export function PhotoLibrarySearch({ bridge, knowledgeBaseId, onSelectionCount, 
     if (!selected.size || preparing) return;
     setError("");
     try {
-      if (!window.desktop?.exportPhotoLibrary) throw new Error("请更新桌面应用后重试，当前版本不支持导出系统照片。");
+      if (!window.desktop?.exportPhotoLibrary) throw new Error(t("请更新桌面应用后重试，当前版本不支持导出系统照片。"));
       const files: File[] = [];
       for (const [i, photo] of [...selected.values()].entries()) {
-        setPreparing(`正在本地准备第 ${i + 1} / ${selected.size} 张照片…`);
+        setPreparing(t("正在本地准备第 ${index} / ${total} 张照片…", { index: i + 1, total: selected.size }));
         const image = await window.desktop.exportPhotoLibrary({ assetId: photo.id });
-        if (!image.dataUrl) throw new Error(`${photo.name} 尚未下载，请先下载预览后重试。`);
+        if (!image.dataUrl) throw new Error(t("${photo.name} 尚未下载，请先下载预览后重试。", { "photo.name": photo.name }));
         const blob = await (await fetch(image.dataUrl)).blob();
         files.push(new File([blob], `${String(i + 1).padStart(2,"0")}-${photo.name.replace(/\.[^.]+$/, "")}.jpg`, { type: "image/jpeg" }));
       }
-      if (files.reduce((sum, f) => sum + f.size, 0) > 100 * 1024 * 1024) throw new Error("这批照片超过 100 MB，请减少选择后重试。");
+      if (files.reduce((sum, f) => sum + f.size, 0) > 100 * 1024 * 1024) throw new Error(t("这批照片超过 100 MB，请减少选择后重试。"));
       setImportFiles(files);
     } catch (reason) { setError(message(reason)); }
     finally { setPreparing(""); }
@@ -96,7 +98,7 @@ export function PhotoLibrarySearch({ bridge, knowledgeBaseId, onSelectionCount, 
   useEffect(() => {
     if (authorization === "authorized") void window.desktop?.retainPhotoLibrary?.([...selected.keys()]).catch(reason => setError(message(reason)));
   }, [selected, authorization]);
-  useEffect(() => { onStatus?.(authorization === "authorized" ? "只读取系统照片库，选好后进入“认人 → 讲故事”" : "照片库不会被改动，也不会发送给 AI"); }, [authorization, onStatus]);
+  useEffect(() => { onStatus?.(authorization === "authorized" ? t("只读取系统照片库，选好后进入“认人 → 讲故事”") : t("照片库不会被改动，也不会发送给 AI")); }, [authorization, onStatus, t]);
   const lastInput = useRef<PhotoLibrarySearchInput | undefined>(undefined);
   const generation = useRef(0);
   useEffect(() => {
@@ -171,57 +173,61 @@ export function PhotoLibrarySearch({ bridge, knowledgeBaseId, onSelectionCount, 
     setQuery(""); setFrom(""); setThrough(""); setDateBasis("taken"); setPlace(""); setRadiusKm(30); setAlbumId(""); setFavoritesOnly(false); setPhotoType("all"); setResult(undefined); setError("");
   }
   const advancedFilters = [
-    ...(dateBasis === "added" ? [{ label: "加入图库时间", clear: () => setDateBasis("taken") }] : []),
-    ...(from ? [{ label: `从 ${from}`, clear: () => setFrom("") }] : []),
-    ...(through ? [{ label: `至 ${through}`, clear: () => setThrough("") }] : []),
-    ...(albumId ? [{ label: filters?.albums.find(a => a.id === albumId)?.title || "相册", clear: () => setAlbumId("") }] : []),
-    ...(photoType !== "all" ? [{ label: photoTypes.find(t => t[0] === photoType)![1], clear: () => setPhotoType("all") }] : []),
-    ...(favoritesOnly ? [{ label: "仅看收藏", clear: () => setFavoritesOnly(false) }] : []),
+    ...(dateBasis === "added" ? [{ label: t("加入图库时间"), clear: () => setDateBasis("taken") }] : []),
+    ...(from ? [{ label: t("从 ${from}", { from }), clear: () => setFrom("") }] : []),
+    ...(through ? [{ label: t("至 ${through}", { through }), clear: () => setThrough("") }] : []),
+    ...(albumId ? [{ label: filters?.albums.find(album => album.id === albumId)?.title || t("相册"), clear: () => setAlbumId("") }] : []),
+    ...(photoType !== "all" ? [{ label: t(photoTypes.find(entry => entry[0] === photoType)![1]), clear: () => setPhotoType("all") }] : []),
+    ...(favoritesOnly ? [{ label: t("仅看收藏"), clear: () => setFavoritesOnly(false) }] : []),
   ];
+  const dateTag = locale === "en" ? "en" : "zh-CN";
   return <div id="photo-library-search" className="photo-library-search">
-    {!authorization && !error && <p role="status">正在检查照片库访问权限…</p>}
-    {authorization === "notDetermined" && <div className="photo-library-access"><p>允许后可以搜索这台 Mac 的系统照片库。只读取和展示，不自动导入，也不发送给 AI。未同步到这台 Mac 的手机照片无法查找。</p><button type="button" className="desktop-primary" disabled={busy} onClick={() => void access()}>{busy ? "等待系统授权…" : "允许访问照片库"}</button></div>}
-    {(authorization === "denied" || authorization === "restricted") && <div className="photo-library-access"><p>{authorization === "restricted" ? "系统限制了照片库访问，请检查设备的隐私限制。" : "尚未允许访问照片库。你可以在系统设置的“隐私与安全性 → 照片”中开启。"}</p><div className="photo-library-actions"><button type="button" className="desktop-secondary" onClick={() => void bridge.openPhotoLibrarySettings().catch(error => setError(message(error)))}>打开系统设置</button><button type="button" className="desktop-secondary" disabled={busy} onClick={() => void access()}>已设置，重新检查</button></div></div>}
+    {!authorization && !error && <p role="status">{t("正在检查照片库访问权限…")}</p>}
+    {authorization === "notDetermined" && <div className="photo-library-access"><p>{t("允许后可以搜索这台 Mac 的系统照片库。只读取和展示，不自动导入，也不发送给 AI。未同步到这台 Mac 的手机照片无法查找。")}</p><button type="button" className="desktop-primary" disabled={busy} onClick={() => void access()}>{busy ? t("等待系统授权…") : t("允许访问照片库")}</button></div>}
+    {(authorization === "denied" || authorization === "restricted") && <div className="photo-library-access"><p>{t(authorization === "restricted" ? "系统限制了照片库访问，请检查设备的隐私限制。" : "尚未允许访问照片库。你可以在系统设置的“隐私与安全性 → 照片”中开启。")}</p><div className="photo-library-actions"><button type="button" className="desktop-secondary" onClick={() => void bridge.openPhotoLibrarySettings().catch(error => setError(message(error)))}>{t("打开系统设置")}</button><button type="button" className="desktop-secondary" disabled={busy} onClick={() => void access()}>{t("已设置，重新检查")}</button></div></div>}
     {authorization === "authorized" && <>
       <form onSubmit={event => { event.preventDefault(); void search(); }}>
-        <p className="source-lead"><Icon name="image" size={18} />从一张照片想起——按时间、地点、相册或收藏，找找最近或以前的照片。</p>
+        <p className="source-lead"><Icon name="image" size={18} />{t("从一张照片想起——按时间、地点、相册或收藏，找找最近或以前的照片。")}</p>
         <div className="photo-filter-grid">
-          <div><label><span>时间（可选）</span><input type="search" value={query} disabled={busy} maxLength={120} placeholder="例如：最近30天、去年、2024年5月" aria-describedby="photo-library-time-help" onChange={event => { setQuery(event.target.value); if (event.target.value) { setFrom(""); setThrough(""); } }} /></label>
-          <div className="photo-chip-row" role="group" aria-label="常用时间">{["最近7天","最近30天","今年","去年"].map(time => <button type="button" className="photo-chip" key={time} disabled={busy} aria-pressed={query === time} onClick={() => { setQuery(time); setFrom(""); setThrough(""); }}>{time.replace(/最近(\d+)天/, "最近 $1 天")}</button>)}</div></div>
-          <div><label><span>拍摄地点（可选）</span><input type="search" value={place} disabled={busy} maxLength={120} placeholder="例如：浙江杭州富阳" aria-describedby="photo-library-place-help" onChange={event => setPlace(event.target.value)} /></label>
-          <div className="photo-chip-row" role="group" aria-label="地点附近范围"><span>附近</span>{[1,5,10,30,100].map(radius => <button type="button" className="photo-chip" key={radius} disabled={busy || !place.trim()} aria-pressed={radiusKm === radius} onClick={() => setRadiusKm(radius)}>{radius}{radius === 1 ? " 公里" : ""}</button>)}</div></div>
+          <div><label><span>{t("时间（可选）")}</span><input type="search" value={query} disabled={busy} maxLength={120} placeholder={t("例如：最近30天、去年、2024年5月")} aria-describedby="photo-library-time-help" onChange={event => { setQuery(event.target.value); if (event.target.value) { setFrom(""); setThrough(""); } }} /></label>
+          <div className="photo-chip-row" role="group" aria-label={t("常用时间")}>{["最近7天","最近30天","今年","去年"].map(time => {
+            const days = time.match(/^最近(\d+)天$/);
+            return <button type="button" className="photo-chip" key={time} disabled={busy} aria-pressed={query === time} onClick={() => { setQuery(time); setFrom(""); setThrough(""); }}>{days ? t("最近 ${count} 天", { count: days[1] }) : t(time)}</button>;
+          })}</div></div>
+          <div><label><span>{t("拍摄地点（可选）")}</span><input type="search" value={place} disabled={busy} maxLength={120} placeholder={t("例如：浙江杭州富阳")} aria-describedby="photo-library-place-help" onChange={event => setPlace(event.target.value)} /></label>
+          <div className="photo-chip-row" role="group" aria-label={t("地点附近范围")}><span>{t("附近")}</span>{[1,5,10,30,100].map(radius => <button type="button" className="photo-chip" key={radius} disabled={busy || !place.trim()} aria-pressed={radiusKm === radius} onClick={() => setRadiusKm(radius)}>{radius}{radius === 1 ? t(" 公里") : ""}</button>)}</div></div>
         </div>
-        <p id="photo-library-time-help" className="photo-library-note">时间留空查看全部日期；也可在“更多筛选”里用起止日期，和上方时间任选一种。</p>
-        <p id="photo-library-place-help" className="photo-library-note">地点由 Apple 联网定位，只匹配有位置记录的照片；附近范围不代表行政区边界。</p>
-        <div className="photo-advanced-row"><button type="button" className="photo-advanced-toggle" aria-expanded={advanced} aria-controls="photo-advanced-panel" onClick={() => setAdvanced(value => !value)}><Icon name="controls" size={17} />更多筛选{advancedFilters.length > 0 && <span className="capture-source-count">{advancedFilters.length}</span>}<Icon name="down" size={16} /></button>
-        {!advanced && <div className="photo-chip-row">{advancedFilters.map(filter => <button type="button" className="photo-chip" key={filter.label} disabled={busy} aria-label={`移除筛选：${filter.label}`} onClick={filter.clear}>{filter.label}<Icon name="close" size={12} /></button>)}</div>}</div>
+        <p id="photo-library-time-help" className="photo-library-note">{t("时间留空查看全部日期；也可在“更多筛选”里用起止日期，和上方时间任选一种。")}</p>
+        <p id="photo-library-place-help" className="photo-library-note">{t("地点由 Apple 联网定位，只匹配有位置记录的照片；附近范围不代表行政区边界。")}</p>
+        <div className="photo-advanced-row"><button type="button" className="photo-advanced-toggle" aria-expanded={advanced} aria-controls="photo-advanced-panel" onClick={() => setAdvanced(value => !value)}><Icon name="controls" size={17} />{t("更多筛选")}{advancedFilters.length > 0 && <span className="capture-source-count">{advancedFilters.length}</span>}<Icon name="down" size={16} /></button>
+        {!advanced && <div className="photo-chip-row">{advancedFilters.map(filter => <button type="button" className="photo-chip" key={filter.label} disabled={busy} aria-label={t("移除筛选：${label}", { label: filter.label })} onClick={filter.clear}>{filter.label}<Icon name="close" size={12} /></button>)}</div>}</div>
         <div id="photo-advanced-panel" className="photo-advanced-panel" hidden={!advanced}>
-          <label><span>时间依据</span><select value={dateBasis} disabled={busy} onChange={e => setDateBasis(e.target.value as typeof dateBasis)}><option value="taken">拍摄时间</option>{filters?.supportsAddedDate && <option value="added">加入图库时间</option>}</select></label>
-          <label><span>开始日期（可选）</span><input type="date" min="1900-01-01" max="2200-12-31" value={from} disabled={busy} onChange={e => { setFrom(e.target.value); setQuery(""); }} /></label>
-          <label><span>结束日期（可选）</span><input type="date" min="1900-01-01" max="2200-12-31" value={through} disabled={busy} onChange={e => { setThrough(e.target.value); setQuery(""); }} /></label>
-          <div className="photo-album-field"><label><span>相册</span><select value={albumId} disabled={busy || filtersLoading || !filters} onChange={e => setAlbumId(e.target.value)}><option value="">{filtersLoading ? "正在读取相册…" : "全部相册"}</option>{filters?.albums.map(album => <option key={album.id} value={album.id}>{album.title}</option>)}</select></label><button type="button" className="desktop-secondary" aria-label="刷新相册" disabled={busy || filtersLoading} onClick={() => setFiltersRevision(value => value + 1)}><Icon name="refresh" size={17} /></button></div>
-          <label><span>照片类型</span><select value={photoType} disabled={busy} onChange={e => setPhotoType(e.target.value as typeof photoType)}>{photoTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label className="photo-library-favorite"><input type="checkbox" checked={favoritesOnly} disabled={busy} onChange={e => setFavoritesOnly(e.target.checked)} />仅看收藏</label>
+          <label><span>{t("时间依据")}</span><select value={dateBasis} disabled={busy} onChange={e => setDateBasis(e.target.value as typeof dateBasis)}><option value="taken">{t("拍摄时间")}</option>{filters?.supportsAddedDate && <option value="added">{t("加入图库时间")}</option>}</select></label>
+          <label><span>{t("开始日期（可选）")}</span><input type="date" min="1900-01-01" max="2200-12-31" value={from} disabled={busy} onChange={e => { setFrom(e.target.value); setQuery(""); }} /></label>
+          <label><span>{t("结束日期（可选）")}</span><input type="date" min="1900-01-01" max="2200-12-31" value={through} disabled={busy} onChange={e => { setThrough(e.target.value); setQuery(""); }} /></label>
+          <div className="photo-album-field"><label><span>{t("相册")}</span><select value={albumId} disabled={busy || filtersLoading || !filters} onChange={e => setAlbumId(e.target.value)}><option value="">{filtersLoading ? t("正在读取相册…") : t("全部相册")}</option>{filters?.albums.map(album => <option key={album.id} value={album.id}>{album.title}</option>)}</select></label><button type="button" className="desktop-secondary" aria-label={t("刷新相册")} disabled={busy || filtersLoading} onClick={() => setFiltersRevision(value => value + 1)}><Icon name="refresh" size={17} /></button></div>
+          <label><span>{t("照片类型")}</span><select value={photoType} disabled={busy} onChange={e => setPhotoType(e.target.value as typeof photoType)}>{photoTypes.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
+          <label className="photo-library-favorite"><input type="checkbox" checked={favoritesOnly} disabled={busy} onChange={e => setFavoritesOnly(e.target.checked)} />{t("仅看收藏")}</label>
         </div>
-        {filtersError && <p role="alert" className="photo-library-error">相册读取失败：{filtersError}。请刷新相册后重试。</p>}
-        <div className="photo-library-submit"><button type="submit" className="desktop-primary" disabled={busy}><Icon name="search" size={16} />{busy ? "查找中…" : "搜索照片"}</button><button type="button" className="desktop-secondary" disabled={busy} onClick={clearFilters}>清除筛选</button></div>
+        {filtersError && <p role="alert" className="photo-library-error">{t("相册读取失败：${error}。请刷新相册后重试。", { error: filtersError })}</p>}
+        <div className="photo-library-submit"><button type="submit" className="desktop-primary" disabled={busy}><Icon name="search" size={16} />{busy ? t("查找中…") : t("搜索照片")}</button><button type="button" className="desktop-secondary" disabled={busy} onClick={clearFilters}>{t("清除筛选")}</button></div>
       </form>
       {busy && !result && <div className="photo-library-skeletons" aria-hidden="true">{Array.from({length: 12}, (_, i) => <div key={i} />)}</div>}
-      {busy && <div className="photo-library-progress" role="status"><span>正在读取照片信息，大图库或地点查询可能需要一些时间。</span><button type="button" className="desktop-secondary" onClick={() => void cancel()}>取消查找</button></div>}
+      {busy && <div className="photo-library-progress" role="status"><span>{t("正在读取照片信息，大图库或地点查询可能需要一些时间。")}</span><button type="button" className="desktop-secondary" onClick={() => void cancel()}>{t("取消查找")}</button></div>}
       {result && <>
-        <div className="photo-library-result-head"><p>{result.summary}</p><span>已显示 {result.photos.length} 张{result.nextCursor ? " · 还有更多" : ""}</span></div>
-        {result.place && <p className="photo-library-note">匹配地点：{result.place.name}（{result.place.latitude.toFixed(3)}, {result.place.longitude.toFixed(3)}），附近 {result.place.radiusKm} 公里。</p>}
-        {result.photos.length ? <PhotoResults photos={result.photos} bridge={bridge} selected={selected} toggle={toggle} capped={selected.size >= PHOTO_LIMIT} onThumbnail={(id, url) => setThumbnails(previous => previous.get(id) === url ? previous : new Map([...previous, [id, url]]))} /> : <div className="photo-library-empty"><p>没有找到符合条件的照片。试试放宽时间、地点范围，或清除部分筛选条件。</p><button type="button" className="desktop-secondary" onClick={clearFilters}>清除筛选</button></div>}
-        {result.nextCursor && <button type="button" className="desktop-secondary photo-library-more" disabled={busy} onClick={() => void search(true)}>显示更多照片</button>}
+        <div className="photo-library-result-head"><p>{result.summary}</p><span>{t("已显示 ${count} 张", { count: result.photos.length })}{result.nextCursor ? t(" · 还有更多") : ""}</span></div>
+        {result.place && <p className="photo-library-note">{t("匹配地点：${name}（${latitude}, ${longitude}），附近 ${radius} 公里。", { name: result.place.name, latitude: result.place.latitude.toFixed(3), longitude: result.place.longitude.toFixed(3), radius: result.place.radiusKm })}</p>}
+        {result.photos.length ? <PhotoResults photos={result.photos} bridge={bridge} selected={selected} toggle={toggle} capped={selected.size >= PHOTO_LIMIT} onThumbnail={(id, url) => setThumbnails(previous => previous.get(id) === url ? previous : new Map([...previous, [id, url]]))} /> : <div className="photo-library-empty"><p>{t("没有找到符合条件的照片。试试放宽时间、地点范围，或清除部分筛选条件。")}</p><button type="button" className="desktop-secondary" onClick={clearFilters}>{t("清除筛选")}</button></div>}
+        {result.nextCursor && <button type="button" className="desktop-secondary photo-library-more" disabled={busy} onClick={() => void search(true)}>{t("显示更多照片")}</button>}
       </>}
-      {limit && selected.size >= PHOTO_LIMIT && <p role="status" className="photo-limit-note">一条记录最多选 50 张。先取消几张，再继续选。</p>}
-      {selected.size > 0 && <div className="photo-selection-bar"><div className="photo-selection-stack" aria-hidden="true">{[...selected.keys()].slice(0,3).map(id => thumbnails.get(id) && <img key={id} src={thumbnails.get(id)} alt="" />)}</div><div className="photo-selection-copy"><strong>已选 {selected.size} / 50 张{selected.size >= PHOTO_LIMIT ? " · 已达上限" : ""}</strong><span>下一步圈选人物、让 AI 串成故事，照片原文件不会被改动</span></div><button type="button" className="photo-link-button" disabled={!!preparing} onClick={() => { setSelected(new Map()); setLimit(false); }}>清空</button><button type="button" className="desktop-primary" disabled={!!preparing || busy} onClick={() => void prepareImport()}><Icon name="spark" size={17} />{preparing || "整理成照片记忆"}</button></div>}
-      <p className="photo-library-note photo-library-privacy">仅浏览系统照片库，不改动照片；点“AI 帮你写”之前不会发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需点击下载预览。</p>
+      {limit && selected.size >= PHOTO_LIMIT && <p role="status" className="photo-limit-note">{t("一条记录最多选 50 张。先取消几张，再继续选。")}</p>}
+      {selected.size > 0 && <div className="photo-selection-bar"><div className="photo-selection-stack" aria-hidden="true">{[...selected.keys()].slice(0,3).map(id => thumbnails.get(id) && <img key={id} src={thumbnails.get(id)} alt="" />)}</div><div className="photo-selection-copy"><strong>{t("已选 ${count} / 50 张", { count: selected.size })}{selected.size >= PHOTO_LIMIT ? t(" · 已达上限") : ""}</strong><span>{t("下一步圈选人物、让 AI 串成故事，照片原文件不会被改动")}</span></div><button type="button" className="photo-link-button" disabled={!!preparing} onClick={() => { setSelected(new Map()); setLimit(false); }}>{t("清空")}</button><button type="button" className="desktop-primary" disabled={!!preparing || busy} onClick={() => void prepareImport()}><Icon name="spark" size={17} />{preparing || t("整理成照片记忆")}</button></div>}
+      <p className="photo-library-note photo-library-privacy">{t("仅浏览系统照片库，不改动照片；点“AI 帮你写”之前不会发送给 AI。人物姓名和画面内容暂不参与搜索；iCloud 照片需点击下载预览。")}</p>
     </>}
-    {photoHistory.length > 0 && <details className="photo-memory-history"><summary>照片记忆 · 继续整理 ({photoHistory.length})</summary>{photoHistory.map(item => <button type="button" key={item.id} className="photo-history-item" onClick={() => setBatch(item)}><Icon name="image" size={15} />{item.files[0]?.originalName || "照片记忆"}<span>{item.fileCount} 张 · {new Date(item.createdAt).toLocaleDateString("zh-CN")}</span></button>)}</details>}
-    {completed && <p role="status" className="capture-saved">已生成生活记录「{completed.title}」，照片已收进理解。{completed.pageId && <NavLink to={pageHref(completed.pageId)}>查看记录 <Icon name="arrow" size={14} /></NavLink>}</p>}
+    {photoHistory.length > 0 && <details className="photo-memory-history"><summary>{t("照片记忆 · 继续整理 (${count})", { count: photoHistory.length })}</summary>{photoHistory.map(item => <button type="button" key={item.id} className="photo-history-item" onClick={() => setBatch(item)}><Icon name="image" size={15} />{item.files[0]?.originalName || t("照片记忆")}<span>{t("${count} 张 · ${date}", { count: item.fileCount, date: new Date(item.createdAt).toLocaleDateString(dateTag) })}</span></button>)}</details>}
+    {completed && <p role="status" className="capture-saved">{t("已生成生活记录「${title}」，照片已收进理解。", { title: completed.title })}{completed.pageId && <NavLink to={pageHref(completed.pageId)}>{t("查看记录")} <Icon name="arrow" size={14} /></NavLink>}</p>}
     {importFiles && <ImportMaterialsModal folders={[destination]} currentFolder={destination} initialRoute="photos" initialPhotoFiles={importFiles} knowledgeBaseId={knowledgeBaseId} onClose={() => setImportFiles(undefined)} onImported={value => { importedSelections.current.set(value.id, [...selected.keys()]); setBatch(value); if (value.targetFolder) onDestination?.(value.targetFolder); refreshHistory(); }} onConnected={() => {}} onJourney={() => {}} />}
     {batch && <PhotoCaptureDialog batch={batch} knowledgeBaseId={knowledgeBaseId} close={() => { setBatch(undefined); refreshHistory(); }} completed={(title, pageId) => { setCompleted({ title, pageId }); setLimit(false); setBatch(undefined); refreshHistory(); }} />}
-    {error && <div role="alert" className="photo-library-error"><p>{error}</p>{!authorization && <button type="button" className="desktop-secondary" disabled={busy} onClick={() => void access()}>重新检查</button>}</div>}
+    {error && <div role="alert" className="photo-library-error"><p>{t(error)}</p>{!authorization && <button type="button" className="desktop-secondary" disabled={busy} onClick={() => void access()}>{t("重新检查")}</button>}</div>}
   </div>;
 }

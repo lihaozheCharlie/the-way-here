@@ -11,6 +11,8 @@
 .desktop-preferences .preferences-group-heading h2 { margin:0 0 4px; font-size:15px; font-weight:600; line-height:1.5; }
 .desktop-preferences .preferences-group-heading p { margin:0; color:var(--ink-soft); font-size:13px; line-height:1.65; }
 .desktop-preferences .preference-row { padding:16px 0 0; border-top:1px solid var(--line); gap:24px; }
+.desktop-preferences .preference-locale-row { align-items:center; }
+.desktop-preferences .preference-locale-row .segmented-tabs { width:auto; flex:none; }
 .desktop-preferences .preference-row > span { gap:4px; }
 .desktop-preferences .preference-row b { font-size:14px; font-weight:500; }
 .desktop-preferences .preference-row small { font-size:12.5px; line-height:1.65; }
