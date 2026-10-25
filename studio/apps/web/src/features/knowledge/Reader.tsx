@@ -10,7 +10,7 @@ import { EditableDocument, ReadOnlyDocument } from "../../shared/markdown";
 import { PageLink, pageHref } from "../../shared/routing";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { usePublishReaderLocation } from "./reader-location";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { useDemoLabels, useI18n, tr } from "../../shared/i18n";
 
 export function Reader({ revision }: { revision: number }) {
   const params = useParams();
@@ -31,7 +31,7 @@ export function Reader({ revision }: { revision: number }) {
     navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true, state: location.state });
   }, [location.pathname, location.search, location.state, navigate, page?.id, page?.isSource]);
   if (loading) return <Loading />;
-  if (error || !page) return <Empty>{error || t("页面不存在")}</Empty>;
+  if (error || !page) return <Empty>{error ? t(error) : t("页面不存在")}</Empty>;
   const buildProvenance = (importBatches || []).flatMap((batch) => batch.files.map((file) => ({ batch, file }))).filter(({ file }) => file.builtRefs?.some((ref) => ref.pageId === page.id));
 
   const relations = (buildProvenance.length > 0 || page.sources.length > 0 || page.incomingLinks.length > 0) ? <div className="evidence-panel">
@@ -54,9 +54,9 @@ export function Reader({ revision }: { revision: number }) {
       <article className="reader">
         <button className="context-back" onClick={goBack}><Icon name="back" size={16} />{t(returnContext?.returnLabel || (page.isSource ? "返回生活记录" : "返回已有理解"))}</button>
         <div className="reader-meta"><span>{t(graphCategoryNames[page.category] || (page.isSource ? "生活记录" : page.category))}</span><time>{page.end || page.start || ""}</time></div>
-        {new URLSearchParams(location.search).has("detached") ? <ReadOnlyDocument readOnlyReason="此页面已与原文件断开" relations={relations} page={page} id={page.id} markdown={page.renderedMarkdown} /> : <EditableDocument relations={relations} page={page} onRenamed={(renamed) => navigate(`${pageHref(renamed.id)}${page.isSource ? "?from=source" : ""}`, { replace: true, state: returnContext })} />}
+        {new URLSearchParams(location.search).has("detached") ? <ReadOnlyDocument readOnlyReason={tr("此页面已与原文件断开")} relations={relations} page={page} id={page.id} markdown={page.renderedMarkdown} /> : <EditableDocument relations={relations} page={page} onRenamed={(renamed) => navigate(`${pageHref(renamed.id)}${page.isSource ? "?from=source" : ""}`, { replace: true, state: returnContext })} />}
       </article>
-      <PageAgentContext context={{ scope: `${t(page.isSource ? "原始材料" : "知识页面")} · ${t(graphCategoryNames[page.category] || page.category)}`, title: demo.title(page.title), pageId: page.id, summary: page.excerpt, defaultMode: page.isSource ? "read" : "write", suggestions: page.isSource ? ["这份原始记录可以支持哪些已有判断？请区分直接证据和推断。", "这份记录与哪些人生阶段、人物或反复循环有关？"] : ["我想补充一段与当前页面有关的新经历，请按现有规则更新。", "请检查当前页面是否缺少来源、反例、关联或状态追踪。"] }} />
+      <PageAgentContext context={{ scope: `${t(page.isSource ? "原始材料" : "知识页面")} · ${t(graphCategoryNames[page.category] || page.category)}`, title: demo.title(page.title), pageId: page.id, summary: page.excerpt, defaultMode: page.isSource ? "read" : "write", suggestions: page.isSource ? [tr("这份原始记录可以支持哪些已有判断？请区分直接证据和推断。"), tr("这份记录与哪些人生阶段、人物或反复循环有关？")] : [tr("我想补充一段与当前页面有关的新经历，请按现有规则更新。"), tr("请检查当前页面是否缺少来源、反例、关联或状态追踪。")] }} />
     </div>
   );
 }

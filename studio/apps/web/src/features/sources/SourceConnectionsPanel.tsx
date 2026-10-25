@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { useEffect, useRef, useState } from "react";
 import type { SourceConnection, VaultInfo } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
@@ -28,7 +29,7 @@ export function SourceConnectionsPanel({ onOpened }: { onOpened?: (folder?: stri
   useEffect(() => {
     const launch = () => void openRef.current();
     const isDirectory = (transfer: DataTransfer | null) => [...(transfer?.items || [])].some(item => item.webkitGetAsEntry()?.isDirectory);
-    const over = (event: DragEvent) => { if (!isDirectory(event.dataTransfer) || document.querySelector('[role="dialog"]')) return; event.preventDefault(); setDragName([...(event.dataTransfer?.items || [])].map(item => item.webkitGetAsEntry()).find(entry => entry?.isDirectory)?.name || "文件夹"); };
+    const over = (event: DragEvent) => { if (!isDirectory(event.dataTransfer) || document.querySelector('[role="dialog"]')) return; event.preventDefault(); setDragName([...(event.dataTransfer?.items || [])].map(item => item.webkitGetAsEntry()).find(entry => entry?.isDirectory)?.name || tr("文件夹")); };
     const leave = (event: DragEvent) => { if (!event.relatedTarget) setDragName(""); };
     const drop = (event: DragEvent) => { if (!isDirectory(event.dataTransfer) || document.querySelector('[role="dialog"]')) return; event.preventDefault(); setDragName(""); const file = event.dataTransfer?.files[0]; const path = file && window.desktop?.pathForDroppedFile?.(file); if (path) void openRef.current(path); else { setError(translate(currentLocale(), "请点击“打开文件夹”选择这个目录。")); launch(); } };
     window.addEventListener("open-source-folder", launch); window.addEventListener("dragover", over); window.addEventListener("dragleave", leave); window.addEventListener("drop", drop);
@@ -36,6 +37,6 @@ export function SourceConnectionsPanel({ onOpened }: { onOpened?: (folder?: stri
   }, []);
   return <div className="source-connections">{dragName && <div className="source-directory-drop" role="status"><Icon name="folder" size={30} /><b>{t("松开以打开「${name}」", { name: dragName })}</b><span>{t("将作为新的根文件夹加入列表")}</span></div>}
     <button type="button" disabled={busy || !vault} onClick={() => void open()}><Icon name="folder" size={16} />{t("打开文件夹…")}</button>
-    {error && <p role="alert">{error}</p>}
+    {error && <p role="alert">{t(error)}</p>}
   </div>;
 }

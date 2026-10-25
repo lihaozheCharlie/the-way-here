@@ -13,7 +13,7 @@ import { AgentComposerSettings, reasoningLabel, useAgentSelection, type AgentSet
 import { AgentAnswer } from "./AgentAnswer";
 import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, abandonedRunOnContextChange, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
 import { useAgentStream } from "./use-agent-stream";
-import { useI18n, currentLocale, demoLibraryLabel, translate } from "../../shared/i18n";
+import { useI18n, currentLocale, demoLibraryLabel, translate, uiDateLocale } from "../../shared/i18n";
 
 function tr(message: string, params?: Record<string, string | number | null | undefined>): string {
   return translate(currentLocale(), message, params);
@@ -301,11 +301,11 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
             {!embedded && <button type="button" className="context-agent-icon-button" aria-label={t("关闭对话窗口")} onClick={closeDock}><Icon name="close" size={17} /></button>}
           </div>
         </header>
-        {topicRestore === "loading" ? <Loading label={tr("正在找回这个话题的聊天记录")} /> : topicRestore === "error" ? <p role="alert">{error}。请关闭后重新打开这个话题。</p> : runId ? <ContextualRunPanel agent={agent} runId={runId} revision={revision} runList={runList || []} onRunId={setRunId} onNew={startNewQuestion} onClose={closeDock} /> : view === "history" ? <AgentHistory threads={threads} loading={runsLoading} error={runsError} knowledgeBaseName={vault?.name ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : undefined} onOpen={setRunId} onNew={startNewQuestion} onDelete={deleteConversation} /> : <form className="context-agent-compose" onSubmit={submit}>
+        {topicRestore === "loading" ? <Loading label={tr("正在找回这个话题的聊天记录")} /> : topicRestore === "error" ? <p role="alert">{error ? tr(error) : ""}{tr("。请关闭后重新打开这个话题。")}</p> : runId ? <ContextualRunPanel agent={agent} runId={runId} revision={revision} runList={runList || []} onRunId={setRunId} onNew={startNewQuestion} onClose={closeDock} /> : view === "history" ? <AgentHistory threads={threads} loading={runsLoading} error={runsError} knowledgeBaseName={vault?.name ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : undefined} onOpen={setRunId} onNew={startNewQuestion} onDelete={deleteConversation} /> : <form className="context-agent-compose" onSubmit={submit}>
           <div className={`context-agent-compose-body${draft ? " has-draft" : ""}`}>
-            {outputTarget?.kind === "letter-version" && <div className="context-output-target"><Icon name="library" size={15} /><div><b>将保留为「{outputTarget.label}」</b><span>完成后会成为这封回信的最新版本，原始回信仍可随时切换查看。</span></div></div>}
-            {(outputTarget?.kind === "journey-report" || outputTarget?.kind === "photo-memory") && <div className="context-output-target is-journey"><Icon name="receipt" size={15} /><div><b>只更新「{outputTarget.label}」</b><span>会查阅已有 Wiki 帮你理解线索，但这段对话不会构建或修改 Wiki。</span></div></div>}
-            {mode === "validate" ? <div className="context-validate-summary"><span className="context-agent-empty-glyph"><Icon name="check" size={20} /></span><b>检查当前知识库</b><p>运行既有标签、链接与结构检查，不生成新的知识内容。</p></div> : null}
+            {outputTarget?.kind === "letter-version" && <div className="context-output-target"><Icon name="library" size={15} /><div><b>{tr("将保留为「${label}」", { label: outputTarget.label })}</b><span>{tr("完成后会成为这封回信的最新版本，原始回信仍可随时切换查看。")}</span></div></div>}
+            {(outputTarget?.kind === "journey-report" || outputTarget?.kind === "photo-memory") && <div className="context-output-target is-journey"><Icon name="receipt" size={15} /><div><b>{tr("只更新「${label}」", { label: outputTarget.label })}</b><span>{tr("会查阅已有 Wiki 帮你理解线索，但这段对话不会构建或修改 Wiki。")}</span></div></div>}
+            {mode === "validate" ? <div className="context-validate-summary"><span className="context-agent-empty-glyph"><Icon name="check" size={20} /></span><b>{tr("检查当前知识库")}</b><p>{tr("运行既有标签、链接与结构检查，不生成新的知识内容。")}</p></div> : null}
           </div>
           <div className="context-agent-composer">
             <div className={`text-field-shell context-composer-shell agent-composer-stacked${mode === "validate" ? " validate" : ""}`}>
@@ -313,7 +313,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
               <div className="agent-composer-toolbar"><div className="agent-composer-toolbar-left">{mode !== "validate" && <ModePicker mode={conversationMode} onChange={setConversationMode} />}</div><div className="agent-composer-toolbar-right">{mode !== "validate" && <AgentComposerSettings id={`context-ai-${context.pageId || context.scope}`} agent={agent} label={modelChipLabel(agent)} />}{mode !== "validate" && <VoiceInputForTextArea textareaRef={textareaRef} />}<button type="submit" className="context-agent-send" disabled={submitDisabled} aria-label={submitting ? t("正在开始") : t(collaborationModes[mode].action)} title={submitting ? t("正在开始…") : t(collaborationModes[mode].action)}><Icon name="up" size={16} /></button></div></div>
             </div>
             {(mode !== "auto" || outputTarget?.kind === "photo-memory" || outputTarget?.kind === "journey-report") && <p className="context-agent-boundary">{outputTarget?.kind === "photo-memory" ? t("只保存对话或故事草稿；回到讲故事后收进理解") : outputTarget?.kind === "journey-report" ? t("Wiki 仅检索；本轮只更新消费旅程报告") : t(collaborationModes[mode].boundary)}</p>}
-            {error && <p className="context-agent-error" role="alert">{error}</p>}
+            {error && <p className="context-agent-error" role="alert">{tr(error)}</p>}
             {!vaultLoading && !vault?.agentAvailable && <p className="context-agent-offline">{t("暂时无法开始对话；请在偏好设置中连接 AI 助手。")}</p>}
           </div>
         </form>}
@@ -327,13 +327,13 @@ function AgentHistory({ threads, loading, error, knowledgeBaseName, onOpen, onNe
   const [deleteTarget, setDeleteTarget] = useState<AgentThread>();
   return <section className="context-agent-history">
     <p className="context-history-scope">{knowledgeBaseName ? t("这些对话只留在「${name}」。", { name: knowledgeBaseName }) : t("这里只显示当前个人空间里的对话。")}</p>
-    {loading ? <Loading label={t("正在整理对话历史")} /> : error ? <div className="context-history-empty"><b>{t("暂时无法读取对话历史")}</b><p>{error}</p></div> : threads.length ? <div className="context-history-list">{threads.map((thread) => {
+    {loading ? <Loading label={t("正在整理对话历史")} /> : error ? <div className="context-history-empty"><b>{t("暂时无法读取对话历史")}</b><p>{tr(error)}</p></div> : threads.length ? <div className="context-history-list">{threads.map((thread) => {
       const answer = runFinalAnswer(thread.latest);
       const title = runDisplayPrompt(thread.runs[0]!);
       const active = thread.runs.some((run) => !isTerminalRunStatus(run.status));
       return <article className="context-history-item" key={thread.id}>
         <button type="button" className="context-history-open" onClick={() => onOpen(thread.latest.id)}>
-          <span className="context-history-meta"><RunStatus status={thread.latest.status} /><time>{new Date(thread.latest.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></span>
+          <span className="context-history-meta"><RunStatus status={thread.latest.status} /><time>{new Date(thread.latest.createdAt).toLocaleString(uiDateLocale(), { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></span>
           <b>{title}</b>
           <p>{plainPreview(answer, thread.latest.error || (thread.latest.status === "completed" ? tr("已完成，打开查看回答") : tr("任务仍在进行")))}</p>
           <small>{thread.latest.outputTarget?.kind === "letter-version" ? thread.latest.outputTarget.label : t(collaborationModes[thread.latest.mode].short)}{thread.runs.length > 1 ? t(" · ${count} 轮对话", { count: thread.runs.length }) : ""}</small>
@@ -390,7 +390,7 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
         setBuildStatus(build.status);
         if (isTerminalRunStatus(build.status)) {
           window.clearInterval(timer);
-          setBuildNotice(build.status === "completed" ? tr("日记与 Wiki 构建已完成") : tr("构建未完成：${build.error || \"请查看任务详情\"}", { "build.error || \"请查看任务详情\"": build.error || "请查看任务详情" }));
+          setBuildNotice(build.status === "completed" ? tr("日记与 Wiki 构建已完成") : tr("构建未完成：${build.error || \"请查看任务详情\"}", { "build.error || \"请查看任务详情\"": build.error || tr("请查看任务详情") }));
         }
       }).catch((reason: Error) => { window.clearInterval(timer); setBuildNotice(tr("无法读取构建进度：${reason.message}", { "reason.message": reason.message })); });
     }, 2000);
@@ -404,7 +404,7 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
     return () => window.clearTimeout(timer);
   }, [buildStatus]);
   if (loading && !run) return <Loading label={tr("正在接入知识上下文")} />;
-  if (error || !run) return <div className="context-run-error"><p>{error || tr("这次对话没有找到。")}</p><button onClick={() => onRunId("")}>返回对话历史</button></div>;
+  if (error || !run) return <div className="context-run-error"><p>{error ? tr(error) : tr("这次对话没有找到。")}</p><button onClick={() => onRunId("")}>{tr("返回对话历史")}</button></div>;
   const activeRun = run;
   const active = ["preparing", "running", "waiting-approval", "validating"].includes(activeRun.status);
   const hasFailed = activeRun.status === "failed" || activeRun.status === "interrupted";
@@ -414,7 +414,7 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
   const journeyWrappedUp = isJourneyWrapUpRun(activeRun);
   const draft = stream.draft;
   const visibleDraft = draft ? visibleAgentAnswer(draft.text, activeRun.outputTarget) : "";
-  const phase = activeRun.status === "waiting-approval" ? tr("需要你确认后继续") : activeRun.status === "validating" ? tr("正在检查更新") : stream.phase;
+  const phase = activeRun.status === "waiting-approval" ? tr("需要你确认后继续") : activeRun.status === "validating" ? tr("正在检查更新") : tr(stream.phase);
   const buildInProgress = Boolean(buildRunId && buildStatus && !isTerminalRunStatus(buildStatus));
   const buildTooltip = buildInProgress ? tr("后台构建中…可以继续聊别的") : showBuildDone ? tr("日记与 Wiki 构建已完成") : tr("整理成日记并构建 Wiki");
   const storedThreadRuns = activeRun.runtimeSessionId ? runList.filter((candidate) => candidate.runtimeSessionId === activeRun.runtimeSessionId) : [];
@@ -511,30 +511,30 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
   return <div className="context-run">
     <div ref={statusRef} tabIndex={-1} className="context-run-body" onScroll={(event) => { const body = event.currentTarget; followStreamRef.current = body.scrollHeight - body.scrollTop - body.clientHeight < 80; }}>
       {activeRun.outputTarget?.kind === "letter-version" && <div className={`context-run-artifact ${activeRun.status === "completed" ? "saved" : "pending"}`}><Icon name={activeRun.status === "completed" ? "library" : "spark"} size={15} /><div><b>{activeRun.status === "completed" ? tr("已保留为「${activeRun.outputTarget.label}」", { "activeRun.outputTarget.label": activeRun.outputTarget.label }) : tr("完成后将保留为「${activeRun.outputTarget.label}」", { "activeRun.outputTarget.label": activeRun.outputTarget.label })}</b><span>{activeRun.status === "completed" ? tr("关闭窗口后，回信页会默认显示这个最新版本。") : tr("原始回信不会被覆盖，完成后可在回信页切换版本。")}</span></div></div>}
-      {isPhotoConversation && <div className="context-run-artifact pending"><Icon name="image" size={15} /><div><b>讲述只保存为照片记忆草稿</b><span>关闭抽屉回到“讲故事”，核对后点击“收进理解”。</span></div></div>}
-      {legacyJourneyConversation && <div className="context-run-artifact journey pending"><Icon name="receipt" size={15} /><div><b>继续聊聊会先丰富消费旅程报告</b><span>这是一段旧对话。下一段讲述开始只查阅 Wiki、更新报告；需要构建时再由你明确选择。</span></div></div>}
+      {isPhotoConversation && <div className="context-run-artifact pending"><Icon name="image" size={15} /><div><b>{tr("讲述只保存为照片记忆草稿")}</b><span>{tr("关闭抽屉回到“讲故事”，核对后点击“收进理解”。")}</span></div></div>}
+      {legacyJourneyConversation && <div className="context-run-artifact journey pending"><Icon name="receipt" size={15} /><div><b>{tr("继续聊聊会先丰富消费旅程报告")}</b><span>{tr("这是一段旧对话。下一段讲述开始只查阅 Wiki、更新报告；需要构建时再由你明确选择。")}</span></div></div>}
       <div className="context-thread" aria-label={tr("对话内容")}>{threadRuns.map((threadRun) => {
       const answer = runFinalAnswer(threadRun);
       const isCurrent = threadRun.id === activeRun.id;
       return <section className="context-thread-turn" key={threadRun.id}>
         <div className="context-user-message"><p>{runDisplayPrompt(threadRun)}</p></div>
-        <div className="context-message-meta"><RunStatus status={threadRun.status} /><span aria-hidden="true">·</span><span className="agent-turn-model">{threadRun.model?.split("/").at(-1) || "Agent"}</span><span aria-hidden="true">·</span><time>{new Date(threadRun.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></div>
-        {answer ? <><AgentAnswer answer={answer} run={threadRun} revision={revision} />{threadRun.wikiSuggestion && !dismissedSuggestions.has(threadRun.id) && !buildRunId && <div className="agent-wiki-suggestion" role="status"><Icon name="library" size={17} /><div><b>这段对话可以留到 Wiki</b><p>{threadRun.wikiSuggestion.summary}{threadRun.wikiSuggestion.page ? tr(" · 可能关联「${threadRun.wikiSuggestion.page}」", { "threadRun.wikiSuggestion.page": threadRun.wikiSuggestion.page }) : ""}</p><div className="agent-wiki-suggestion-actions"><button type="button" onClick={() => buildWindow.show()}>{tr("整理成日记并构建 Wiki")}</button><button type="button" onClick={() => setDismissedSuggestions((previous) => new Set(previous).add(threadRun.id))}>继续聊天</button></div></div><button type="button" className="agent-wiki-suggestion-close" aria-label={tr("关闭 Wiki 提示")} onClick={() => setDismissedSuggestions((previous) => new Set(previous).add(threadRun.id))}><Icon name="close" size={15} /></button></div>}{isCurrent && active && <section className="context-run-working" role="status" aria-live="polite"><span className="working-mark" aria-hidden="true"><i /><i /><i /></span><b>{phase}</b></section>}</> : isCurrent && active ? <>
+        <div className="context-message-meta"><RunStatus status={threadRun.status} /><span aria-hidden="true">·</span><span className="agent-turn-model">{threadRun.model?.split("/").at(-1) || "Agent"}</span><span aria-hidden="true">·</span><time>{new Date(threadRun.createdAt).toLocaleString(uiDateLocale(), { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></div>
+        {answer ? <><AgentAnswer answer={answer} run={threadRun} revision={revision} />{threadRun.wikiSuggestion && !dismissedSuggestions.has(threadRun.id) && !buildRunId && <div className="agent-wiki-suggestion" role="status"><Icon name="library" size={17} /><div><b>{tr("这段对话可以留到 Wiki")}</b><p>{threadRun.wikiSuggestion.summary}{threadRun.wikiSuggestion.page ? tr(" · 可能关联「${threadRun.wikiSuggestion.page}」", { "threadRun.wikiSuggestion.page": threadRun.wikiSuggestion.page }) : ""}</p><div className="agent-wiki-suggestion-actions"><button type="button" onClick={() => buildWindow.show()}>{tr("整理成日记并构建 Wiki")}</button><button type="button" onClick={() => setDismissedSuggestions((previous) => new Set(previous).add(threadRun.id))}>{tr("继续聊天")}</button></div></div><button type="button" className="agent-wiki-suggestion-close" aria-label={tr("关闭 Wiki 提示")} onClick={() => setDismissedSuggestions((previous) => new Set(previous).add(threadRun.id))}><Icon name="close" size={15} /></button></div>}{isCurrent && active && <section className="context-run-working" role="status" aria-live="polite"><span className="working-mark" aria-hidden="true"><i /><i /><i /></span><b>{phase}</b></section>}</> : isCurrent && active ? <>
           {visibleDraft && <div className="context-run-answer context-streaming-answer">{visibleDraft}<span className="streaming-cursor" aria-hidden="true" /></div>}
           <section className="context-run-working" role="status" aria-live="polite"><span className="working-mark" aria-hidden="true"><i /><i /><i /></span><b>{phase}</b></section>
-        </> : <div className="context-run-missing"><b>{threadRun.error ? tr("这次没有顺利完成") : tr("这轮没有留下可读回答")}</b><p>{threadRun.error || tr("可以在下方继续聊，或者把范围说得更具体一些。")}</p></div>}
+        </> : <div className="context-run-missing"><b>{threadRun.error ? tr("这次没有顺利完成") : tr("这轮没有留下可读回答")}</b><p>{threadRun.error ? tr(threadRun.error) : tr("可以在下方继续聊，或者把范围说得更具体一些。")}</p></div>}
       </section>;
       })}</div>
-      {activeRun.approvals.map((approval) => <section className="context-approval-box" key={String(approval.requestId)} aria-live="polite"><span>需要你确认</span><h3>{approval.title}</h3><p>{approval.detail || String(approval.params?.reason || approval.params?.command || approval.method || approval.operation)}</p><small>允许只对这一次请求生效；拒绝后会保留现状。</small><div><button type="button" onClick={() => approve(approval.requestId, "deny")}>先不要</button><button type="button" className="primary-action" onClick={() => approve(approval.requestId, "allow-once")}>允许一次</button></div></section>)}
-      {actionError && <p className="context-agent-error" role="alert">{actionError}</p>}
-      {hasFailed && <button type="button" className="context-retry-run" onClick={onNew}>带着新问题重新开始</button>}
+      {activeRun.approvals.map((approval) => <section className="context-approval-box" key={String(approval.requestId)} aria-live="polite"><span>{tr("需要你确认")}</span><h3>{tr(approval.title)}</h3><p>{approval.detail || String(approval.params?.reason || approval.params?.command || approval.method || approval.operation)}</p><small>{tr("允许只对这一次请求生效；拒绝后会保留现状。")}</small><div><button type="button" onClick={() => approve(approval.requestId, "deny")}>{tr("先不要")}</button><button type="button" className="primary-action" onClick={() => approve(approval.requestId, "allow-once")}>{tr("允许一次")}</button></div></section>)}
+      {actionError && <p className="context-agent-error" role="alert">{tr(actionError)}</p>}
+      {hasFailed && <button type="button" className="context-retry-run" onClick={onNew}>{tr("带着新问题重新开始")}</button>}
     </div>
-    {buildNotice && <div className="agent-build-toast" role="status"><span>{buildNotice}</span>{buildRunId && buildStatus && isTerminalRunStatus(buildStatus) && <button type="button" onClick={() => onRunId(buildRunId)}>查看改动</button>}<button type="button" aria-label={tr("关闭通知")} onClick={() => setBuildNotice("")}><Icon name="close" size={13} /></button></div>}
+    {buildNotice && <div className="agent-build-toast" role="status"><span>{buildNotice}</span>{buildRunId && buildStatus && isTerminalRunStatus(buildStatus) && <button type="button" onClick={() => onRunId(buildRunId)}>{tr("查看改动")}</button>}<button type="button" aria-label={tr("关闭通知")} onClick={() => setBuildNotice("")}><Icon name="close" size={13} /></button></div>}
     {activeRun.mode !== "validate" && journeyWrappedUp && !active && !continuingAfterWrapUp ? <section className="context-journey-complete" aria-live="polite">
-      <div><Icon name="check" size={16} /><span><b>这段旅程已经整理好了</b><small>你说过的内容已留在报告里，没有说清的地方会保持未知。</small></span></div>
+      <div><Icon name="check" size={16} /><span><b>{tr("这段旅程已经整理好了")}</b><small>{tr("你说过的内容已留在报告里，没有说清的地方会保持未知。")}</small></span></div>
       <footer><button type="button" onClick={() => setContinuingAfterWrapUp(true)}>{tr("我还想补一句")}</button><button type="button" className="primary" onClick={onClose}>{tr("关闭对话")}</button></footer>
     </section> : activeRun.mode !== "validate" && <form className={`context-run-reply${isJourneyConversation ? " is-journey" : ""}`} onSubmit={followUp}>
-      {isJourneyConversation ? <header className="context-journey-reply-heading"><span><b>{isPhotoConversation ? tr("继续聊聊，丰富这段记忆") : tr("继续聊聊，丰富旅程")}</b><small>你的下一段讲述只会更新报告，不会构建 Wiki。</small></span>{!isPhotoConversation && !active ? <button type="button" disabled={sending || finishingJourney} onClick={() => void finishJourney()}>{finishingJourney ? tr("正在整理…") : tr("这段先聊到这里")}</button> : null}</header> : null}
+      {isJourneyConversation ? <header className="context-journey-reply-heading"><span><b>{isPhotoConversation ? tr("继续聊聊，丰富这段记忆") : tr("继续聊聊，丰富旅程")}</b><small>{tr("你的下一段讲述只会更新报告，不会构建 Wiki。")}</small></span>{!isPhotoConversation && !active ? <button type="button" disabled={sending || finishingJourney} onClick={() => void finishJourney()}>{finishingJourney ? tr("正在整理…") : tr("这段先聊到这里")}</button> : null}</header> : null}
       <label className="sr-only" htmlFor={`context-run-reply-${run.id}`}>{active ? tr("再补充一句") : tr("沿着这件事继续聊")}</label>
       <div className="text-field-shell context-composer-shell agent-composer-stacked">
         <TextArea voice={false} ref={replyTextareaRef} id={`context-run-reply-${run.id}`} name="context-run-reply" autoComplete="off" value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={submitAgentFormOnEnter} placeholder={activeRun.status === "validating" ? tr("检查完成后即可继续聊聊…") : active && legacyJourneyConversation ? tr("本轮结束后即可按新流程继续…") : active ? tr("补充说明，按 Enter 发送…") : isJourneyConversation ? tr("补充人物、动机、当时的感受，或告诉我哪里需要修正…") : tr("接着说，或者提出新的要求")} rows={1} disabled={active && legacyJourneyConversation} />
@@ -542,7 +542,7 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
           : <button type="submit" className="context-agent-send" disabled={sending || agent.loading || agent.saving || !reply.trim()} aria-label={sending ? tr("正在发送") : tr("继续聊聊")} title={sending ? tr("正在发送…") : tr("继续聊聊")}><Icon name="up" size={16} /></button>}</div></div>
       </div>
     </form>}
-    <dialog ref={buildDialogRef} className="agent-build-dialog" aria-labelledby="agent-build-dialog-title" onCancel={event => { event.preventDefault(); buildWindow.hide(); }}><div className="agent-build-dialog-heading"><Icon name="library" size={20} /><button type="button" aria-label={tr("关闭弹窗")} onClick={() => buildWindow.hide()}><Icon name="close" size={17} /></button></div><h2 id="agent-build-dialog-title">{tr("整理成日记并构建 Wiki")}</h2><p>将这段对话中你亲自讲述的内容整理成日记，再更新有充分依据的 Wiki 页面。Agent 的建议不会当作你的经历写入。</p><div className="agent-build-dialog-scope"><b>本次整理范围</b><span>当前对话 · {threadRuns.length} 轮</span><span>知识库 · {activeRun.knowledgeBaseId}</span></div><footer><button type="button" onClick={() => buildWindow.hide()}>继续聊天</button><button type="button" className="primary-action" onClick={() => void startBackgroundBuild()}>开始后台构建</button></footer></dialog>
+    <dialog ref={buildDialogRef} className="agent-build-dialog" aria-labelledby="agent-build-dialog-title" onCancel={event => { event.preventDefault(); buildWindow.hide(); }}><div className="agent-build-dialog-heading"><Icon name="library" size={20} /><button type="button" aria-label={tr("关闭弹窗")} onClick={() => buildWindow.hide()}><Icon name="close" size={17} /></button></div><h2 id="agent-build-dialog-title">{tr("整理成日记并构建 Wiki")}</h2><p>{tr("将这段对话中你亲自讲述的内容整理成日记，再更新有充分依据的 Wiki 页面。Agent 的建议不会当作你的经历写入。")}</p><div className="agent-build-dialog-scope"><b>{tr("本次整理范围")}</b><span>{tr("当前对话 ·") + " "}{threadRuns.length} {tr("轮")}</span><span>{tr("知识库 ·") + " "}{activeRun.knowledgeBaseId}</span></div><footer><button type="button" onClick={() => buildWindow.hide()}>{tr("继续聊天")}</button><button type="button" className="primary-action" onClick={() => void startBackgroundBuild()}>{tr("开始后台构建")}</button></footer></dialog>
   </div>;
 }
 

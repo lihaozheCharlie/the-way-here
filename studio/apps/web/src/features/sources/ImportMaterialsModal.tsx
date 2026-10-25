@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { FolderTree } from "../../shared/FolderTree";
 import { TextInput } from "../../shared/form-controls";
@@ -61,7 +62,7 @@ function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
-    reader.onerror = () => reject(reader.error || new Error(`无法读取 ${file.name}`));
+    reader.onerror = () => reject(reader.error || new Error(tr("无法读取 ${file.name}", { "file.name": file.name })));
     reader.readAsDataURL(file);
   });
 }
@@ -278,11 +279,11 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
       return;
     }
     if (!files.length) {
-      setError("请先选择需要带进来的材料。");
+      setError(tr("请先选择需要带进来的材料。"));
       return;
     }
     if (totalBytes > 100 * 1024 * 1024) {
-      setError("这批材料超过 100 MB，请拆分后再导入。");
+      setError(tr("这批材料超过 100 MB，请拆分后再导入。"));
       return;
     }
     setImporting(true);

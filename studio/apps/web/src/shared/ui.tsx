@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useQuietScroll } from "./QuietScroll";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
@@ -43,7 +44,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-export function Loading({ label = "正在整理页面" }: { label?: string }) {
+export function Loading({ label = tr("正在整理页面") }: { label?: string }) {
   return <div className="loading"><span />{label}</div>;
 }
 
@@ -52,7 +53,7 @@ export function Empty({ children }: { children: ReactNode }) {
 }
 
 export function SectionTabs({ items }: { items: ReadonlyArray<readonly [string, string]> }) {
-  return <nav className="section-tabs" aria-label="页面分类">{items.map(([to, label]) => <NavLink key={to} to={to} end>{label}</NavLink>)}</nav>;
+  return <nav className="section-tabs" aria-label={tr("页面分类")}>{items.map(([to, label]) => <NavLink key={to} to={to} end>{tr(label)}</NavLink>)}</nav>;
 }
 
 export function ParentBack({ to, label }: { to: string; label: string }) {
@@ -60,7 +61,7 @@ export function ParentBack({ to, label }: { to: string; label: string }) {
 }
 
 function PaneCollapseButton({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
-  return <button type="button" className="pane-collapse-button" onClick={onToggle} aria-expanded={open} aria-label={`${open ? "收起" : "展开"}${label}`} title={`${open ? "收起" : "展开"}${label}`}>
+  return <button type="button" className="pane-collapse-button" onClick={onToggle} aria-expanded={open} aria-label={tr(open ? "收起${name}" : "展开${name}", { name: tr(label) })} title={tr(open ? "收起${name}" : "展开${name}", { name: tr(label) })}>
     <span>{label}</span><Icon name={open ? "back" : "arrow"} size={12} />
   </button>;
 }

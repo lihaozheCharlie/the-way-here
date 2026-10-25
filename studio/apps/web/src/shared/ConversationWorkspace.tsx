@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 /** Keep the primary input on screen while long context and evidence scroll inside. */
@@ -24,5 +25,5 @@ export function ConversationWorkspace({ children, id }: { children: ReactNode; i
     window.addEventListener("resize", measure);
     return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
-  return <section ref={root} id={id} className="focus-conversation-grid" aria-label="当前话题与证据">{children}</section>;
+  return <section ref={root} id={id} className="focus-conversation-grid" aria-label={tr("当前话题与证据")}>{children}</section>;
 }

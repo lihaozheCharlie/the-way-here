@@ -17,7 +17,7 @@ import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { graphCategoryNames } from "../../shared/categories";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { tr, useDemoLabels, useI18n } from "../../shared/i18n";
 import { pageDestination, pageHref, type ReturnContext } from "../../shared/routing";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
@@ -163,6 +163,7 @@ function ImportedBatchGuide({ batch, busyPath, onStart, onStartAll, onDefer }: {
 
 export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
   const { t } = useI18n();
+  const demo = useDemoLabels();
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
   const related = (page.relatedPages || []).filter((item) => item.category !== "maintenance");
@@ -170,19 +171,19 @@ export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
   const letter = related.find((item) => item.category === "letters");
   const knowledge = related.filter((item) => item.id !== letter?.id);
   const shown = expanded ? knowledge : knowledge.slice(0, 8);
-  const returnContext: ReturnContext = { returnTo: `${location.pathname}${location.search}`, returnLabel: "返回这篇原始记录" };
+  const returnContext: ReturnContext = { returnTo: `${location.pathname}${location.search}`, returnLabel: tr("返回这篇原始记录") };
   return <details className="source-knowledge-connections">
     <summary>{t("查看关联结果 · ${count}", { count: related.length })}</summary>
     {letter && <NavLink className="source-letter-feature" to={pageDestination(letter)} state={returnContext}>
-      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{letter.title}</h3><p>{letter.excerpt || t("沿着这篇记录，留下一封可以从未来回看的信。")}</p></div>
+      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{demo.heading(letter.relativePath, letter.excerpt) || demo.title(letter.title)}</h3><p>{(letter.excerpt && demo.excerpt(letter.relativePath, letter.excerpt)) || t("沿着这篇记录，留下一封可以从未来回看的信。")}</p></div>
       <i><Icon name="arrow" size={17} /></i>
     </NavLink>}
     {shown.length > 0 && <nav className="source-related-knowledge" aria-label={t("这篇原始记录关联的页面")}>
       {shown.map((item) => <NavLink key={item.id} to={pageHref(item.id)} state={returnContext}>
         <span>{t(graphCategoryNames[item.category] || item.category)}</span>
-        <b>{item.title}</b>
+        <b>{demo.heading(item.relativePath, item.excerpt) || demo.title(item.title)}</b>
         <i><Icon name="arrow" size={14} /></i>
-        <p className="source-related-peek" data-overflow-tooltip="off">{item.excerpt || t("打开页面继续阅读完整内容。")}</p>
+        <p className="source-related-peek" data-overflow-tooltip="off">{(item.excerpt && demo.excerpt(item.relativePath, item.excerpt)) || t("打开页面继续阅读完整内容。")}</p>
       </NavLink>)}
     </nav>}
     {knowledge.length > 8 && <button type="button" className="source-related-more" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>{expanded ? t("收起部分页面") : t("查看全部 ${count} 个关联页面", { count: knowledge.length })}<Icon name={expanded ? "back" : "arrow"} size={14} /></button>}
@@ -348,31 +349,31 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const anySelectableBuildsSelected = selectedBuildRecords.length > 0;
   const recentJourneyRecord = useMemo(() => recentBatch?.files.find((file) => file.storedPath === recentJourney?.reportPath && file.buildKind === "dialogue"), [recentBatch, recentJourney?.reportPath]);
   const agentContext = useMemo(() => selectedBuildRecord?.file.buildKind === "dialogue" ? {
-    scope: "消费旅程",
+    scope: tr("消费旅程"),
     title: selected?.title || sourceBuildTitle(selectedBuildRecord),
     pageId: selected?.id,
-    summary: selected?.excerpt || `${selectedBuildRecord.file.clueCount || 0} 条账单线索正在等待你补充真实语境。`,
+    summary: selected?.excerpt || tr("${p0} 条账单线索正在等待你补充真实语境。", { "p0": selectedBuildRecord.file.clueCount || 0 }),
     defaultMode: "read" as const,
-    defaultOutputTarget: { kind: "journey-report" as const, importId: selectedBuildRecord.batch.id, storedPath: selectedBuildRecord.file.storedPath, label: "消费旅程报告" },
+    defaultOutputTarget: { kind: "journey-report" as const, importId: selectedBuildRecord.batch.id, storedPath: selectedBuildRecord.file.storedPath, label: tr("消费旅程报告") },
     defaultSourceContext: { importId: selectedBuildRecord.batch.id, storedPath: selectedBuildRecord.file.storedPath, flow: "dialogue" as const, operation: "enrich" as const },
     suggestions: selectedBuildRecord.batch.journey?.clusters.length
-      ? [`请从「${selectedBuildRecord.batch.journey.clusters[0]!.title}」开始，一次问我一个关于人物、动机或感受的问题。`, "先从最有画面的一段线索开始，邀请我慢慢讲出来。"]
-      : ["请从最完整的一条消费线索开始，一次只问我一个开放式问题。", "帮我从这份账单里找到值得继续讲述的一段经历。"],
+      ? [tr("请从「${p0}」开始，一次问我一个关于人物、动机或感受的问题。", { "p0": selectedBuildRecord.batch.journey.clusters[0]!.title }), tr("先从最有画面的一段线索开始，邀请我慢慢讲出来。")]
+      : [tr("请从最完整的一条消费线索开始，一次只问我一个开放式问题。"), tr("帮我从这份账单里找到值得继续讲述的一段经历。")],
   } : recentJourney && recentBatch && recentJourneyRecord ? {
-    scope: "消费旅程",
+    scope: tr("消费旅程"),
     title: recentJourney.title,
-    summary: `${recentJourney.transactionCount} 笔消费被串成 ${recentJourney.clusters.length} 组旅程线索。`,
+    summary: tr("${recentJourney.transactionCount} 笔消费被串成 ${recentJourney.clusters.length} 组旅程线索。", { "recentJourney.transactionCount": recentJourney.transactionCount, "recentJourney.clusters.length": recentJourney.clusters.length }),
     defaultMode: "read" as const,
-    defaultOutputTarget: { kind: "journey-report" as const, importId: recentBatch.id, storedPath: recentJourneyRecord.storedPath, label: "消费旅程报告" },
+    defaultOutputTarget: { kind: "journey-report" as const, importId: recentBatch.id, storedPath: recentJourneyRecord.storedPath, label: tr("消费旅程报告") },
     defaultSourceContext: { importId: recentBatch.id, storedPath: recentJourneyRecord.storedPath, flow: "dialogue" as const, operation: "enrich" as const },
-    suggestions: [`请从「${recentJourney.title}」里最有画面的一段线索开始，一次问我一个关于人物、动机或感受的问题。先陪我把经历说出来。`, "先从最有画面的一次出行、聚会或生活变化开始，邀请我慢慢讲出来。"],
+    suggestions: [tr("请从「${recentJourney.title}」里最有画面的一段线索开始，一次问我一个关于人物、动机或感受的问题。先陪我把经历说出来。", { "recentJourney.title": recentJourney.title }), tr("先从最有画面的一次出行、聚会或生活变化开始，邀请我慢慢讲出来。")],
   } : {
-    scope: "生活记录",
-    title: selected?.title || "生活记录",
+    scope: tr("生活记录"),
+    title: selected?.title || tr("生活记录"),
     pageId: selected?.id,
-    summary: selected?.excerpt || `当前有 ${pages.length} 份原始记录。`,
+    summary: selected?.excerpt || tr("当前有 ${pages.length} 份原始记录。", { "pages.length": pages.length }),
     defaultMode: "read" as const,
-    suggestions: ["这份记录里有哪些还没有真正说清楚、值得我继续补充的地方？", "请概括这份记录，并区分事实、感受和后来的解释。"],
+    suggestions: [tr("这份记录里有哪些还没有真正说清楚、值得我继续补充的地方？"), tr("请概括这份记录，并区分事实、感受和后来的解释。")],
   }, [pages.length, recentBatch, recentJourney, recentJourneyRecord, selected?.excerpt, selected?.id, selected?.title, selectedBuildRecord]);
   if (loading) return <Loading label={t("正在打开生活记录")} />;
   if (!data) return <Empty>{t("生活记录暂时无法读取，请刷新重试。")}</Empty>;
@@ -433,7 +434,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
             ? `请按 build-wiki 的「导入后冷启构建」入口读取消费旅程报告「${record.file.storedPath}」。只把“已确认的消费旅程”中具体、耐久且有证据支持的内容收进真正受到影响的已有理解；候选线索和规范化交易只能用于核对，不得当作用户已经确认的人生事实。保持报告和原始 CSV 不变，完成派生内容与质量门，并清楚说明新增、更新或因证据不足而跳过了什么。`
             : `请按 build-wiki 的「导入后冷启构建」入口读取生活记录「${record.file.storedPath}」，保持原始记录正文不变，把其中具体、耐久且证据充分的内容收进真正受到影响的已有理解；完成该入口要求的派生内容与质量门，并清楚列出新增、更新或因证据不足而跳过了什么。`,
           sourceContext,
-          attachedContext: { title, currentUnderstanding: flow === "dialogue" ? "消费旅程报告已经经过对话补充，构建时只使用其中已确认的叙述。" : "这份记录的叙事和上下文较完整，可以直接进入构建。", reason: "用户已经明确选择把它收进已有理解。" },
+          attachedContext: { title, currentUnderstanding: flow === "dialogue" ? tr("消费旅程报告已经经过对话补充，构建时只使用其中已确认的叙述。") : tr("这份记录的叙事和上下文较完整，可以直接进入构建。"), reason: tr("用户已经明确选择把它收进已有理解。") },
         });
       } else if (flow === "dialogue") {
         const firstClue = record.batch.journey?.clusters[0];
@@ -442,9 +443,9 @@ export function OrganizedSources({ revision }: { revision: number }) {
           autoSubmit: true,
           displayPrompt: record.file.dialogueRunId ? "继续聊聊，丰富旅程" : "从这段旅程开始聊",
           prompt: journeyOverviewConversationPrompt(record.file.storedPath, firstClue),
-          outputTarget: { kind: "journey-report", importId: record.batch.id, storedPath: record.file.storedPath, label: "消费旅程报告" },
+          outputTarget: { kind: "journey-report", importId: record.batch.id, storedPath: record.file.storedPath, label: tr("消费旅程报告") },
           sourceContext,
-          attachedContext: { title, currentUnderstanding: `${record.file.clueCount || 0} 条结构化线索只是回忆候选，还不是已确认经历。`, reason: "先由用户补上材料本身没有留下的语境；对话只丰富报告，何时构建由用户明确决定。" },
+          attachedContext: { title, currentUnderstanding: tr("${p0} 条结构化线索只是回忆候选，还不是已确认经历。", { "p0": record.file.clueCount || 0 }), reason: tr("先由用户补上材料本身没有留下的语境；对话只丰富报告，何时构建由用户明确决定。") },
         });
       } else {
         openContextAgent({
@@ -453,11 +454,11 @@ export function OrganizedSources({ revision }: { revision: number }) {
           displayPrompt: "先帮我看看这是什么",
           prompt: `请读取生活记录「${record.file.storedPath}」。我还不知道它属于哪类材料；先用一句自然的问题请我说明这是什么，不要把无法判类当作错误，也不要在我确认前修改知识库。`,
           sourceContext,
-          attachedContext: { title, currentUnderstanding: "这份材料的格式或语境不足，暂时无法判类。", reason: "先由用户补上材料本身没有留下的语境，再决定是否构建。" },
+          attachedContext: { title, currentUnderstanding: tr("这份材料的格式或语境不足，暂时无法判类。"), reason: tr("先由用户补上材料本身没有留下的语境，再决定是否构建。") },
         });
       }
     } catch (reason: any) {
-      setBuildError(reason.message || "暂时无法开始，可以稍后再试");
+      setBuildError(reason.message || tr("暂时无法开始，可以稍后再试"));
     } finally {
       setBusyBuildPath(undefined);
     }
@@ -475,7 +476,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       prompt: journeyDeepConversationPrompt(record.file.storedPath, cluster),
       outputTarget: { kind: "journey-report", importId: batch.id, storedPath: record.file.storedPath, label: cluster.title, clueId: cluster.id },
       sourceContext,
-      attachedContext: { title: cluster.title, currentUnderstanding: cluster.summary, reason: "你主动选择展开这条线索；对话只更新消费旅程报告，不会构建 Wiki。" },
+      attachedContext: { title: cluster.title, currentUnderstanding: cluster.summary, reason: tr("你主动选择展开这条线索；对话只更新消费旅程报告，不会构建 Wiki。") },
     });
   }
   function beginBatchBuild(records: SourceBuildRecord[]) {
@@ -491,7 +492,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       displayPrompt: `批量构建 ${records.length} 份记录`,
       prompt: `请按 build-wiki 的「导入后冷启构建」入口读取下面选中的 ${records.length} 份 direct 生活记录：\n${pathList}\n\n这些记录可能来自不同导入批次。保持原始记录正文不变，把其中具体、耐久且证据充分的内容收进真正受到影响的已有理解；合并重复判断，完成该入口要求的派生内容与质量门，并清楚列出新增、更新或因证据不足而跳过了什么。`,
       sourceContext: { importId: batch.id, storedPath: records[0]!.file.storedPath, storedPaths: paths, flow: "direct", operation: "build" },
-      attachedContext: { title: `${records.length} 份语境完整的新记录`, currentUnderstanding: "这些记录可以直接进入构建，但每一条判断仍需保留来源。", reason: "用户已经明确选择批量收进已有理解。" },
+      attachedContext: { title: tr("${records.length} 份语境完整的新记录", { "records.length": records.length }), currentUnderstanding: tr("这些记录可以直接进入构建，但每一条判断仍需保留来源。"), reason: tr("用户已经明确选择批量收进已有理解。") },
     });
   }
   function beginSelectedBuild(records: SourceBuildRecord[]) {
@@ -511,7 +512,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       setRecentBatch(undefined);
       update({ batch: undefined });
     } catch (reason: any) {
-      setBuildError(reason.message || "暂时无法记住这个选择");
+      setBuildError(reason.message || tr("暂时无法记住这个选择"));
     }
   }
   return <div className="organized-sources-page" ref={workspaceRef}>
@@ -531,7 +532,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
     </SourceMemoryDialog> : null}
     {shownBatch && !["photos", "alipay"].includes(shownBatch.channel || "") ? <ImportedBatchGuide batch={shownBatch} busyPath={busyBuildPath} onStart={beginBuild} onStartAll={beginBatchBuild} onDefer={deferBuilds} /> : null}
     {moveMessage ? <p className="source-move-status" role="status">{moveMessage}</p> : null}
-    {buildError ? <p className="source-build-error" role="alert">{buildError}</p> : null}
+    {buildError ? <p className="source-build-error" role="alert">{tr(buildError)}</p> : null}
     {moveChoice ? createPortal(<div className="desktop-modal-backdrop" onClick={event => { if (event.target === event.currentTarget && !moving) setMoveChoice(undefined); }}><section className="source-move-dialog" ref={moveDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="source-move-title" onKeyDown={event => {
       if (event.key !== "Tab") return;
       const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]),[role="treeitem"][tabindex="0"]')].filter(node => node.tabIndex >= 0);
@@ -597,6 +598,6 @@ export function OrganizedSources({ revision }: { revision: number }) {
       </FileBrowserPane>
       {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>{t("选择一个文件")}</span></div>}
     </div>
-    <PageAgentContext context={photoBatch ? { scope: "照片记忆", title: photoBatch.files[0]?.originalName || "照片记忆", pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: "记忆报告", phase: "enrich" }, suggestions: ["我想讲讲这批照片里的故事，一次问我一个具体问题。"], } : agentContext} />
+    <PageAgentContext context={photoBatch ? { scope: tr("照片记忆"), title: photoBatch.files[0]?.originalName || tr("照片记忆"), pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: tr("记忆报告"), phase: "enrich" }, suggestions: [tr("我想讲讲这批照片里的故事，一次问我一个具体问题。")], } : agentContext} />
   </div>;
 }

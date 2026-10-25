@@ -18,6 +18,7 @@ import type { VaultInfo } from "@the-way-here/shared";
 import { api } from "../api";
 import { useApi } from "../shared/use-api";
 import { navigation } from "./config";
+import { desktopWindowTitle } from "./window-title";
 import { activeKnowledgeChild, isSourceDocument, pageIdFromPathname, type LoadedReader } from "./navigation-state";
 import { ReaderLocationProvider } from "../features/knowledge/reader-location";
 import { type ReturnContext } from "../shared/routing";
@@ -39,9 +40,15 @@ import { Relationships } from "../features/knowledge/Relationships";
 import { SearchResults } from "../features/knowledge/SearchResults";
 import { Timeline } from "../features/knowledge/Timeline";
 import { CreateKnowledgeBaseDialog, DemoKnowledgeBaseNotice } from "../features/knowledge-bases/KnowledgeBaseOnboarding";
-import { ActiveLibraryProvider, demoLibraryLabel, useI18n } from "../shared/i18n";
+import { ActiveLibraryProvider, demoLibraryLabel, tr, useI18n } from "../shared/i18n";
 
 type KnowledgeBaseSummary = VaultInfo["knowledgeBases"][number];
+
+const libraryLabelKey = "the-way-here.library-label";
+
+function readRememberedLibraryLabel() {
+  try { return sessionStorage.getItem(libraryLabelKey) || ""; } catch { return ""; }
+}
 
 function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDelete }: { vault: VaultInfo; disabled: boolean; onChange: (knowledgeBaseId: string) => void; onCreate: () => void; onDelete: (knowledgeBase: KnowledgeBaseSummary) => void }) {
   const { t, locale } = useI18n();
@@ -78,12 +85,13 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
         {vault.knowledgeBases.map((knowledgeBase) => {
           const selected = knowledgeBase.id === vault.knowledgeBaseId;
           const demo = knowledgeBase.id.toLowerCase() === "demo";
+          const libraryName = demoLibraryLabel(knowledgeBase.id, locale, knowledgeBase.name);
           return <div className="global-kb-option-row" key={knowledgeBase.id}>
             <button className="global-kb-option-main" type="button" role="menuitemradio" aria-checked={selected} onClick={() => chooseKnowledgeBase(knowledgeBase.id)}>
               <span className="global-kb-check">{selected ? <Icon name="check" size={15} /> : null}</span>
               <span className="global-kb-option-copy"><span>{demoLibraryLabel(knowledgeBase.id, locale, knowledgeBase.name)}{demo ? <small>{t("演示")}</small> : null}</span><small>{demo ? t("预置的示例记忆，可以先感受被记住的体验") : t("来自「${knowledgeBase.name}」的生活记录与已有理解", { "knowledgeBase.name": knowledgeBase.name })}</small></span>
             </button>
-            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={t("删除知识库「${name}」", { name: knowledgeBase.name })} title={t("删除知识库")}><Icon name="trash" size={15} /></button> : null}
+            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={t("删除知识库「${name}」", { name: libraryName })} title={t("删除知识库")}><Icon name="trash" size={15} /></button> : null}
           </div>;
         })}
       </div>
@@ -116,6 +124,7 @@ export function AppShell({ revision }: { revision: number }) {
   const [inspectorByMenu, setInspectorByMenu] = useState<Record<string, boolean>>({});
   const [suspendedInspectorMenu, setSuspendedInspectorMenu] = useState<string>();
   const agentToggleRef = useRef<HTMLButtonElement>(null);
+  const libraryNameRef = useRef(readRememberedLibraryLabel() || "The Way Here");
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
   const inspector = useInspector()!;
   const utilityWindow = location.pathname === "/preferences" || location.pathname === "/capture";
@@ -272,9 +281,19 @@ export function AppShell({ revision }: { revision: number }) {
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
   const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
-  const windowTitle = utilityWindow
-    ? (location.pathname === "/capture" ? t("随手记") : t("偏好设置"))
-    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${demoLibraryLabel(vault?.knowledgeBaseId, locale, vault?.name || "The Way Here")}`;
+  const nextLibraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "";
+  if (nextLibraryName) libraryNameRef.current = nextLibraryName;
+  const libraryName = nextLibraryName || libraryNameRef.current;
+  const utilityKind = location.pathname === "/capture" ? "capture" : utilityWindow ? "preferences" : null;
+  const routeLabel = location.pathname === "/search" ? "搜索" : location.pathname === "/conversation" ? "深入聊聊" : "";
+  const pageLabel = utilityKind === "capture" ? t("随手记") : utilityKind === "preferences" ? t("偏好设置") : routeLabel ? t(routeLabel) : t(sectionLabel);
+  const windowTitle = desktopWindowTitle(pageLabel, libraryName, utilityKind);
+  if (typeof document !== "undefined") document.title = windowTitle;
+  useEffect(() => {
+    document.title = windowTitle;
+    if (!nextLibraryName) return;
+    try { sessionStorage.setItem(libraryLabelKey, nextLibraryName); } catch { /* The title still updates in this session. */ }
+  }, [windowTitle, nextLibraryName]);
   return (
     <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">{t("跳到主要内容")}</a>
@@ -297,7 +316,7 @@ export function AppShell({ revision }: { revision: number }) {
       </aside>
       <main className="main-area" id="main-content" tabIndex={-1}>
         {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />{t("正在打开「${name}」…", { name: switchingKnowledgeBaseName })}</div> : null}
-        {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{knowledgeBaseError}</div> : null}
+        {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{tr(knowledgeBaseError)}</div> : null}
         <div className="page-frame">
           {!utilityWindow && !detached ? <ModelOnboarding revision={revision} initialOpen={location.pathname === "/"} onOpenPreferences={openPreferences} /> : null}
           {!utilityWindow && vault?.knowledgeBaseId.toLowerCase() === "demo" ? <DemoKnowledgeBaseNotice
@@ -325,8 +344,18 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/cards/systems" element={<Cards revision={revision} category="systems" />} />
             <Route path="/letters" element={<Letters revision={revision} />} />
             <Route path="/mental-models" element={<MentalModels revision={revision} />} />
-            <Route path="/search" element={<SearchResults revision={revision} />} />
+            <Route path="/search" element={<SearchResults revision={revision} libraryId={vault?.knowledgeBaseId} />} />
             <Route path="/page/*" element={<Reader revision={revision} />} />
+            <Route path="/wiki" element={<Navigate to="/knowledge" replace />} />
+            <Route path="/understanding" element={<Navigate to="/knowledge" replace />} />
+            <Route path="/understanding/overview" element={<Navigate to="/knowledge" replace />} />
+            <Route path="/understanding/self" element={<Navigate to="/insights" replace />} />
+            <Route path="/understanding/life" element={<Navigate to="/timeline" replace />} />
+            <Route path="/understanding/people" element={<Navigate to="/relationships" replace />} />
+            <Route path="/understanding/ahead" element={<Navigate to="/predict-self" replace />} />
+            <Route path="/settings" element={<Navigate to="/preferences" replace />} />
+            <Route path="/models" element={<Navigate to="/preferences?tab=ai" replace />} />
+            <Route path="/collaboration" element={<Navigate to="/conversation" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
@@ -337,7 +366,7 @@ export function AppShell({ revision }: { revision: number }) {
       {deleteKnowledgeBaseTarget ? <ConfirmDeleteDialog
         title={t("删除这个知识库？")}
         description={t("其中的生活记录和已有理解会从本机永久删除。")}
-        itemName={deleteKnowledgeBaseTarget.name}
+        itemName={demoLibraryLabel(deleteKnowledgeBaseTarget.id, locale, deleteKnowledgeBaseTarget.name)}
         impact={deleteKnowledgeBaseTarget.id === vault?.knowledgeBaseId ? t("这是当前打开的知识库。删除后会自动打开另一个保留的空间；此操作不能撤销。") : t("这个知识库的日记、导入材料和构建出的理解都会一起删除；此操作不能撤销。")}
         confirmLabel={t("删除知识库")}
         onClose={closeDeleteKnowledgeBaseDialog}

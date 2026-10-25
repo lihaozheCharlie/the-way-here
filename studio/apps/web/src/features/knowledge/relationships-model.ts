@@ -1,3 +1,4 @@
+import { tr, uiDateLocale } from "../../shared/i18n";
 import type { PersonInsight, StructuredCard } from "@the-way-here/shared";
 
 export type RelationshipPerson = { person: PersonInsight; group: string };
@@ -32,13 +33,13 @@ export function filterAndSortPeople(people: RelationshipPerson[], roles: Structu
 }
 
 export function formatRelationshipDate(value?: string, now = new Date()) {
-  if (!value) return "日期待补";
+  if (!value) return tr("日期待补");
   const parsed = new Date(value);
   if (Number.isNaN(parsed.valueOf())) return value.slice(0, 10);
   const days = Math.max(0, Math.floor((now.valueOf() - parsed.valueOf()) / 86_400_000));
-  if (days === 0) return "今天";
-  if (days === 1) return "昨天";
-  if (days < 30) return `${days} 天前`;
-  if (days < 365) return `${Math.floor(days / 30)} 个月前`;
-  return parsed.toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+  if (days === 0) return tr("今天");
+  if (days === 1) return tr("昨天");
+  if (days < 30) return tr("${days} 天前", { "days": days });
+  if (days < 365) return tr("${p0} 个月前", { "p0": Math.floor(days / 30) });
+  return parsed.toLocaleDateString(uiDateLocale(), { year: "numeric", month: "short", day: "numeric" });
 }

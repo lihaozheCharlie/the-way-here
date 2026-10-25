@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import type { LifePredictionReport, LifeScenario } from "@the-way-here/shared";
 import { pageHref } from "../../shared/routing";
-import { useI18n } from "../../shared/i18n";
+import { useI18n, tr } from "../../shared/i18n";
 
 const confidence = {low:"证据有限",medium:"有一定依据",high:"依据较充分"};
-export const scenarioProbability = (s:LifeScenario) => s.probability === null ? "暂不能估计" : `${s.probability}%${s.probabilityBasis === "conditional" ? " · 假设成立时" : ""}`;
+export const scenarioProbability = (s:LifeScenario) => s.probability === null ? tr("暂不能估计") : `${s.probability}%${s.probabilityBasis === "conditional" ? tr(" · 假设成立时") : ""}`;
 
 export function ScenarioEvidence({report,scenario}:{report:LifePredictionReport;scenario:LifeScenario}) {
   const { t } = useI18n();
@@ -19,7 +19,7 @@ export function ScenarioEvidence({report,scenario}:{report:LifePredictionReport;
     <details className="prediction-evidence-sources"><summary>{t("查看原文 · ${count} 条", { count: evidence.length })}</summary>
       <ol className="prediction-clues">{evidence.map(e=><li key={e.id} className="prediction-source">
         <h3>{e.cue}</h3><blockquote>{e.quote}</blockquote>
-        {e.pageId==="prediction-input/current"?<span>{t("本次补充")}</span>:<Link to={pageHref(e.pageId)} state={{returnTo:"/predict-self",returnLabel:"返回看见未来"}}>{e.pageId.split("/").pop()} →</Link>}
+        {e.pageId==="prediction-input/current"?<span>{t("本次补充")}</span>:<Link to={pageHref(e.pageId)} state={{returnTo:"/predict-self",returnLabel:tr("返回看见未来")}}>{e.pageId.split("/").pop()} →</Link>}
       </li>)}</ol>
     </details>
   </section>;

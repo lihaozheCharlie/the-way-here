@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import type { SourceImportBatch } from "@the-way-here/shared";
 import type { PhotoLocalDraft } from "../sources/photo-draft";
 
@@ -24,15 +25,15 @@ export function clearPendingPhotoMemory(): void {
 /** Preview bytes stay on device. Rejects anything that is not a still image data URL. */
 export function photoPreviewPayload(dataUrl: string, name: string): { name: string; content: string; encoding: "base64" } {
   const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(dataUrl);
-  if (!match?.[1] || !match[2]) throw new Error("这张照片的预览不是可保存的 JPG、PNG 或 WebP");
+  if (!match?.[1] || !match[2]) throw new Error(tr("这张照片的预览不是可保存的 JPG、PNG 或 WebP"));
   const ext = match[1].toLowerCase() === "jpeg" ? "jpg" : match[1].toLowerCase();
-  const base = name.replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|\r\n]/g, " ").trim().slice(0, 80) || "照片";
+  const base = name.replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|\r\n]/g, " ").trim().slice(0, 80) || tr("照片");
   return { name: `${base}.${ext}`, content: match[2], encoding: "base64" };
 }
 
 /** Names and the short note are local draft context for the later person-confirmation step. */
 export function photoHandoffDraft(people: string, note: string): PhotoLocalDraft | undefined {
-  const lines = [people.trim() && `照片里的人：${people.trim()}`, note.trim()].filter((line): line is string => Boolean(line));
+  const lines = [people.trim() && tr("照片里的人：${p0}", { "p0": people.trim() }), note.trim()].filter((line): line is string => Boolean(line));
   if (!lines.length) return undefined;
   return {
     revision: 1,

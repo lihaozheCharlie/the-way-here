@@ -13,7 +13,7 @@ import { Empty, Icon, Loading } from "../../shared/ui";
 import { TimelineFilter } from "../../shared/TimelineFilter";
 import { LetterLensPicker } from "./LetterLensPicker";
 import { LetterComposer, type LetterRequest } from "./LetterComposer";
-import { useI18n, currentLocale, translate } from "../../shared/i18n";
+import { useI18n, currentLocale, translate, useDemoLabels } from "../../shared/i18n";
 
 function tr(message: string, params?: Record<string, string | number | null | undefined>): string {
   return translate(currentLocale(), message, params);
@@ -35,12 +35,12 @@ function stageIntent(request: LetterRequest): string {
   const page = request.stage!.pageId ? tr("页面 ${request.stage!.pageId}", { "request.stage!.pageId": request.stage!.pageId }) : "";
   const detail = [request.stage!.range, page].filter(Boolean).join(currentLocale() === "en" ? ", " : "，");
   const wrapped = detail ? (currentLocale() === "en" ? ` (${detail})` : `（${detail}）`) : "";
-  return currentLocale() === "en" ? `Experience: ${request.stage!.title}${wrapped}` : `经历：${request.stage!.title}${wrapped}`;
+  return currentLocale() === "en" ? `Experience: ${request.stage!.title}${wrapped}` : tr("经历：${p0}${wrapped}", { "p0": request.stage!.title, "wrapped": wrapped });
 }
 
 function lensLine(lens: { name: string; attention?: string }): string {
   const note = lens.attention ? (currentLocale() === "en" ? ` (${lens.attention})` : `（${lens.attention}）`) : "";
-  return currentLocale() === "en" ? `Lens: ${lens.name}${note}` : `视角：${lens.name}${note}`;
+  return currentLocale() === "en" ? `Lens: ${lens.name}${note}` : tr("视角：${lens.name}${note}", { "lens.name": lens.name, "note": note });
 }
 
 export function requestPrompt(request: LetterRequest): { prompt: string; label: string } {
@@ -69,7 +69,7 @@ export function requestPrompt(request: LetterRequest): { prompt: string; label: 
 
 export function perspectiveLetterRequest(letter: LetterViewItem, lens: ReasoningLens): { prompt: string; context: AgentContext } {
   const sources = [...new Set([...(letter.evidenceSources || []), ...letter.page.sources].filter(source => source && source !== "wiki synthesis"))];
-  const period = [letter.evidenceFrom, letter.evidenceTo].filter(Boolean).join(" 至 ") || letter.letterDate;
+  const period = [letter.evidenceFrom, letter.evidenceTo].filter(Boolean).join(tr(" 至 ")) || letter.letterDate;
   const clues = [
     tr("材料时间：${period}", { "period": period }),
     sources.length ? tr("原始来源线索：${sources.join(\"；\")}", { "sources.join(\"；\")": sources.join("；") }) : tr("原始来源线索：请按材料时间和主题检索，无法定位到具体原始材料时停止。"),
@@ -83,6 +83,7 @@ export function perspectiveLetterRequest(letter: LetterViewItem, lens: Reasoning
 
 export function Letters({ revision }: { revision: number }) {
   const { t } = useI18n();
+  const demo = useDemoLabels();
   const { data, loading, error } = useApi<LettersView>("/api/views/letters", revision);
   const { data: lenses, error: lensesError } = useApi<ReasoningLens[]>("/api/lenses", revision);
   const { data: lifeMap } = useApi<LifeMapView>("/api/views/life-map", revision);
@@ -93,7 +94,7 @@ export function Letters({ revision }: { revision: number }) {
   const [thread, setThread] = useState("");
   const [indexOpen, setIndexOpen] = useState(true);
   if (loading || runsLoading) return <Loading label={t("正在整理回信")} />;
-  if (error || !data) return <Empty>{error || t("回信暂时无法读取，请刷新重试。")}</Empty>;
+  if (error || !data) return <Empty>{error ? t(error) : t("回信暂时无法读取，请刷新重试。")}</Empty>;
   const selectedThread = data.threads.find((item) => item.id === thread);
   const filtered = data.letters.filter((letter) => (view === "chronology" ? year === "" || letter.letterDate.startsWith(year) : thread === "" || selectedThread?.letters.includes(letter.page.id))).sort((a, b) => b.letterDate.localeCompare(a.letterDate));
   const selected = filtered.find((letter) => letter.page.id === params.get("letter")) || filtered[0];
@@ -126,7 +127,7 @@ export function Letters({ revision }: { revision: number }) {
         allLabel={view === "chronology" ? t("全部年份") : t("全部主题")}
         value={view === "chronology" ? year : thread}
         total={data.letters.length}
-        periods={view === "chronology" ? [...data.years].sort().reverse().map((item) => ({ value: item, label: tr("${item} 年", { "item": item }), count: data.letters.filter((letter) => letter.letterDate.startsWith(item)).length })) : data.threads.map((item) => ({ value: item.id, label: item.title, count: item.letters.length }))}
+        periods={view === "chronology" ? [...data.years].sort().reverse().map((item) => ({ value: item, label: tr("${item} 年", { "item": item }), count: data.letters.filter((letter) => letter.letterDate.startsWith(item)).length })) : data.threads.map((item) => ({ value: item.id, label: demo.title(item.title), count: item.letters.length }))}
         onChange={(value) => { if (view === "chronology") setYear(value); else setThread(value); selectLetter(undefined, true); }}
         hint={t("按写信时间从新到旧排列")}
         leading={<div className="letters-view-switch" role="group" aria-label={t("回信阅读方式")}><button type="button" aria-pressed={view === "chronology"} onClick={() => { setView("chronology"); selectLetter(undefined, true); }}>{t("按时间阅读")}</button><button type="button" aria-pressed={view === "themes"} onClick={() => { setView("themes"); selectLetter(undefined, true); }}>{t("沿主题追踪")}</button></div>}
@@ -149,14 +150,14 @@ export function Letters({ revision }: { revision: number }) {
           controls={<><div className="letter-provenance" aria-label={t("这封信的来历")}>
           <span>{t("写于 ")}<time dateTime={selected.letterDate.slice(0, 10)}>{selected.letterDate.slice(0, 10)}</time></span>
           {selected.evidenceFrom && <span>{t("依据 … 的材料").replace("…", `${selected.evidenceFrom}${selected.evidenceTo && selected.evidenceTo !== selected.evidenceFrom ? tr(" 至 ${selected.evidenceTo}", { "selected.evidenceTo": selected.evidenceTo }) : ""}`)}</span>}
-          <div className="letter-meta-themes">{selected.themes.slice(0, 2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}{selected.themes.length > 2 && <details key={selected.page.id} className="letter-more-themes"><summary aria-label={tr("另外 ${selected.themes.length - 2} 个主题", { "selected.themes.length - 2": selected.themes.length - 2 })}>+{selected.themes.length - 2}</summary><div>{selected.themes.slice(2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}</div></details>}</div>
+          <div className="letter-meta-themes">{selected.themes.slice(0, 2).map((theme) => <PageLink key={theme.id} page={theme}>{demo.title(theme.title)}</PageLink>)}{selected.themes.length > 2 && <details key={selected.page.id} className="letter-more-themes"><summary aria-label={tr("另外 ${selected.themes.length - 2} 个主题", { "selected.themes.length - 2": selected.themes.length - 2 })}>+{selected.themes.length - 2}</summary><div>{selected.themes.slice(2).map((theme) => <PageLink key={theme.id} page={theme}>{demo.title(theme.title)}</PageLink>)}</div></details>}</div>
         </div>
         {historical && <div className="letter-history-banner" role="status">{t("你正在查看历史版本")} <button type="button" onClick={() => selectVersion()}>{t("回到最新版本")}</button></div>}
 </>}
           footer={activeVersion && activeVersion.id !== "original" ? <button className="letter-generation-link" type="button" onClick={() => openContextAgent({ runId: activeVersion.runId })}>{t("查看生成对话")} <Icon name="arrow" size={14} /></button> : undefined}
         /> : <div className="source-preview-empty"><Empty>{t("当前范围暂无回信，可以切换筛选查看。")}</Empty></div>}
       </div>
-      <PageAgentContext context={{ scope: view === "themes" ? tr("近况回信 · ${selectedThread?.title || \"全部主题\"}", { "selectedThread?.title || \"全部主题\"": selectedThread?.title || "全部主题" }) : tr("近况回信 · ${year}", { "year": year || "全部" }), title: selected?.page.title || tr("${year === \"全部\" ? \"最近\" : year + \" 年\"}的近况回信", { "year === \"全部\" ? \"最近\" : year + \" 年\"": year ? year + " 年" : "最近" }), pageId: selected?.page.id, summary: selected?.page.excerpt || tr("从选定年份的日记和已有知识生成回信。"), defaultMode: "write", suggestions: [year ? tr("从 ${year} 年日记中抽样几篇，结合已有知识写一封新的近况回信。", { "year": year }) : tr("从 2025 年日记中抽样几篇，结合已有知识写一封新的近况回信。"), selected ? tr("根据更多原始证据重新写这封回信，保留朋友式回应，不做绩效复盘。") : tr("请先帮我选择最值得回看的一个时间切片，再写回信。")] }} />
+      <PageAgentContext context={{ scope: view === "themes" ? tr("近况回信 · ${selectedThread?.title || \"全部主题\"}", { "selectedThread?.title || \"全部主题\"": selectedThread ? demo.title(selectedThread.title) : "全部主题" }) : tr("近况回信 · ${year}", { "year": year || "全部" }), title: selected ? (demo.heading(selected.page.relativePath, selected.page.excerpt) || demo.title(selected.page.title)) : tr("${year === \"全部\" ? \"最近\" : year + \" 年\"}的近况回信", { "year === \"全部\" ? \"最近\" : year + \" 年\"": year ? year + " 年" : "最近" }), pageId: selected?.page.id, summary: selected ? demo.excerpt(selected.page.relativePath, selected.page.excerpt) : tr("从选定年份的日记和已有知识生成回信。"), defaultMode: "write", suggestions: [year ? tr("从 ${year} 年日记中抽样几篇，结合已有知识写一封新的近况回信。", { "year": year }) : tr("从 2025 年日记中抽样几篇，结合已有知识写一封新的近况回信。"), selected ? tr("根据更多原始证据重新写这封回信，保留朋友式回应，不做绩效复盘。") : tr("请先帮我选择最值得回看的一个时间切片，再写回信。")] }} />
     </div>
   );
 }

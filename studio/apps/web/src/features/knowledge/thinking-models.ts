@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import type { SectionedPageView, StructuredCard } from "@the-way-here/shared";
 
 export type ThinkingModel = {
@@ -5,6 +6,7 @@ export type ThinkingModel = {
   pageId: string;
   title: string;
   body: string;
+  excerpt?: string;
   sections: Array<{ heading: string; body: string }>;
 };
 
@@ -15,6 +17,7 @@ function fromCard(card: StructuredCard): ThinkingModel {
     key: card.id,
     pageId: card.id,
     title: card.title,
+    excerpt: card.excerpt,
     sections: card.sections,
     body: card.sections.map((section) => `${section.heading}\n${section.body}`).join("\n\n"),
   };
@@ -30,7 +33,7 @@ export function resolveThinkingModels(cards: StructuredCard[] | undefined, legac
       key: section.heading,
       pageId: legacy.page.id,
       title: section.heading.replace(numberedHeading, ""),
-      sections: [{ heading: "模型说明", body: section.body }],
+      sections: [{ heading: tr("模型说明"), body: section.body }],
       body: section.body,
     }));
   }

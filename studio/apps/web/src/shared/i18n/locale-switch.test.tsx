@@ -40,7 +40,8 @@ describe("locale switch", () => {
     expect(english).toContain("Preferences");
     expect(english).toContain("Language");
     expect(english).toContain("General");
-    expect(english).toContain("中文");
+    expect(english).toContain("Chinese");
+    expect(english).not.toContain("中文");
     expect(english).toContain("English");
     expect(english).toContain("Your own library content is never translated.");
     expect(english).toContain('role="tab"');

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { LifePredictionReport } from "@the-way-here/shared";
 import { predictionPathwayLabels } from "@the-way-here/shared";
 import { ScenarioEvidence } from "./ScenarioEvidence";
-import { useI18n } from "../../shared/i18n";
+import { useI18n, tr } from "../../shared/i18n";
 
 const stageLabels = {months0_3:"0–3 个月 · 决定期",months3_12:"3–12 个月 · 扛压期",years1_3:"1–3 年 · 验证期",years3_5:"3–5 年 · 分化期"};
 export { DimensionDashboard } from "./DimensionDashboard";
@@ -36,7 +36,7 @@ export function LifeScenarios({report}:{report:LifePredictionReport}) {
     {scenario?.pathway === "wildcard" && clickedFuture === scenario.id && <p className="prediction-wildcard-note" role="status">{t("未来偶尔会带来意想不到的转弯。愿你保持清醒，也给变化留一点空间，慢慢找到自己的方向。")}</p>}
     {scenario && <><header className="dim-section-head"><h2>{t("为什么可能这样走")}</h2></header><article className="prediction-detail life-scenario-detail" aria-label={t("所选生活情景")}>
       <header className="prediction-detail-head"><h2 ref={heading} tabIndex={-1}>{scenario.title}</h2><span>{step+1} / 3</span></header>
-      <nav className="prediction-steps" aria-label={t("阅读步骤")}>{["五年生活","经历依据","整体节奏"].map((name,i)=><button key={name} type="button" aria-current={step===i?"step":undefined} onClick={()=>move(i)}>{t(name)}</button>)}</nav>
+      <nav className="prediction-steps" aria-label={t("阅读步骤")}>{[tr("五年生活"),tr("经历依据"),tr("整体节奏")].map((name,i)=><button key={name} type="button" aria-current={step===i?"step":undefined} onClick={()=>move(i)}>{t(name)}</button>)}</nav>
       {step===0 && <section aria-label={t("五年生活")}>
         <p className="prediction-detail-summary">{scenario.overview}</p>
         <p className="prediction-day">{scenario.week}</p>

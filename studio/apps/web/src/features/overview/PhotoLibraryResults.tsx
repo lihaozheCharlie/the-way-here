@@ -4,8 +4,8 @@ import { Icon } from "../../shared/ui";
 import { CaptureDialog } from "./CaptureDialogs";
 import { photoImageQueue } from "./photo-library-images";
 import type { PhotosBridge } from "./PhotoLibraryCard";
-import { useI18n, type AppLocale } from "../../shared/i18n";
-const photoDate = (p: LibraryPhoto, locale: AppLocale) => p.createdAt ? new Date(p.createdAt).toLocaleDateString(locale === "en" ? "en" : "zh-CN") : "日期未知";
+import { useI18n, type AppLocale, tr } from "../../shared/i18n";
+const photoDate = (p: LibraryPhoto, locale: AppLocale) => p.createdAt ? new Date(p.createdAt).toLocaleDateString(locale === "en" ? "en" : "zh-CN") : tr("日期未知");
 type Queue = ReturnType<typeof photoImageQueue>;
 export function PhotoResults({ photos, bridge, selected, toggle, capped, onThumbnail }: { onThumbnail?: (id: string, url: string) => void; photos: LibraryPhoto[]; bridge: PhotosBridge; selected: Map<string, LibraryPhoto>; toggle: (p: LibraryPhoto) => void; capped: boolean }) {
   const { t, locale } = useI18n();
@@ -27,7 +27,7 @@ function PhotoImage({ photo, queue, size, onOpen, checked, blocked, onReady }: {
   const [network, setNetwork] = useState(false), [attempt, setAttempt] = useState(0);
   const callback = useRef(onReady); callback.current = onReady;
   const when = photoDate(photo, locale);
-  useEffect(() => { let active = true; setImage(undefined); setError(""); void queue.image(photo.id, size, network).then(value => { if (active) { setImage(value); if (value.dataUrl) callback.current?.(value.dataUrl); } }, reason => { if (active) setError(reason instanceof Error ? reason.message : "照片读取失败，请重试"); }); return () => { active = false; }; }, [photo.id, queue, size, network, attempt]);
+  useEffect(() => { let active = true; setImage(undefined); setError(""); void queue.image(photo.id, size, network).then(value => { if (active) { setImage(value); if (value.dataUrl) callback.current?.(value.dataUrl); } }, reason => { if (active) setError(reason instanceof Error ? reason.message : tr("照片读取失败，请重试")); }); return () => { active = false; }; }, [photo.id, queue, size, network, attempt]);
   if (image?.dataUrl) return onOpen ? <button type="button" className="photo-library-thumbnail" role="checkbox" aria-checked={checked} aria-disabled={blocked} onClick={onOpen} aria-label={t("选择照片：${name}，${date}", { name: photo.name, date: when === "日期未知" ? t(when) : when })}><img src={image.dataUrl} alt="" /><span className="photo-tile-check"><Icon name="check" size={14} /></span></button> : <img className="photo-library-full-image" src={image.dataUrl} alt={photo.name} />;
   return <div className={`photo-library-placeholder photo-library-placeholder--${size}`}><Icon name="image" size={24} />{image?.cloudOnly ? <><span>{t("照片在 iCloud")}</span><button type="button" className="desktop-secondary" onClick={() => setNetwork(true)}>{t("下载预览")}</button></> : error ? <><span>{t(error)}</span><button type="button" className="desktop-secondary" onClick={() => setAttempt(value => value + 1)}>{t("重试")}</button></> : <span role="status">{network ? t("正在下载预览…") : t("正在加载…")}</span>}</div>;
 }

@@ -1,15 +1,16 @@
 import { spawn } from 'node:child_process';
 import { photoQuery } from './photo-query.mjs';
+import { getLocale, translateLocale } from './locale.mjs';
 
 /** A bounded, app-owned native process. No filesystem or executable paths from the renderer. */
 export class PhotoLibrary {
   constructor(binary, spawnProcess = spawn) { this.binary = binary; this.spawnProcess = spawnProcess; this.pending = new Map(); this.sequence = 0; }
   request(message) {
-    if (this.pending.size >= 48) return Promise.reject(new Error('照片加载较多，请稍后重试'));
+    if (this.pending.size >= 48) return Promise.reject(new Error(translateLocale(getLocale(), '照片加载较多，请稍后重试')));
     if (!this.child) this.start();
     const id = String(++this.sequence);
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => this.close('照片读取超时，请重试。云端照片需要网络连接。'), message.command === 'authorize' ? 120_000 : 60_000);
+      const timer = setTimeout(() => this.close(translateLocale(getLocale(), '照片读取超时，请重试。云端照片需要网络连接。')), message.command === 'authorize' ? 120_000 : 60_000);
       this.pending.set(id, { resolve, reject, timer });
       this.child.stdin.write(JSON.stringify({ ...message, id }) + '\n');
     });
@@ -44,7 +45,7 @@ export class PhotoLibrary {
   status() { return this.request({ command: 'status' }); }
   filters() { return this.request({ command: 'filters' }); }
   authorize() { return this.request({ command: 'authorize' }); }
-  search(input) { return this.request(photoQuery(input)); }
+  search(input) { return this.request(photoQuery(input, new Date(), getLocale())); }
   image(input) {
     if (!input || typeof input.assetId !== 'string' || input.assetId.length > 256 || !['thumbnail', 'preview'].includes(input.size) || typeof input.network !== 'boolean') throw new Error('照片预览条件无效');
     return this.request({ command: 'image', assetId: input.assetId, size: input.size, network: input.network });

@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { WikiPage } from "@the-way-here/shared";
@@ -16,8 +17,8 @@ export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: stri
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.show();
   }, []);
-  return createPortal(<dialog ref={dialog} className="stage-document-dialog" aria-label="文件预览" onCancel={event => { event.preventDefault(); onClose(); }}>
-    <header><span>文件预览</span><button type="button" aria-label="关闭文件预览" onClick={onClose}><Icon name="close" size={18} /></button></header>
+  return createPortal(<dialog ref={dialog} className="stage-document-dialog" aria-label={tr("文件预览")} onCancel={event => { event.preventDefault(); onClose(); }}>
+    <header><span>{tr("文件预览")}</span><button type="button" aria-label={tr("关闭文件预览")} onClick={onClose}><Icon name="close" size={18} /></button></header>
     <div className="stage-document-scroll" onClickCapture={event => {
       const anchor = (event.target as Element).closest('a');
       if (!anchor) return;
@@ -26,7 +27,7 @@ export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: stri
       const id = url.pathname.startsWith('/page/') ? decodeURIComponent(url.pathname.slice(6)) : url.pathname === '/letters' ? url.searchParams.get('letter') : undefined;
       if (id) { event.preventDefault(); event.stopPropagation(); setCurrentId(id); event.currentTarget.scrollTop = 0; }
     }}>
-      {loading ? <Loading label="正在读取文件" /> : error || !data ? <Empty>{error || "文件暂时无法读取"}</Empty> : <ReadOnlyDocument key={data.id} id={data.id} page={data} markdown={data.renderedMarkdown} />}
+      {loading ? <Loading label={tr("正在读取文件")} /> : error || !data ? <Empty>{error ? tr(error) : tr("文件暂时无法读取")}</Empty> : <ReadOnlyDocument key={data.id} id={data.id} page={data} markdown={data.renderedMarkdown} />}
     </div>
   </dialog>, document.body);
 }

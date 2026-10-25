@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import type { SourceImportBatch, WikiPageSummary } from "@the-way-here/shared";
 
 export type SourceRecordType = "notes" | "ai" | "bill" | "photos";
@@ -9,7 +10,7 @@ export type SourceBuildPresentation = {
 };
 export type SourceBuildActionPresentation =
   | { kind: "hidden" }
-  | { kind: "open"; label: "查看进度" | "继续聊聊"; runId: string }
+  | { kind: "open"; label: string; runId: string }
   | { kind: "start"; label: string };
 
 export const sourceRecordTypes: ReadonlyArray<{ id: "all" | SourceRecordType; label: string }> = [
@@ -130,30 +131,30 @@ export function buildableSourceRecordForPage(page: Pick<WikiPageSummary, "id" | 
 }
 
 export function sourceBuildPresentation(file: SourceBuildRecord["file"]): SourceBuildPresentation {
-  if (file.buildStatus === "built") return { label: "已构建", tone: "done" };
-  if (file.buildStatus === "building") return { label: "构建中", detail: "完成后会显示实际改动", tone: "progress" };
-  if (file.buildStatus === "in-dialogue") return { label: "对话中", detail: "只更新这份记录", tone: "progress" };
-  if (file.buildStatus === "ready-to-build") return { label: "草稿已更新", detail: "对话补充已保存 · 尚未构建", tone: "attention" };
-  if (file.buildStatus === "deferred") return { label: "稍后再说", detail: file.buildKind === "direct" ? "可直接构建" : file.buildKind === "dialogue" ? "线索已经留好" : "等待确认类型", tone: "quiet" };
-  if (file.buildKind === "dialogue") return { label: "待厘清", detail: file.clueCount ? `已识别 ${file.clueCount} 条候选线索` : "等一次对话", tone: "attention" };
-  if (file.buildKind === "identify") return { label: "待确认类型", detail: "先告诉我这是什么", tone: "quiet" };
-  return { label: "待构建", detail: "可直接构建", tone: "attention" };
+  if (file.buildStatus === "built") return { label: tr("已构建"), tone: "done" };
+  if (file.buildStatus === "building") return { label: tr("构建中"), detail: tr("完成后会显示实际改动"), tone: "progress" };
+  if (file.buildStatus === "in-dialogue") return { label: tr("对话中"), detail: tr("只更新这份记录"), tone: "progress" };
+  if (file.buildStatus === "ready-to-build") return { label: tr("草稿已更新"), detail: tr("对话补充已保存 · 尚未构建"), tone: "attention" };
+  if (file.buildStatus === "deferred") return { label: tr("稍后再说"), detail: file.buildKind === "direct" ? tr("可直接构建") : file.buildKind === "dialogue" ? tr("线索已经留好") : tr("等待确认类型"), tone: "quiet" };
+  if (file.buildKind === "dialogue") return { label: tr("待厘清"), detail: file.clueCount ? tr("已识别 ${file.clueCount} 条候选线索", { "file.clueCount": file.clueCount }) : tr("等一次对话"), tone: "attention" };
+  if (file.buildKind === "identify") return { label: tr("待确认类型"), detail: tr("先告诉我这是什么"), tone: "quiet" };
+  return { label: tr("待构建"), detail: tr("可直接构建"), tone: "attention" };
 }
 
 export function sourceBuildActionPresentation(file: SourceBuildRecord["file"]): SourceBuildActionPresentation {
   const active = file.buildStatus === "building" || file.buildStatus === "in-dialogue";
   if (file.buildKind === "dialogue") {
     const runId = file.buildStatus === "building" ? file.buildRunId : file.dialogueRunId || file.buildRunId;
-    if (runId) return { kind: "open", label: active ? "查看进度" : "继续聊聊", runId };
+    if (runId) return { kind: "open", label: active ? tr("查看进度") : tr("继续聊聊"), runId };
     if (file.buildStatus === "built") return { kind: "hidden" };
-    return { kind: "start", label: "开始聊聊" };
+    return { kind: "start", label: tr("开始聊聊") };
   }
   if (file.buildStatus === "built") return { kind: "hidden" };
   if (active) return file.buildRunId
-    ? { kind: "open", label: "查看进度", runId: file.buildRunId }
+    ? { kind: "open", label: tr("查看进度"), runId: file.buildRunId }
     : { kind: "hidden" };
   return {
     kind: "start",
-    label: file.buildKind === "direct" ? "构建这份记录" : "帮我看看",
+    label: file.buildKind === "direct" ? tr("构建这份记录") : tr("帮我看看"),
   };
 }

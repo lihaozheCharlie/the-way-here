@@ -6,7 +6,12 @@ import { useApi } from "../../shared/use-api";
 import { graphCategoryNames } from "../../shared/categories";
 import { PageLink } from "../../shared/routing";
 import { Empty, Loading, PageHeader, SectionHeading } from "../../shared/ui";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { shownDemoRecord, useDemoLabels, useI18n } from "../../shared/i18n";
+
+/** Same heading, path, and excerpt overlay as the Life records row. */
+export function searchShown(demo: ReturnType<typeof useDemoLabels>, page: Pick<WikiPageSummary, "title" | "relativePath" | "excerpt" | "externalSource">, libraryId?: string | null) {
+  return shownDemoRecord(libraryId === undefined ? demo.libraryId : libraryId, demo.locale, page);
+}
 
 export function SearchHighlight({ text, query }: { text: string; query: string }) {
   const needle = query.trim();
@@ -20,21 +25,21 @@ export function SearchHighlight({ text, query }: { text: string; query: string }
   return <>{parts}{text.slice(position)}</>;
 }
 
-export function SearchResults({ revision }: { revision: number }) {
+export function SearchResults({ revision, libraryId }: { revision: number; libraryId?: string | null }) {
   const { t } = useI18n();
   const demo = useDemoLabels();
   const [params] = useSearchParams();
   const query = params.get("q") || "";
   const { data, loading, error } = useApi<WikiPageSummary[]>(`/api/search?q=${encodeURIComponent(query)}`, revision);
   if (loading) return <Loading label={t("正在知识与原始材料中寻找")} />;
-  if (error || !data) return <Empty>{error || t("搜索暂时不可用，请刷新重试。")}</Empty>;
+  if (error || !data) return <Empty>{error ? t(error) : t("搜索暂时不可用，请刷新重试。")}</Empty>;
   const knowledge = data.filter((page) => !page.isSource);
   const sources = data.filter((page) => page.isSource);
   return (
     <div>
       <PageHeader title={`“${query}”`} description={t("找到 ${count} 项结果，已按构建知识与原始材料分组。", { count: data.length })} />
-      {knowledge.length > 0 && <section className="search-group"><SectionHeading title={t("已有理解 · ${count}", { count: knowledge.length })} action={<NavLink to="/knowledge">{t("进入已有理解")}</NavLink>} /><div className="search-results">{knowledge.map((page) => <FileListRow key={page.id} page={page}><PageLink page={page} key={page.id} className="search-result"><small>{t(graphCategoryNames[page.category] || page.category)}</small><h2><SearchHighlight text={demo.title(page.title)} query={query} /></h2><p><SearchHighlight text={page.excerpt} query={query} /></p></PageLink></FileListRow>)}</div></section>}
-      {sources.length > 0 && <section className="search-group"><SectionHeading title={t("生活记录 · ${count}", { count: sources.length })} action={<NavLink to="/sources">{t("查看全部生活记录")}</NavLink>} /><div className="search-results">{sources.map((page) => <FileListRow key={page.id} page={page}><PageLink page={page} key={page.id} className="search-result"><small>{t("生活记录")} · {page.relativePath}</small><h2><SearchHighlight text={demo.title(page.title)} query={query} /></h2><p><SearchHighlight text={page.excerpt} query={query} /></p></PageLink></FileListRow>)}</div></section>}
+      {knowledge.length > 0 && <section className="search-group"><SectionHeading title={t("已有理解 · ${count}", { count: knowledge.length })} action={<NavLink to="/knowledge">{t("进入已有理解")}</NavLink>} /><div className="search-results">{knowledge.map((page) => { const shown = searchShown(demo, page, libraryId); return <FileListRow key={page.id} page={page}><PageLink page={page} key={page.id} className="search-result"><small>{t(graphCategoryNames[page.category] || page.category)} · {shown.path}</small><h2><SearchHighlight text={shown.title} query={query} /></h2><p><SearchHighlight text={shown.excerpt} query={query} /></p></PageLink></FileListRow>; })}</div></section>}
+      {sources.length > 0 && <section className="search-group"><SectionHeading title={t("生活记录 · ${count}", { count: sources.length })} action={<NavLink to="/sources">{t("查看全部生活记录")}</NavLink>} /><div className="search-results">{sources.map((page) => { const shown = searchShown(demo, page, libraryId); return <FileListRow key={page.id} page={page}><PageLink page={page} key={page.id} className="search-result"><small>{t("生活记录")} · {shown.path}</small><h2><SearchHighlight text={shown.title} query={query} /></h2><p><SearchHighlight text={shown.excerpt} query={query} /></p></PageLink></FileListRow>; })}</div></section>}
       {!data.length && <Empty>{t("没有找到相关内容。换一个关键词，或者先带进一段新的生活记录。")}</Empty>}
     </div>
   );

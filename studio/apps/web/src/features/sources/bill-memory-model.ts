@@ -1,17 +1,18 @@
+import { tr } from "../../shared/i18n";
 import type { PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, PaymentJourneyTransactionEvidence } from "@the-way-here/shared";
 
 export type BillEvidenceRow = { id: string; summary: string; detail: string };
 
 function displayTransactionDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(value);
-  return match ? `${Number(match[2])}月${Number(match[3])}日 ${match[4]}:${match[5]}` : value;
+  return match ? tr("${p0}月${p1}日 ${p2}:${p3}", { "p0": Number(match[2]), "p1": Number(match[3]), "p2": match[4], "p3": match[5] }) : value;
 }
 
 function transactionText(transaction: PaymentJourneyTransactionEvidence): BillEvidenceRow {
   const date = displayTransactionDate(transaction.createdAt);
-  const amount = `${transaction.amount.toFixed(2)} 元`;
+  const amount = tr("${p0} 元", { "p0": transaction.amount.toFixed(2) });
   const payment = transaction.direction ? `${transaction.direction} ${amount}` : amount;
-  const refund = transaction.refund > 0 ? ` · 成功退款 ${transaction.refund.toFixed(2)} 元` : "";
+  const refund = transaction.refund > 0 ? tr(" · 成功退款 ${p0} 元", { "p0": transaction.refund.toFixed(2) }) : "";
   return {
     id: transaction.id,
     summary: `${date} · ${transaction.merchant} · ${transaction.product} · ${payment}`,
@@ -57,9 +58,9 @@ export function briefNeedsDeepSuggestion(value: string): boolean {
 }
 
 export function journeyStatusLabel(state: PaymentJourneyClueState): string {
-  if (state.status === "confirmed") return "已确认为事实";
-  if (state.status === "brief") return "已简单说说";
-  if (state.status === "deep") return state.conversationTurns ? `已细聊 · ${state.conversationTurns} 轮` : "正在细聊";
-  if (state.status === "skipped") return "已跳过";
-  return "待处理";
+  if (state.status === "confirmed") return tr("已确认为事实");
+  if (state.status === "brief") return tr("已简单说说");
+  if (state.status === "deep") return state.conversationTurns ? tr("已细聊 · ${state.conversationTurns} 轮", { "state.conversationTurns": state.conversationTurns }) : tr("正在细聊");
+  if (state.status === "skipped") return tr("已跳过");
+  return tr("待处理");
 }

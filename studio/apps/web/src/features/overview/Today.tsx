@@ -5,7 +5,7 @@ import { Empty, Icon, Loading } from "../../shared/ui";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { companionshipDays } from "./companionship";
 import { LifeRecordCapture } from "./LifeRecordCapture";
-import { useI18n } from "../../shared/i18n";
+import { useI18n, tr } from "../../shared/i18n";
 import "./today.css";
 
 export function Today({ revision }: { revision: number }) {
@@ -16,7 +16,7 @@ export function Today({ revision }: { revision: number }) {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
-  if (!vault && error) return <Empty>{error}</Empty>;
+  if (!vault && error) return <Empty>{tr(error)}</Empty>;
   if (!vault) return <Loading label={t("正在打开此刻")} />;
   const days = companionshipDays(vault.companionshipStartedAt, now);
   return <div className="home-overview today-simple">
@@ -27,6 +27,6 @@ export function Today({ revision }: { revision: number }) {
       <p>{t("我会记得你的来路，也会坦白哪些地方还不懂你。你先说，我们再一起把生活慢慢理清。")}</p>
     </section>
     <LifeRecordCapture key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} />
-    <PageAgentContext context={{ scope: "此刻", title: "从此刻说起", summary: "听听最近发生的事，一起把生活慢慢理清。", defaultMode: "read", suggestions: ["我想聊聊最近发生的一件事。"] }} />
+    <PageAgentContext context={{ scope: tr("此刻"), title: tr("从此刻说起"), summary: tr("听听最近发生的事，一起把生活慢慢理清。"), defaultMode: "read", suggestions: [tr("我想聊聊最近发生的一件事。")] }} />
   </div>;
 }

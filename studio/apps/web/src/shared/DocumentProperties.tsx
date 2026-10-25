@@ -1,3 +1,4 @@
+import { tr, useDemoLabels } from "./i18n";
 import { useState } from "react";
 import type { WikiPage } from "@the-way-here/shared";
 import { useI18n } from "./i18n";
@@ -30,8 +31,8 @@ function NotePropertyIcon({ kind }: { kind: NotePropertyKind }) {
 }
 
 function propertyLabel(value: unknown, kind: NotePropertyKind): string {
-  if (value === null || value === undefined || value === "") return "没有值";
-  if (typeof value === "boolean") return value ? "是" : "否";
+  if (value === null || value === undefined || value === "") return tr("没有值");
+  if (typeof value === "boolean") return value ? tr("是") : tr("否");
   if (typeof value === "object") return JSON.stringify(value);
   const text = String(value).replace(/^\[\[/, "").replace(/\]\]$/, "");
   return kind === "date" && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text.replaceAll("-", "/") : text;
@@ -66,18 +67,22 @@ export function NoteProperties({ properties, compact = false }: { properties: Re
 }
 
 export function SourceProperties({ properties }: { properties: Record<string, unknown> }) {
+  const demo = useDemoLabels();
   const [expanded, setExpanded] = useState(false);
   const entries = Object.entries(properties).filter(([, value]) => propertyHasValue(value));
-  const labels: Record<string, string> = { type: "类型", tags: "标签", aliases: "别名", source: "来源", status: "状态", Start: "开始", end: "结束", location: "地点" };
+  const labels: Record<string, string> = { type: tr("类型"), tags: tr("标签"), aliases: tr("别名"), source: tr("来源"), status: tr("状态"), Start: tr("开始"), end: tr("结束"), location: tr("地点") };
   const tokens = entries.flatMap(([key, value]) => (Array.isArray(value) ? value : [value]).map((entry) => {
-    const text = propertyLabel(entry, notePropertyKind(key, value));
+    const raw = propertyLabel(entry, notePropertyKind(key, value));
+    const exact = demo.exact(raw);
+    const text = exact === raw.trim() ? raw : exact;
     const tag = key === "tags" ? text.match(/^(类型|人物|实体|索引|来源)\/(.+)$/) : null;
-    return { label: tag?.[1] || labels[key] || key, value: tag?.[2] || text };
-  })).sort((a, b) => (a.label === "类型" ? 0 : a.label === "人物" ? 1 : 2) - (b.label === "类型" ? 0 : b.label === "人物" ? 1 : 2));
+    const label = tag?.[1] ? tr(tag[1]) : labels[key] || key;
+    return { label, value: tag?.[2] || text, rank: tag?.[1] === "类型" || key === "type" ? 0 : tag?.[1] === "人物" ? 1 : 2 };
+  })).sort((a, b) => a.rank - b.rank);
   if (!tokens.length) return null;
-  return <section className="source-property-summary" aria-label="记录标签">
+  return <section className="source-property-summary" aria-label={tr("记录标签")}>
     {(expanded ? tokens : tokens.slice(0, 2)).map((token, index) => <span className="source-property-chip" key={index}>{token.label}<b>{token.value}</b></span>)}
-    {tokens.length > 2 && <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? "收起标签" : `+${tokens.length - 2} 个标签`}</button>}
+    {tokens.length > 2 && <button type="button" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? tr("收起标签") : tr("+${p0} 个标签", { "p0": tokens.length - 2 })}</button>}
   </section>;
 }
 

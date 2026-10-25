@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import * as ort from "onnxruntime-web/wasm";
 import { faceAlignment, faceTensorPixels } from "./photo-face-alignment";
 import { normalizedDescriptor } from "./photo-face-groups";
@@ -13,7 +14,7 @@ export async function describePhotoFace(bitmap: ImageBitmap, keypoints: Array<{ 
   const model = await session;
   const canvas = new OffscreenCanvas(112, 112);
   const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) throw new Error("无法读取人脸特征");
+  if (!context) throw new Error(tr("无法读取人脸特征"));
   context.fillStyle = "black"; context.fillRect(0, 0, 112, 112);
   context.setTransform(...transform); context.drawImage(bitmap, 0, 0);
   const tensor = new ort.Tensor("float32", faceTensorPixels(context.getImageData(0, 0, 112, 112).data), [1, 3, 112, 112]);

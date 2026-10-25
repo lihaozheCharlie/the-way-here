@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useId, type ReactNode } from "react";
 import { Icon } from "./ui";
 
@@ -8,7 +9,7 @@ export function AuxPanel({ open, onToggle, label, children, width = 240, railWid
 }) {
   const id = useId();
   return <aside className={`aux-panel ${className}${open ? " is-open" : " is-collapsed"}`} style={{ width: open ? width : railWidth }} aria-label={label}>
-    {showToggle && <button type="button" className="aux-panel-toggle desktop-icon" aria-label={`${open ? "收起" : "展开"}${label}`} aria-expanded={open} aria-controls={id} onClick={onToggle}><Icon name={open ? "back" : icon} size={17} /></button>}
+    {showToggle && <button type="button" className="aux-panel-toggle desktop-icon" aria-label={tr(open ? "收起${name}" : "展开${name}", { name: tr(label) })} aria-expanded={open} aria-controls={id} onClick={onToggle}><Icon name={open ? "back" : icon} size={17} /></button>}
     <div id={id} className="aux-panel-content" inert={!open} aria-hidden={!open}>{children}</div>
   </aside>;
 }

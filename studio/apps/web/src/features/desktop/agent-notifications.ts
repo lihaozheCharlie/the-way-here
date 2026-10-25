@@ -1,7 +1,7 @@
 import type { WikiRun } from "@the-way-here/shared";
-import { currentLocale, translate } from "../../shared/i18n";
+import { currentLocale, translate, translateInterpolated } from "../../shared/i18n";
 
-const tr = (message: string) => translate(currentLocale(), message);
+const tr = (message: string, params?: Record<string, string | number | null | undefined>) => translate(currentLocale(), message, params);
 
 export interface AgentNotification { title: string; body: string; route: string }
 export interface PredictionNotificationEvent {
@@ -12,18 +12,18 @@ export interface PredictionNotificationEvent {
 }
 
 function moduleForRun(run: WikiRun): string {
-  if (run.sourceModule) return run.sourceModule.slice(0, 24);
+  if (run.sourceModule) return tr(run.sourceModule.slice(0, 24));
   switch (run.outputTarget?.kind) {
-    case "life-record": return "随手记";
-    case "letter-version": return "近况回信";
-    case "photo-memory": return "照片记忆";
-    case "journey-report": return "账单记忆";
+    case "life-record": return tr("随手记");
+    case "letter-version": return tr("近况回信");
+    case "photo-memory": return tr("照片记忆");
+    case "journey-report": return tr("账单记忆");
   }
-  if (run.sourceContext) return "生活记录";
-  if (run.contextTopicId) return "值得聊聊";
-  if (run.mode === "validate") return "系统检查";
-  if (run.contextPageId) return "已有理解";
-  return "AI 对话";
+  if (run.sourceContext) return tr("生活记录");
+  if (run.contextTopicId) return tr("值得聊聊");
+  if (run.mode === "validate") return tr("系统检查");
+  if (run.contextPageId) return tr("已有理解");
+  return tr("AI 对话");
 }
 
 function terminal(status: WikiRun["status"]): boolean {
@@ -46,8 +46,8 @@ export class AgentNotificationTracker {
     // Initial history is silent; a newly completed run is still caught before the first snapshot.
     if (previous === undefined && Date.parse(run.updatedAt) < this.startedAt) return;
     this.notify({
-      title: `【${tr(moduleForRun(run))}】${run.status === "completed" ? tr("任务已完成") : tr("任务未完成")}`,
-      body: (run.title || tr("Agent 任务")).slice(0, 120),
+      title: tr("【${module}】${status}", { module: moduleForRun(run), status: run.status === "completed" ? tr("任务已完成") : tr("任务未完成") }),
+      body: (run.title ? translateInterpolated(currentLocale(), run.title) : tr("Agent 任务")).slice(0, 120),
       route: `/conversation?detached=true&run=${encodeURIComponent(run.id)}`,
     });
   }
@@ -68,7 +68,7 @@ export class AgentNotificationTracker {
     const status = tr(completed ? "已完成" : "未完成");
     const gap = currentLocale() === "en" && status && !/^\s/.test(status) ? " " : "";
     this.notify({
-      title: `【${tr("看见未来")}】${tr(event.job === "scan" ? "了解度扫描" : "预测")}${gap}${status}`,
+      title: tr("【${name}】${job}${gap}${status}", { name: tr("看见未来"), job: tr(event.job === "scan" ? "了解度扫描" : "预测"), gap, status }),
       body: completed ? tr("点击查看结果。") : tr("点击查看原因并重试。"),
       route: "/predict-self",
     });

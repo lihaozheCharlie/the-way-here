@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useDismissLayer } from "./use-dismiss-layer";
 import { useRememberedWindow } from "./use-remembered-preview";
@@ -30,12 +31,12 @@ export function GraphViewport({ label, width, height, children }: { label: strin
     return () => element?.removeEventListener("wheel", onWheel);
   }, [expanded]);
   const content = <div className="graph-viewport" aria-label={label}>
-    <div className="graph-viewport-tools" role="toolbar" aria-label={`${label}视图控制`}>
-      <button type="button" aria-label="缩小图谱" disabled={camera.zoom <= .4} onClick={() => zoom(1 / 1.25)}>−</button>
+    <div className="graph-viewport-tools" role="toolbar" aria-label={tr("${label}视图控制", { "label": label })}>
+      <button type="button" aria-label={tr("缩小图谱")} disabled={camera.zoom <= .4} onClick={() => zoom(1 / 1.25)}>−</button>
       <output aria-live="polite">{Math.round(camera.zoom * 100)}%</output>
-      <button type="button" aria-label="放大图谱" disabled={camera.zoom >= 4} onClick={() => zoom(1.25)}>＋</button>
-      <button type="button" onClick={() => setCamera({ zoom: 1, x: 0, y: 0 })}>适应画布</button>
-      <button ref={expanded ? undefined : expandButton} type="button" onClick={expanded ? expandedWindow.hide : expandedWindow.show}>{expanded ? "退出放大" : "放大查看"}</button>
+      <button type="button" aria-label={tr("放大图谱")} disabled={camera.zoom >= 4} onClick={() => zoom(1.25)}>+</button>
+      <button type="button" onClick={() => setCamera({ zoom: 1, x: 0, y: 0 })}>{tr("适应画布")}</button>
+      <button ref={expanded ? undefined : expandButton} type="button" onClick={expanded ? expandedWindow.hide : expandedWindow.show}>{expanded ? tr("退出放大") : tr("放大查看")}</button>
     </div>
     <svg ref={svg} className="graph-viewport-svg" viewBox={`${width / 2 - width / camera.zoom / 2 - camera.x} ${height / 2 - height / camera.zoom / 2 - camera.y} ${width / camera.zoom} ${height / camera.zoom}`} role="group" aria-label={label} tabIndex={0}
       onKeyDown={event => { if (event.target !== event.currentTarget) return; if (["+", "=", "-", "0"].includes(event.key)) { event.preventDefault(); if (event.key === "0") setCamera({ zoom: 1, x: 0, y: 0 }); else zoom(event.key === "-" ? .8 : 1.25); } }}
@@ -45,5 +46,5 @@ export function GraphViewport({ label, width, height, children }: { label: strin
       {children}
     </svg>
   </div>;
-  return expanded ? <><div className="graph-viewport-placeholder" aria-hidden="true" /><dialog ref={dialog} className="graph-expanded-dialog" aria-label={`${label}放大查看`} onCancel={event => { event.preventDefault(); expandedWindow.hide(); }}>{content}</dialog></> : content;
+  return expanded ? <><div className="graph-viewport-placeholder" aria-hidden="true" /><dialog ref={dialog} className="graph-expanded-dialog" aria-label={tr("${label}放大查看", { "label": label })} onCancel={event => { event.preventDefault(); expandedWindow.hide(); }}>{content}</dialog></> : content;
 }

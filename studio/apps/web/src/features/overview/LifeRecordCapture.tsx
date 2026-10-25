@@ -12,7 +12,7 @@ import { CaptureFolderDialog, CaptureHistoryDialog } from "./CaptureDialogs";
 import { useCaptureDraft } from "./useCaptureDraft";
 import { PhotoCaptureHistory } from "./PhotoCaptureHistory";
 import { PhotoLibrarySearch, photoLibraryBridge } from "./PhotoLibraryCard";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { useDemoLabels, useI18n, tr } from "../../shared/i18n";
 import "./capture-sources.css";
 import "./today.css";
 import "./life-record-capture.css";
@@ -25,7 +25,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
   const photoFolderKey = `photo-capture.folder.${knowledgeBaseId}`;
   const [photoDefaultFolder, setPhotoDefaultFolder] = useState(() => localStorage.getItem(photoFolderKey) || "照片记忆");
   const [photoFolder, setPhotoFolder] = useState(photoDefaultFolder);
-  const [photoStatus, setPhotoStatus] = useState("照片库不会被改动，也不会发送给 AI");
+  const [photoStatus, setPhotoStatus] = useState(tr("照片库不会被改动，也不会发送给 AI"));
   const photosBridge = !standalone ? photoLibraryBridge() : undefined;
   const legacyKey = `${standalone ? "desktop" : "today"}.capture.${knowledgeBaseId}`;
   const capture = useCaptureDraft(knowledgeBaseId, legacyKey);
@@ -49,17 +49,17 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       try {
         const next = await api<WikiRun>(`/api/runs/${encodeURIComponent(runId)}`);
         if (!active) return;
-        if (next.knowledgeBaseId !== knowledgeBaseId || next.outputTarget?.kind !== "life-record") throw new Error("记录任务与当前知识库不一致");
+        if (next.knowledgeBaseId !== knowledgeBaseId || next.outputTarget?.kind !== "life-record") throw new Error(tr("记录任务与当前知识库不一致"));
         setRun(next); setError("");
         if (isTerminalRunStatus(next.status)) {
           localStorage.removeItem(`${key}.run`); localStorage.removeItem(`${legacyKey}.run`); setRunId("");
           if (next.status === "completed" && next.result?.outputPageId) { callbacks.current.reset(); void callbacks.current.refresh().catch(callbacks.current.fail); }
-          else setError(next.error || "整理未完成，原话已保留，可以再次发送。");
+          else setError(next.error || tr("整理未完成，原话已保留，可以再次发送。"));
           return;
         }
       } catch (reason) {
         if (active) {
-          const message = reason instanceof Error ? reason.message : "暂时无法获取进度，正在重试…";
+          const message = reason instanceof Error ? reason.message : tr("暂时无法获取进度，正在重试…");
           setError(message);
           if (message.includes("任务不存在") || message.includes("不一致")) { localStorage.removeItem(`${key}.run`); localStorage.removeItem(`${legacyKey}.run`); setRunId(""); return; }
         }
@@ -79,7 +79,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       mode: "read",
       prompt: draft.text,
       displayPrompt: draft.text,
-      contextOverride: { scope: "此刻", title: "随手记", summary: "先聊聊这段还没保存的话。已经写下的记录留在本机。", suggestions: [], defaultMode: "read" },
+      contextOverride: { scope: tr("此刻"), title: tr("随手记"), summary: tr("先聊聊这段还没保存的话。已经写下的记录留在本机。"), suggestions: [], defaultMode: "read" },
     });
   }
   async function saveOriginal() {
@@ -93,7 +93,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       setSavedOriginalId(page.id);
       capture.reset();
       void capture.refresh().catch(capture.fail);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "原文还在，没有保存成功。"); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : tr("原文还在，没有保存成功。")); }
     finally { submitting.current = false; setSavingOriginal(false); }
   }
   async function submit() {
@@ -106,7 +106,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
         outputTarget: { kind: "life-record", label: "随手记", originalText: draft.text, diaryDate: draft.diaryDate, folder: draft.folder, captureId: draft.id, captureRevision: savedDraft?.revision || draft.revision },
       }) });
       localStorage.setItem(`${key}.run`, next.id); setRunId(next.id); setRun(next);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "发送失败，原话已保留。"); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : tr("发送失败，原话已保留。")); }
     finally { submitting.current = false; setStarting(false); }
   }
   const pendingCount = capture.history.filter(e => e.status === "draft" || e.text !== (e.originalText ?? e.content)).length;
@@ -119,7 +119,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       setSource(next); document.getElementById(`${headingId}-tab-${next}`)?.focus();
     }}>
       <span className={`capture-sources-indicator${source === "photo" ? " is-photo" : ""}`} aria-hidden="true" />
-      {([['write','说或写','edit'],['photo','找照片','image']] as const).map(([id,label,icon]) => <button key={id} type="button" role="tab" id={`${headingId}-tab-${id}`} aria-selected={source === id} aria-controls={`${headingId}-panel-${id}`} tabIndex={source === id ? 0 : -1} disabled={voiceActive || busy} onClick={() => setSource(id)}><Icon name={icon} size={16} />{t(label)}{id === "photo" && photoCount > 0 && <span className="capture-source-count">{photoCount}</span>}</button>)}
+      {([['write',tr("说或写"),'edit'],['photo',tr("找照片"),'image']] as const).map(([id,label,icon]) => <button key={id} type="button" role="tab" id={`${headingId}-tab-${id}`} aria-selected={source === id} aria-controls={`${headingId}-panel-${id}`} tabIndex={source === id ? 0 : -1} disabled={voiceActive || busy} onClick={() => setSource(id)}><Icon name={icon} size={16} />{t(label)}{id === "photo" && photoCount > 0 && <span className="capture-source-count">{photoCount}</span>}</button>)}
     </div>}
     <div hidden={source !== "write"} role={photosBridge ? "tabpanel" : undefined} id={`${headingId}-panel-write`} aria-labelledby={photosBridge ? `${headingId}-tab-write` : undefined}>
     <form onSubmit={event => { event.preventDefault(); void submit(); }}>
@@ -150,7 +150,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       <div className="capture-editor-body"><PhotoLibrarySearch bridge={photosBridge} knowledgeBaseId={knowledgeBaseId} destination={photoFolder} onDestination={setPhotoFolder} onStatus={setPhotoStatus} onSelectionCount={setPhotoCount} active={source === "photo"} /></div>
       <footer className="capture-footer"><button type="button" className="capture-destination" disabled={busy} title={t("选择照片记忆保存目录")} onClick={() => setDialog("photo-folder")}><Icon name="folder" size={16} /><span>{t("保存到")} <span>{t("生活记录")} / <strong>{demo.folder(photoFolder)}</strong></span></span><Icon name="down" size={13} /></button><span role="status">{t(photoStatus)}</span></footer>
     </div>}
-    {(error || capture.error) && <p className="capture-error" role="alert">{error || capture.error}</p>}
+    {(error || capture.error) && <p className="capture-error" role="alert">{tr(error || capture.error || "")}</p>}
     {savedOriginalId && <p role="status" className="capture-saved">{t("原文已留在本机，没有发给模型。")}<NavLink to={pageHref(savedOriginalId)} state={returnContextFor(standalone ? "/capture" : "/")}>{t("查看记录")} <Icon name="arrow" size={14} /></NavLink></p>}
     {run?.status === "completed" && run.result?.outputPageId && <p role="status" className="capture-saved">{t("已整理成日记并保存在本机。")}<NavLink to={pageHref(run.result.outputPageId)} state={returnContextFor(standalone ? "/capture" : "/")}>{t("查看记录")} <Icon name="arrow" size={14} /></NavLink>{(run.changes || []).filter((change) => change.kind !== "deleted" && wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)).map((change) => {
       const pageId = wikiPageIdFromChange(change.path, run.configSnapshot?.paths.wiki)!;

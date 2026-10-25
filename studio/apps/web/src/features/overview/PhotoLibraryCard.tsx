@@ -11,10 +11,10 @@ import { NavLink } from "react-router-dom";
 import { pageHref } from "../../shared/routing";
 import type { SourceImportBatch } from "@the-way-here/shared";
 import "./photo-library.css";
-import { useI18n } from "../../shared/i18n";
+import { useI18n, tr } from "../../shared/i18n";
 
 export type PhotosBridge = Required<Pick<DesktopBridge, "photoLibraryFilters" | "photoLibraryStatus" | "authorizePhotoLibrary" | "searchPhotoLibrary" | "photoLibraryImage" | "closePhotoLibrary" | "openPhotoLibrarySettings">>;
-const message = (error: unknown) => error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "") : "照片读取失败，请重试";
+const message = (error: unknown) => error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "") : tr("照片读取失败，请重试");
 const photoTypes = [["all","全部照片"],["live","实况照片"],["screenshot","截屏"],["panorama","全景"],["portrait","人像模式"],["raw","RAW"],["burst","连拍"]] as const;
 
 export function photoLibraryBridge(): PhotosBridge | undefined {
@@ -190,7 +190,7 @@ export function PhotoLibrarySearch({ bridge, knowledgeBaseId, onSelectionCount, 
         <p className="source-lead"><Icon name="image" size={18} />{t("从一张照片想起——按时间、地点、相册或收藏，找找最近或以前的照片。")}</p>
         <div className="photo-filter-grid">
           <div><label><span>{t("时间（可选）")}</span><input type="search" value={query} disabled={busy} maxLength={120} placeholder={t("例如：最近30天、去年、2024年5月")} aria-describedby="photo-library-time-help" onChange={event => { setQuery(event.target.value); if (event.target.value) { setFrom(""); setThrough(""); } }} /></label>
-          <div className="photo-chip-row" role="group" aria-label={t("常用时间")}>{["最近7天","最近30天","今年","去年"].map(time => {
+          <div className="photo-chip-row" role="group" aria-label={t("常用时间")}>{[tr("最近7天"),tr("最近30天"),tr("今年"),tr("去年")].map(time => {
             const days = time.match(/^最近(\d+)天$/);
             return <button type="button" className="photo-chip" key={time} disabled={busy} aria-pressed={query === time} onClick={() => { setQuery(time); setFrom(""); setThrough(""); }}>{days ? t("最近 ${count} 天", { count: days[1] }) : t(time)}</button>;
           })}</div></div>

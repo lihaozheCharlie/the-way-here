@@ -1,6 +1,7 @@
+import { tr } from "../../shared/i18n";
 import type { StructuredCard } from "@the-way-here/shared";
 
-const calibrationKeywords = /边界|反例|不适用|不能|避免|代价|限制|风险|区分/;
+const calibrationKeywords = /边界|反例|不适用|不能|避免|代价|限制|风险|区分|boundar|counterexample|does not apply|avoid|cost|limit|risk|distinguish/i;
 
 export function plainInsightText(value: string): string {
   return value
@@ -25,7 +26,7 @@ export function insightSectionText(card: StructuredCard, heading: string): strin
 }
 
 export function insightCoreJudgment(card: StructuredCard): string {
-  return insightSectionText(card, "核心判断") || plainInsightText(card.excerpt) || "这条主线还没有形成独立的核心判断。";
+  return insightSectionText(card, "核心判断") || insightSectionText(card, "Core judgment") || plainInsightText(card.excerpt) || tr("这条主线还没有形成独立的核心判断。");
 }
 
 export function insightExcerpt(value: string, length = 150): string {
@@ -35,10 +36,10 @@ export function insightExcerpt(value: string, length = 150): string {
 
 export function mentalModelPanels(body: string): { summary: string; calibration: string } {
   const text = plainInsightText(body);
-  const sentences = text.split(/(?<=[。！？；])/).map((sentence) => sentence.trim()).filter(Boolean);
+  const sentences = text.split(/(?<=[。！？；.!?])/).map((sentence) => sentence.trim()).filter(Boolean);
   const calibration = sentences.filter((sentence) => calibrationKeywords.test(sentence)).join("");
   return {
     summary: sentences.filter((sentence) => !calibrationKeywords.test(sentence)).join("") || text,
-    calibration: calibration || "这份总览还没有单独写出边界或反例；打开完整模型后，可以继续核对和补充。",
+    calibration: calibration || tr("这份总览还没有单独写出边界或反例；打开完整模型后，可以继续核对和补充。"),
   };
 }

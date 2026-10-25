@@ -50,8 +50,8 @@ it("inserts a space before English prediction status words", () => {
     tracker.observePrediction({ knowledgeBaseId: "demo", job: "prediction", startedAt, status: "running" });
     tracker.observePrediction({ knowledgeBaseId: "demo", job: "prediction", startedAt, status: "failed" });
     expect(notify.mock.calls.map(([message]) => message.title)).toEqual([
-      "【See ahead】Understanding scan finished",
-      "【See ahead】Prediction not finished",
+      "[See ahead] Understanding scan finished",
+      "[See ahead] Prediction not finished",
     ]);
   } finally {
     vi.unstubAllGlobals();

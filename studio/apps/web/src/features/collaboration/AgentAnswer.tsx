@@ -21,7 +21,7 @@ export function AgentMarkdown({ text, onCitation }: { text: string; onCitation?:
   const returnContext = useReturnContext();
   return <ReactMarkdown remarkPlugins={[remarkGfm, remarkAnswerCitations]} components={{ a: ({ href, children }) => {
     const citation = citationFromHref(href);
-    if (citation && onCitation) return <button type="button" className="agent-citation-button" aria-label={`查看引用：${citation.fileName}`} onClick={() => onCitation(citation.pageId)}><Icon name="source" size={13} /><span>引用</span><span className="agent-citation-tooltip" role="tooltip">{citation.fileName}</span></button>;
+    if (citation && onCitation) return <button type="button" className="agent-citation-button" aria-label={tr("查看引用：${citation.fileName}", { "citation.fileName": citation.fileName })} onClick={() => onCitation(citation.pageId)}><Icon name="source" size={13} /><span>{tr("引用")}</span><span className="agent-citation-tooltip" role="tooltip">{citation.fileName}</span></button>;
     const local = localWikiHref(href);
     return local ? <NavLink to={local} state={returnContext}>{children}</NavLink> : <a href={href} target="_blank" rel="noreferrer">{children}</a>;
   } }}>{text}</ReactMarkdown>;
@@ -39,21 +39,21 @@ export function AgentAnswer({ answer, run, revision = 0 }: { answer: string; run
   const savedChanges = changes.filter((change) => change.kind !== "deleted");
   const failed = run.validation?.some((check) => check.exitCode !== 0);
   const pending = ["preparing", "running", "waiting-approval", "validating"].includes(run.status);
-  const status = changes.length ? failed ? "检查未通过" : pending ? "待检查" : "已写入" : pending ? "处理中" : "未写入";
+  const status = changes.length ? failed ? tr("检查未通过") : pending ? tr("待检查") : tr("已写入") : pending ? tr("处理中") : tr("未写入");
   return <>
     {prose && <article className="context-run-answer"><AgentMarkdown text={prose} onCitation={citation.open} /></article>}
-    {run.status === "completed" && savedChanges.length > 0 && <p className="agent-understanding-receipt" role="status"><Icon name="library" size={15} /><span>理解有更新。</span>{savedChanges.map((change) => {
+    {run.status === "completed" && savedChanges.length > 0 && <p className="agent-understanding-receipt" role="status"><Icon name="library" size={15} /><span>{tr("理解有更新。")}</span>{savedChanges.map((change) => {
       const pageId = wikiPageIdFromChange(change.path, wikiRoot);
-      const label = change.path.split("/").at(-1)?.replace(/\.md$/i, "") || "查看";
+      const label = change.path.split("/").at(-1)?.replace(/\.md$/i, "") || tr("查看");
       return pageId ? <NavLink key={change.path} to={pageHref(pageId)} state={returnContext}>{label}</NavLink> : <span key={change.path}>{label}</span>;
     })}</p>}
     {(wiki || changes.length > 0) && <details className="agent-wiki-update">
-      <summary><span className="agent-artifact-icon"><Icon name="library" size={17} /></span><span className="agent-artifact-heading"><b>Wiki 更新</b><small>{changes.length ? `${changes.length} 个文件变化` : "本轮提出的更新内容"}</small></span><span className={`agent-artifact-badge ${!changes.length || failed ? "warning" : ""}`}>{status}</span><Icon name="down" size={16} /></summary>
+      <summary><span className="agent-artifact-icon"><Icon name="library" size={17} /></span><span className="agent-artifact-heading"><b>{tr("Wiki 更新")}</b><small>{changes.length ? tr("${changes.length} 个文件变化", { "changes.length": changes.length }) : tr("本轮提出的更新内容")}</small></span><span className={`agent-artifact-badge ${!changes.length || failed ? "warning" : ""}`}>{status}</span><Icon name="down" size={16} /></summary>
       <div className="agent-artifact-fields">
         {wiki && wikiUpdateFields(wiki).map((field, index) => <div className="agent-artifact-field" key={index}><AgentMarkdown text={field} onCitation={citation.open} /></div>)}
-        {changes.map((change) => <details className="agent-artifact-field" key={change.path}><summary>{change.kind === "added" ? "新增" : change.kind === "deleted" ? tr("删除") : "修改"} · {change.path}</summary><pre>{change.diff || "无文本差异"}</pre></details>)}
+        {changes.map((change) => <details className="agent-artifact-field" key={change.path}><summary>{change.kind === "added" ? tr("新增") : change.kind === "deleted" ? tr("删除") : tr("修改")} · {change.path}</summary><pre>{change.diff || tr("无文本差异")}</pre></details>)}
       </div>
-      {(!changes.length && !pending || failed || run.error) && <p className="agent-artifact-note"><Icon name="info" size={14} /><span>{run.error || (failed ? "内容已写入，但质量检查未通过。请在任务详情中查看检查结果。" : "本轮没有检测到 Wiki 文件变化，以上内容尚未写入。")}</span></p>}
+      {(!changes.length && !pending || failed || run.error) && <p className="agent-artifact-note"><Icon name="info" size={14} /><span>{run.error || (failed ? tr("内容已写入，但质量检查未通过。请在任务详情中查看检查结果。") : tr("本轮没有检测到 Wiki 文件变化，以上内容尚未写入。"))}</span></p>}
     </details>}
     {citation.pageId && <ReadOnlyPageDialog key={citation.pageId} pageId={citation.pageId} revision={revision} onClose={citation.close} />}
   </>;

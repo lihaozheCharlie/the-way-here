@@ -27,7 +27,7 @@ export function Preferences({ revision }: { revision: number }) {
           <PreferenceHeading kind="language" id="language-heading" title={t("语言")} description={t("界面和演示库的显示语言。你自己的知识库内容不会被翻译。")} />
           <div className="preference-row preference-locale-row">
             <span><b>{t("语言")}</b></span>
-            <SegmentedTabs label={t("语言")} value={locale} options={localeOptions} onChange={(next: AppLocale) => setLocale(next)} />
+            <SegmentedTabs label={t("语言")} value={locale} options={localeOptions.map((option) => ({ ...option, label: option.value === "zh" ? t("中文") : option.label }))} onChange={(next: AppLocale) => setLocale(next)} />
           </div>
         </section>
         <section className="preferences-group" aria-labelledby="notification-heading">

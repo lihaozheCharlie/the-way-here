@@ -1,6 +1,7 @@
 import type { AppLocale } from "./locale";
 import { demoBodies } from "./demo-body-data";
 import { demoSeedExcerpts } from "./demo-excerpt-data";
+import { localizeDemoTitles } from "./demo-titles";
 
 /** Display-only English markdown for the demo library.
  *
@@ -32,7 +33,7 @@ export type DemoBodyLink = { target: string; resolvedId?: string; ambiguous?: bo
 function rewriteDemoWikilinks(markdown: string, links?: DemoBodyLink[]): string {
   return markdown.replace(/\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]/g, (_raw, rawTarget: string, rawLabel?: string) => {
     const target = rawTarget.split("#", 1)[0]!.trim();
-    const label = (rawLabel || rawTarget.split("#").at(-1) || target).trim();
+    const label = localizeDemoTitles("demo", "en", (rawLabel || rawTarget.split("#").at(-1) || target).trim());
     const match = links?.find((link) => link.target === target);
     if (!match?.resolvedId || match.ambiguous) return label;
     const href = match.resolvedId.split("/").map(encodeURIComponent).join("/");
@@ -43,6 +44,10 @@ function rewriteDemoWikilinks(markdown: string, links?: DemoBodyLink[]): string 
 
 /** Same opening excerpt the indexer stores: frontmatter off, first heading removed, 260 chars. */
 export function demoExcerptFromMarkdown(markdown: string): string {
+  return plainExcerpt(markdown).slice(0, 260);
+}
+
+function plainExcerpt(markdown: string): string {
   const normalized = markdown.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   const fenced = /^---\n[\s\S]*?\n---\n?/.exec(normalized);
   const body = (fenced ? normalized.slice(fenced[0].length) : normalized).trim().replace(/^#\s+.+$/m, "");
@@ -54,8 +59,85 @@ export function demoExcerptFromMarkdown(markdown: string): string {
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/[>*_`~|-]/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 260);
+    .trim();
+}
+
+function normalizeExcerpt(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+/** The indexer excerpt matches the seed when the opening is unchanged, including whitespace and truncation. */
+function excerptsMatch(seed: string, excerpt: string): boolean {
+  const stored = normalizeExcerpt(seed);
+  const shown = normalizeExcerpt(excerpt);
+  if (!stored || !shown) return false;
+  if (stored === shown) return true;
+  const probe = stored.slice(0, 48);
+  return probe.length >= 24 && (shown.startsWith(probe) || stored.startsWith(shown.slice(0, 48)));
+}
+
+function demoRow(libraryId: string | null | undefined, locale: AppLocale, relativePath: string) {
+  if (locale !== "en" || (libraryId || "").toLowerCase() !== "demo" || !relativePath) return undefined;
+  const key = demoPathKey(relativePath);
+  const resolved = demoBodies[key] ? key : demoBodies[`${key}.md`] ? `${key}.md` : "";
+  if (!resolved) return undefined;
+  return { key: resolved, row: demoBodies[resolved]! };
+}
+
+function englishExcerpt(markdown: string): string {
+  const plain = plainExcerpt(markdown).replace(/ +([.,;:!?，。；：！？])/g, "$1");
+  return localizeDemoTitles("demo", "en", plain).slice(0, 260);
+}
+
+/** English H1 for an unedited demo file. Edited openings keep the stored title. */
+export function demoEnglishHeading(
+  libraryId: string | null | undefined,
+  locale: AppLocale,
+  relativePath: string,
+  excerpt?: string,
+): string | undefined {
+  const found = demoRow(libraryId, locale, relativePath);
+  if (!found) return undefined;
+  if (excerpt) {
+    const seed = demoSeedExcerpts[found.key];
+    if (!seed || !excerptsMatch(seed, excerpt)) return undefined;
+  }
+  return found.row.markdown.match(/^#\s+(.+)$/m)?.[1]?.trim();
+}
+
+/** Level-2 sections from the English demo page, only while the indexed opening still matches the seed. */
+export function demoEnglishSections(
+  libraryId: string | null | undefined,
+  locale: AppLocale,
+  relativePath: string,
+  excerpt: string,
+): Array<{ heading: string; body: string }> | undefined {
+  const found = demoRow(libraryId, locale, relativePath);
+  if (!found) return undefined;
+  const seed = demoSeedExcerpts[found.key];
+  if (!seed || !excerptsMatch(seed, excerpt)) return undefined;
+  const markdown = found.row.markdown.replace(/^---\n[\s\S]*?\n---\n?/, "");
+  const sections: Array<{ heading: string; body: string }> = [];
+  let current: { heading: string; lines: string[] } | undefined;
+  for (const line of markdown.split("\n")) {
+    const heading = /^(#{2})\s+(.+)$/.exec(line);
+    if (heading) {
+      if (current) sections.push({ heading: current.heading, body: current.lines.join("\n").trim() });
+      current = { heading: heading[2]!.trim(), lines: [] };
+      continue;
+    }
+    if (/^#{1}\s+/.test(line)) {
+      if (current) sections.push({ heading: current.heading, body: current.lines.join("\n").trim() });
+      current = undefined;
+      continue;
+    }
+    if (current) current.lines.push(line);
+  }
+  if (current) sections.push({ heading: current.heading, body: current.lines.join("\n").trim() });
+  return sections.filter((section) => section.heading).map((section) => ({
+    heading: section.heading,
+    body: localizeDemoTitles("demo", "en", section.body),
+  }));
 }
 
 /** List excerpt for a fingerprinted demo file. Personal libraries and edited openings stay as stored. */
@@ -65,11 +147,12 @@ export function demoListExcerpt(
   relativePath: string,
   excerpt: string,
 ): string {
-  if (locale !== "en" || (libraryId || "").toLowerCase() !== "demo" || !excerpt) return excerpt;
-  const key = demoPathKey(relativePath);
-  const row = demoBodies[key];
-  if (!row || demoSeedExcerpts[key] !== excerpt) return excerpt;
-  return demoExcerptFromMarkdown(row.markdown).replace(/ +([.,;:!?，。；：！？])/g, "$1");
+  if (!excerpt) return excerpt;
+  const found = demoRow(libraryId, locale, relativePath);
+  if (!found) return excerpt;
+  const seed = demoSeedExcerpts[found.key];
+  if (!seed || !excerptsMatch(seed, excerpt)) return excerpt;
+  return englishExcerpt(found.row.markdown);
 }
 
 export function demoEnglishDocument(
@@ -82,5 +165,5 @@ export function demoEnglishDocument(
   if (locale !== "en" || (libraryId || "").toLowerCase() !== "demo") return undefined;
   const row = demoBodies[demoPathKey(relativePath)];
   if (!row || demoFingerprint(fileMarkdown) !== row.fingerprint) return undefined;
-  return rewriteDemoWikilinks(row.markdown, links);
+  return localizeDemoTitles("demo", "en", rewriteDemoWikilinks(row.markdown, links));
 }

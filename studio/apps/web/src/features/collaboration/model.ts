@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import type { AgentSelection } from "./AgentSettings";
 import { isTerminalRunStatus, JOURNEY_REPORT_OUTPUT_END, JOURNEY_REPORT_OUTPUT_START, type AgentOutputTarget, type AgentRuntimeEvent, type SourceRunContext, type WikiRun } from "@the-way-here/shared";
 
@@ -321,7 +322,8 @@ export function contextPrompt(context: AgentContext, request: string): string {
 
 export function continuationModelSelection(run: WikiRun, selection: AgentSelection): AgentSelection {
   if (run.runtimeId && selection.runtimeId !== run.runtimeId) {
-    throw new Error(`继续此对话请选择${run.runtimeId === "codex" ? " Codex" : "第三方模型"}；切换运行方式请开始新对话，原聊天记录会保留。`);
+    const runtime = run.runtimeId === "codex" ? "Codex" : tr("第三方模型");
+    throw new Error(tr("继续此对话请选择${runtime}；切换运行方式请开始新对话，原聊天记录会保留。", { runtime }));
   }
   return { runtimeId: selection.runtimeId, model: selection.model, effort: selection.effort };
 }

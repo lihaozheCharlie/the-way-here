@@ -2,7 +2,7 @@ import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../../shared/ui";
-import { currentLocale, translate } from "../../shared/i18n";
+import { currentLocale, translate, uiDateLocale } from "../../shared/i18n";
 
 function tr(message: string, params?: Record<string, string | number | null | undefined>): string {
   return translate(currentLocale(), message, params);
@@ -41,7 +41,7 @@ export function LetterHistory({ versions, activeId, onSelect }: { versions: Vers
     return () => document.removeEventListener("pointerdown", dismiss);
   }, [open]);
   return <>
-    <button ref={trigger} type="button" className="letter-history-trigger" aria-label={tr("历史版本")} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(!open)}>历史版本 · {versions.length - 1}<Icon name="down" size={14} /></button>
+    <button ref={trigger} type="button" className="letter-history-trigger" aria-label={tr("历史版本")} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(!open)}>{tr("历史版本 ·") + " "}{versions.length - 1}<Icon name="down" size={14} /></button>
     {open && createPortal(<div ref={menu} id={id} className="letter-history-popover" style={position} role="menu" aria-label={tr("这封信的历史版本")} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node) && event.relatedTarget !== trigger.current) close(); }} onKeyDown={event => {
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
         event.preventDefault(); const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
@@ -51,7 +51,7 @@ export function LetterHistory({ versions, activeId, onSelect }: { versions: Vers
       }
     }}>
       <p>{tr("这封信的历史版本")}</p>
-      {[...versions].reverse().map(version => { const active = version.id === activeId; const original = version.id === "original"; const date = new Date(version.createdAt); const dateText = Number.isNaN(date.getTime()) ? version.createdAt : date.toLocaleString("zh-CN", original ? { year: "numeric", month: "long", day: "numeric" } : { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); return <button type="button" key={version.id} role="menuitemradio" aria-checked={active} onClick={() => { onSelect(version.id); close(true); }}><i aria-hidden="true" /><span><b>{version.label}</b><small>{active && tr("当前查看 · ")}{original ? tr("最初写于 ") : tr("生成于 ")}{dateText}</small></span></button>; })}
+      {[...versions].reverse().map(version => { const active = version.id === activeId; const original = version.id === "original"; const date = new Date(version.createdAt); const dateText = Number.isNaN(date.getTime()) ? version.createdAt : date.toLocaleString(uiDateLocale(), original ? { year: "numeric", month: "long", day: "numeric" } : { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); return <button type="button" key={version.id} role="menuitemradio" aria-checked={active} onClick={() => { onSelect(version.id); close(true); }}><i aria-hidden="true" /><span><b>{version.label}</b><small>{active && tr("当前查看 · ")}{original ? tr("最初写于 ") : tr("生成于 ")}{dateText}</small></span></button>; })}
     </div>, document.body)}
   </>;
 }
