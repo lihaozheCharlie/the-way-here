@@ -29,39 +29,39 @@ AI 对话	apps/web/src/features/sources/source-model.ts; apps/web/src/features/d
 打开照片记忆	apps/web/src/features/sources/Sources.tsx	Open photo memory	Provisional action: Open photo memory.
 打开账单记忆	apps/web/src/features/sources/Sources.tsx	Open bill memory	Provisional action: Open bill memory.
 The Way Here 演示 Wiki	apps/web/src/shared/i18n/demo-overlay.ts	The Way Here demo	Not a t() key. Demo library name overlay only, and only when the stored name still matches. Provisional: The Way Here demo. Personal libraries are never overlaid.
-这份记录已经构建进 Wiki。你仍可以继续聊来完善来源；有新的补充后，会再次由你决定是否更新 Wiki。	apps/web/src/features/sources/Sources.tsx	This record is in the wiki. You can keep talking to improve the source; when there’s something new, you decide again whether to update the wiki.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-正在把已经确认的叙述构建进 Wiki。候选线索和规范化交易只用于核对，不会被当作已经确认的人生事实。	apps/web/src/features/sources/Sources.tsx	Building the confirmed telling into the wiki. Candidate clues and normalized transactions are only for checking. They are not treated as confirmed facts of your life.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-这份内容还只是草稿。对话补充已经保存在来源记录中；只有确认构建后，它才会进入 Wiki。	apps/web/src/features/sources/Sources.tsx	This is still a draft. What you added in chat is saved on the source record. It enters the wiki only after you confirm the build.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-对话正在完善这份来源记录，不会修改 Wiki。等内容准备好后，再由你决定是否构建。	apps/web/src/features/sources/Sources.tsx	Chat is filling in this source record and will not change the wiki. When it’s ready, you decide whether to build.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-账单中的聚类只是回忆候选，还不是人生事实。先聊聊人物、动机或感受，再决定是否构建。	apps/web/src/features/sources/Sources.tsx	Clusters in the bill are only candidates for memory, not facts of your life. Talk about the people, motives, or feelings first, then decide whether to build.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-消费账单构建进度	apps/web/src/features/sources/Sources.tsx	Spending-bill build progress	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-账单解析	apps/web/src/features/sources/Sources.tsx	Read the bill	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-对话完善	apps/web/src/features/sources/Sources.tsx	Fill in through chat	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-可反复	apps/web/src/features/sources/Sources.tsx	Repeatable	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-构建入 Wiki	apps/web/src/features/sources/Sources.tsx	Build into the wiki	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-查看关联结果 · ${count}	apps/web/src/features/sources/Sources.tsx	See linked results · ${count}	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-沿着这篇记录，留下一封可以从未来回看的信。	apps/web/src/features/sources/Sources.tsx	From this record, leave a letter you can look back on.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-这篇原始记录关联的页面	apps/web/src/features/sources/Sources.tsx	Pages linked from this source record	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-打开页面继续阅读完整内容。	apps/web/src/features/sources/Sources.tsx	Open the page to read the rest.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-收起部分页面	apps/web/src/features/sources/Sources.tsx	Show fewer pages	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-查看全部 ${count} 个关联页面	apps/web/src/features/sources/Sources.tsx	See all ${count} linked pages	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-删除这个文件夹？	apps/web/src/features/sources/Sources.tsx	Delete this folder?	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-删除这份生活记录？	apps/web/src/features/sources/Sources.tsx	Delete this Life record?	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-文件夹内的记录和所有子文件夹都会一起删除。	apps/web/src/features/sources/Sources.tsx	Records in the folder and every subfolder are deleted together.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-文件会从生活记录中永久移除。	apps/web/src/features/sources/Sources.tsx	The file is removed from Life records for good.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-其中包含 ${count} 份记录。已有理解不会自动删除，但之后将无法再回到这些原始材料；此操作不能撤销。	apps/web/src/features/sources/Sources.tsx	This includes ${count} records. Understanding is not deleted automatically, but you won’t be able to return to these source materials. This can’t be undone.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-这会删除记忆报告并隐藏人物影像关联，但不会删除隐藏目录中保留的原图。	apps/web/src/features/sources/Sources.tsx	This deletes the memory report and hides links to people in the images. Originals kept in the hidden folder stay.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-已有理解不会自动删除，但之后将无法再回到这份原始材料；此操作不能撤销。	apps/web/src/features/sources/Sources.tsx	Understanding is not deleted automatically, but you won’t be able to return to this source material. This can’t be undone.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-删除文件夹	apps/web/src/features/sources/Sources.tsx	Delete folder	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-删除文件	apps/web/src/features/sources/Sources.tsx	Delete file	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-移动「${name}」	apps/web/src/features/sources/Sources.tsx	Move “${name}”	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-选择目标文件夹	apps/web/src/features/sources/Sources.tsx	Choose a destination folder	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-正在移动…	apps/web/src/features/sources/Sources.tsx	Moving…	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-移动到这里	apps/web/src/features/sources/Sources.tsx	Move here	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-知识库已切换，请重新选择文件	apps/web/src/features/sources/Sources.tsx	The library changed. Choose the file again.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-正文或文件名尚未保存，请等待保存完成后再移动	apps/web/src/features/sources/Sources.tsx	The text or file name isn’t saved yet. Wait for the save to finish, then move it.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-已移动到「${folder}」	apps/web/src/features/sources/Sources.tsx	Moved to “${folder}”	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-移动失败，原文件已保留	apps/web/src/features/sources/Sources.tsx	Couldn’t move it. The original file is still there.	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-继续显示 ${count} 份	apps/web/src/features/sources/Sources.tsx	Show ${count} more	Provisional. Writer can refine. Uses wiki / Understanding / Life records / library where those words appear.
-关闭删除确认	apps/web/src/shared/ConfirmDeleteDialog.tsx	Close delete confirmation	Provisional. Writer can refine.
-暂时无法删除，请稍后再试	apps/web/src/shared/ConfirmDeleteDialog.tsx	Couldn’t delete it. Try again in a moment.	Provisional. Writer can refine.
+这份记录已经构建进 Wiki。你仍可以继续聊来完善来源；有新的补充后，会再次由你决定是否更新 Wiki。	apps/web/src/features/sources/Sources.tsx	This record is already in the Wiki. You can keep talking to refine the source; when there’s something new, you decide again whether to update the Wiki.	Writer finalized.
+正在把已经确认的叙述构建进 Wiki。候选线索和规范化交易只用于核对，不会被当作已经确认的人生事实。	apps/web/src/features/sources/Sources.tsx	Building the confirmed telling into the Wiki. Candidate clues and normalized transactions are only for checking—they aren’t treated as confirmed facts of your life.	Writer finalized.
+这份内容还只是草稿。对话补充已经保存在来源记录中；只有确认构建后，它才会进入 Wiki。	apps/web/src/features/sources/Sources.tsx	This is still a draft. What you added in chat is saved on the source record. It enters the Wiki only after you confirm the build.	Writer finalized.
+对话正在完善这份来源记录，不会修改 Wiki。等内容准备好后，再由你决定是否构建。	apps/web/src/features/sources/Sources.tsx	Chat is filling in this source record and won’t change the Wiki. When it’s ready, you decide whether to build.	Writer finalized.
+账单中的聚类只是回忆候选，还不是人生事实。先聊聊人物、动机或感受，再决定是否构建。	apps/web/src/features/sources/Sources.tsx	Clusters in the bill are only candidates for memory, not facts of your life. Talk about the people, motives, or feelings first, then decide whether to build.	Writer finalized.
+消费账单构建进度	apps/web/src/features/sources/Sources.tsx	Spending-bill build progress	Writer finalized.
+账单解析	apps/web/src/features/sources/Sources.tsx	Read the bill	Writer finalized.
+对话完善	apps/web/src/features/sources/Sources.tsx	Fill in through chat	Writer finalized.
+可反复	apps/web/src/features/sources/Sources.tsx	Repeatable	Writer finalized.
+构建入 Wiki	apps/web/src/features/sources/Sources.tsx	Build into the Wiki	Writer finalized.
+查看关联结果 · ${count}	apps/web/src/features/sources/Sources.tsx	See linked results · ${count}	Writer finalized.
+沿着这篇记录，留下一封可以从未来回看的信。	apps/web/src/features/sources/Sources.tsx	From this record, leave a letter you can look back on later.	Writer finalized.
+这篇原始记录关联的页面	apps/web/src/features/sources/Sources.tsx	Pages linked from this source record	Writer finalized.
+打开页面继续阅读完整内容。	apps/web/src/features/sources/Sources.tsx	Open the page to read the rest.	Writer finalized.
+收起部分页面	apps/web/src/features/sources/Sources.tsx	Show fewer pages	Writer finalized.
+查看全部 ${count} 个关联页面	apps/web/src/features/sources/Sources.tsx	See all ${count} linked pages	Writer finalized.
+删除这个文件夹？	apps/web/src/features/sources/Sources.tsx	Delete this folder?	Writer finalized.
+删除这份生活记录？	apps/web/src/features/sources/Sources.tsx	Delete this Life record?	Writer finalized.
+文件夹内的记录和所有子文件夹都会一起删除。	apps/web/src/features/sources/Sources.tsx	Records in the folder and every subfolder are deleted together.	Writer finalized.
+文件会从生活记录中永久移除。	apps/web/src/features/sources/Sources.tsx	The file is removed from Life records for good.	Writer finalized.
+其中包含 ${count} 份记录。已有理解不会自动删除，但之后将无法再回到这些原始材料；此操作不能撤销。	apps/web/src/features/sources/Sources.tsx	This includes ${count} records. Understanding isn’t deleted automatically, but you won’t be able to return to these source materials. This can’t be undone.	Writer finalized.
+这会删除记忆报告并隐藏人物影像关联，但不会删除隐藏目录中保留的原图。	apps/web/src/features/sources/Sources.tsx	This deletes the memory report and hides people links in the images, but keeps the originals in the hidden folder.	Writer finalized.
+已有理解不会自动删除，但之后将无法再回到这份原始材料；此操作不能撤销。	apps/web/src/features/sources/Sources.tsx	Understanding isn’t deleted automatically, but you won’t be able to return to this source material. This can’t be undone.	Writer finalized.
+删除文件夹	apps/web/src/features/sources/Sources.tsx	Delete folder	Writer finalized.
+删除文件	apps/web/src/features/sources/Sources.tsx	Delete file	Writer finalized.
+移动「${name}」	apps/web/src/features/sources/Sources.tsx	Move “${name}”	Writer finalized.
+选择目标文件夹	apps/web/src/features/sources/Sources.tsx	Choose a destination folder	Writer finalized.
+正在移动…	apps/web/src/features/sources/Sources.tsx	Moving…	Writer finalized.
+移动到这里	apps/web/src/features/sources/Sources.tsx	Move here	Writer finalized.
+知识库已切换，请重新选择文件	apps/web/src/features/sources/Sources.tsx	The library changed. Choose the file again.	Writer finalized.
+正文或文件名尚未保存，请等待保存完成后再移动	apps/web/src/features/sources/Sources.tsx	The text or file name isn’t saved yet. Wait for the save to finish, then move it.	Writer finalized.
+已移动到「${folder}」	apps/web/src/features/sources/Sources.tsx	Moved to “${folder}”	Writer finalized.
+移动失败，原文件已保留	apps/web/src/features/sources/Sources.tsx	Couldn’t move it. The original file is still there.	Writer finalized.
+继续显示 ${count} 份	apps/web/src/features/sources/Sources.tsx	Show ${count} more	Writer finalized.
+关闭删除确认	apps/web/src/shared/ConfirmDeleteDialog.tsx	Close delete confirmation	Writer finalized.
+暂时无法删除，请稍后再试	apps/web/src/shared/ConfirmDeleteDialog.tsx	Couldn’t delete it. Try again in a moment.	Writer finalized.
