@@ -119,25 +119,26 @@ function SourceBuildAction({ record, busy, onStart, detail = false }: { record: 
 }
 
 function SourceJourneyContext({ file }: { file: SourceBuildRecord["file"] }) {
+  const { t } = useI18n();
   const status = file.buildStatus || "needs-dialogue";
   const dialogueDone = ["ready-to-build", "building", "built"].includes(status);
   const dialogueCurrent = !dialogueDone;
   const buildCurrent = status === "building";
   const buildDone = status === "built";
   const message = buildDone
-    ? "这份记录已经构建进 Wiki。你仍可以继续聊来完善来源；有新的补充后，会再次由你决定是否更新 Wiki。"
+    ? t("这份记录已经构建进 Wiki。你仍可以继续聊来完善来源；有新的补充后，会再次由你决定是否更新 Wiki。")
     : buildCurrent
-      ? "正在把已经确认的叙述构建进 Wiki。候选线索和规范化交易只用于核对，不会被当作已经确认的人生事实。"
+      ? t("正在把已经确认的叙述构建进 Wiki。候选线索和规范化交易只用于核对，不会被当作已经确认的人生事实。")
       : status === "ready-to-build"
-        ? "这份内容还只是草稿。对话补充已经保存在来源记录中；只有确认构建后，它才会进入 Wiki。"
+        ? t("这份内容还只是草稿。对话补充已经保存在来源记录中；只有确认构建后，它才会进入 Wiki。")
         : status === "in-dialogue"
-          ? "对话正在完善这份来源记录，不会修改 Wiki。等内容准备好后，再由你决定是否构建。"
-          : "账单中的聚类只是回忆候选，还不是人生事实。先聊聊人物、动机或感受，再决定是否构建。";
+          ? t("对话正在完善这份来源记录，不会修改 Wiki。等内容准备好后，再由你决定是否构建。")
+          : t("账单中的聚类只是回忆候选，还不是人生事实。先聊聊人物、动机或感受，再决定是否构建。");
   return <section className="source-journey-context" data-no-edit>
-    <ol className="source-journey-progress" aria-label="消费账单构建进度">
-      <li className="done"><i aria-hidden="true" /><b>账单解析</b></li><li className={`rail${dialogueDone ? " done" : ""}`} aria-hidden="true" />
-      <li className={`${dialogueDone ? "done" : dialogueCurrent ? "current" : ""}`}><i aria-hidden="true" /><b>对话完善</b><span>可反复</span></li><li className={`rail${buildDone ? " done" : ""}`} aria-hidden="true" />
-      <li className={`${buildDone ? "done" : buildCurrent ? "current" : ""}`}><i aria-hidden="true" /><b>构建入 Wiki</b></li>
+    <ol className="source-journey-progress" aria-label={t("消费账单构建进度")}>
+      <li className="done"><i aria-hidden="true" /><b>{t("账单解析")}</b></li><li className={`rail${dialogueDone ? " done" : ""}`} aria-hidden="true" />
+      <li className={`${dialogueDone ? "done" : dialogueCurrent ? "current" : ""}`}><i aria-hidden="true" /><b>{t("对话完善")}</b><span>{t("可反复")}</span></li><li className={`rail${buildDone ? " done" : ""}`} aria-hidden="true" />
+      <li className={`${buildDone ? "done" : buildCurrent ? "current" : ""}`}><i aria-hidden="true" /><b>{t("构建入 Wiki")}</b></li>
     </ol>
     <p className={`source-journey-callout is-${buildDone ? "done" : buildCurrent ? "progress" : status === "ready-to-build" ? "ready" : "draft"}`}><Icon name={buildDone ? "check" : "history"} size={15} /><span>{message}</span></p>
   </section>;
@@ -171,20 +172,20 @@ export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
   const shown = expanded ? knowledge : knowledge.slice(0, 8);
   const returnContext: ReturnContext = { returnTo: `${location.pathname}${location.search}`, returnLabel: "返回这篇原始记录" };
   return <details className="source-knowledge-connections">
-    <summary>查看关联结果 · {related.length}</summary>
+    <summary>{t("查看关联结果 · ${count}", { count: related.length })}</summary>
     {letter && <NavLink className="source-letter-feature" to={pageDestination(letter)} state={returnContext}>
-      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{letter.title}</h3><p>{letter.excerpt || "沿着这篇记录，留下一封可以从未来回看的信。"}</p></div>
+      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{letter.title}</h3><p>{letter.excerpt || t("沿着这篇记录，留下一封可以从未来回看的信。")}</p></div>
       <i><Icon name="arrow" size={17} /></i>
     </NavLink>}
-    {shown.length > 0 && <nav className="source-related-knowledge" aria-label="这篇原始记录关联的页面">
+    {shown.length > 0 && <nav className="source-related-knowledge" aria-label={t("这篇原始记录关联的页面")}>
       {shown.map((item) => <NavLink key={item.id} to={pageHref(item.id)} state={returnContext}>
         <span>{t(graphCategoryNames[item.category] || item.category)}</span>
         <b>{item.title}</b>
         <i><Icon name="arrow" size={14} /></i>
-        <p className="source-related-peek" data-overflow-tooltip="off">{item.excerpt || "打开页面继续阅读完整内容。"}</p>
+        <p className="source-related-peek" data-overflow-tooltip="off">{item.excerpt || t("打开页面继续阅读完整内容。")}</p>
       </NavLink>)}
     </nav>}
-    {knowledge.length > 8 && <button type="button" className="source-related-more" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>{expanded ? "收起部分页面" : `查看全部 ${knowledge.length} 个关联页面`}<Icon name={expanded ? "back" : "arrow"} size={14} /></button>}
+    {knowledge.length > 8 && <button type="button" className="source-related-more" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>{expanded ? t("收起部分页面") : t("查看全部 ${count} 个关联页面", { count: knowledge.length })}<Icon name={expanded ? "back" : "arrow"} size={14} /></button>}
   </details>;
 }
 
@@ -311,18 +312,18 @@ export function OrganizedSources({ revision }: { revision: number }) {
   async function moveFile(targetFolder: string) {
     const payload = draggedSource.current;
     if (!payload || movingRef.current) return;
-    if (payload.knowledgeBaseId !== moveScope.current) { setBuildError("知识库已切换，请重新选择文件"); return; }
-    if (!window.dispatchEvent(new Event("source-file-move-request", { cancelable: true }))) { setBuildError("正文或文件名尚未保存，请等待保存完成后再移动"); return; }
+    if (payload.knowledgeBaseId !== moveScope.current) { setBuildError(t("知识库已切换，请重新选择文件")); return; }
+    if (!window.dispatchEvent(new Event("source-file-move-request", { cancelable: true }))) { setBuildError(t("正文或文件名尚未保存，请等待保存完成后再移动")); return; }
     const { page, knowledgeBaseId } = payload;
-    movingRef.current = true; setMoving(true); setBuildError(""); setMoveMessage("正在移动…");
+    movingRef.current = true; setMoving(true); setBuildError(""); setMoveMessage(t("正在移动…"));
     try {
       const moved = await api<WikiPage>("/api/sources/move", { method: "POST", body: JSON.stringify({ pageId: page.id, folder: targetFolder, knowledgeBaseId, expectedModifiedAt: page.modifiedAt }) });
       if (moveScope.current !== knowledgeBaseId) return;
       setMoveChoice(undefined); setCreatedPageId(undefined); setRecentBatch(undefined); setSelectedBuildPaths(new Set());
       setFolderRevision(value => value + 1);
       update({ folder: targetFolder, file: moved.id, q: undefined, month: undefined, type: undefined, limit: undefined, batch: undefined });
-      setMoveMessage(`已移动到「${sourceFolders?.find(item => item.path === targetFolder)?.label || targetFolder.split("/").at(-1)}」`);
-    } catch (reason) { if (moveScope.current === knowledgeBaseId) { setMoveMessage(""); setBuildError(reason instanceof Error ? reason.message : "移动失败，原文件已保留"); } }
+      setMoveMessage(t("已移动到「${folder}」", { folder: sourceFolders?.find(item => item.path === targetFolder)?.label || targetFolder.split("/").at(-1) }));
+    } catch (reason) { if (moveScope.current === knowledgeBaseId) { setMoveMessage(""); setBuildError(reason instanceof Error ? reason.message : t("移动失败，原文件已保留")); } }
     finally { movingRef.current = false; setMoving(false); draggedSource.current = undefined; }
   }
   const requestedLimit = Number.parseInt(params.get("limit") || "120", 10);
@@ -516,11 +517,11 @@ export function OrganizedSources({ revision }: { revision: number }) {
   return <div className="organized-sources-page" ref={workspaceRef}>
     {importOpen ? <ImportMaterialsModal folders={folderPaths.filter(name => !name.startsWith("外部来源/"))} currentFolder={folder.startsWith("外部来源/") ? "" : folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); const record = importedMemoryRecord(batch); if (record) memoryWindow.open(memoryRecordKey(record)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
     {deleteTarget ? <ConfirmDeleteDialog
-      title={deleteTarget.kind === "folder" ? "删除这个文件夹？" : "删除这份生活记录？"}
-      description={deleteTarget.kind === "folder" ? "文件夹内的记录和所有子文件夹都会一起删除。" : "文件会从生活记录中永久移除。"}
+      title={deleteTarget.kind === "folder" ? t("删除这个文件夹？") : t("删除这份生活记录？")}
+      description={deleteTarget.kind === "folder" ? t("文件夹内的记录和所有子文件夹都会一起删除。") : t("文件会从生活记录中永久移除。")}
       itemName={deleteTarget.kind === "folder" ? deleteTarget.folder : documentIdentity(deleteTarget.page.relativePath).fileName}
-      impact={deleteTarget.kind === "folder" ? `其中包含 ${deleteTarget.count} 份记录。已有理解不会自动删除，但之后将无法再回到这些原始材料；此操作不能撤销。` : deleteTarget.page.importChannel === "photos" ? "这会删除记忆报告并隐藏人物影像关联，但不会删除隐藏目录中保留的原图。" : "已有理解不会自动删除，但之后将无法再回到这份原始材料；此操作不能撤销。"}
-      confirmLabel={deleteTarget.kind === "folder" ? "删除文件夹" : "删除文件"}
+      impact={deleteTarget.kind === "folder" ? t("其中包含 ${count} 份记录。已有理解不会自动删除，但之后将无法再回到这些原始材料；此操作不能撤销。", { count: deleteTarget.count }) : deleteTarget.page.importChannel === "photos" ? t("这会删除记忆报告并隐藏人物影像关联，但不会删除隐藏目录中保留的原图。") : t("已有理解不会自动删除，但之后将无法再回到这份原始材料；此操作不能撤销。")}
+      confirmLabel={deleteTarget.kind === "folder" ? t("删除文件夹") : t("删除文件")}
       onClose={() => setDeleteTarget(undefined)}
       onConfirm={deleteSelectedTarget}
     /> : null}
@@ -537,7 +538,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       const first = controls[0], last = controls.at(-1);
       if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    }}><h2 id="source-move-title">移动「{documentIdentity(moveChoice.externalSource?.originalPath || moveChoice.relativePath).fileName}」</h2><p>选择目标文件夹</p><FolderTree selected={moveDestination} onSelect={setMoveDestination} revision={revision + folderRevision} />{buildError ? <p role="alert">{buildError}</p> : null}<footer><button type="button" disabled={moving} onClick={() => setMoveChoice(undefined)}>取消</button><button type="button" className="desktop-primary" disabled={moving || !moveDestination || sourcePagePath(moveChoice).split("/").slice(0, -1).join("/") === moveDestination} onClick={() => { if (moveChoiceScope.current) { draggedSource.current = { page: moveChoice, knowledgeBaseId: moveChoiceScope.current }; void moveFile(moveDestination); } }}>{moving ? "正在移动…" : "移动到这里"}</button></footer></section></div>, document.body) : null}
+    }}><h2 id="source-move-title">{t("移动「${name}」", { name: documentIdentity(moveChoice.externalSource?.originalPath || moveChoice.relativePath).fileName })}</h2><p>{t("选择目标文件夹")}</p><FolderTree selected={moveDestination} onSelect={setMoveDestination} revision={revision + folderRevision} />{buildError ? <p role="alert">{buildError}</p> : null}<footer><button type="button" disabled={moving} onClick={() => setMoveChoice(undefined)}>{t("取消")}</button><button type="button" className="desktop-primary" disabled={moving || !moveDestination || sourcePagePath(moveChoice).split("/").slice(0, -1).join("/") === moveDestination} onClick={() => { if (moveChoiceScope.current) { draggedSource.current = { page: moveChoice, knowledgeBaseId: moveChoiceScope.current }; void moveFile(moveDestination); } }}>{moving ? t("正在移动…") : t("移动到这里")}</button></footer></section></div>, document.body) : null}
     <h1 className="sr-only">{t("生活记录")}</h1>
     <section className="source-discovery-tools" aria-label={t("筛选生活记录")}>
       <div className="source-type-filter" role="group" aria-label={t("按来源类型筛选")}>{[...sourceRecordTypes].sort((a, b) => ["all", "notes", "ai", "photos", "bill"].indexOf(a.id) - ["all", "notes", "ai", "photos", "bill"].indexOf(b.id)).map((item) => <button type="button" key={item.id} className={type === item.id ? "active" : ""} aria-pressed={type === item.id} onClick={() => { setCreatedPageId(undefined); update({ type: item.id === "all" ? undefined : item.id, file: undefined, limit: undefined }); }}><Icon name={item.id === "all" ? "library" : item.id === "notes" ? "journal" : item.id === "ai" ? "message" : item.id === "photos" ? "image" : "receipt"} size={14} />{t(item.id === "notes" ? "笔记" : item.id === "bill" ? "账单" : item.label)}</button>)}{pendingBuilds.length ? <button type="button" className={`source-pending-filter${type === "pending" ? " active" : ""}`} aria-pressed={type === "pending"} onClick={() => { setCreatedPageId(undefined); update({ type: type === "pending" ? undefined : "pending", file: undefined, limit: undefined }); }}><Icon name="spark" size={14} />{t("待构建")} <b>{pendingBuilds.length}</b></button> : null}</div>
@@ -591,7 +592,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
                 } : undefined} onDragEnd={() => { draggedSource.current = undefined; }} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
                 selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">{t("选择构建「${name}」", { name: fileName })}</span></label> : null} actions={<FileMenu page={page} extraActions={[...(moveVault && recordType !== "photos" && recordType !== "bill" ? [{ label: t("移动到…"), onSelect: () => { moveChoiceScope.current = moveVault.knowledgeBaseId; setBuildError(""); setMoveDestination(sourcePagePath(page).split("/").slice(0, -1).join("/")); setMoveChoice(page); } }] : []), { label: t(recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档"), onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />} />;
             })}
-            {visiblePages.length < filtered.length ? <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>继续显示 <b>{Math.min(120, filtered.length - visiblePages.length)}</b> 份</button> : null}
+            {visiblePages.length < filtered.length ? (() => { const moreCount = Math.min(120, filtered.length - visiblePages.length); const [moreBefore, moreAfter] = t("继续显示 ${count} 份", { count: "\u0001" }).split("\u0001"); return <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>{moreBefore}<b>{moreCount}</b>{moreAfter}</button>; })() : null}
             {query.trim() && searching ? <Loading label={t("正在搜索正文")} /> : searchError ? <p role="alert">{searchError}</p> : visiblePages.length === 0 ? <div className="source-list-empty"><b>{t("没有匹配的记录")}</b><p>{!sourceFolders?.length ? t("打开文件夹后，里面的文件会显示在这里") : type === "pending" ? t("新带进来的记录都已经构建完成。") : !query && !month && type === "all" && folder ? t("这个文件夹里还没有文件") : t("换一个来源、月份或搜索词试试。")}</p></div> : null}
       </FileBrowserPane>
       {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>{t("选择一个文件")}</span></div>}
