@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { LettersView, VaultInfo, WikiPage, WikiPageSummary } from "@the-way-here/shared";
+import type { LettersView, ReasoningLens, VaultInfo, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { ActiveLibraryProvider } from "./locale";
 import { Today } from "../../features/overview/Today";
 import { Letters } from "../../features/knowledge/Letters";
@@ -9,7 +9,11 @@ import { LetterLensChoices } from "../../features/knowledge/LetterLensPicker";
 import { FileBrowserItem } from "../FileBrowser";
 import { FileMenu } from "../FileMenu";
 import { demoSeedExcerpts } from "./demo-excerpt-data";
-import type { ReasoningLens } from "@the-way-here/shared";
+import { TagSummary } from "../../features/knowledge/UnderstandingDigest";
+import { SearchResults } from "../../features/knowledge/SearchResults";
+import { SourceKnowledgeConnections } from "../../features/sources/Sources";
+import { LetterLensPicker } from "../../features/knowledge/LetterLensPicker";
+import { AiConfiguration } from "../../features/collaboration/AgentSettings";
 
 const mocks = vi.hoisted(() => ({ useApi: vi.fn() }));
 vi.mock("../../shared/use-api", () => ({ useApi: mocks.useApi }));
@@ -162,5 +166,44 @@ describe("English chrome", () => {
     expect(text).toContain("This is a fully fictional demo photo memory.");
     expect(text).toContain("More actions: A photo of a table in a new city · fictional demo");
     expect(text).not.toMatch(CJK);
+  });
+
+  it("renders the reread lens menu in English", () => {
+    const lens = { id: "charlie-munger", displayName: "查理·芒格", attention: "机制、激励、重复模式和可避免的大错", helperUse: "校验一个机制盲点、反例或严重下行", signals: ["复杂决策"], relativePath: "lenses/charlie-munger.md" } as ReasoningLens;
+    const html = renderToStaticMarkup(<LetterLensPicker lenses={[lens]} onSelect={() => undefined} />);
+    expect(html).toContain("Reread with a new lens");
+    expect(chromeText(html)).not.toMatch(CJK);
+  });
+
+  it("translates digest tags and search excerpts from demo payloads", () => {
+    const tags = renderToStaticMarkup(<ActiveLibraryProvider id="demo"><TagSummary tags={["wiki/个人主线", "主线/从证明自己到建设选择权", "来源/wiki", "类型/wiki", "循环/立志中断后又重新开始", "系统/家庭系统", "思维模型/把评价当信息，不当判决"]} /></ActiveLibraryProvider>);
+    expect(chromeText(tags)).toContain("Wiki/Personal thread");
+    expect(chromeText(tags)).toContain("System/Family system");
+    expect(chromeText(tags)).not.toMatch(CJK);
+    const relativePath = "sources/照片记忆/一张新城市餐桌的照片.md";
+    const page = { id: "photo", title: "一张新城市餐桌的照片", relativePath, excerpt: demoSeedExcerpts[relativePath]!, isSource: true, category: "sources", tags: [], aliases: [], locations: [], sources: [], modifiedAt: "2026-03-12T00:00:00Z" } as WikiPageSummary;
+    mocks.useApi.mockImplementation((url: string) => {
+      if (url.startsWith("/api/search")) return { data: [page], loading: false };
+      return { data: undefined, loading: false };
+    });
+    const html = renderToStaticMarkup(<MemoryRouter initialEntries={["/search?q=photo"]}><ActiveLibraryProvider id="demo"><SearchResults revision={0} /></ActiveLibraryProvider></MemoryRouter>);
+    const text = chromeText(html);
+    expect(text).toContain("sources/Photo memories/A photo of a table in the new city.md");
+    expect(text).toContain("fictional demo");
+    expect(text).not.toMatch(CJK);
+  });
+
+  it("renders the life-record related panel and the runtime warning in English", () => {
+    const relativePath = "wiki/07 人物与城市/生活过的城市/杭州.md";
+    const related = { id: relativePath.replace(/\.md$/, ""), title: "杭州：职业机会与日常生活", relativePath, excerpt: demoSeedExcerpts[relativePath]!, category: "entities", tags: ["实体/杭州"], aliases: [], locations: [], sources: [], modifiedAt: "2026-03-12T00:00:00Z", isSource: false } as WikiPageSummary;
+    const source = { id: "photo", title: "照片", relativePath: "sources/照片记忆/一张新城市餐桌的照片.md", excerpt: "", category: "sources", tags: [], aliases: [], locations: [], sources: [], modifiedAt: "2026-03-12T00:00:00Z", isSource: true, markdown: "", renderedMarkdown: "", properties: {}, sections: [], outgoingLinks: [], incomingLinks: [], relatedPages: [related] } satisfies WikiPage;
+    const html = renderToStaticMarkup(<MemoryRouter><ActiveLibraryProvider id="demo"><SourceKnowledgeConnections page={source} /></ActiveLibraryProvider></MemoryRouter>);
+    const text = chromeText(html);
+    expect(text).toContain("Hangzhou: career chances and everyday life");
+    expect(text).toContain("Hangzhou first meant a new platform");
+    expect(text).not.toMatch(CJK);
+    const settings = renderToStaticMarkup(<AiConfiguration id="models" agent={{ draft: { runtimeId: "codex", codex: { model: "gpt", effort: "low" }, thirdParty: {} }, loading: false, codexRuntime: { available: false, reason: "运行时未启用", models: [] }, codexModels: [{ id: "gpt", displayName: "GPT" }], codexEfforts: ["low"], selectRuntime: () => undefined, selectCodexModel: () => undefined, setCodexEffort: () => undefined } as never} />);
+    expect(chromeText(settings)).toContain("The runtime isn’t enabled");
+    expect(chromeText(settings)).not.toMatch(CJK);
   });
 });

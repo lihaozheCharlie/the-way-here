@@ -2,6 +2,7 @@
  * Report Chinese that can still reach the English UI.
  *
  * Resolved catalog keys, agent prompts, demo body and excerpt seed tables, and tests are excluded.
+ * Demo page payloads (titles, tags, excerpts, paths) are scanned after the same display overlay the UI uses.
  * Everything else is a failure unless it is on the explicit whitelist.
  *
  *   node studio/scripts/check-cjk-chrome.mjs
@@ -10,6 +11,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { demoPayloadChromeLeaks } from "./demo-payload-chrome.mjs";
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ts = createRequire(path.join(studio, "apps/web/package.json"))("typescript");
@@ -21,6 +23,7 @@ const skipFiles = new Set([
   "apps/web/src/shared/i18n/demo-excerpt-data.ts",
   "apps/web/src/shared/i18n/demo-json-data.ts",
   "apps/web/src/shared/i18n/demo-overlay.ts",
+  "apps/web/src/shared/i18n/demo-titles.ts",
   "apps/web/src/shared/i18n/en-messages.ts",
 ]);
 const whitelistFiles = new Set([
@@ -195,6 +198,12 @@ function classify(node, rel, text, translated) {
   }
   if (rel.endsWith("talking-questions.ts") && (text.includes("请先") || text.includes("一次只问"))) return "agent-prompt";
   return "";
+}
+
+const vaultDemo = path.resolve(studio, "../vault/demo");
+for (const leak of demoPayloadChromeLeaks(vaultDemo)) {
+  const [where, text] = leak.split("\t");
+  record(failures, `vault/demo/${where}`, 1, "visible", text || leak);
 }
 
 const byReason = new Map();

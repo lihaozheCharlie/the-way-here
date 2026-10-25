@@ -18,6 +18,7 @@ import type { VaultInfo } from "@the-way-here/shared";
 import { api } from "../api";
 import { useApi } from "../shared/use-api";
 import { navigation } from "./config";
+import { desktopWindowTitle } from "./window-title";
 import { activeKnowledgeChild, isSourceDocument, pageIdFromPathname, type LoadedReader } from "./navigation-state";
 import { ReaderLocationProvider } from "../features/knowledge/reader-location";
 import { type ReturnContext } from "../shared/routing";
@@ -274,9 +275,9 @@ export function AppShell({ revision }: { revision: number }) {
 
   const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || tr("阅读");
   const libraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "The Way Here";
-  const windowTitle = utilityWindow
-    ? (location.pathname === "/capture" ? t("随手记") : t("偏好设置"))
-    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${libraryName}`;
+  const utilityKind = location.pathname === "/capture" ? "capture" : utilityWindow ? "preferences" : null;
+  const pageLabel = utilityKind === "capture" ? t("随手记") : utilityKind === "preferences" ? t("偏好设置") : location.pathname === "/search" ? t("搜索") : t(sectionLabel);
+  const windowTitle = desktopWindowTitle(pageLabel, libraryName, utilityKind);
   useEffect(() => { document.title = windowTitle; }, [windowTitle]);
   return (
     <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>

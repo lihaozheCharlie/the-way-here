@@ -47,7 +47,7 @@ export function StageFocus({ stage, revision }: { stage: LifeStageView; revision
           </foreignObject>
           {positioned.map(group => <g key={group.label} className={`stage-network-${group.tone}`}>
             <foreignObject x={390} y={group.y-23} width={180} height={46}><button type="button" className="stage-tree-category" aria-expanded={!collapsed.includes(group.label)} onClick={() => setCollapsed(current => current.includes(group.label) ? current.filter(item => item !== group.label) : [...current, group.label])}>● {group.label} · {group.pages.length || tr("暂无关联")}</button></foreignObject>
-            {!collapsed.includes(group.label) && group.leaves.map(leaf => <foreignObject key={leaf.page.id} x={730} y={leaf.y-20} width={220} height={40}><button type="button" className="stage-network-leaf stage-tree-leaf" onClick={() => open(leaf.page)} title={demo.title(leaf.page.title)}>{demo.title(leaf.page.title)}</button></foreignObject>)}
+            {!collapsed.includes(group.label) && group.leaves.map(leaf => { const label = demo.heading(leaf.page.relativePath, leaf.page.excerpt) || demo.title(leaf.page.title); return <foreignObject key={leaf.page.id} x={730} y={leaf.y-20} width={220} height={40}><button type="button" className="stage-network-leaf stage-tree-leaf" onClick={() => open(leaf.page)} title={label}>{label}</button></foreignObject>; })}
           </g>)}
         </GraphViewport>
         {stage.relatedLetters.length > 0 && <div className="stage-network-letters"><span>{tr("近况回信")}</span>{stage.relatedLetters.map(page => <button type="button" key={page.id} onClick={() => open(page)}>{demo.heading(page.relativePath, page.excerpt) || demo.title(page.title)}<Icon name="arrow" size={13} /></button>)}</div>}

@@ -1,6 +1,7 @@
 import type { AppLocale } from "./locale";
 import { demoBodies } from "./demo-body-data";
 import { demoSeedExcerpts } from "./demo-excerpt-data";
+import { localizeDemoTitles } from "./demo-titles";
 
 /** Display-only English markdown for the demo library.
  *
@@ -32,7 +33,7 @@ export type DemoBodyLink = { target: string; resolvedId?: string; ambiguous?: bo
 function rewriteDemoWikilinks(markdown: string, links?: DemoBodyLink[]): string {
   return markdown.replace(/\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]/g, (_raw, rawTarget: string, rawLabel?: string) => {
     const target = rawTarget.split("#", 1)[0]!.trim();
-    const label = (rawLabel || rawTarget.split("#").at(-1) || target).trim();
+    const label = localizeDemoTitles("demo", "en", (rawLabel || rawTarget.split("#").at(-1) || target).trim());
     const match = links?.find((link) => link.target === target);
     if (!match?.resolvedId || match.ambiguous) return label;
     const href = match.resolvedId.split("/").map(encodeURIComponent).join("/");
@@ -43,6 +44,10 @@ function rewriteDemoWikilinks(markdown: string, links?: DemoBodyLink[]): string 
 
 /** Same opening excerpt the indexer stores: frontmatter off, first heading removed, 260 chars. */
 export function demoExcerptFromMarkdown(markdown: string): string {
+  return plainExcerpt(markdown).slice(0, 260);
+}
+
+function plainExcerpt(markdown: string): string {
   const normalized = markdown.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
   const fenced = /^---\n[\s\S]*?\n---\n?/.exec(normalized);
   const body = (fenced ? normalized.slice(fenced[0].length) : normalized).trim().replace(/^#\s+.+$/m, "");
@@ -54,8 +59,7 @@ export function demoExcerptFromMarkdown(markdown: string): string {
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/[>*_`~|-]/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 260);
+    .trim();
 }
 
 function normalizeExcerpt(value: string): string {
@@ -81,7 +85,8 @@ function demoRow(libraryId: string | null | undefined, locale: AppLocale, relati
 }
 
 function englishExcerpt(markdown: string): string {
-  return demoExcerptFromMarkdown(markdown).replace(/ +([.,;:!?，。；：！？])/g, "$1");
+  const plain = plainExcerpt(markdown).replace(/ +([.,;:!?，。；：！？])/g, "$1");
+  return localizeDemoTitles("demo", "en", plain).slice(0, 260);
 }
 
 /** English H1 for an unedited demo file. Edited openings keep the stored title. */
@@ -129,7 +134,10 @@ export function demoEnglishSections(
     if (current) current.lines.push(line);
   }
   if (current) sections.push({ heading: current.heading, body: current.lines.join("\n").trim() });
-  return sections.filter((section) => section.heading);
+  return sections.filter((section) => section.heading).map((section) => ({
+    heading: section.heading,
+    body: localizeDemoTitles("demo", "en", section.body),
+  }));
 }
 
 /** List excerpt for a fingerprinted demo file. Personal libraries and edited openings stay as stored. */
@@ -157,5 +165,5 @@ export function demoEnglishDocument(
   if (locale !== "en" || (libraryId || "").toLowerCase() !== "demo") return undefined;
   const row = demoBodies[demoPathKey(relativePath)];
   if (!row || demoFingerprint(fileMarkdown) !== row.fingerprint) return undefined;
-  return rewriteDemoWikilinks(row.markdown, links);
+  return localizeDemoTitles("demo", "en", rewriteDemoWikilinks(row.markdown, links));
 }

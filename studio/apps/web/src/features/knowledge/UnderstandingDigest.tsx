@@ -21,21 +21,24 @@ const cycleStages = [
 ];
 
 export function TagSummary({ tags }: { tags: string[] }) {
+  const demo = useDemoLabels();
   const uniqueTags = [...new Set(tags)];
   return <div className="digest-tags">
-    {uniqueTags.slice(0, 3).map(tag => <span key={tag}>{tag}</span>)}
+    {uniqueTags.slice(0, 3).map(tag => <span key={tag}>{demo.tag(tag)}</span>)}
     {uniqueTags.length > 3 && <details>
       <summary>+{uniqueTags.length - 3}</summary>
-      <div>{uniqueTags.slice(3).map(tag => <span key={tag}>{tag}</span>)}</div>
+      <div>{uniqueTags.slice(3).map(tag => <span key={tag}>{demo.tag(tag)}</span>)}</div>
     </details>}
   </div>;
 }
 
 function ModelDigest({ page, revision }: { page: WikiPageSummary; revision: number }) {
+  const demo = useDemoLabels();
   const [view, setView] = useState("summary");
   // Read exactly the page named by this card, never another model's overview.
   const model = useApi<WikiPage>(apiPageHref(page.id), revision);
-  const body = model.data?.sections.map(section => section.body).join("\n") || page.excerpt;
+  const english = demo.sections(page.relativePath, page.excerpt);
+  const body = english?.map(section => section.body).join("\n") || model.data?.sections.map(section => section.body).join("\n") || page.excerpt;
   const panels = mentalModelPanels(body);
   return <>
     <SegmentedTabs label={tr("思维模型查看方式")} value={view}
@@ -61,7 +64,7 @@ export function UnderstandingDigest({ revision }: { revision: number }) {
         <header><h2>{tr(group.title)}</h2><NavLink to={group.to}>{tr("查看全部")}</NavLink></header>
         {page ? <>
           <PageLink page={page} className="digest-title">{demo.heading(page.relativePath, page.excerpt) || demo.title(page.title)}</PageLink>
-          <p>{demo.excerpt(page.relativePath, page.excerpt)}</p><TagSummary tags={page.tags.map((tag) => demo.title(tag))} />
+          <p>{demo.excerpt(page.relativePath, page.excerpt)}</p><TagSummary tags={page.tags} />
         </> : <p>{pages.loading ? tr("正在读取…") : pages.error ? tr(pages.error) : tr("还没有形成这类理解。")}</p>}
         {group.category === "cycles" && cycle && <>
           <button type="button" className="digest-disclosure" aria-expanded={cycleOpen}
