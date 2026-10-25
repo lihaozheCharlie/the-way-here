@@ -439,7 +439,7 @@ export const enMessages: Record<string, string> = {
   "有什么，都可以聊聊": "Whatever it is, we can talk about it",
   "有利因素": "What helps",
   "有效部分": "What works",
-  "有更新，可以重新预测了": "There’s an update — you can predict again",
+  "有更新，可以重新预测了": "There's an update — you can predict again",
   "有未保存更改": "Unsaved changes",
   "有补充": "Has follow-up",
   "未完成": "not finished",

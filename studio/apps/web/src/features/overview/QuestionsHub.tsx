@@ -1,4 +1,4 @@
-import { tr } from "../../shared/i18n";
+import { tr, useDemoLabels } from "../../shared/i18n";
 import { useState } from "react";
 import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { NavLink } from "react-router-dom";
@@ -23,6 +23,7 @@ const directionQuestions = [
 type GeneratedQuestion = { id: number; templateIndex: number; question: string };
 
 export function QuestionsHub({ revision }: { revision: number }) {
+  const demo = useDemoLabels();
   const [selectedQuestionId, setSelectedQuestionId] = useState("");
   const [topicKind, setTopicKind] = useState<ConversationTopicKind | "all" | "generated">("all");
   const [topicBatchIndex, setTopicBatchIndex] = useState(0);
@@ -72,7 +73,7 @@ export function QuestionsHub({ revision }: { revision: number }) {
         <h2 id="questions-wall-title" className="sr-only">{tr("值得聊聊的话题")}</h2>
         <div className="questions-filters" aria-label={tr("筛选话题")}>
           <button type="button" className={topicKind === "all" ? "active" : ""} aria-pressed={topicKind === "all"} onClick={() => changeKind("all")}>{tr("全部")}</button>
-          {availableKinds.map((kind) => <button type="button" key={kind} className={topicKind === kind ? "active" : ""} aria-pressed={topicKind === kind} title={conversationTopicKinds[kind].description} onClick={() => changeKind(kind)}>{conversationTopicKinds[kind].label}</button>)}
+          {availableKinds.map((kind) => <button type="button" key={kind} className={topicKind === kind ? "active" : ""} aria-pressed={topicKind === kind} title={tr(conversationTopicKinds[kind].description)} onClick={() => changeKind(kind)}>{tr(conversationTopicKinds[kind].label)}</button>)}
           {generatedQuestions.length > 0 && <button type="button" className={topicKind === "generated" ? "active generated" : "generated"} aria-pressed={topicKind === "generated"} onClick={() => changeKind("generated")}>{tr("新生成")}</button>}
         </div>
         <button type="button" className="questions-shuffle-button" disabled={topicKind === "generated" || filteredQuestions.length === 0} onClick={() => {
@@ -100,8 +101,8 @@ export function QuestionsHub({ revision }: { revision: number }) {
           const evidenceStrength = Math.min(question.evidenceCount, 3);
           const headingId = `question-topic-${index}`;
           return <article className={`questions-topic-card is-${question.kind}${selectedQuestionId === question.id ? " active" : ""}`} key={question.id} aria-labelledby={headingId}>
-            <span className="questions-topic-kind">{kind.label}</span>
-            <h3 id={headingId}>{question.question}</h3>
+            <span className="questions-topic-kind">{tr(kind.label)}</span>
+            <h3 id={headingId}>{demo.title(question.question)}</h3>
             <p>{question.reason}</p>
             <div className="questions-topic-evidence">
               <span aria-hidden="true">{[0, 1, 2].map((index) => <i className={index < evidenceStrength ? "on" : ""} key={index} />)}</span>

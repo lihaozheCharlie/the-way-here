@@ -36,6 +36,11 @@ export function demoFolderLabel(libraryId: string | null | undefined, locale: Ap
   return overlay(libraryId, locale, segment.trim(), demoFolders);
 }
 
+/** Exact demo title only. Substring replacement stays on excerpts, where titles are embedded in prose. */
+export function demoExactTitleLabel(libraryId: string | null | undefined, locale: AppLocale, title: string): string {
+  return overlay(libraryId, locale, title.trim(), demoTitles);
+}
+
 export function demoTitleLabel(libraryId: string | null | undefined, locale: AppLocale, title: string): string {
   const trimmed = title.trim();
   const overlaid = overlay(libraryId, locale, trimmed, demoTitles);
@@ -94,6 +99,7 @@ export function useDemoLabels() {
     libraryId,
     locale,
     title: (value: string) => demoTitleLabel(libraryId, locale, value),
+    exact: (value: string) => demoExactTitleLabel(libraryId, locale, value),
     folder: (value: string) => chromeFolderLabel(libraryId, locale, value),
     folderPath: (value: string) => demoFolderPath(libraryId, locale, value),
     library: (value: string) => demoLibraryLabel(libraryId, locale, value),

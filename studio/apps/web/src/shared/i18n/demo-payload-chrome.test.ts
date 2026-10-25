@@ -27,6 +27,8 @@ describe("demo payload chrome", () => {
     expect(excerpt).toContain("Related");
     expect(excerpt).not.toMatch(/[\u3400-\u9fff]/);
     expect(desktopWindowTitle("Preferences", "The Way Here demo", "preferences")).toBe("Preferences · The Way Here demo");
+    expect(desktopWindowTitle("Search", "The Way Here demo", null)).toBe("Search · The Way Here demo");
+    expect(desktopWindowTitle("Go deeper", "The Way Here demo", null)).toBe("Go deeper · The Way Here demo");
     expect(desktopWindowTitle("Quick note", "The Way Here demo", "capture")).toBe("Quick note");
   });
 });

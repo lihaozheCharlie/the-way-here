@@ -102,6 +102,11 @@ export const demoTitles: Record<string, string> = {
   "芒格视角：别让掌声替你决定投入": "Munger lens: don't let applause decide what you invest in",
   "费曼视角：保留那个还不知道": "Feynman lens: keep the part you still don't know",
   "马斯克视角：先找到作品的瓶颈": "Musk lens: find the product's bottleneck first",
+  "约 2007—2010 年，回顾性记录": "About 2007–2010, written in retrospect",
+  "约 2010—2013 年，回顾性记录": "About 2010–2013, written in retrospect",
+  "这次移动对你意味着什么？": "What did this move mean to you?",
+  "这一天最想留下哪个小片段？": "Which small moment from that day do you most want to keep?",
+  "从南京到杭州的一张车票": "A ticket from Nanjing to Hangzhou",
 };
 
 const tagPrefixes: Record<string, string> = {

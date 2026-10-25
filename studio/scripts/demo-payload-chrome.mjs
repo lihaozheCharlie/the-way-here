@@ -72,7 +72,7 @@ function headingOf(markdown, relativePath) {
 export function demoPayloadChromeLeaks(vaultRoot) {
   const i18n = path.join(studio, "apps/web/src/shared/i18n");
   const { demoListExcerpt, demoEnglishHeading, demoExcerptFromMarkdown } = loadTs(path.join(i18n, "demo-body.ts"));
-  const { demoPathTooltip, demoTitleLabel } = loadTs(path.join(i18n, "demo-overlay.ts"));
+  const { demoPathTooltip, demoTitleLabel, demoExactTitleLabel, demoFileLabel } = loadTs(path.join(i18n, "demo-overlay.ts"));
   const { demoTagLabel } = loadTs(path.join(i18n, "demo-titles.ts"));
   const { translate } = loadTs(path.join(i18n, "locale.tsx"));
   const leaks = [];
@@ -93,9 +93,36 @@ export function demoPayloadChromeLeaks(vaultRoot) {
     note(`${relative} title`, demoEnglishHeading("demo", "en", relative, excerpt) || demoTitleLabel("demo", "en", title));
     note(`${relative} path`, demoPathTooltip("demo", "en", relative));
     note(`${relative} original`, demoPathTooltip("demo", "en", `app/demo/${relative}`));
+    const storedName = relative.split("/").at(-1) || title;
+    note(`${relative} search-title`, demoEnglishHeading("demo", "en", relative, excerpt) || demoFileLabel("demo", "en", storedName));
+    note(`${relative} search-path`, demoPathTooltip("demo", "en", relative));
+    note(`${relative} search-excerpt`, demoListExcerpt("demo", "en", relative, excerpt));
     for (const tag of frontmatterTags(markdown)) note(`${relative} tag ${tag}`, demoTagLabel("demo", "en", tag));
+    for (const value of frontmatterPeriods(markdown)) note(`${relative} period`, demoExactTitleLabel("demo", "en", value));
+  }
+  const importsDir = path.join(vaultRoot, "sources/.imports");
+  if (existsSync(importsDir)) {
+    for (const name of readdirSync(importsDir)) {
+      if (!name.endsWith(".json")) continue;
+      const payload = JSON.parse(readFileSync(path.join(importsDir, name), "utf8"));
+      for (const cluster of payload.journey?.clusters || []) {
+        note(`${name} question`, demoExactTitleLabel("demo", "en", cluster.question || ""));
+        note(`${name} topic`, translate("en", "账单线索"));
+      }
+    }
   }
   return leaks;
+}
+
+function frontmatterPeriods(markdown) {
+  const fence = /^---\n([\s\S]*?)\n---/.exec(markdown);
+  if (!fence) return [];
+  const values = [];
+  for (const line of fence[1].split("\n")) {
+    const item = /^period:\s+["'](.+)["']\s*$/.exec(line);
+    if (item) values.push(item[1]);
+  }
+  return values;
 }
 
 const direct = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

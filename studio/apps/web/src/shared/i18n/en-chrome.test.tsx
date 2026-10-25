@@ -11,6 +11,8 @@ import { FileMenu } from "../FileMenu";
 import { demoSeedExcerpts } from "./demo-excerpt-data";
 import { TagSummary } from "../../features/knowledge/UnderstandingDigest";
 import { SearchResults } from "../../features/knowledge/SearchResults";
+import { QuestionsHub } from "../../features/overview/QuestionsHub";
+import { SourceProperties } from "../DocumentProperties";
 import { SourceKnowledgeConnections } from "../../features/sources/Sources";
 import { LetterLensPicker } from "../../features/knowledge/LetterLensPicker";
 import { AiConfiguration } from "../../features/collaboration/AgentSettings";
@@ -190,7 +192,26 @@ describe("English chrome", () => {
     const text = chromeText(html);
     expect(text).toContain("sources/Photo memories/A photo of a table in the new city.md");
     expect(text).toContain("fictional demo");
+    expect(text).toContain("This is a fully fictional demo");
     expect(text).not.toMatch(CJK);
+  });
+
+  it("renders Worth talking about cards and life-record period tags in English", () => {
+    mocks.useApi.mockImplementation((url: string) => {
+      if (url === "/api/views/today") return { data: { currentStages: [], stateSignals: [], focusCandidates: [], conversationPrompts: [], focusPages: [], recentPages: [] }, loading: false };
+      if (url === "/api/imports") return { data: [{ id: "bills", createdAt: "2026-03-12T00:00:00Z", fileCount: 1, totalBytes: 1, files: [], journey: { provider: "alipay", title: "从车票到两只杯子 · 虚构消费旅程", reportPath: "sources/账单记忆/支付宝消费旅程 2022-03-11 至 2022-03-12.md", period: { start: "2022-03-11", end: "2022-03-12" }, transactionCount: 5, activeDays: 2, netExpense: 234, refundCount: 0, agentPrompt: "", clusters: [{ id: "journey-t001", kind: "journey", title: "从南京到杭州的一张车票", summary: "两笔交通记录", question: "这次移动对你意味着什么？", startDate: "2022-03-11", endDate: "2022-03-12", entryCount: 2, categories: ["出行"], evidence: [], transactions: [] }] } }], loading: false };
+      return { data: undefined, loading: false };
+    });
+    const cards = renderToStaticMarkup(<MemoryRouter><ActiveLibraryProvider id="demo"><QuestionsHub revision={0} /></ActiveLibraryProvider></MemoryRouter>);
+    const cardText = chromeText(cards);
+    expect(cardText).toContain("Bill signals");
+    expect(cardText).toContain("What did this move mean to you?");
+    expect(cardText).not.toMatch(CJK);
+    const tags = renderToStaticMarkup(<ActiveLibraryProvider id="demo"><SourceProperties properties={{ period: "约 2007—2010 年，回顾性记录", tags: ["demo"] }} /><SourceProperties properties={{ period: "约 2010—2013 年，回顾性记录" }} /></ActiveLibraryProvider>);
+    const tagText = chromeText(tags);
+    expect(tagText).toContain("About 2007–2010, written in retrospect");
+    expect(tagText).toContain("About 2010–2013, written in retrospect");
+    expect(tagText).not.toMatch(CJK);
   });
 
   it("renders the life-record related panel and the runtime warning in English", () => {

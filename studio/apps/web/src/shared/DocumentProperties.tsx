@@ -1,4 +1,4 @@
-import { tr } from "./i18n";
+import { tr, useDemoLabels } from "./i18n";
 import { useState } from "react";
 import type { WikiPage } from "@the-way-here/shared";
 import { useI18n } from "./i18n";
@@ -67,11 +67,14 @@ export function NoteProperties({ properties, compact = false }: { properties: Re
 }
 
 export function SourceProperties({ properties }: { properties: Record<string, unknown> }) {
+  const demo = useDemoLabels();
   const [expanded, setExpanded] = useState(false);
   const entries = Object.entries(properties).filter(([, value]) => propertyHasValue(value));
   const labels: Record<string, string> = { type: tr("类型"), tags: tr("标签"), aliases: tr("别名"), source: tr("来源"), status: tr("状态"), Start: tr("开始"), end: tr("结束"), location: tr("地点") };
   const tokens = entries.flatMap(([key, value]) => (Array.isArray(value) ? value : [value]).map((entry) => {
-    const text = propertyLabel(entry, notePropertyKind(key, value));
+    const raw = propertyLabel(entry, notePropertyKind(key, value));
+    const exact = demo.exact(raw);
+    const text = exact === raw.trim() ? raw : exact;
     const tag = key === "tags" ? text.match(/^(类型|人物|实体|索引|来源)\/(.+)$/) : null;
     const label = tag?.[1] ? tr(tag[1]) : labels[key] || key;
     return { label, value: tag?.[2] || text, rank: tag?.[1] === "类型" || key === "type" ? 0 : tag?.[1] === "人物" ? 1 : 2 };

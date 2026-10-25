@@ -273,11 +273,13 @@ export function AppShell({ revision }: { revision: number }) {
 
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
-  const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || tr("阅读");
+  const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
   const libraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "The Way Here";
   const utilityKind = location.pathname === "/capture" ? "capture" : utilityWindow ? "preferences" : null;
-  const pageLabel = utilityKind === "capture" ? t("随手记") : utilityKind === "preferences" ? t("偏好设置") : location.pathname === "/search" ? t("搜索") : t(sectionLabel);
+  const routeLabel = location.pathname === "/search" ? "搜索" : location.pathname === "/conversation" ? "深入聊聊" : "";
+  const pageLabel = utilityKind === "capture" ? t("随手记") : utilityKind === "preferences" ? t("偏好设置") : routeLabel ? t(routeLabel) : t(sectionLabel);
   const windowTitle = desktopWindowTitle(pageLabel, libraryName, utilityKind);
+  if (typeof document !== "undefined") document.title = windowTitle;
   useEffect(() => { document.title = windowTitle; }, [windowTitle]);
   return (
     <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
