@@ -147,11 +147,11 @@ export function Letters({ revision }: { revision: number }) {
             <LetterLensPicker key={selected.page.id} lenses={lenses || []} onSelect={(lens) => { const request = perspectiveLetterRequest(selected, lens); selectVersion(); openContextAgent({ mode: "read", contextOverride: request.context, outputTarget: { kind: "letter-version", pageId: selected.page.id, lensId: lens.id, lensName: lens.displayName, label: tr("${lens.displayName}视角回信", { "lens.displayName": lens.displayName }) }, prompt: request.prompt }); }} />
           </div>}
           controls={<><div className="letter-provenance" aria-label={t("这封信的来历")}>
-          <span>写于 <time dateTime={selected.letterDate.slice(0, 10)}>{selected.letterDate.slice(0, 10)}</time></span>
-          {selected.evidenceFrom && <span>依据 {selected.evidenceFrom}{selected.evidenceTo && selected.evidenceTo !== selected.evidenceFrom ? tr(" 至 ${selected.evidenceTo}", { "selected.evidenceTo": selected.evidenceTo }) : ""} 的材料</span>}
+          <span>{t("写于 ")}<time dateTime={selected.letterDate.slice(0, 10)}>{selected.letterDate.slice(0, 10)}</time></span>
+          {selected.evidenceFrom && <span>{t("依据 … 的材料").replace("…", `${selected.evidenceFrom}${selected.evidenceTo && selected.evidenceTo !== selected.evidenceFrom ? tr(" 至 ${selected.evidenceTo}", { "selected.evidenceTo": selected.evidenceTo }) : ""}`)}</span>}
           <div className="letter-meta-themes">{selected.themes.slice(0, 2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}{selected.themes.length > 2 && <details key={selected.page.id} className="letter-more-themes"><summary aria-label={tr("另外 ${selected.themes.length - 2} 个主题", { "selected.themes.length - 2": selected.themes.length - 2 })}>+{selected.themes.length - 2}</summary><div>{selected.themes.slice(2).map((theme) => <PageLink key={theme.id} page={theme}>{theme.title}</PageLink>)}</div></details>}</div>
         </div>
-        {historical && <div className="letter-history-banner" role="status">你正在查看历史版本 <button type="button" onClick={() => selectVersion()}>{t("回到最新版本")}</button></div>}
+        {historical && <div className="letter-history-banner" role="status">{t("你正在查看历史版本")} <button type="button" onClick={() => selectVersion()}>{t("回到最新版本")}</button></div>}
 </>}
           footer={activeVersion && activeVersion.id !== "original" ? <button className="letter-generation-link" type="button" onClick={() => openContextAgent({ runId: activeVersion.runId })}>{t("查看生成对话")} <Icon name="arrow" size={14} /></button> : undefined}
         /> : <div className="source-preview-empty"><Empty>{t("当前范围暂无回信，可以切换筛选查看。")}</Empty></div>}

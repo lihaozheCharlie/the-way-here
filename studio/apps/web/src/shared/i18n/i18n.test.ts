@@ -36,6 +36,9 @@ describe("translate", () => {
     expect(translate("en", "未完成")).toBe("not finished");
     expect(translate("en", "正在停止")).toBe("Stopping");
     expect(translate("en", "正在停止…")).toBe("Stopping…");
+    expect(translate("en", "写于 ")).toBe("Written ");
+    expect(translate("en", "依据 … 的材料")).toBe("Based on materials from …");
+    expect(translate("en", "你正在查看历史版本")).toBe("You’re viewing a past version");
     expect(translate("en", "近况回信")).toBe("Recent letters");
     expect(translate("en", "语言")).toBe("Language");
     expect(translate("en", "全景")).toBe("Wide");
