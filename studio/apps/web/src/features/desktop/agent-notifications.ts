@@ -1,4 +1,7 @@
 import type { WikiRun } from "@the-way-here/shared";
+import { currentLocale, translate } from "../../shared/i18n";
+
+const tr = (message: string) => translate(currentLocale(), message);
 
 export interface AgentNotification { title: string; body: string; route: string }
 export interface PredictionNotificationEvent {
@@ -43,8 +46,8 @@ export class AgentNotificationTracker {
     // Initial history is silent; a newly completed run is still caught before the first snapshot.
     if (previous === undefined && Date.parse(run.updatedAt) < this.startedAt) return;
     this.notify({
-      title: `【${moduleForRun(run)}】${run.status === "completed" ? "任务已完成" : "任务未完成"}`,
-      body: (run.title || "Agent 任务").slice(0, 120),
+      title: `【${tr(moduleForRun(run))}】${run.status === "completed" ? tr("任务已完成") : tr("任务未完成")}`,
+      body: (run.title || tr("Agent 任务")).slice(0, 120),
       route: `/conversation?detached=true&run=${encodeURIComponent(run.id)}`,
     });
   }
@@ -62,9 +65,11 @@ export class AgentNotificationTracker {
     const completed = event.job === "scan" ? event.status === "idle" || event.status === "ready" : event.status === "ready";
     if (previous === event.status || !completed && event.status !== "failed") return;
     if (previous === undefined && Date.parse(event.startedAt) < this.startedAt) return;
+    const status = tr(completed ? "已完成" : "未完成");
+    const gap = currentLocale() === "en" && status && !/^\s/.test(status) ? " " : "";
     this.notify({
-      title: `【看见未来】${event.job === "scan" ? "了解度扫描" : "预测"}${completed ? "已完成" : "未完成"}`,
-      body: completed ? "点击查看结果。" : "点击查看原因并重试。",
+      title: `【${tr("看见未来")}】${tr(event.job === "scan" ? "了解度扫描" : "预测")}${gap}${status}`,
+      body: completed ? tr("点击查看结果。") : tr("点击查看原因并重试。"),
       route: "/predict-self",
     });
   }

@@ -2,17 +2,20 @@ import { useId, useState } from "react";
 import { MemoryWritingAssist } from "./MemoryWritingAssist";
 import { TextArea } from "../../shared/form-controls";
 import { photoAssetUrl, type PhotoMemory } from "@the-way-here/shared";
+import { useDemoJsonText } from "../../shared/i18n";
 
-export function PhotoNarration({ memory, story, locked, generating, onStory, onGenerate, background = "", onBackground = () => {} }: {
+export function PhotoNarration({ memory, story, locked, generating, onStory, onGenerate, onStoryFocus, onStoryBlur, background = "", onBackground = () => {} }: {
   memory: PhotoMemory; story: string; locked: boolean; generating: boolean;
-  onStory: (value: string) => void; onGenerate: () => void; background?: string; onBackground?: (value: string) => void;
+  onStory: (value: string) => void; onGenerate: () => void; onStoryFocus?: () => void; onStoryBlur?: () => void; background?: string; onBackground?: (value: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const galleryId = useId();
-  const names = Array.from(new Set(memory.photos.flatMap((photo) => photo.people.map((person) => person.name.trim()).filter(Boolean))));
+  const demoText = useDemoJsonText();
+  const memoryFile = `sources/.photo-memories/${memory.id}/memory.json`;
+  const names = Array.from(new Set(memory.photos.flatMap((photo, photoIndex) => photo.people.map((person, personIndex) => demoText(memoryFile, `$.photos[${photoIndex}].people[${personIndex}].name`, person.name).trim()).filter(Boolean))));
   return <section className="photo-narration-step">
     <div id={galleryId} className="photo-story-gallery" role="group" aria-label="一起讲故事的照片">
-      {(showAll ? memory.photos : memory.photos.slice(0,14)).map((photo, index) => <img key={photo.id} src={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id)} alt={`第 ${index + 1} 张：${photo.name}`} />)}
+      {(showAll ? memory.photos : memory.photos.slice(0,14)).map((photo, index) => <img key={photo.id} src={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id)} alt={`第 ${index + 1} 张：${demoText(memoryFile, `$.photos[${index}].name`, photo.name)}`} />)}
       {memory.photos.length > 14 && <button type="button" className="photo-gallery-toggle" aria-expanded={showAll} aria-controls={galleryId} onClick={() => setShowAll(value => !value)}>{showAll ? "收起照片" : `+${memory.photos.length - 14} 张 · 展开全部`}</button>}
     </div>
     <header className="photo-stage-heading photo-story-heading">
@@ -23,7 +26,7 @@ export function PhotoNarration({ memory, story, locked, generating, onStory, onG
     </header>
     <MemoryWritingAssist inline background={background} onBackground={onBackground} disabled={locked} generating={generating} onGenerate={onGenerate} context={[...(names.length ? [{ text: `已认出：${names.join("、")}`, icon: "people" as const }] : []), { text: `${memory.photos.length} 张照片`, icon: "image" }]} placeholder="补充一点照片背后的线索，比如和谁一起、那天发生了什么特别的事……" />
     <label className="photo-story-label" htmlFor="photo-group-story">故事</label>
-    <TextArea id="photo-group-story" value={story} maxLength={60000} disabled={locked} rows={6} onChange={(event) => onStory(event.target.value)} placeholder="这些照片串起了我的哪段经历？当时和谁在一起，发生了什么？" />
+    <TextArea id="photo-group-story" value={story} maxLength={60000} disabled={locked} rows={6} onFocus={onStoryFocus} onBlur={onStoryBlur} onChange={(event) => onStory(event.target.value)} placeholder="这些照片串起了我的哪段经历？当时和谁在一起，发生了什么？" />
     {story.trim() && !memory.confirmedAt ? <p className="photo-help">收进理解前请核对并修改，尤其是 AI 起草的内容。</p> : null}
   </section>;
 }

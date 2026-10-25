@@ -2,22 +2,24 @@ import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { TextInput } from "../../shared/form-controls";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/ui";
+import { useI18n } from "../../shared/i18n";
 
 export function DemoKnowledgeBaseNotice({ hasPersonalKnowledgeBase, onCreate, onOpenPersonal }: {
   hasPersonalKnowledgeBase: boolean;
   onCreate: () => void;
   onOpenPersonal: () => void;
 }) {
+  const { t } = useI18n();
   return <section className={`demo-kb-notice${hasPersonalKnowledgeBase ? " is-established" : ""}`} aria-labelledby="demo-kb-notice-title">
     <div className="demo-kb-notice-mark"><Icon name="library" size={19} /></div>
     <div>
-      <strong id="demo-kb-notice-title">先看看我会怎样记住一段生活</strong>
+      <strong id="demo-kb-notice-title">{t("先看看我会怎样记住一段生活")}</strong>
       <p>{hasPersonalKnowledgeBase
-        ? "这里是匿名故事，适合随便逛逛。你自己的空间与它完全分开。"
-        : "这里是一段匿名故事。准备好之后，可以建立只属于你的空间；你说过的话不会和演示内容混在一起。"}</p>
+        ? t("这里是匿名故事，适合随便逛逛。你自己的空间与它完全分开。")
+        : t("这里是一段匿名故事。准备好之后，可以建立只属于你的空间；你说过的话不会和演示内容混在一起。")}</p>
     </div>
     <button type="button" className={hasPersonalKnowledgeBase ? "secondary-action" : "primary-action"} onClick={hasPersonalKnowledgeBase ? onOpenPersonal : onCreate}>
-      {hasPersonalKnowledgeBase ? "回到我的空间" : "开始我的空间"}<Icon name="arrow" size={15} />
+      {hasPersonalKnowledgeBase ? t("回到我的空间") : t("开始我的空间")}<Icon name="arrow" size={15} />
     </button>
   </section>;
 }
@@ -26,6 +28,7 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
   onClose: () => void;
   onSubmit: (name: string) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState("我的 The Way Here");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -66,18 +69,18 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
       <form onSubmit={submit}>
         <header>
           <div className="kb-dialog-symbol"><Icon name="library" size={22} /></div>
-          <div><h2 id="kb-dialog-title">新建知识库</h2><p id="kb-dialog-description">给这个空间起个名字，之后可以在偏好设置里重命名。</p></div>
-          <button type="button" className="icon-button" onClick={onClose} disabled={saving} aria-label="关闭"><Icon name="close" size={18} /></button>
+          <div><h2 id="kb-dialog-title">{t("新建知识库")}</h2><p id="kb-dialog-description">{t("给这个空间起个名字，之后可以在偏好设置里重命名。")}</p></div>
+          <button type="button" className="icon-button" onClick={onClose} disabled={saving} aria-label={t("关闭")}><Icon name="close" size={18} /></button>
         </header>
         <div className="kb-dialog-body">
-          <label htmlFor="knowledge-base-name">空间名称</label>
+          <label htmlFor="knowledge-base-name">{t("空间名称")}</label>
           <TextInput ref={inputRef} id="knowledge-base-name" value={name} maxLength={40} disabled={saving} aria-invalid={Boolean(error)} aria-describedby={error ? "knowledge-base-name-error" : undefined} onFocus={(event) => event.currentTarget.select()} onChange={(event) => { setName(event.target.value); setError(""); }} />
-          <p>创建后会打开一个空白空间。演示内容不会被复制，你可以从第一句话慢慢开始。</p>
+          <p>{t("创建后会打开一个空白空间。演示内容不会被复制，你可以从第一句话慢慢开始。")}</p>
           {error ? <div id="knowledge-base-name-error" className="kb-dialog-error" role="alert">{error}</div> : null}
         </div>
         <footer>
-          <button type="button" className="secondary-action" onClick={onClose} disabled={saving}>取消</button>
-          <button className="primary-action" disabled={saving}>{saving ? "正在准备…" : "创建并开始"}</button>
+          <button type="button" className="secondary-action" onClick={onClose} disabled={saving}>{t("取消")}</button>
+          <button className="primary-action" disabled={saving}>{saving ? t("正在准备…") : t("创建并开始")}</button>
         </footer>
       </form>
     </section>

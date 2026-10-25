@@ -4,6 +4,7 @@ import type { PhotoBox, PhotoMemory, PhotoPerson } from "@the-way-here/shared";
 import { photoAssetUrl } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
 import { PhotoPersonPicker, type PhotoPersonOption } from "./PhotoPersonPicker";
+import { useDemoJsonText } from "../../shared/i18n";
 import { drawnPhotoBox, movePhotoBox, photoPoint, resizePhotoBox, type PhotoBoxHandle, type PhotoPoint } from "./photo-box-interaction";
 import { groupedPhotoQueue, type FaceGroups } from "./photo-face-groups";
 
@@ -22,7 +23,14 @@ export function PhotoPersonQueue({ memory, drafts, groups, onDetach, groupingErr
   onSkip: (photoId: string, person: PhotoPerson) => void;
   detecting: boolean; detectionLabel?: string; detectionError?: string; onRetry: () => void;
 }) {
+  const demoText = useDemoJsonText();
   const photo = memory.photos.find((photo) => photo.id === photoId) ?? memory.photos[0]!;
+  const memoryFile = `sources/.photo-memories/${memory.id}/memory.json`;
+  const photoIndex = Math.max(0, memory.photos.findIndex((item) => item.id === photo.id));
+  const shownPersonName = (candidate: { id: string; name: string }) => {
+    const personIndex = photo.people.findIndex((item) => item.id === candidate.id);
+    return personIndex < 0 ? candidate.name : demoText(memoryFile, `$.photos[${photoIndex}].people[${personIndex}].name`, candidate.name);
+  };
   const candidates = drafts[photo.id] ?? photo.people;
   const person = candidates.find((person) => person.id === selectedId);
   const group = groupedPhotoQueue(memory, drafts, groups).find((entry) => entry.members.some((member) => member.person.id === person?.id));
@@ -164,15 +172,15 @@ export function PhotoPersonQueue({ memory, drafts, groups, onDetach, groupingErr
     {drawing ? <p className="photo-draw-instruction" role="status">在照片上按住并拖动，框住人物的脸部。</p> : null}
     <div className="photo-tag-stage">
       <div ref={imageRef} className={`photo-tag-image${drawing ? " drawing" : ""}`} style={{ aspectRatio: `${photo.width} / ${photo.height}`, maxWidth: `${Math.min(740, 620 * photo.width / photo.height)}px` }} onPointerDown={beginDraw} onPointerMove={continueDraw} onPointerUp={finishDraw} onPointerCancel={() => { setDrawStart(undefined); setDrawEnd(undefined); }} onKeyDown={(event) => { if (event.key === "Escape" && drawing) { setDrawing(false); setDrawStart(undefined); setDrawEnd(undefined); } }}>
-        <img src={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id)} alt={photo.name} draggable={false} />
+        <img src={photoAssetUrl(memory.knowledgeBaseId, memory.id, photo.id)} alt={demoText(memoryFile, `$.photos[${photoIndex}].name`, photo.name)} draggable={false} />
         {candidates.map((candidate, index) => <div ref={(node) => { faceTags.current[candidate.id] = node; }} key={candidate.id} className={`photo-face-tag ${candidate.name ? "named" : "unassigned"}${candidate.id === person?.id ? " selected" : ""}${candidate.box.x + candidate.box.width / 2 > .5 ? " popover-left" : ""}${candidate.box.y + candidate.box.height / 2 > .55 ? " popover-up" : ""}`} style={{ left: `${candidate.box.x * 100}%`, top: `${candidate.box.y * 100}%`, width: `${candidate.box.width * 100}%`, height: `${candidate.box.height * 100}%` }}>
           <button ref={(node) => { faceButtons.current[candidate.id] = node; }} type="button" className="photo-face-hit" aria-label={`${candidate.name || `人物 ${index + 1}，待认领`}的圈选范围；点击选中，拖动调整位置`} aria-pressed={candidate.id === person?.id} disabled={locked || detecting || drawing} onPointerDown={(event) => beginBoxGesture(event, candidate)} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } setNamingId(""); onSelect(candidate.id); }} />
-          <button ref={(node) => { faceLabels.current[candidate.id] = node; }} type="button" className="photo-face-label" aria-expanded={namingId === candidate.id} aria-controls={namingId === candidate.id ? panelId : undefined} disabled={locked || detecting || drawing} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); openNaming(candidate); }}>{candidate.name || "填写人物"}</button>
+          <button ref={(node) => { faceLabels.current[candidate.id] = node; }} type="button" className="photo-face-label" aria-expanded={namingId === candidate.id} aria-controls={namingId === candidate.id ? panelId : undefined} disabled={locked || detecting || drawing} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); openNaming(candidate); }}>{shownPersonName(candidate) || "填写人物"}</button>
           {candidate.id === person?.id && !drawing ? handles.map((handle) => <button key={handle} type="button" className={`photo-resize-handle ${handle}`} aria-label={`拖动${handleNames[handle]}调整人物框，方向键可微调`} disabled={locked || detecting} onPointerDown={(event) => beginBoxGesture(event, candidate, handle)} onKeyDown={(event) => resizeWithKeyboard(event, candidate, handle)} />) : null}
           {candidate.id === person?.id && namingId === candidate.id ? <fieldset ref={formRef} id={panelId} className="photo-name-panel photo-name-popover" disabled={locked || detecting} onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); closeNaming(true); } }}>
             <legend className="sr-only">标注照片中的人物</legend>
             <div className="photo-name-panel-head"><b>这是谁？</b><button type="button" className="photo-text-action" aria-label="关闭人物标注" onClick={() => closeNaming(true)}><Icon name="close" size={14} /></button></div>
-            <PhotoPersonPicker key={candidate.id} person={candidate} people={people} onChange={(patch) => onConfirm(photo.id, { ...candidate, ...patch })} />
+            <PhotoPersonPicker key={candidate.id} person={candidate} people={people} displayName={shownPersonName(candidate)} onChange={(patch) => onConfirm(photo.id, { ...candidate, ...patch })} />
             {group && group.members.length > 1 ? <div className="photo-group-hint"><p>另有 {group.members.length - 1} 张照片识别为同一人，选择名字后同步更新。</p><button type="button" className="photo-text-action" onClick={() => onDetach(candidate.id)}>认错了，这张单独标注</button></div> : null}
             <button type="button" className="photo-person-remove photo-text-action" onClick={() => onSkip(photo.id, candidate)}>不记录这个人</button>
           </fieldset> : null}

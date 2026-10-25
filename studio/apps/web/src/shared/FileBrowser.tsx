@@ -3,6 +3,7 @@ import type { WikiPageSummary } from "@the-way-here/shared";
 import { PaneShelf } from "./PaneShelf";
 import { QuietScroll } from "./QuietScroll";
 import "./file-browser.css";
+import { useDemoLabels } from "./i18n";
 
 /** Both records and letters use the same collapsible file column and row markup. */
 export function FileBrowserPane({ label, count, open, onToggle, toolbar, headerAction, onCreate, createLabel, createDisabled, inlineCreate, children, toggleLabel = "文件列表" }: {
@@ -24,7 +25,9 @@ export function FileBrowserItem({ page, active, onSelect, selection, actions, ch
   page: Pick<WikiPageSummary, "relativePath" | "title" | "excerpt" | "externalSource">; active: boolean; onSelect: () => void;
   selection?: ReactNode; actions?: ReactNode; children?: ReactNode; onDragStart?: DragEventHandler<HTMLElement>; onDragEnd?: DragEventHandler<HTMLElement>;
 }) {
-  const fileName = (page.externalSource?.originalPath || page.relativePath).replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
+  const demo = useDemoLabels();
+  const storedName = (page.externalSource?.originalPath || page.relativePath).replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
+  const fileName = demo.file(storedName);
   return <article draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragEnd={onDragEnd} className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""} file-browser-item`}>
     {selection}
     <button type="button" className="source-file-select" aria-label={fileName} aria-current={active ? "true" : undefined} onClick={onSelect}>

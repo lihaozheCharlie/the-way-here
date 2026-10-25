@@ -3,6 +3,11 @@ import { createPortal } from "react-dom";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReasoningLens } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
+import { currentLocale, translate } from "../../shared/i18n";
+
+function tr(message: string, params?: Record<string, string | number | null | undefined>): string {
+  return translate(currentLocale(), message, params);
+}
 
 function LensChoice({ lens, onSelect, selected = false }: { lens: ReasoningLens; onSelect: () => void; selected?: boolean }) {
   const id = useId();
@@ -85,7 +90,7 @@ export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]
     if (!rootRef.current?.contains(event.relatedTarget as Node | null) && !popoverRef.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
   }}>
     <button ref={triggerRef} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}>用新视角重读 <Icon name="down" size={14} /></button>
-    {open && createPortal(<section ref={popoverRef} id={id} className="letter-lens-popover" data-placement={placement.above ? "above" : "below"} style={{ maxHeight: placement.maxHeight, left: placement.left, top: placement.above ? "auto" : placement.edge, bottom: placement.above ? placement.edge : "auto" }} aria-label="选择重读视角">
+    {open && createPortal(<section ref={popoverRef} id={id} className="letter-lens-popover" data-placement={placement.above ? "above" : "below"} style={{ maxHeight: placement.maxHeight, left: placement.left, top: placement.above ? "auto" : placement.edge, bottom: placement.above ? placement.edge : "auto" }} aria-label={tr("选择重读视角")}>
       <p>用 {lenses.length} 种从公开原则提炼的视角重新写这封信。</p>
       <LetterLensChoices lenses={lenses} onSelect={lens => { setOpen(false); onSelect(lens); }} />
     </section>, document.body)}

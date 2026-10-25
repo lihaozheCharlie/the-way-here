@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import type { WikiPageSummary } from "@the-way-here/shared";
 
 import { subscribeLiveRevision } from "./live-revision";
+import { useDemoLabels } from "./i18n";
 
 export type ReturnContext = { returnTo: string; returnLabel: string };
 
@@ -57,7 +58,8 @@ export function useReturnContext(): ReturnContext {
 
 export function PageLink({ page, className = "", children }: { page: WikiPageSummary; className?: string; children?: ReactNode }) {
   const returnContext = useReturnContext();
-  return <NavLink data-overflow-tooltip="off" to={pageDestination(page)} state={returnContext} className={className}>{children || page.title}</NavLink>;
+  const demo = useDemoLabels();
+  return <NavLink data-overflow-tooltip="off" to={pageDestination(page)} state={returnContext} className={className}>{children || demo.title(page.title)}</NavLink>;
 }
 
 function returnLabelForPath(pathname: string): string {

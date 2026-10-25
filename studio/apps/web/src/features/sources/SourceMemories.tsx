@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { photoAssetUrl, type PhotoMemory, type VaultInfo } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
+import { useDemoJsonText } from "../../shared/i18n";
 import { Icon } from "../../shared/ui";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { cleanSourcePath, sourceBuildPresentation, type SourceBuildRecord } from "./source-model";
@@ -11,7 +12,8 @@ function MemoryCard({ record, knowledgeBaseId, revision, onOpen }: { record: Sou
   const { batch, file } = record;
   const photos = batch.channel === "photos";
   const { data: memory } = useApi<PhotoMemory>(photos && knowledgeBaseId ? `/api/photo-memories/${encodeURIComponent(batch.id)}?knowledgeBaseId=${encodeURIComponent(knowledgeBaseId)}` : "", revision);
-  const title = photos ? memory?.title || file.originalName : batch.journey?.title || cleanSourcePath(file.storedPath).split("/").at(-1)?.replace(/\.md$/i, "") || file.originalName;
+  const demoText = useDemoJsonText();
+  const title = photos ? (memory ? demoText(`sources/.photo-memories/${memory.id}/memory.json`, "$.title", memory.title) : file.originalName) : batch.journey?.title || cleanSourcePath(file.storedPath).split("/").at(-1)?.replace(/\.md$/i, "") || file.originalName;
   const state = sourceBuildPresentation(file);
   const photo = memory?.photos[0];
   return <button type="button" className="source-memory-card" aria-haspopup="dialog" onClick={onOpen}>

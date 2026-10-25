@@ -5,9 +5,11 @@ import { Empty, Icon, Loading } from "../../shared/ui";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { companionshipDays } from "./companionship";
 import { LifeRecordCapture } from "./LifeRecordCapture";
+import { useI18n } from "../../shared/i18n";
 import "./today.css";
 
 export function Today({ revision }: { revision: number }) {
+  const { t } = useI18n();
   const { data: vault, error } = useApi<VaultInfo>("/api/vault", revision);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -15,13 +17,14 @@ export function Today({ revision }: { revision: number }) {
     return () => window.clearInterval(timer);
   }, []);
   if (!vault && error) return <Empty>{error}</Empty>;
-  if (!vault) return <Loading label="正在打开此刻" />;
+  if (!vault) return <Loading label={t("正在打开此刻")} />;
+  const days = companionshipDays(vault.companionshipStartedAt, now);
   return <div className="home-overview today-simple">
-    {error ? <p className="today-vault-status" role="status">刚才没能刷新知识库，下面仍是上次打开的内容。</p> : null}
+    {error ? <p className="today-vault-status" role="status">{t("刚才没能刷新知识库，下面仍是上次打开的内容。")}</p> : null}
     <section className="today-companion-card" aria-labelledby="home-intro-title">
-      <span className="today-companion-badge"><Icon name="heart" size={18} />长期陪伴 · 已相处 {companionshipDays(vault.companionshipStartedAt, now)} 天</span>
-      <h1 id="home-intro-title">有什么，都可以聊聊</h1>
-      <p>我会记得你的来路，也会坦白哪些地方还不懂你。你先说，我们再一起把生活慢慢理清。</p>
+      <span className="today-companion-badge"><Icon name="heart" size={18} />{t("长期陪伴 · 已相处 ${days} 天", { days })}</span>
+      <h1 id="home-intro-title">{t("有什么，都可以聊聊")}</h1>
+      <p>{t("我会记得你的来路，也会坦白哪些地方还不懂你。你先说，我们再一起把生活慢慢理清。")}</p>
     </section>
     <LifeRecordCapture key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} />
     <PageAgentContext context={{ scope: "此刻", title: "从此刻说起", summary: "听听最近发生的事，一起把生活慢慢理清。", defaultMode: "read", suggestions: ["我想聊聊最近发生的一件事。"] }} />

@@ -39,10 +39,12 @@ import { Relationships } from "../features/knowledge/Relationships";
 import { SearchResults } from "../features/knowledge/SearchResults";
 import { Timeline } from "../features/knowledge/Timeline";
 import { CreateKnowledgeBaseDialog, DemoKnowledgeBaseNotice } from "../features/knowledge-bases/KnowledgeBaseOnboarding";
+import { ActiveLibraryProvider, useI18n } from "../shared/i18n";
 
 type KnowledgeBaseSummary = VaultInfo["knowledgeBases"][number];
 
 function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDelete }: { vault: VaultInfo; disabled: boolean; onChange: (knowledgeBaseId: string) => void; onCreate: () => void; onDelete: (knowledgeBase: KnowledgeBaseSummary) => void }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useDismissLayer(open, () => { setOpen(false); rootRef.current?.querySelector<HTMLButtonElement>(".global-kb-trigger")?.focus(); });
@@ -67,11 +69,11 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
   return <div className="global-kb-switcher" ref={rootRef}>
     <button className="global-kb-trigger" type="button" disabled={disabled} aria-haspopup="menu" aria-expanded={open} aria-controls="global-kb-menu" onClick={() => setOpen((current) => !current)}>
       <Icon name="spark" size={15} />
-      <span>{active?.name || "个人空间"}</span>
+      <span>{active?.name || t("个人空间")}</span>
       <Icon name="down" size={14} />
     </button>
-    {open ? <div className="global-kb-menu" id="global-kb-menu" role="menu" aria-label="切换知识库">
-      <div className="global-kb-menu-heading"><b>切换知识库</b><span>每个空间有各自的记录、理解和对话。</span></div>
+    {open ? <div className="global-kb-menu" id="global-kb-menu" role="menu" aria-label={t("切换知识库")}>
+      <div className="global-kb-menu-heading"><b>{t("切换知识库")}</b><span>{t("每个空间有各自的记录、理解和对话。")}</span></div>
       <div className="global-kb-options">
         {vault.knowledgeBases.map((knowledgeBase) => {
           const selected = knowledgeBase.id === vault.knowledgeBaseId;
@@ -79,18 +81,19 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
           return <div className="global-kb-option-row" key={knowledgeBase.id}>
             <button className="global-kb-option-main" type="button" role="menuitemradio" aria-checked={selected} onClick={() => chooseKnowledgeBase(knowledgeBase.id)}>
               <span className="global-kb-check">{selected ? <Icon name="check" size={15} /> : null}</span>
-              <span className="global-kb-option-copy"><span>{knowledgeBase.name}{demo ? <small>演示</small> : null}</span><small>{demo ? "预置的示例记忆，可以先感受被记住的体验" : `来自「${knowledgeBase.name}」的生活记录与已有理解`}</small></span>
+              <span className="global-kb-option-copy"><span>{knowledgeBase.name}{demo ? <small>{t("演示")}</small> : null}</span><small>{demo ? t("预置的示例记忆，可以先感受被记住的体验") : t("来自「${knowledgeBase.name}」的生活记录与已有理解", { "knowledgeBase.name": knowledgeBase.name })}</small></span>
             </button>
-            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={`删除知识库「${knowledgeBase.name}」`} title="删除知识库"><Icon name="trash" size={15} /></button> : null}
+            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={t("删除知识库「${name}」", { name: knowledgeBase.name })} title={t("删除知识库")}><Icon name="trash" size={15} /></button> : null}
           </div>;
         })}
       </div>
-      <button className="global-kb-create" type="button" role="menuitem" onClick={() => { setOpen(false); onCreate(); }}>新建一个知识库 <Icon name="arrow" size={14} /></button>
+      <button className="global-kb-create" type="button" role="menuitem" onClick={() => { setOpen(false); onCreate(); }}>{t("新建一个知识库")} <Icon name="arrow" size={14} /></button>
     </div> : null}
   </div>;
 }
 
 export function AppShell({ revision }: { revision: number }) {
+  const { t } = useI18n();
   const { data: vault } = useApi<VaultInfo>("/api/vault", revision);
   const initialKnowledgeBase = useRef<string | undefined>(undefined);
   const explicitKnowledgeBaseNavigation = useRef(false);
@@ -162,7 +165,7 @@ export function AppShell({ revision }: { revision: number }) {
     if (!vault || knowledgeBaseId === vault.knowledgeBaseId || knowledgeBaseSwitching) return;
     const nextKnowledgeBase = vault.knowledgeBases.find((item) => item.id === knowledgeBaseId);
     setKnowledgeBaseSwitching(true);
-    setSwitchingKnowledgeBaseName(nextKnowledgeBase?.name || "所选空间");
+    setSwitchingKnowledgeBaseName(nextKnowledgeBase?.name || t("所选空间"));
     setKnowledgeBaseError("");
     explicitKnowledgeBaseNavigation.current = true;
     try {
@@ -268,28 +271,32 @@ export function AppShell({ revision }: { revision: number }) {
 
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
+  const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
+  const windowTitle = utilityWindow
+    ? (location.pathname === "/capture" ? t("随手记") : t("偏好设置"))
+    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${vault?.name || "The Way Here"}`;
   return (
-    <ReaderLocationProvider publish={setReaderLocation}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
-      <a className="skip-link" href="#main-content">跳到主要内容</a>
+    <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
+      <a className="skip-link" href="#main-content">{t("跳到主要内容")}</a>
       <header className="desktop-titlebar">
         <div className="desktop-window-space" aria-hidden="true" />
-        <span className="desktop-window-title">{utilityWindow ? location.pathname === "/capture" ? "随手记" : "偏好设置" : `${location.pathname === "/search" ? "搜索" : activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读"} · ${vault?.name || "The Way Here"}`}</span>
-        {!utilityWindow ? <><button className="desktop-icon" aria-label="搜索与命令" title="搜索与命令 ⌘K" onClick={searchWindow.show}><Icon name="search" size={17} /></button>
-        {!localConversation && !detached ? <button ref={agentToggleRef} className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? "收起Agent对话" : "打开Agent对话"} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? "收起Agent对话" : "打开Agent对话"}</span></button> : null}</> : null}
+        <span className="desktop-window-title">{windowTitle}</span>
+        {!utilityWindow ? <><button className="desktop-icon" aria-label={t("搜索与命令")} title={t("搜索与命令 ⌘K")} onClick={searchWindow.show}><Icon name="search" size={17} /></button>
+        {!localConversation && !detached ? <button ref={agentToggleRef} className={`desktop-icon agent-toggle${inspectorOpen ? " selected" : ""}`} aria-label={inspectorOpen ? t("收起Agent对话") : t("打开Agent对话")} aria-expanded={inspectorOpen} onClick={toggleInspector}><Icon name="spark" size={17} /><span className="agent-toggle-tooltip" role="tooltip">{inspectorOpen ? t("收起Agent对话") : t("打开Agent对话")}</span></button> : null}</> : null}
       </header>
-      <aside className="desktop-sidebar" aria-label="侧边栏">
+      <aside className="desktop-sidebar" aria-label={t("侧边栏")}>
         <div className="desktop-identity"><img className="desktop-app-mark" src="/brand/app-icon.svg?v=app-icon-5" width={28} height={28} alt="" aria-hidden="true" /><b>The Way Here</b></div>
         {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
-        <nav id="main-navigation" className="desktop-navigation" aria-label="主要导航" onClickCapture={event => { if ((event.target as Element).closest("a")) { setSuspendedInspectorMenu(activeMenu); window.dispatchEvent(new Event("suspend-floating-windows")); } }}>
+        <nav id="main-navigation" className="desktop-navigation" aria-label={t("主要导航")} onClickCapture={event => { if ((event.target as Element).closest("a")) { setSuspendedInspectorMenu(activeMenu); window.dispatchEvent(new Event("suspend-floating-windows")); } }}>
           {navigation.map((item) => <React.Fragment key={item.to}>
-            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{item.label}</span></NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? "收起已有理解" : "展开已有理解"} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
-            {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{child.label}</NavLink>)}</div> : null}
+            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{t(item.label)}</span></NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? t("收起已有理解") : t("展开已有理解")} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
+            {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{t(child.label)}</NavLink>)}</div> : null}
           </React.Fragment>)}
         </nav>
-        <div className="desktop-sidebar-bottom"><button onClick={openPreferences}><Icon name="controls" size={16} />偏好设置</button></div>
+        <div className="desktop-sidebar-bottom"><button onClick={openPreferences}><Icon name="controls" size={16} />{t("偏好设置")}</button></div>
       </aside>
       <main className="main-area" id="main-content" tabIndex={-1}>
-        {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />正在打开「{switchingKnowledgeBaseName}」…</div> : null}
+        {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />{t("正在打开「${name}」…", { name: switchingKnowledgeBaseName })}</div> : null}
         {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{knowledgeBaseError}</div> : null}
         <div className="page-frame">
           {!utilityWindow && !detached ? <ModelOnboarding revision={revision} initialOpen={location.pathname === "/"} onOpenPreferences={openPreferences} /> : null}
@@ -302,9 +309,9 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/conversation" element={<ConversationWindow revision={revision} />} />
             <Route path="/preferences" element={<Preferences revision={revision} />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">正在打开知识库…</p>} />
+            <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">{t("正在打开知识库…")}</p>} />
             <Route path="/" element={<Today revision={revision} />} />
-            <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : <p role="status">正在打开知识库…</p>} />
+            <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : <p role="status">{t("正在打开知识库…")}</p>} />
             <Route path="/questions" element={<QuestionsHub revision={revision} />} />
             <Route path="/sources" element={<OrganizedSources revision={revision} />} />
             <Route path="/sources/materials" element={<OrganizedSources revision={revision} />} />
@@ -328,15 +335,15 @@ export function AppShell({ revision }: { revision: number }) {
       {searchWindow.open ? <CommandPalette routes={navigation.flatMap(item => [{ title: item.label, to: item.to }, ...item.children.map(child => ({ title: child.label, to: child.to }))])} onClose={searchWindow.hide} onCapture={openCapture} onSettings={openPreferences} /> : null}
       {createKnowledgeBaseOpen ? <CreateKnowledgeBaseDialog onClose={() => setCreateKnowledgeBaseOpen(false)} onSubmit={createKnowledgeBase} /> : null}
       {deleteKnowledgeBaseTarget ? <ConfirmDeleteDialog
-        title="删除这个知识库？"
-        description="其中的生活记录和已有理解会从本机永久删除。"
+        title={t("删除这个知识库？")}
+        description={t("其中的生活记录和已有理解会从本机永久删除。")}
         itemName={deleteKnowledgeBaseTarget.name}
-        impact={deleteKnowledgeBaseTarget.id === vault?.knowledgeBaseId ? "这是当前打开的知识库。删除后会自动打开另一个保留的空间；此操作不能撤销。" : "这个知识库的日记、导入材料和构建出的理解都会一起删除；此操作不能撤销。"}
-        confirmLabel="删除知识库"
+        impact={deleteKnowledgeBaseTarget.id === vault?.knowledgeBaseId ? t("这是当前打开的知识库。删除后会自动打开另一个保留的空间；此操作不能撤销。") : t("这个知识库的日记、导入材料和构建出的理解都会一起删除；此操作不能撤销。")}
+        confirmLabel={t("删除知识库")}
         onClose={closeDeleteKnowledgeBaseDialog}
         onConfirm={deleteKnowledgeBase}
       /> : null}
       <TruncatedTextTooltip />
-    </div></ReaderLocationProvider>
+    </div></ActiveLibraryProvider></ReaderLocationProvider>
   );
 }

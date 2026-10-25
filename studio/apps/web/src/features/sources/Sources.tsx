@@ -17,6 +17,7 @@ import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { graphCategoryNames } from "../../shared/categories";
+import { useI18n } from "../../shared/i18n";
 import { pageDestination, pageHref, type ReturnContext } from "../../shared/routing";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
@@ -157,6 +158,7 @@ function ImportedBatchGuide({ batch, busyPath, onStart, onStartAll, onDefer }: {
 }
 
 export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
+  const { t } = useI18n();
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
   const related = (page.relatedPages || []).filter((item) => item.category !== "maintenance");
@@ -168,12 +170,12 @@ export function SourceKnowledgeConnections({ page }: { page: WikiPage }) {
   return <details className="source-knowledge-connections">
     <summary>查看关联结果 · {related.length}</summary>
     {letter && <NavLink className="source-letter-feature" to={pageDestination(letter)} state={returnContext}>
-      <div><span><Icon name="spark" size={15} />近况回信</span><h3>{letter.title}</h3><p>{letter.excerpt || "沿着这篇记录，留下一封可以从未来回看的信。"}</p></div>
+      <div><span><Icon name="spark" size={15} />{t("近况回信")}</span><h3>{letter.title}</h3><p>{letter.excerpt || "沿着这篇记录，留下一封可以从未来回看的信。"}</p></div>
       <i><Icon name="arrow" size={17} /></i>
     </NavLink>}
     {shown.length > 0 && <nav className="source-related-knowledge" aria-label="这篇原始记录关联的页面">
       {shown.map((item) => <NavLink key={item.id} to={pageHref(item.id)} state={returnContext}>
-        <span>{graphCategoryNames[item.category] || item.category}</span>
+        <span>{t(graphCategoryNames[item.category] || item.category)}</span>
         <b>{item.title}</b>
         <i><Icon name="arrow" size={14} /></i>
         <p className="source-related-peek" data-overflow-tooltip="off">{item.excerpt || "打开页面继续阅读完整内容。"}</p>

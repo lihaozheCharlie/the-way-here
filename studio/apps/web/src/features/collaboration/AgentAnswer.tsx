@@ -11,6 +11,11 @@ import { localWikiHref } from "./local-page-link";
 import { splitWikiUpdate, wikiUpdateFields } from "./answer-model";
 import { citationFromHref, remarkAnswerCitations } from "./answer-citations";
 import "./answer-citations.css";
+import { currentLocale, translate } from "../../shared/i18n";
+
+function tr(message: string, params?: Record<string, string | number | null | undefined>): string {
+  return translate(currentLocale(), message, params);
+}
 
 export function AgentMarkdown({ text, onCitation }: { text: string; onCitation?: (pageId: string) => void }) {
   const returnContext = useReturnContext();
@@ -46,7 +51,7 @@ export function AgentAnswer({ answer, run, revision = 0 }: { answer: string; run
       <summary><span className="agent-artifact-icon"><Icon name="library" size={17} /></span><span className="agent-artifact-heading"><b>Wiki 更新</b><small>{changes.length ? `${changes.length} 个文件变化` : "本轮提出的更新内容"}</small></span><span className={`agent-artifact-badge ${!changes.length || failed ? "warning" : ""}`}>{status}</span><Icon name="down" size={16} /></summary>
       <div className="agent-artifact-fields">
         {wiki && wikiUpdateFields(wiki).map((field, index) => <div className="agent-artifact-field" key={index}><AgentMarkdown text={field} onCitation={citation.open} /></div>)}
-        {changes.map((change) => <details className="agent-artifact-field" key={change.path}><summary>{change.kind === "added" ? "新增" : change.kind === "deleted" ? "删除" : "修改"} · {change.path}</summary><pre>{change.diff || "无文本差异"}</pre></details>)}
+        {changes.map((change) => <details className="agent-artifact-field" key={change.path}><summary>{change.kind === "added" ? "新增" : change.kind === "deleted" ? tr("删除") : "修改"} · {change.path}</summary><pre>{change.diff || "无文本差异"}</pre></details>)}
       </div>
       {(!changes.length && !pending || failed || run.error) && <p className="agent-artifact-note"><Icon name="info" size={14} /><span>{run.error || (failed ? "内容已写入，但质量检查未通过。请在任务详情中查看检查结果。" : "本轮没有检测到 Wiki 文件变化，以上内容尚未写入。")}</span></p>}
     </details>}

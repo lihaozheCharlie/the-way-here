@@ -1,6 +1,7 @@
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import "./floating-agent-panel.css";
+import { useI18n } from "../../shared/i18n";
 
 const WIDTH_KEY = "the-way-here.agent-panel-width";
 const DEFAULT_WIDTH = 440;
@@ -8,6 +9,7 @@ const MIN_WIDTH = 320;
 const MAX_WIDTH = 960;
 
 export function FloatingAgentPanel({ open, triggerRef, children }: { open: boolean; triggerRef: RefObject<HTMLButtonElement | null>; children: ReactNode }) {
+  const { t } = useI18n();
   const panelRef = useRef<HTMLElement>(null);
   useDismissLayer(open, reason => { window.dispatchEvent(new Event("hide-inspector")); if (reason === "escape") triggerRef.current?.focus(); }, { priority: 0, element: panelRef, outside: true, ignore: triggerRef });
   const id = useId();
@@ -37,8 +39,8 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
     if (!open) { drag.current = null; setResizing(false); }
   }, [open]);
 
-  return <aside ref={panelRef} className={`desktop-inspector floating-agent-panel${open ? " is-open" : " is-collapsed"}${resizing ? " is-resizing" : ""}`} style={{ width }} aria-label="AI 协作面板" inert={!open} aria-hidden={!open}>
-    <div className="agent-panel-resize" role="separator" tabIndex={open ? 0 : -1} aria-label="调整 Agent 对话宽度" aria-orientation="vertical" aria-controls={id} aria-valuemin={minWidth} aria-valuemax={maxWidth} aria-valuenow={width} aria-valuetext={`${width} 像素`} title="拖动调整宽度，或使用左右方向键"
+  return <aside ref={panelRef} className={`desktop-inspector floating-agent-panel${open ? " is-open" : " is-collapsed"}${resizing ? " is-resizing" : ""}`} style={{ width }} aria-label={t("AI 协作面板")} inert={!open} aria-hidden={!open}>
+    <div className="agent-panel-resize" role="separator" tabIndex={open ? 0 : -1} aria-label={t("调整 Agent 对话宽度")} aria-orientation="vertical" aria-controls={id} aria-valuemin={minWidth} aria-valuemax={maxWidth} aria-valuenow={width} aria-valuetext={t("${width} 像素", { width })} title={t("拖动调整宽度，或使用左右方向键")}
       onPointerDown={event => {
         if (event.button !== 0 || !event.isPrimary) return;
         event.preventDefault();
