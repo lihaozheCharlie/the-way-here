@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { desktopWindowTitle } from "../../app/window-title";
 import { demoListExcerpt } from "./demo-body";
-import { demoPathTooltip, demoTitleLabel } from "./demo-overlay";
+import { demoLibraryLabel, demoPathTooltip, demoSectionHeadingLabel, demoTitleLabel } from "./demo-overlay";
 import { demoTagLabel } from "./demo-titles";
 import { demoSeedExcerpts } from "./demo-excerpt-data";
 
@@ -27,7 +27,10 @@ describe("demo payload chrome", () => {
     expect(excerpt).toContain("Related");
     expect(excerpt).not.toMatch(/[\u3400-\u9fff]/);
     expect(desktopWindowTitle("Preferences", "The Way Here demo", "preferences")).toBe("Preferences · The Way Here demo");
+    expect(desktopWindowTitle("Search", demoLibraryLabel("demo", "en", "The Way Here"), null)).toBe("Search · The Way Here demo");
     expect(desktopWindowTitle("Search", "The Way Here demo", null)).toBe("Search · The Way Here demo");
+    expect(demoSectionHeadingLabel("demo", "en", "模型定义")).toBe("Model definition");
+    expect(demoSectionHeadingLabel("personal", "en", "模型定义")).toBe("模型定义");
     expect(desktopWindowTitle("Go deeper", "The Way Here demo", null)).toBe("Go deeper · The Way Here demo");
     expect(desktopWindowTitle("Quick note", "The Way Here demo", "capture")).toBe("Quick note");
   });

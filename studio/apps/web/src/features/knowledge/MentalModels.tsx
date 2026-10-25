@@ -1,4 +1,4 @@
-import { tr } from "../../shared/i18n";
+import { tr, useDemoLabels } from "../../shared/i18n";
 import { FileMenu } from "../../shared/FileMenu";
 import { NavLink, useSearchParams } from "react-router-dom";
 import { useState } from "react";
@@ -14,6 +14,7 @@ import { CollapsibleIndexPane, Empty, Icon, Loading, PageHeader, SectionHeading,
 import { resolveThinkingModels } from "./thinking-models";
 
 export function MentalModels({ revision }: { revision: number }) {
+  const demo = useDemoLabels();
   const legacy = useApi<SectionedPageView>("/api/views/mental-models", revision);
   const cards = useApi<StructuredCard[]>("/api/views/cards/mental-models", revision);
   const [params, setParams] = useSearchParams();
@@ -29,6 +30,9 @@ export function MentalModels({ revision }: { revision: number }) {
   const requestedModel = params.get("model") || "";
   const selected = models.find((model) => model.key === requestedModel || model.title === requestedModel || model.pageId === requestedModel) || models[0]!;
   const selectModel = (key: string) => setParams((current) => { const next = new URLSearchParams(current); next.set("model", key); return next; }, { replace: true });
+  const label = (model: typeof selected) => demo.heading(model.key, model.excerpt) || demo.title(model.title);
+  const english = selected.excerpt ? demo.sections(selected.key, selected.excerpt) : undefined;
+  const shownSections = english?.length ? english : selected.sections;
   return (
     <div>
       <SectionTabs items={growthTabs} />
@@ -37,22 +41,22 @@ export function MentalModels({ revision }: { revision: number }) {
       <div className={`model-explorer${indexOpen ? "" : " index-collapsed"}`}>
         <CollapsibleIndexPane open={indexOpen} onToggle={() => setIndexOpen((value) => !value)} label={tr("模型列表")}>
           <aside className="model-index" role="listbox" aria-label={tr("模型领域")}>
-            {models.map((model) => <button role="option" aria-selected={selected.key === model.key} className={selected.key === model.key ? "active" : ""} key={model.key} onClick={() => selectModel(model.key)}>{model.title}<Icon name="arrow" size={15} /></button>)}
+            {models.map((model) => <button role="option" aria-selected={selected.key === model.key} className={selected.key === model.key ? "active" : ""} key={model.key} onClick={() => selectModel(model.key)}>{label(model)}<Icon name="arrow" size={15} /></button>)}
           </aside>
         </CollapsibleIndexPane>
         <article className="model-detail" aria-live="polite">
-          <h2>{selected.title}</h2>
-          {selected.sections.length === 1 && selected.sections[0]?.heading === "模型说明"
-            ? <MarkdownBody>{selected.sections[0].body}</MarkdownBody>
-            : selected.sections.map((section) => <section key={section.heading}><h3>{section.heading}</h3><MarkdownBody>{section.body}</MarkdownBody></section>)}
+          <h2>{label(selected)}</h2>
+          {shownSections.length === 1 && shownSections[0]?.heading === "模型说明"
+            ? <MarkdownBody>{shownSections[0].body}</MarkdownBody>
+            : shownSections.map((section) => <section key={section.heading}><h3>{demo.sectionHeading(section.heading)}</h3><MarkdownBody>{section.body}</MarkdownBody></section>)}
         </article>
       </div>
       <div className="model-lower">
         {calibrations && <section><SectionHeading title={tr("近期校准")} /><ReactMarkdown remarkPlugins={[remarkGfm]}>{calibrations.body}</ReactMarkdown></section>}
         {priorities && <section><SectionHeading title={tr("当前优先观察")} /><ReactMarkdown remarkPlugins={[remarkGfm]}>{priorities.body}</ReactMarkdown></section>}
       </div>
-      <div className="model-file-actions"><FileMenu page={{ id: selected.pageId, title: selected.title }} /><NavLink to={pageHref(selected.pageId)} state={{ returnTo: "/mental-models", returnLabel: tr("返回思维模型") }} className="source-page-link">{tr("阅读完整模型") + " "}<Icon name="arrow" size={15} /></NavLink></div>
-      <PageAgentContext context={{ scope: tr("理解自己 · 思维模型"), title: selected.title, pageId: selected.pageId, summary: selected.body.slice(0, 260), defaultMode: "write", suggestions: [tr("结合最近的经历，为当前模型补充一个真实反例或适用边界。"), tr("请用当前模型解释最近的一次选择，并明确证据、推断和竞争解释。")] }} />
+      <div className="model-file-actions"><FileMenu page={{ id: selected.pageId, title: selected.title, relativePath: selected.key, excerpt: selected.excerpt }} /><NavLink to={pageHref(selected.pageId)} state={{ returnTo: "/mental-models", returnLabel: tr("返回思维模型") }} className="source-page-link">{tr("阅读完整模型") + " "}<Icon name="arrow" size={15} /></NavLink></div>
+      <PageAgentContext context={{ scope: tr("理解自己 · 思维模型"), title: label(selected), pageId: selected.pageId, summary: (english?.map((section) => section.body).join("\n") || selected.body).slice(0, 260), defaultMode: "write", suggestions: [tr("结合最近的经历，为当前模型补充一个真实反例或适用边界。"), tr("请用当前模型解释最近的一次选择，并明确证据、推断和竞争解释。")] }} />
     </div>
   );
 }

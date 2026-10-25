@@ -58,7 +58,8 @@ describe("demo markdown overlay", () => {
     expect(`Life records · ${windowLibrary("demo", "en", "The Way Here 演示 Wiki")}`).toBe("Life records · The Way Here demo");
     expect(`生活记录 · ${windowLibrary("demo", "zh", "The Way Here 演示 Wiki")}`).toBe("生活记录 · The Way Here 演示 Wiki");
     expect(`Life records · ${windowLibrary("personal", "en", "我的生活")}`).toBe("Life records · 我的生活");
-    expect(`Life records · ${windowLibrary("demo", "en")}`).toBe("Life records · The Way Here");
+    expect(`Life records · ${windowLibrary("demo", "en")}`).toBe("Life records · The Way Here demo");
+    expect(demoLibraryLabel("personal", "en", "The Way Here")).toBe("The Way Here");
   });
 });
 

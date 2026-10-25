@@ -1,4 +1,4 @@
-import { tr } from "../../shared/i18n";
+import { tr, useDemoLabels } from "../../shared/i18n";
 import { FileListRow } from "../../shared/FileMenu";
 import { SearchField } from "../../shared/form-controls";
 import { useMemo, useState } from "react";
@@ -11,6 +11,8 @@ import { CollapsibleIndexPane, Empty, Icon, Loading, PageHeader, SectionTabs } f
 import { EditablePageContent } from "./PagePreview";
 
 export function StructuredExplorer({ cards, revision, contextScope, emptyLabel = tr("暂无内容"), suggestions = [] }: { cards: StructuredCard[]; revision: number; contextScope: string; emptyLabel?: string; suggestions?: string[] }) {
+  const demo = useDemoLabels();
+  const shownCard = (card: StructuredCard) => ({ title: demo.heading(card.id, card.excerpt) || demo.title(card.title), excerpt: demo.excerpt(card.id, card.excerpt) });
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [indexOpen, setIndexOpen] = useState(true);
@@ -29,7 +31,7 @@ export function StructuredExplorer({ cards, revision, contextScope, emptyLabel =
       <aside className="collection-list">
         <SearchField name="collection-search" autoComplete="off" aria-label={tr("在当前分类中查找")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("在当前分类中查找…")} />
         <small>{filtered.length} / {cards.length}</small>
-        <div role="list" aria-label={tr("内容列表")}>{filtered.map((card) => <FileListRow key={card.id} page={card} onRenamed={page => selectItem(page.id)}><button aria-label={card.title} aria-current={selected?.id === card.id ? "true" : undefined} key={card.id} className={selected?.id === card.id ? "active" : ""} onClick={() => selectItem(card.id)}><b>{card.title}</b><span>{card.excerpt}</span></button></FileListRow>)}</div>
+        <div role="list" aria-label={tr("内容列表")}>{filtered.map((card) => { const shown = shownCard(card); return <FileListRow key={card.id} page={card} onRenamed={page => selectItem(page.id)}><button aria-label={shown.title} aria-current={selected?.id === card.id ? "true" : undefined} key={card.id} className={selected?.id === card.id ? "active" : ""} onClick={() => selectItem(card.id)}><b>{shown.title}</b><span>{shown.excerpt}</span></button></FileListRow>; })}</div>
       </aside>
     </CollapsibleIndexPane>
     <article className="collection-detail" aria-live="polite">
@@ -39,7 +41,7 @@ export function StructuredExplorer({ cards, revision, contextScope, emptyLabel =
       </> : <Empty>{tr("没有匹配内容")}</Empty>}
     </article>
     </div>
-    {selected && <PageAgentContext context={{ scope: contextScope, title: selected.title, pageId: selected.id, summary: selected.excerpt, defaultMode: "write", suggestions: suggestions.length ? suggestions : [tr("我想补充一段新经历，请帮我放到当前内容的合适位置。"), tr("请沿着当前页面的证据，告诉我还有什么值得继续追问。")] }} />}
+    {selected && <PageAgentContext context={{ scope: contextScope, title: shownCard(selected).title, pageId: selected.id, summary: shownCard(selected).excerpt, defaultMode: "write", suggestions: suggestions.length ? suggestions : [tr("我想补充一段新经历，请帮我放到当前内容的合适位置。"), tr("请沿着当前页面的证据，告诉我还有什么值得继续追问。")] }} />}
   </>;
 }
 

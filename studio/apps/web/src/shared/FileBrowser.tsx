@@ -3,7 +3,7 @@ import type { WikiPageSummary } from "@the-way-here/shared";
 import { PaneShelf } from "./PaneShelf";
 import { QuietScroll } from "./QuietScroll";
 import "./file-browser.css";
-import { useDemoLabels, tr } from "./i18n";
+import { shownDemoRecord, useDemoLabels, tr } from "./i18n";
 
 /** Both records and letters use the same collapsible file column and row markup. */
 export function FileBrowserPane({ label, count, open, onToggle, toolbar, headerAction, onCreate, createLabel, createDisabled, inlineCreate, children, toggleLabel = tr("文件列表") }: {
@@ -26,12 +26,11 @@ export function FileBrowserItem({ page, active, onSelect, selection, actions, ch
   selection?: ReactNode; actions?: ReactNode; children?: ReactNode; onDragStart?: DragEventHandler<HTMLElement>; onDragEnd?: DragEventHandler<HTMLElement>;
 }) {
   const demo = useDemoLabels();
-  const storedName = (page.externalSource?.originalPath || page.relativePath).replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
-  const fileName = demo.heading(page.relativePath, page.excerpt) || demo.file(storedName);
+  const shown = shownDemoRecord(demo.libraryId, demo.locale, page);
   return <article draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragEnd={onDragEnd} className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""} file-browser-item`}>
     {selection}
-    <button type="button" className="source-file-select" aria-label={fileName} aria-current={active ? "true" : undefined} onClick={onSelect}>
-      <span className="source-record-copy"><b className="file-browser-name">{fileName}</b>{page.excerpt && <small className="file-browser-excerpt" data-overflow-tooltip="off">{demo.excerpt(page.relativePath, page.excerpt)}</small>}</span>
+    <button type="button" className="source-file-select" aria-label={shown.title} aria-current={active ? "true" : undefined} onClick={onSelect}>
+      <span className="source-record-copy"><b className="file-browser-name">{shown.title}</b>{page.excerpt && <small className="file-browser-excerpt" data-overflow-tooltip="off">{shown.excerpt}</small>}</span>
     </button>
     {actions}{children}
   </article>;

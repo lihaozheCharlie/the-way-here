@@ -71,8 +71,8 @@ function headingOf(markdown, relativePath) {
 /** Chinese still visible after the demo display overlay. Each leak is where, marks, snippet. */
 export function demoPayloadChromeLeaks(vaultRoot) {
   const i18n = path.join(studio, "apps/web/src/shared/i18n");
-  const { demoListExcerpt, demoEnglishHeading, demoExcerptFromMarkdown } = loadTs(path.join(i18n, "demo-body.ts"));
-  const { demoPathTooltip, demoTitleLabel, demoExactTitleLabel, demoFileLabel } = loadTs(path.join(i18n, "demo-overlay.ts"));
+  const { demoListExcerpt, demoEnglishHeading, demoExcerptFromMarkdown, demoEnglishSections } = loadTs(path.join(i18n, "demo-body.ts"));
+  const { demoPathTooltip, demoTitleLabel, demoExactTitleLabel, demoFileLabel, shownDemoRecord, demoLibraryLabel, demoSectionHeadingLabel } = loadTs(path.join(i18n, "demo-overlay.ts"));
   const { demoTagLabel } = loadTs(path.join(i18n, "demo-titles.ts"));
   const { translate } = loadTs(path.join(i18n, "locale.tsx"));
   const leaks = [];
@@ -83,6 +83,9 @@ export function demoPayloadChromeLeaks(vaultRoot) {
     }
   };
   for (const reason of ["运行时未启用", "Pi 运行时未启用"]) note(`runtime ${reason}`, translate("en", reason));
+  note("library The Way Here", demoLibraryLabel("demo", "en", "The Way Here"));
+  note("library seed", demoLibraryLabel("demo", "en", "The Way Here 演示 Wiki"));
+  for (const heading of ["模型定义", "它解释什么", "适用条件", "边界与反例", "行动规则", "模型说明"]) note(`section-chrome ${heading}`, demoSectionHeadingLabel("demo", "en", heading));
   for (const file of walk(vaultRoot)) {
     const relative = path.relative(vaultRoot, file).split(path.sep).join("/");
     if (!relative.startsWith("wiki/") && !relative.startsWith("sources/")) continue;
@@ -97,6 +100,16 @@ export function demoPayloadChromeLeaks(vaultRoot) {
     note(`${relative} search-title`, demoEnglishHeading("demo", "en", relative, excerpt) || demoFileLabel("demo", "en", storedName));
     note(`${relative} search-path`, demoPathTooltip("demo", "en", relative));
     note(`${relative} search-excerpt`, demoListExcerpt("demo", "en", relative, excerpt));
+    const indexed = shownDemoRecord("demo", "en", { title, relativePath: `vault/demo/${relative}`, excerpt });
+    note(`${relative} indexed-search-title`, indexed.title);
+    note(`${relative} indexed-search-path`, indexed.path);
+    note(`${relative} indexed-search-excerpt`, indexed.excerpt);
+    if (/\/(01 个人主线|04 反复循环|06 现实系统|09 思维模型|05 人物关系图谱|07 人物与城市)\//.test(relative)) {
+      for (const section of demoEnglishSections("demo", "en", relative, excerpt) || []) {
+        note(`${relative} section ${section.heading}`, section.heading);
+        note(`${relative} section-body`, section.body);
+      }
+    }
     for (const tag of frontmatterTags(markdown)) note(`${relative} tag ${tag}`, demoTagLabel("demo", "en", tag));
     for (const value of frontmatterPeriods(markdown)) note(`${relative} period`, demoExactTitleLabel("demo", "en", value));
   }

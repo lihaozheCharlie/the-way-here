@@ -22,9 +22,34 @@ export function isDemoLibrary(id?: string | null): boolean {
   return (id || "").toLowerCase() === "demo";
 }
 
-/** Display name for a library. The stored id and name stay as written. */
+/** Display name for a library. The stored id and name stay as written.
+ * The demo library's English window name is "The Way Here demo", including when
+ * the active record still carries the product default "The Way Here".
+ */
 export function demoLibraryLabel(libraryId: string | null | undefined, locale: AppLocale, name: string): string {
-  return overlay(libraryId, locale, name, demoLibraries);
+  const labeled = overlay(libraryId, locale, name, demoLibraries);
+  if (locale === "en" && isDemoLibrary(libraryId) && (labeled === "The Way Here" || name.trim() === "The Way Here")) return "The Way Here demo";
+  return labeled;
+}
+
+export type DemoRecordFields = {
+  title: string;
+  relativePath?: string;
+  excerpt?: string;
+  externalSource?: { originalPath?: string };
+};
+
+/** Heading, path, and excerpt for one demo row. Life records and Search both use this. */
+export function shownDemoRecord(libraryId: string | null | undefined, locale: AppLocale, page: DemoRecordFields) {
+  const storedPath = page.externalSource?.originalPath || page.relativePath || "";
+  const storedName = storedPath.replaceAll("\\", "/").split("/").filter(Boolean).at(-1) || page.title;
+  const relative = page.relativePath || storedPath;
+  const excerpt = page.excerpt || "";
+  return {
+    path: demoPathTooltip(libraryId, locale, storedPath),
+    title: demoEnglishHeading(libraryId, locale, relative, excerpt) || demoFileLabel(libraryId, locale, storedName),
+    excerpt: demoListExcerpt(libraryId, locale, relative, excerpt),
+  };
 }
 
 function overlay(libraryId: string | null | undefined, locale: AppLocale, value: string, table: Record<string, string>): string {
@@ -39,6 +64,23 @@ export function demoFolderLabel(libraryId: string | null | undefined, locale: Ap
 /** Exact demo title only. Substring replacement stays on excerpts, where titles are embedded in prose. */
 export function demoExactTitleLabel(libraryId: string | null | undefined, locale: AppLocale, title: string): string {
   return overlay(libraryId, locale, title.trim(), demoTitles);
+}
+
+const modelSectionHeadings: Record<string, string> = {
+  "模型定义": "Model definition",
+  "它解释什么": "What it explains",
+  "适用条件": "When it applies",
+  "边界与反例": "Boundaries and counterexamples",
+  "行动规则": "Action rule",
+};
+
+/** Mental-model section labels. English demo pages use the seed headings; these cover the stored Chinese labels. */
+export function demoSectionHeadingLabel(libraryId: string | null | undefined, locale: AppLocale, heading: string): string {
+  const trimmed = heading.trim();
+  const mapped = overlay(libraryId, locale, trimmed, modelSectionHeadings);
+  if (mapped !== trimmed) return mapped;
+  if (locale === "en" && trimmed === "模型说明") return translate(locale, trimmed);
+  return demoTitleLabel(libraryId, locale, heading);
 }
 
 export function demoTitleLabel(libraryId: string | null | undefined, locale: AppLocale, title: string): string {
@@ -106,7 +148,9 @@ export function useDemoLabels() {
     file: (value: string) => demoFileLabel(libraryId, locale, value),
     excerpt: (relativePath: string, excerpt: string) => demoListExcerpt(libraryId, locale, relativePath, excerpt),
     heading: (relativePath: string, excerpt?: string) => demoEnglishHeading(libraryId, locale, relativePath, excerpt),
+    sectionHeading: (value: string) => demoSectionHeadingLabel(libraryId, locale, value),
     sections: (relativePath: string, excerpt: string) => demoEnglishSections(libraryId, locale, relativePath, excerpt),
+    record: (page: DemoRecordFields) => shownDemoRecord(libraryId, locale, page),
     path: (value: string) => demoPathTooltip(libraryId, locale, value),
     tag: (value: string) => demoTagLabel(libraryId, locale, value),
     libraryName: (id: string | null | undefined, name: string) => demoLibraryLabel(id, locale, name),

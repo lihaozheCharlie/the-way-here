@@ -6,6 +6,7 @@ export type ThinkingModel = {
   pageId: string;
   title: string;
   body: string;
+  excerpt?: string;
   sections: Array<{ heading: string; body: string }>;
 };
 
@@ -16,6 +17,7 @@ function fromCard(card: StructuredCard): ThinkingModel {
     key: card.id,
     pageId: card.id,
     title: card.title,
+    excerpt: card.excerpt,
     sections: card.sections,
     body: card.sections.map((section) => `${section.heading}\n${section.body}`).join("\n\n"),
   };

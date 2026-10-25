@@ -44,6 +44,12 @@ import { ActiveLibraryProvider, demoLibraryLabel, tr, useI18n } from "../shared/
 
 type KnowledgeBaseSummary = VaultInfo["knowledgeBases"][number];
 
+const libraryLabelKey = "the-way-here.library-label";
+
+function readRememberedLibraryLabel() {
+  try { return sessionStorage.getItem(libraryLabelKey) || ""; } catch { return ""; }
+}
+
 function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDelete }: { vault: VaultInfo; disabled: boolean; onChange: (knowledgeBaseId: string) => void; onCreate: () => void; onDelete: (knowledgeBase: KnowledgeBaseSummary) => void }) {
   const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
@@ -118,6 +124,7 @@ export function AppShell({ revision }: { revision: number }) {
   const [inspectorByMenu, setInspectorByMenu] = useState<Record<string, boolean>>({});
   const [suspendedInspectorMenu, setSuspendedInspectorMenu] = useState<string>();
   const agentToggleRef = useRef<HTMLButtonElement>(null);
+  const libraryNameRef = useRef(readRememberedLibraryLabel() || "The Way Here");
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(true);
   const inspector = useInspector()!;
   const utilityWindow = location.pathname === "/preferences" || location.pathname === "/capture";
@@ -274,13 +281,19 @@ export function AppShell({ revision }: { revision: number }) {
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
   const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
-  const libraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "The Way Here";
+  const nextLibraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "";
+  if (nextLibraryName) libraryNameRef.current = nextLibraryName;
+  const libraryName = nextLibraryName || libraryNameRef.current;
   const utilityKind = location.pathname === "/capture" ? "capture" : utilityWindow ? "preferences" : null;
   const routeLabel = location.pathname === "/search" ? "搜索" : location.pathname === "/conversation" ? "深入聊聊" : "";
   const pageLabel = utilityKind === "capture" ? t("随手记") : utilityKind === "preferences" ? t("偏好设置") : routeLabel ? t(routeLabel) : t(sectionLabel);
   const windowTitle = desktopWindowTitle(pageLabel, libraryName, utilityKind);
   if (typeof document !== "undefined") document.title = windowTitle;
-  useEffect(() => { document.title = windowTitle; }, [windowTitle]);
+  useEffect(() => {
+    document.title = windowTitle;
+    if (!nextLibraryName) return;
+    try { sessionStorage.setItem(libraryLabelKey, nextLibraryName); } catch { /* The title still updates in this session. */ }
+  }, [windowTitle, nextLibraryName]);
   return (
     <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">{t("跳到主要内容")}</a>
@@ -331,7 +344,7 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/cards/systems" element={<Cards revision={revision} category="systems" />} />
             <Route path="/letters" element={<Letters revision={revision} />} />
             <Route path="/mental-models" element={<MentalModels revision={revision} />} />
-            <Route path="/search" element={<SearchResults revision={revision} />} />
+            <Route path="/search" element={<SearchResults revision={revision} libraryId={vault?.knowledgeBaseId} />} />
             <Route path="/page/*" element={<Reader revision={revision} />} />
             <Route path="/wiki" element={<Navigate to="/knowledge" replace />} />
             <Route path="/understanding" element={<Navigate to="/knowledge" replace />} />
