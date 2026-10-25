@@ -5,12 +5,12 @@ export type PhotoDetectionStatus = { state: "detecting" | "done" | "failed"; pha
 export type PhotoFaceResult = { boxes: PhotoBox[]; descriptors?: Array<number[] | undefined>; groupingError?: string };
 type DetectPhotoFaces = (url: string, signal: AbortSignal, onProgress?: (phase: PhotoDetectionPhase) => void) => Promise<PhotoBox[] | PhotoFaceResult>;
 
-export function detectionProgressLabel(photos: Array<{ id: string }>, statuses: Record<string, PhotoDetectionStatus>): string | undefined {
+export function detectionProgressLabel(photos: Array<{ id: string }>, statuses: Record<string, PhotoDetectionStatus>, tr: (message: string, params?: Record<string, string | number>) => string = (message, params) => params ? message.replace(/\$\{([^}]+)\}/g, (_, key: string) => String(params[key.trim()] ?? "")) : message): string | undefined {
   const index = photos.findIndex((photo) => statuses[photo.id]?.state === "detecting");
   if (index < 0) return undefined;
   const phase = statuses[photos[index]!.id]!.phase;
   const action = phase === "grouping" ? "正在比对相似人脸" : phase === "locating" ? "正在识别人脸" : "正在准备识别";
-  return `${action} · 第 ${index + 1} / ${photos.length} 张`;
+  return tr("${action} · 第 ${index} / ${total} 张", { action: tr(action), index: index + 1, total: photos.length });
 }
 
 // Keep one worker per batch; if feature extraction stalls, retain detected boxes

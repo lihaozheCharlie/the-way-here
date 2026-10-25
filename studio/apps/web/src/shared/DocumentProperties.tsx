@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { WikiPage } from "@the-way-here/shared";
+import { useI18n } from "./i18n";
 
 type NotePropertyKind = "text" | "aliases" | "tags" | "date" | "list" | "boolean";
 
@@ -44,11 +45,14 @@ function propertyHasValue(value: unknown): boolean {
 }
 
 export function NoteProperties({ properties, compact = false }: { properties: Record<string, unknown>; compact?: boolean }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const entries = Object.entries(properties).filter(([, value]) => propertyHasValue(value));
   if (!entries.length) return null;
-  return <section className={`note-properties${compact ? " compact" : ""}`} aria-label="笔记属性">
-    <div className="note-property-summary"><span>{String(properties.type || properties["类型"] || "笔记")} · {Array.isArray(properties.tags) ? properties.tags.length : properties.tags ? 1 : 0} 个标签{properties.date || properties.Start ? ` · ${String(properties.date || properties.Start).slice(0, 10)}` : ""}</span><button type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "收起属性" : "展开全部属性"}</button></div>
+  const tagCount = Array.isArray(properties.tags) ? properties.tags.length : properties.tags ? 1 : 0;
+  const when = properties.date || properties.Start ? String(properties.date || properties.Start).slice(0, 10) : "";
+  return <section className={`note-properties${compact ? " compact" : ""}`} aria-label={t("笔记属性")}>
+    <div className="note-property-summary"><span>{String(properties.type || properties["类型"] || t("笔记"))} · {t("${count} 个标签", { count: tagCount })}{when ? ` · ${when}` : ""}</span><button type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? t("收起属性") : t("展开全部属性")}</button></div>
     <dl hidden={!expanded}>{entries.map(([key, value]) => {
       const kind = notePropertyKind(key, value);
       const values = Array.isArray(value) ? value : [value];

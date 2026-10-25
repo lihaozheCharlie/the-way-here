@@ -1,0 +1,31 @@
+zh	file	provisional_en	notes
+账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。	apps/web/src/features/sources/Sources.tsx	Bills import here, grouped by time on this computer.\nYou write the story; nothing is sent to a model.	Designer lock. Two lines only; do not expand into an essay. The newline is intentional.
+笔记	apps/web/src/features/sources/Sources.tsx	Notes	Designer lock for the Life records chip: Notes.
+照片	apps/web/src/features/sources/Sources.tsx	Photos	Designer lock for the Life records chip: Photos. Also the import type card.
+账单	apps/web/src/features/sources/Sources.tsx	Bills	Designer lock for the Life records chip: Bills. Distinct from 消费账单.
+AI 对话	apps/web/src/features/sources/source-model.ts; apps/web/src/features/desktop/agent-notifications.ts	Chats	Designer lock: Chats. Shared key, so agent notifications that fall back to this module now read 【Chats】 instead of 【AI chat】.
+展开全部属性	apps/web/src/shared/DocumentProperties.tsx	Expand properties	Designer lock: Expand properties.
+收起属性	apps/web/src/shared/DocumentProperties.tsx	Collapse properties	Provisional pair with Expand properties. Collapse properties may want a shorter label.
+目录	apps/web/src/shared/DocumentOutline.tsx	Contents	Provisional Contents. Outline is the other candidate for the document navigation tab.
+收起目录	apps/web/src/shared/DocumentOutline.tsx	Collapse contents	Provisional, follows Contents.
+展开目录	apps/web/src/shared/DocumentOutline.tsx	Expand contents	Provisional, follows Contents.
+固定目录	apps/web/src/shared/DocumentOutline.tsx	Pin contents	Provisional, follows Contents.
+固定为侧栏	apps/web/src/shared/DocumentOutline.tsx	Pin as a sidebar	Provisional.
+思考深度关闭	apps/web/src/features/collaboration/AgentSettings.tsx	Off	English only. Chinese still shows 关闭. Do not change the 关闭 → Close key; close buttons use it.
+让 The Way Here 先认识你的思考方式	apps/web/src/features/desktop/ModelOnboarding.tsx	Let The Way Here learn how you think	Provisional onboarding headline.
+配置一次即可，之后可随时在「偏好设置 → AI 助手」更换。	apps/web/src/features/desktop/ModelOnboarding.tsx	Set it up once. You can change it anytime in Preferences → AI assistant.	Already in the catalog before this pass. Sentence uses “AI assistant”; the short key AI 助手 is “AI Assistant”.
+接收方：${recipient}。对话、整理和自动更新可能发送输入、相关日记、知识页面、照片预览、账单内容及历史对话；AI 可继续读取当前知识库及你授权目录中的任务相关资料。用途是回答、整理和更新知识。	apps/web/src/features/collaboration/AgentSettings.tsx	Recipient: ${recipient}. Chat, organizing, and automatic updates may send what you type, related diary entries, knowledge pages, photo previews, bill contents, and past chats. The AI can keep reading the current library and task material in folders you allow. The purpose is to answer, organize, and update knowledge.	Provisional consent copy. Writer should review before it is treated as final legal text.
+资料会离开设备。服务商的保留、训练使用及处理地区以其政策和账户设置为准。撤回许可会阻止新请求并停止活动任务，已发送的资料需向服务商申请删除。更换服务后需重新同意。	apps/web/src/features/collaboration/AgentSettings.tsx	Material leaves this device. How long a provider keeps it, whether it is used for training, and where it is processed follow that provider’s policy and your account settings. Withdrawing permission blocks new requests and stops active tasks. Ask the provider to delete anything already sent. Switching services requires agreeing again.	Provisional consent copy. Writer should review before it is treated as final legal text.
+我已了解并允许向上述服务发送任务所需资料，包括我启用的自动更新	apps/web/src/features/collaboration/AgentSettings.tsx	I understand and allow the service above to receive the material a task needs, including automatic updates I turn on	Provisional consent checkbox.
+豆包	apps/web/src/features/sources/ImportMaterialsModal.tsx	Doubao	Provisional brand: Doubao.
+消费账单	apps/web/src/features/sources/ImportMaterialsModal.tsx	Spending bills	Import type card. Provisional “Spending bills”, not the chip word Bills.
+聊天记录	apps/web/src/features/sources/ImportMaterialsModal.tsx	Chats	Import type card. Same English word as the Chats chip.
+认人	apps/web/src/features/sources/PhotoProgress.tsx	Name people	Provisional step name: Name people.
+讲故事	apps/web/src/features/sources/PhotoProgress.tsx	Tell the story	Provisional step name: Tell the story.
+收进理解	apps/web/src/features/sources/PhotoMemoryPanel.tsx	Add to Understanding	Provisional. Uses the locked word Understanding.
+已收进理解	apps/web/src/features/sources/PhotoMemoryPanel.tsx	In Understanding	Provisional. Uses the locked word Understanding.
+导入资料	apps/web/src/features/sources/Sources.tsx	Import materials	Provisional button: Import materials.
+通过“打开照片记忆”修改人物和讲述	apps/web/src/shared/DocumentPreview.tsx	Edit people and the telling from “Open photo memory”.	Provisional. Quotes the Open photo memory action.
+打开照片记忆	apps/web/src/features/sources/Sources.tsx	Open photo memory	Provisional action: Open photo memory.
+打开账单记忆	apps/web/src/features/sources/Sources.tsx	Open bill memory	Provisional action: Open bill memory.
+The Way Here 演示 Wiki	apps/web/src/shared/i18n/demo-overlay.ts	The Way Here demo	Not a t() key. Demo library name overlay only, and only when the stored name still matches. Provisional: The Way Here demo. Personal libraries are never overlaid.

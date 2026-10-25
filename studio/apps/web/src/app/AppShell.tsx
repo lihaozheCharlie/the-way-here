@@ -39,12 +39,12 @@ import { Relationships } from "../features/knowledge/Relationships";
 import { SearchResults } from "../features/knowledge/SearchResults";
 import { Timeline } from "../features/knowledge/Timeline";
 import { CreateKnowledgeBaseDialog, DemoKnowledgeBaseNotice } from "../features/knowledge-bases/KnowledgeBaseOnboarding";
-import { ActiveLibraryProvider, useI18n } from "../shared/i18n";
+import { ActiveLibraryProvider, demoLibraryLabel, useI18n } from "../shared/i18n";
 
 type KnowledgeBaseSummary = VaultInfo["knowledgeBases"][number];
 
 function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDelete }: { vault: VaultInfo; disabled: boolean; onChange: (knowledgeBaseId: string) => void; onCreate: () => void; onDelete: (knowledgeBase: KnowledgeBaseSummary) => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useDismissLayer(open, () => { setOpen(false); rootRef.current?.querySelector<HTMLButtonElement>(".global-kb-trigger")?.focus(); });
@@ -69,7 +69,7 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
   return <div className="global-kb-switcher" ref={rootRef}>
     <button className="global-kb-trigger" type="button" disabled={disabled} aria-haspopup="menu" aria-expanded={open} aria-controls="global-kb-menu" onClick={() => setOpen((current) => !current)}>
       <Icon name="spark" size={15} />
-      <span>{active?.name || t("个人空间")}</span>
+      <span>{active ? demoLibraryLabel(active.id, locale, active.name) : t("个人空间")}</span>
       <Icon name="down" size={14} />
     </button>
     {open ? <div className="global-kb-menu" id="global-kb-menu" role="menu" aria-label={t("切换知识库")}>
@@ -81,7 +81,7 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
           return <div className="global-kb-option-row" key={knowledgeBase.id}>
             <button className="global-kb-option-main" type="button" role="menuitemradio" aria-checked={selected} onClick={() => chooseKnowledgeBase(knowledgeBase.id)}>
               <span className="global-kb-check">{selected ? <Icon name="check" size={15} /> : null}</span>
-              <span className="global-kb-option-copy"><span>{knowledgeBase.name}{demo ? <small>{t("演示")}</small> : null}</span><small>{demo ? t("预置的示例记忆，可以先感受被记住的体验") : t("来自「${knowledgeBase.name}」的生活记录与已有理解", { "knowledgeBase.name": knowledgeBase.name })}</small></span>
+              <span className="global-kb-option-copy"><span>{demoLibraryLabel(knowledgeBase.id, locale, knowledgeBase.name)}{demo ? <small>{t("演示")}</small> : null}</span><small>{demo ? t("预置的示例记忆，可以先感受被记住的体验") : t("来自「${knowledgeBase.name}」的生活记录与已有理解", { "knowledgeBase.name": knowledgeBase.name })}</small></span>
             </button>
             {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={t("删除知识库「${name}」", { name: knowledgeBase.name })} title={t("删除知识库")}><Icon name="trash" size={15} /></button> : null}
           </div>;

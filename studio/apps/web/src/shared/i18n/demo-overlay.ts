@@ -1,6 +1,6 @@
 import type { AppLocale } from "./locale";
 import { useActiveLibraryId, useI18n } from "./locale";
-import { demoEnglishDocument, type DemoBodyLink } from "./demo-body";
+import { demoEnglishDocument, demoListExcerpt, type DemoBodyLink } from "./demo-body";
 
 /** Display-only English for the demo library.
  *
@@ -34,6 +34,10 @@ const demoFolders: Record<string, string> = {
   "12 近况对话": "12 Recent letters",
   "照片记忆": "Photo memories",
   "账单记忆": "Bill memories",
+};
+
+const demoLibraryNames: Record<string, string> = {
+  "The Way Here 演示 Wiki": "The Way Here demo",
 };
 
 const demoTitles: Record<string, string> = {
@@ -121,6 +125,11 @@ export function demoFolderPath(libraryId: string | null | undefined, locale: App
   return folder.split(" / ").map((part) => demoFolderLabel(libraryId, locale, part)).join(" / ");
 }
 
+export function demoLibraryLabel(libraryId: string | null | undefined, locale: AppLocale, name: string): string {
+  if (locale !== "en" || !isDemoLibrary(libraryId) || !name) return name;
+  return demoLibraryNames[name.trim()] ?? name;
+}
+
 export function demoFileLabel(libraryId: string | null | undefined, locale: AppLocale, fileName: string): string {
   const match = /^(.*?)(\.(?:md|txt))$/i.exec(fileName);
   const stem = match?.[1] ?? fileName;
@@ -141,6 +150,8 @@ export function useDemoLabels() {
     folder: (value: string) => demoFolderLabel(libraryId, locale, value),
     folderPath: (value: string) => demoFolderPath(libraryId, locale, value),
     file: (value: string) => demoFileLabel(libraryId, locale, value),
+    excerpt: (relativePath: string, excerpt: string) => demoListExcerpt(libraryId, locale, relativePath, excerpt),
+    libraryName: (id: string | null | undefined, name: string) => demoLibraryLabel(id, locale, name),
     englishDocument: (relativePath: string, fileMarkdown: string, links?: DemoBodyLink[]) => demoEnglishDocument(libraryId, locale, relativePath, fileMarkdown, links),
   };
 }

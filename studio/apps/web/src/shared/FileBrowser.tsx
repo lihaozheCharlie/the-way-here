@@ -31,7 +31,7 @@ export function FileBrowserItem({ page, active, onSelect, selection, actions, ch
   return <article draggable={Boolean(onDragStart)} onDragStart={onDragStart} onDragEnd={onDragEnd} className={`source-file-row${active ? " active" : ""}${selection ? " is-selectable" : ""} file-browser-item`}>
     {selection}
     <button type="button" className="source-file-select" aria-label={fileName} aria-current={active ? "true" : undefined} onClick={onSelect}>
-      <span className="source-record-copy"><b className="file-browser-name">{fileName}</b>{page.excerpt && <small className="file-browser-excerpt" data-overflow-tooltip="off">{page.excerpt}</small>}</span>
+      <span className="source-record-copy"><b className="file-browser-name">{fileName}</b>{page.excerpt && <small className="file-browser-excerpt" data-overflow-tooltip="off">{demo.excerpt(page.relativePath, page.excerpt)}</small>}</span>
     </button>
     {actions}{children}
   </article>;

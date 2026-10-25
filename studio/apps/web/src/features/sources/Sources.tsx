@@ -17,7 +17,7 @@ import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { graphCategoryNames } from "../../shared/categories";
-import { useI18n } from "../../shared/i18n";
+import { useDemoLabels, useI18n } from "../../shared/i18n";
 import { pageDestination, pageHref, type ReturnContext } from "../../shared/routing";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
@@ -43,6 +43,7 @@ function memoryRecordKey(record: SourceBuildRecord): string { return `${record.b
 type SourceBuildIntent = "enrich" | "build" | "open";
 
 function SourceBuildConfirmAction({ record, busy, onConfirm, detail = false }: { record: SourceBuildRecord; busy: boolean; onConfirm: () => void; detail?: boolean }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: -1000, top: -1000 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -87,33 +88,34 @@ function SourceBuildConfirmAction({ record, busy, onConfirm, detail = false }: {
   }, [busy]);
 
   return <>
-    <button ref={triggerRef} type="button" className={`source-build-action is-build-ready${detail ? " is-detail" : ""}`} disabled={busy} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? titleId : undefined} onClick={() => setOpen((value) => !value)}><Icon name="build" size={13} />{busy ? "正在准备…" : "构建这份记录"}</button>
+    <button ref={triggerRef} type="button" className={`source-build-action is-build-ready${detail ? " is-detail" : ""}`} disabled={busy} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? titleId : undefined} onClick={() => setOpen((value) => !value)}><Icon name="build" size={13} />{busy ? t("正在准备…") : t("构建这份记录")}</button>
     {open ? createPortal(<div ref={popoverRef} className="source-build-confirm" role="dialog" aria-modal="false" aria-labelledby={titleId} aria-describedby={descriptionId} style={position}>
-      <b id={titleId}>把「{sourceBuildTitle(record)}」构建进 Wiki？</b>
-      <p id={descriptionId}>只会采用这份报告中已经确认的叙述；候选线索和交易明细不会被当作事实。构建后仍可以回来继续聊。</p>
-      <div><button ref={cancelRef} type="button" className="source-build-confirm-cancel" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>再想想</button><button type="button" className="source-build-confirm-submit" onClick={() => { setOpen(false); onConfirm(); }}>确认构建</button></div>
+      <b id={titleId}>{t("把「${title}」构建进 Wiki？", { title: sourceBuildTitle(record) })}</b>
+      <p id={descriptionId}>{t("只会采用这份报告中已经确认的叙述；候选线索和交易明细不会被当作事实。构建后仍可以回来继续聊。")}</p>
+      <div><button ref={cancelRef} type="button" className="source-build-confirm-cancel" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}>{t("再想想")}</button><button type="button" className="source-build-confirm-submit" onClick={() => { setOpen(false); onConfirm(); }}>{t("确认构建")}</button></div>
     </div>, triggerRef.current?.closest("dialog") || document.body) : null}
   </>;
 }
 
 function SourceBuildAction({ record, busy, onStart, detail = false }: { record: SourceBuildRecord; busy: boolean; onStart: (record: SourceBuildRecord, intent?: SourceBuildIntent) => void; detail?: boolean }) {
-  if (record.batch.channel === "photos" || record.batch.channel === "alipay") return <button type="button" className="source-build-action is-dialogue" disabled={busy} aria-haspopup="dialog" onClick={() => onStart(record, "open")}><Icon name={record.batch.channel === "photos" ? "image" : "receipt"} size={13} />{record.batch.channel === "photos" ? "打开照片记忆" : "打开账单记忆"}</button>;
+  const { t } = useI18n();
+  if (record.batch.channel === "photos" || record.batch.channel === "alipay") return <button type="button" className="source-build-action is-dialogue" disabled={busy} aria-haspopup="dialog" onClick={() => onStart(record, "open")}><Icon name={record.batch.channel === "photos" ? "image" : "receipt"} size={13} />{t(record.batch.channel === "photos" ? "打开照片记忆" : "打开账单记忆")}</button>;
   const { file } = record;
   const action = sourceBuildActionPresentation(file);
   if (action.kind === "hidden") return null;
   if (file.buildKind === "dialogue") {
     const chatAction = action.kind === "open"
-      ? <button type="button" className={`source-build-action is-quiet${detail ? " is-detail" : ""}`} onClick={() => openContextAgent({ runId: action.runId })}><Icon name="message" size={13} />{action.label}</button>
-      : <button type="button" className={`source-build-action is-dialogue${detail ? " is-detail" : ""}`} disabled={busy} onClick={() => onStart(record, "enrich")}><Icon name="message" size={13} />{busy ? "正在准备…" : action.label}</button>;
+      ? <button type="button" className={`source-build-action is-quiet${detail ? " is-detail" : ""}`} onClick={() => openContextAgent({ runId: action.runId })}><Icon name="message" size={13} />{t(action.label)}</button>
+      : <button type="button" className={`source-build-action is-dialogue${detail ? " is-detail" : ""}`} disabled={busy} onClick={() => onStart(record, "enrich")}><Icon name="message" size={13} />{busy ? t("正在准备…") : t(action.label)}</button>;
     return <div className={`source-journey-actions${detail ? " is-detail" : ""}`}>
-      {detail ? <div className="source-journey-action-col">{chatAction}<small>只更新这份记录，不影响 Wiki</small></div> : chatAction}
+      {detail ? <div className="source-journey-action-col">{chatAction}<small>{t("只更新这份记录，不影响 Wiki")}</small></div> : chatAction}
       {file.buildStatus === "ready-to-build" ? detail
-        ? <div className="source-journey-action-col"><SourceBuildConfirmAction record={record} busy={busy} detail onConfirm={() => onStart(record, "build")} /><small>确认后写入 Wiki，之后仍可继续聊</small></div>
+        ? <div className="source-journey-action-col"><SourceBuildConfirmAction record={record} busy={busy} detail onConfirm={() => onStart(record, "build")} /><small>{t("确认后写入 Wiki，之后仍可继续聊")}</small></div>
         : <SourceBuildConfirmAction record={record} busy={busy} onConfirm={() => onStart(record, "build")} /> : null}
     </div>;
   }
-  if (action.kind === "open") return <button type="button" className="source-build-action is-quiet" onClick={() => openContextAgent({ runId: action.runId })}>{action.label}</button>;
-  return <button type="button" className={`source-build-action is-${file.buildKind}`} disabled={busy} onClick={() => onStart(record)}>{file.buildKind === "direct" && !busy ? <Icon name="build" size={13} /> : null}{busy ? "正在准备…" : action.label}</button>;
+  if (action.kind === "open") return <button type="button" className="source-build-action is-quiet" onClick={() => openContextAgent({ runId: action.runId })}>{t(action.label)}</button>;
+  return <button type="button" className={`source-build-action is-${file.buildKind}`} disabled={busy} onClick={() => onStart(record)}>{file.buildKind === "direct" && !busy ? <Icon name="build" size={13} /> : null}{busy ? t("正在准备…") : t(action.label)}</button>;
 }
 
 function SourceJourneyContext({ file }: { file: SourceBuildRecord["file"] }) {
@@ -142,18 +144,19 @@ function SourceJourneyContext({ file }: { file: SourceBuildRecord["file"] }) {
 }
 
 function ImportedBatchGuide({ batch, busyPath, onStart, onStartAll, onDefer }: { batch: SourceImportBatch; busyPath?: string; onStart: (record: SourceBuildRecord, intent?: SourceBuildIntent) => void; onStartAll: (records: SourceBuildRecord[]) => void; onDefer: (records: SourceBuildRecord[]) => void }) {
+  const { t, locale } = useI18n();
   const records = sourceBuildRecords([batch]).filter(({ file }) => !["built", "deferred"].includes(file.buildStatus || "ready"));
   if (!records.length) return null;
   const hasActive = records.some(({ file }) => file.buildStatus === "building" || file.buildStatus === "in-dialogue");
   const directRecords = records.filter(({ file }) => file.buildKind === "direct" && file.buildStatus === "ready");
   const shownRecords = records.slice(0, 5);
   return <section className="source-import-guide" aria-labelledby={`source-import-guide-${batch.id}`}>
-    <header><div><span className="source-import-guide-mark" aria-hidden="true"><Icon name="check" size={16} /></span><div><h2 id={`source-import-guide-${batch.id}`}>已收好 {batch.fileCount} 份新记录</h2><p>原文已经保存。下面这一步决定它们怎样进入已有理解，你也可以稍后再说。</p></div></div><time>{new Date(batch.createdAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></header>
+    <header><div><span className="source-import-guide-mark" aria-hidden="true"><Icon name="check" size={16} /></span><div><h2 id={`source-import-guide-${batch.id}`}>{t("已收好 ${count} 份新记录", { count: batch.fileCount })}</h2><p>{t("原文已经保存。下面这一步决定它们怎样进入已有理解，你也可以稍后再说。")}</p></div></div><time>{new Date(batch.createdAt).toLocaleString(locale === "en" ? "en" : "zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time></header>
     <div className="source-import-guide-list">{shownRecords.map((record) => {
       const state = sourceBuildPresentation(record.file);
-      return <article key={record.file.storedPath}><div><b>{sourceBuildTitle(record)}</b><span>{record.file.buildKind === "direct" ? "这份记录语境完整，可以直接读懂" : record.file.buildKind === "dialogue" ? "账单只留下线索，需要你说出背后的故事" : "我还不确定这份材料是什么"}</span></div><div className="source-import-guide-state"><span className={`source-build-chip is-${state.tone}`}><i aria-hidden="true" />{state.label}</span><SourceBuildAction record={record} busy={busyPath === record.file.storedPath} onStart={onStart} /></div></article>;
+      return <article key={record.file.storedPath}><div><b>{sourceBuildTitle(record)}</b><span>{t(record.file.buildKind === "direct" ? "这份记录语境完整，可以直接读懂" : record.file.buildKind === "dialogue" ? "账单只留下线索，需要你说出背后的故事" : "我还不确定这份材料是什么")}</span></div><div className="source-import-guide-state"><span className={`source-build-chip is-${state.tone}`}><i aria-hidden="true" />{t(state.label)}</span><SourceBuildAction record={record} busy={busyPath === record.file.storedPath} onStart={onStart} /></div></article>;
     })}</div>
-    {!hasActive ? <footer><span>{records.length > shownRecords.length ? `另有 ${records.length - shownRecords.length} 份，` : ""}这些记录会继续留在完整列表里。</span><div>{directRecords.length > 1 ? <button type="button" className="source-import-build-all" onClick={() => onStartAll(directRecords)}><Icon name="build" size={13} />批量构建 {directRecords.length} 份</button> : null}<button type="button" onClick={() => onDefer(records)}>稍后再说</button></div></footer> : null}
+    {!hasActive ? <footer><span>{records.length > shownRecords.length ? t("另有 ${count} 份，", { count: records.length - shownRecords.length }) : ""}{t("这些记录会继续留在完整列表里。")}</span><div>{directRecords.length > 1 ? <button type="button" className="source-import-build-all" onClick={() => onStartAll(directRecords)}><Icon name="build" size={13} />{t("批量构建 ${count} 份", { count: directRecords.length })}</button> : null}<button type="button" onClick={() => onDefer(records)}>{t("稍后再说")}</button></div></footer> : null}
   </section>;
 }
 
@@ -194,6 +197,8 @@ function SourcePreview({ page, revision, startEditing = false, fileNameFocusToke
 }
 
 export function OrganizedSources({ revision }: { revision: number }) {
+  const { t } = useI18n();
+  const demo = useDemoLabels();
   const { data: moveVault } = useApi<VaultInfo>("/api/vault", revision);
   const moveScope = useRef(moveVault?.knowledgeBaseId); moveScope.current = moveVault?.knowledgeBaseId;
   const draggedSource = useRef<{ page: WikiPageSummary; knowledgeBaseId: string } | undefined>(undefined);
@@ -368,8 +373,8 @@ export function OrganizedSources({ revision }: { revision: number }) {
     defaultMode: "read" as const,
     suggestions: ["这份记录里有哪些还没有真正说清楚、值得我继续补充的地方？", "请概括这份记录，并区分事实、感受和后来的解释。"],
   }, [pages.length, recentBatch, recentJourney, recentJourneyRecord, selected?.excerpt, selected?.id, selected?.title, selectedBuildRecord]);
-  if (loading) return <Loading label="正在打开生活记录" />;
-  if (!data) return <Empty>生活记录暂时无法读取，请刷新重试。</Empty>;
+  if (loading) return <Loading label={t("正在打开生活记录")} />;
+  if (!data) return <Empty>{t("生活记录暂时无法读取，请刷新重试。")}</Empty>;
   function update(next: Record<string, string | undefined>) {
     setParams((current) => {
       const value = new URLSearchParams(current);
@@ -519,9 +524,9 @@ export function OrganizedSources({ revision }: { revision: number }) {
       onClose={() => setDeleteTarget(undefined)}
       onConfirm={deleteSelectedTarget}
     /> : null}
-    {memoryCards.length ? <details className="source-memories-disclosure"><summary>照片与账单记忆 · {memoryCards.length}</summary><SourceMemoryCards records={memoryCards} revision={revision} onOpen={(record) => void beginBuild(record, "open")} /></details> : null}
-    {openedMemory ? <SourceMemoryDialog title={openedMemory.batch.channel === "photos" ? "照片记忆" : "账单记忆"} onClose={memoryWindow.close}>
-      {openedMemory.batch.channel === "photos" ? <PhotoMemoryPanel key={openedMemory.batch.id} batch={openedMemory.batch} revision={revision} /> : openedMemory.batch.journey ? <BillMemoryPanel key={openedMemory.batch.id} record={openedMemory} busy={busyBuildPath === openedMemory.file.storedPath} onBuild={(batch) => void beginBuild({ ...openedMemory, batch }, "build")} onDeep={(batch, cluster, state) => beginJourneyDeep(openedMemory, batch, cluster, state)} /> : memoryPage ? <SourcePreview page={memoryPage} revision={revision} fileNameFocusToken={renameRequest?.pageId === memoryPage.id ? renameRequest.token : 0} buildRecord={openedMemory} buildBusy={busyBuildPath === openedMemory.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <Empty>正在等待记录进入列表，请稍后重新打开。</Empty>}
+    {memoryCards.length ? <details className="source-memories-disclosure"><summary>{t("照片与账单记忆 · ${count}", { count: memoryCards.length })}</summary><SourceMemoryCards records={memoryCards} revision={revision} onOpen={(record) => void beginBuild(record, "open")} /></details> : null}
+    {openedMemory ? <SourceMemoryDialog title={openedMemory.batch.channel === "photos" ? t("照片记忆") : t("账单记忆")} onClose={memoryWindow.close}>
+      {openedMemory.batch.channel === "photos" ? <PhotoMemoryPanel key={openedMemory.batch.id} batch={openedMemory.batch} revision={revision} /> : openedMemory.batch.journey ? <BillMemoryPanel key={openedMemory.batch.id} record={openedMemory} busy={busyBuildPath === openedMemory.file.storedPath} onBuild={(batch) => void beginBuild({ ...openedMemory, batch }, "build")} onDeep={(batch, cluster, state) => beginJourneyDeep(openedMemory, batch, cluster, state)} /> : memoryPage ? <SourcePreview page={memoryPage} revision={revision} fileNameFocusToken={renameRequest?.pageId === memoryPage.id ? renameRequest.token : 0} buildRecord={openedMemory} buildBusy={busyBuildPath === openedMemory.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <Empty>{t("正在等待记录进入列表，请稍后重新打开。")}</Empty>}
     </SourceMemoryDialog> : null}
     {shownBatch && !["photos", "alipay"].includes(shownBatch.channel || "") ? <ImportedBatchGuide batch={shownBatch} busyPath={busyBuildPath} onStart={beginBuild} onStartAll={beginBatchBuild} onDefer={deferBuilds} /> : null}
     {moveMessage ? <p className="source-move-status" role="status">{moveMessage}</p> : null}
@@ -533,26 +538,26 @@ export function OrganizedSources({ revision }: { revision: number }) {
       if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }}><h2 id="source-move-title">移动「{documentIdentity(moveChoice.externalSource?.originalPath || moveChoice.relativePath).fileName}」</h2><p>选择目标文件夹</p><FolderTree selected={moveDestination} onSelect={setMoveDestination} revision={revision + folderRevision} />{buildError ? <p role="alert">{buildError}</p> : null}<footer><button type="button" disabled={moving} onClick={() => setMoveChoice(undefined)}>取消</button><button type="button" className="desktop-primary" disabled={moving || !moveDestination || sourcePagePath(moveChoice).split("/").slice(0, -1).join("/") === moveDestination} onClick={() => { if (moveChoiceScope.current) { draggedSource.current = { page: moveChoice, knowledgeBaseId: moveChoiceScope.current }; void moveFile(moveDestination); } }}>{moving ? "正在移动…" : "移动到这里"}</button></footer></section></div>, document.body) : null}
-    <h1 className="sr-only">生活记录</h1>
-    <section className="source-discovery-tools" aria-label="筛选生活记录">
-      <div className="source-type-filter" role="group" aria-label="按来源类型筛选">{[...sourceRecordTypes].sort((a, b) => ["all", "notes", "ai", "photos", "bill"].indexOf(a.id) - ["all", "notes", "ai", "photos", "bill"].indexOf(b.id)).map((item) => <button type="button" key={item.id} className={type === item.id ? "active" : ""} aria-pressed={type === item.id} onClick={() => { setCreatedPageId(undefined); update({ type: item.id === "all" ? undefined : item.id, file: undefined, limit: undefined }); }}><Icon name={item.id === "all" ? "library" : item.id === "notes" ? "journal" : item.id === "ai" ? "message" : item.id === "photos" ? "image" : "receipt"} size={14} />{item.id === "notes" ? "笔记" : item.id === "bill" ? "账单" : item.label}</button>)}{pendingBuilds.length ? <button type="button" className={`source-pending-filter${type === "pending" ? " active" : ""}`} aria-pressed={type === "pending"} onClick={() => { setCreatedPageId(undefined); update({ type: type === "pending" ? undefined : "pending", file: undefined, limit: undefined }); }}><Icon name="spark" size={14} />待构建 <b>{pendingBuilds.length}</b></button> : null}</div>
+    <h1 className="sr-only">{t("生活记录")}</h1>
+    <section className="source-discovery-tools" aria-label={t("筛选生活记录")}>
+      <div className="source-type-filter" role="group" aria-label={t("按来源类型筛选")}>{[...sourceRecordTypes].sort((a, b) => ["all", "notes", "ai", "photos", "bill"].indexOf(a.id) - ["all", "notes", "ai", "photos", "bill"].indexOf(b.id)).map((item) => <button type="button" key={item.id} className={type === item.id ? "active" : ""} aria-pressed={type === item.id} onClick={() => { setCreatedPageId(undefined); update({ type: item.id === "all" ? undefined : item.id, file: undefined, limit: undefined }); }}><Icon name={item.id === "all" ? "library" : item.id === "notes" ? "journal" : item.id === "ai" ? "message" : item.id === "photos" ? "image" : "receipt"} size={14} />{t(item.id === "notes" ? "笔记" : item.id === "bill" ? "账单" : item.label)}</button>)}{pendingBuilds.length ? <button type="button" className={`source-pending-filter${type === "pending" ? " active" : ""}`} aria-pressed={type === "pending"} onClick={() => { setCreatedPageId(undefined); update({ type: type === "pending" ? undefined : "pending", file: undefined, limit: undefined }); }}><Icon name="spark" size={14} />{t("待构建")} <b>{pendingBuilds.length}</b></button> : null}</div>
       <div className="source-toolbar-right">
-      <SearchField className="source-global-search" name="organized-source-search" autoComplete="off" aria-label="搜索生活记录标题或内容" value={query} onChange={(event) => { setCreatedPageId(undefined); update({ q: event.target.value || undefined, file: undefined, limit: undefined }); }} placeholder="搜索标题或内容…" />
+      <SearchField className="source-global-search" name="organized-source-search" autoComplete="off" aria-label={t("搜索生活记录标题或内容")} value={query} onChange={(event) => { setCreatedPageId(undefined); update({ q: event.target.value || undefined, file: undefined, limit: undefined }); }} placeholder={t("搜索标题或内容…")} />
       </div>
-      <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />导入资料</button><p className="source-bills-hint">账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。</p></div></div>
+      <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />{t("导入资料")}</button><p className="source-bills-hint">{t("账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。")}</p></div></div>
     </section>
 
-    <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label="生活记录工作区">
+    <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label={t("生活记录工作区")}>
       <div className={`source-pane-shell source-folder-shell${folderPaneOpen ? "" : " collapsed"}`}>
-        <aside className="source-folder-pane"><PaneShelf label="文件夹" open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel="文件夹栏" onCreate={() => { setFolderOverride(true); setFolderCreateToken(value => value + 1); }} createLabel="新建文件夹" createDisabled={!folder} />
+        <aside className="source-folder-pane"><PaneShelf label={t("文件夹")} open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel={t("文件夹栏")} onCreate={() => { setFolderOverride(true); setFolderCreateToken(value => value + 1); }} createLabel={t("新建文件夹")} createDisabled={!folder} />
           <SourceConnectionsPanel onOpened={path => { setFolderRevision(value => value + 1); if (path) { setFolderOverride(true); setCreatedPageId(undefined); update({ folder: path, file: undefined, month: undefined, q: undefined, type: undefined }); } }} />
           <QuietScroll className="source-folder-contents">
             <FolderTree fileDrop={{ accepts: (data, target) => Boolean(data.types.includes("application/x-the-way-here-source") && !movingRef.current && draggedSource.current && draggedSource.current.knowledgeBaseId === moveScope.current && sourcePagePath(draggedSource.current.page).split("/").slice(0, -1).join("/") !== target), drop: (_data, target) => { void moveFile(target); } }} selected={folder} onSelect={path => { setCreatedPageId(undefined); setCreatingSource(false); setRenameRequest(undefined); update({ folder: path || undefined, month: undefined, file: undefined, limit: undefined }); }} counts={folderCounts} total={pages.length} revision={revision + folderRevision} createToken={folderCreateToken} onChanged={() => setFolderRevision(value => value + 1)} />
           </QuietScroll></aside>
       </div>
-      <FileBrowserPane label={folder ? sourceFolders?.find(item => item.path === folder)?.label || folder.split("/").at(-1)! : "全部记录"} count={String(filtered.length)} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)}
-        onCreate={() => { setFilePaneOpen(true); setCreatingSource(true); }} createLabel="新建记录" createDisabled={!folder}
-        inlineCreate={creatingSource && <InlineNameForm key={folder} label="新建记录" placeholder="记录标题（可稍后修改）" onCancel={() => setCreatingSource(false)} onCreate={async title => {
+      <FileBrowserPane label={folder ? demo.folder(sourceFolders?.find(item => item.path === folder)?.label || folder.split("/").at(-1)!) : t("全部记录")} count={String(filtered.length)} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)}
+        onCreate={() => { setFilePaneOpen(true); setCreatingSource(true); }} createLabel={t("新建记录")} createDisabled={!folder}
+        inlineCreate={creatingSource && <InlineNameForm key={folder} label={t("新建记录")} placeholder={t("记录标题（可稍后修改）")} onCancel={() => setCreatingSource(false)} onCreate={async title => {
           const page = await api<WikiPage>("/api/sources", { method: "POST", body: JSON.stringify({ title, folder }) });
           setCreatingSource(false); setCreatedPageId(page.id); setFolderRevision(value => value + 1);
           update({ q: undefined, type: undefined, month: undefined, file: page.id, limit: undefined });
@@ -564,8 +569,8 @@ export function OrganizedSources({ revision }: { revision: number }) {
         toolbar={<>
             {
             type === "pending" && selectableBuildRecords.length > 0 ? <div className="source-batch-toolbar">
-              <label><input type="checkbox" checked={allSelectableBuildsSelected} ref={(node) => { if (node) node.indeterminate = anySelectableBuildsSelected && !allSelectableBuildsSelected; }} onChange={(event) => setSelectedBuildPaths(event.target.checked ? new Set(selectableBuildPaths) : new Set())} />全选可直接构建 <small>（{selectableBuildRecords.length} 份）</small></label>
-              <button type="button" disabled={!selectedBuildRecords.length || Boolean(busyBuildPath)} onClick={() => beginSelectedBuild(selectedBuildRecords)}><Icon name="build" size={13} />{selectedBuildRecords.length > 1 ? `批量构建 ${selectedBuildRecords.length} 份` : selectedBuildRecords.length === 1 ? "构建这份记录" : "选择记录"}</button>
+              <label><input type="checkbox" checked={allSelectableBuildsSelected} ref={(node) => { if (node) node.indeterminate = anySelectableBuildsSelected && !allSelectableBuildsSelected; }} onChange={(event) => setSelectedBuildPaths(event.target.checked ? new Set(selectableBuildPaths) : new Set())} />{t("全选可直接构建")} <small>{t("（${count} 份）", { count: selectableBuildRecords.length })}</small></label>
+              <button type="button" disabled={!selectedBuildRecords.length || Boolean(busyBuildPath)} onClick={() => beginSelectedBuild(selectedBuildRecords)}><Icon name="build" size={13} />{selectedBuildRecords.length > 1 ? t("批量构建 ${count} 份", { count: selectedBuildRecords.length }) : selectedBuildRecords.length === 1 ? t("构建这份记录") : t("选择记录")}</button>
             </div> : null}</>}>
             {visiblePages.map((page) => {
               const fileName = documentIdentity(page.externalSource?.originalPath || page.relativePath).fileName;
@@ -573,7 +578,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
               const trackedBuildRecord = sourceBuildRecordForPage(page, buildRecords);
               const buildRecord = trackedBuildRecord || buildableSourceRecordForPage(page, buildRecords);
               const selectable = type === "pending" && selectableBuildRecords.some(({ file }) => file.storedPath === trackedBuildRecord?.file.storedPath);
-              if (renameRequest?.pageId === page.id) return <InlineNameForm key={`rename-${page.id}`} label="文件名" placeholder="文件名" initialName={fileName.replace(/\.(md|txt)$/i, "")} onCancel={() => setRenameRequest(undefined)} onCreate={async fileName => {
+              if (renameRequest?.pageId === page.id) return <InlineNameForm key={`rename-${page.id}`} label={t("文件名")} placeholder={t("文件名")} initialName={fileName.replace(/\.(md|txt)$/i, "")} onCancel={() => setRenameRequest(undefined)} onCreate={async fileName => {
                 const renamed = await api<WikiPage>("/api/pages/rename", { method: "POST", body: JSON.stringify({ pageId: page.id, fileName, expectedModifiedAt: page.modifiedAt }) });
                 setRenameRequest(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id });
               }} />;
@@ -584,12 +589,12 @@ export function OrganizedSources({ revision }: { revision: number }) {
                   event.dataTransfer.effectAllowed = "move";
                   event.dataTransfer.setData("application/x-the-way-here-source", page.id);
                 } : undefined} onDragEnd={() => { draggedSource.current = undefined; }} active={selected?.id === page.id} onSelect={() => { setCreatedPageId(undefined); setRecentBatch(undefined); update({ file: page.id, batch: undefined }); }}
-                selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">选择构建「{fileName}」</span></label> : null} actions={<FileMenu page={page} extraActions={[...(moveVault && recordType !== "photos" && recordType !== "bill" ? [{ label: "移动到…", onSelect: () => { moveChoiceScope.current = moveVault.knowledgeBaseId; setBuildError(""); setMoveDestination(sourcePagePath(page).split("/").slice(0, -1).join("/")); setMoveChoice(page); } }] : []), { label: recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档", onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />} />;
+                selection={selectable && trackedBuildRecord ? <label className="source-batch-check"><input type="checkbox" checked={selectedBuildPaths.has(trackedBuildRecord.file.storedPath)} onChange={(event) => setSelectedBuildPaths((current) => { const next = new Set(current); if (event.target.checked) next.add(trackedBuildRecord.file.storedPath); else next.delete(trackedBuildRecord.file.storedPath); return next; })} /><span className="sr-only">{t("选择构建「${name}」", { name: fileName })}</span></label> : null} actions={<FileMenu page={page} extraActions={[...(moveVault && recordType !== "photos" && recordType !== "bill" ? [{ label: t("移动到…"), onSelect: () => { moveChoiceScope.current = moveVault.knowledgeBaseId; setBuildError(""); setMoveDestination(sourcePagePath(page).split("/").slice(0, -1).join("/")); setMoveChoice(page); } }] : []), { label: t(recordType === "photos" ? "打开照片记忆" : recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "打开账单记忆" : "构建这篇文档"), onSelect: () => void beginBuild(buildRecord, recordType === "photos" || recordType === "bill" && buildRecord?.batch.channel === "alipay" ? "open" : "build") }]} onRename={() => requestRename(page)} onDelete={() => setDeleteTarget({ kind: "file", page })} />} />;
             })}
             {visiblePages.length < filtered.length ? <button className="source-file-list-more" onClick={() => update({ limit: String(visibleLimit + 120) })}>继续显示 <b>{Math.min(120, filtered.length - visiblePages.length)}</b> 份</button> : null}
-            {query.trim() && searching ? <Loading label="正在搜索正文" /> : searchError ? <p role="alert">{searchError}</p> : visiblePages.length === 0 ? <div className="source-list-empty"><b>没有匹配的记录</b><p>{!sourceFolders?.length ? "打开文件夹后，里面的文件会显示在这里" : type === "pending" ? "新带进来的记录都已经构建完成。" : !query && !month && type === "all" && folder ? "这个文件夹里还没有文件" : "换一个来源、月份或搜索词试试。"}</p></div> : null}
+            {query.trim() && searching ? <Loading label={t("正在搜索正文")} /> : searchError ? <p role="alert">{searchError}</p> : visiblePages.length === 0 ? <div className="source-list-empty"><b>{t("没有匹配的记录")}</b><p>{!sourceFolders?.length ? t("打开文件夹后，里面的文件会显示在这里") : type === "pending" ? t("新带进来的记录都已经构建完成。") : !query && !month && type === "all" && folder ? t("这个文件夹里还没有文件") : t("换一个来源、月份或搜索词试试。")}</p></div> : null}
       </FileBrowserPane>
-      {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>选择一个文件</span></div>}
+      {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>{t("选择一个文件")}</span></div>}
     </div>
     <PageAgentContext context={photoBatch ? { scope: "照片记忆", title: photoBatch.files[0]?.originalName || "照片记忆", pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: "记忆报告", phase: "enrich" }, suggestions: ["我想讲讲这批照片里的故事，一次问我一个具体问题。"], } : agentContext} />
   </div>;
