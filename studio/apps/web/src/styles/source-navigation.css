@@ -133,7 +133,7 @@ body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px
 .desktop-shell .organized-sources-page .source-type-filter { background: var(--record-sidebar); }
 .desktop-shell .organized-sources-page .source-toolbar-right { flex: 0 1 340px; margin-left: 0; }
 .desktop-shell .organized-sources-page .source-toolbar-actions { margin-left: auto; }
-.source-bills-hint { margin:6px 0 0; max-width:28ch; color:var(--ink-soft); font-size:12px; line-height:1.5; }
+.source-bills-hint { margin:6px 0 0; max-width:56ch; color:var(--ink-soft); font-size:12px; line-height:1.5; white-space:pre-line; }
 .source-import-menu > button { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 .source-import-menu > button:hover { background: var(--accent-hover); color: var(--paper); }
 .desktop-shell .organized-sources-page .source-vault .pane-shelf { background: var(--record-tint); }

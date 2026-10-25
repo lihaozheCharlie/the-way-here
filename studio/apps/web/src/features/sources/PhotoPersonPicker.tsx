@@ -1,6 +1,7 @@
 import { TextInput } from "../../shared/form-controls";
 import { useEffect, useId, useRef, useState } from "react";
 import type { PhotoPerson } from "@the-way-here/shared";
+import { useI18n } from "../../shared/i18n";
 
 export type PhotoPersonOption = { id: string; title: string; aliases?: string[] };
 export function matchingPhotoAliases(person: PhotoPersonOption, query: string) {
@@ -13,6 +14,7 @@ export function matchingPhotoPeople(people: PhotoPersonOption[], query: string) 
 }
 
 export function PhotoPersonPicker({ person, people, onChange, displayName }: { person: PhotoPerson; people: PhotoPersonOption[]; onChange: (patch: Partial<PhotoPerson>) => void; displayName?: string }) {
+  const { t } = useI18n();
   const id = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -42,9 +44,9 @@ export function PhotoPersonPicker({ person, people, onChange, displayName }: { p
   }
   return <>
     <div className="photo-person-picker" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-      <label htmlFor={id}>搜索或填写称呼</label>
+      <label htmlFor={id}>{t("搜索或填写称呼")}</label>
       <TextInput ref={inputRef} id={id} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={open ? `${id}-list` : undefined} aria-activedescendant={open && options.length ? `${id}-option-${activeIndex}` : undefined}
-        value={open ? query : (displayName ?? person.name)} placeholder="搜索姓名、别名，或填写新称呼" autoComplete="off" maxLength={100}
+        value={open ? query : (displayName ?? person.name)} placeholder={t("搜索姓名、别名，或填写新称呼")} autoComplete="off" maxLength={100}
         onFocus={showOptions} onClick={showOptions}
         onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }}
         onKeyDown={(event) => {
@@ -57,15 +59,15 @@ export function PhotoPersonPicker({ person, people, onChange, displayName }: { p
           }
           if (event.key === "Enter" && open) { event.preventDefault(); choose(activeIndex); }
         }} />
-      {open ? <div id={`${id}-list`} role="listbox" aria-label="选择已有人物或使用新称呼" className="photo-person-options">
+      {open ? <div id={`${id}-list`} role="listbox" aria-label={t("选择已有人物或使用新称呼")} className="photo-person-options">
         <div role="group" aria-labelledby={`${id}-existing`}>
-          <p className="photo-person-group-title" id={`${id}-existing`}>已有人物{matches.length ? ` · ${matches.length}` : ""}</p>
+          <p className="photo-person-group-title" id={`${id}-existing`}>{t("已有人物")}{matches.length ? t(" · ${count}", { count: matches.length }) : ""}</p>
           {matches.length ? <div ref={matchesRef} className="photo-person-existing-options">{matches.map((option, index) => <button type="button" role="option" id={`${id}-option-${index}`} aria-selected={index === activeIndex} key={option.id} tabIndex={-1}
-            onMouseDown={(event) => event.preventDefault()} onClick={() => choose(index)}><span>{option.title}{matchingPhotoAliases(option, query).length ? <small className="photo-person-alias">匹配别名：{matchingPhotoAliases(option, query).join("、")}</small> : null}</span><small>关联已有人物</small></button>)}</div> : <p className="photo-person-empty">{people.length ? "没有匹配的已有人物，可以换个关键词。" : "还没有已有人物，输入一个称呼开始记录。"}</p>}
+            onMouseDown={(event) => event.preventDefault()} onClick={() => choose(index)}><span>{option.title}{matchingPhotoAliases(option, query).length ? <small className="photo-person-alias">{t("匹配别名：${names}", { names: matchingPhotoAliases(option, query).join(t("、")) })}</small> : null}</span><small>{t("关联已有人物")}</small></button>)}</div> : <p className="photo-person-empty">{people.length ? t("没有匹配的已有人物，可以换个关键词。") : t("还没有已有人物，输入一个称呼开始记录。")}</p>}
         </div>
-        {query.trim() ? <div role="group" aria-labelledby={`${id}-new`} className="photo-person-new-group"><p className="photo-person-group-title" id={`${id}-new`}>使用称呼</p><button type="button" role="option" id={`${id}-option-${matches.length}`} aria-selected={activeIndex === matches.length} tabIndex={-1} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(matches.length)}><span>使用新称呼「{query.trim()}」</span><small>构建时由模型匹配已有档案</small></button></div> : null}
+        {query.trim() ? <div role="group" aria-labelledby={`${id}-new`} className="photo-person-new-group"><p className="photo-person-group-title" id={`${id}-new`}>{t("使用称呼")}</p><button type="button" role="option" id={`${id}-option-${matches.length}`} aria-selected={activeIndex === matches.length} tabIndex={-1} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(matches.length)}><span>{t("使用新称呼「${name}」", { name: query.trim() })}</span><small>{t("构建时由模型匹配已有档案")}</small></button></div> : null}
       </div> : null}
-      {person.name.trim() ? <p className="photo-person-selection" role="status"><b>{person.pageId ? "已选择已有人物" : "已选择称呼，构建时匹配"}</b><span>{displayName ?? person.name}</span>{!person.pageId && matches.some((match) => [match.title, ...(match.aliases ?? [])].some((name) => name.toLocaleLowerCase() === person.name.trim().toLocaleLowerCase())) ? <small>有姓名或别名相同的人物；如是同一人，请从上方选择关联。</small> : null}</p> : null}
+      {person.name.trim() ? <p className="photo-person-selection" role="status"><b>{person.pageId ? t("已选择已有人物") : t("已选择称呼，构建时匹配")}</b><span>{displayName ?? person.name}</span>{!person.pageId && matches.some((match) => [match.title, ...(match.aliases ?? [])].some((name) => name.toLocaleLowerCase() === person.name.trim().toLocaleLowerCase())) ? <small>{t("有姓名或别名相同的人物；如是同一人，请从上方选择关联。")}</small> : null}</p> : null}
     </div>
   </>;
 }

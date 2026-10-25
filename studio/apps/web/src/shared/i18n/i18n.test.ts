@@ -46,6 +46,56 @@ describe("translate", () => {
     expect(translate("en", "点选照片即可选中，最多 50 张 · 放大查看请点右下角")).toBe("Click a photo to select it — up to 50. Zoom from the lower-right corner.");
   });
 
+  it("uses stable English for life-record filters and the import hint", () => {
+    expect(translate("en", "全部")).toBe("All");
+    expect(translate("en", "笔记")).toBe("Notes");
+    expect(translate("en", "AI 对话")).toBe("Chats");
+    expect(translate("en", "照片")).toBe("Photos");
+    expect(translate("en", "账单")).toBe("Bills");
+    expect(translate("en", "展开全部属性")).toBe("Expand properties");
+    expect(translate("en", "搜索标题或内容…")).toBe("Search titles or text…");
+    expect(translate("en", "导入资料")).toBe("Import materials");
+    expect(translate("en", "打开照片记忆")).toBe("Open photo memory");
+    expect(translate("en", "通过“打开照片记忆”修改人物和讲述")).toBe("Edit people and the telling via “Open photo memory”");
+    expect(translate("en", "让 The Way Here 先认识你的思考方式")).toBe("Let The Way Here learn how you think");
+    expect(translate("en", "思考深度关闭")).toBe("Off");
+    expect(translate("en", "关闭")).toBe("Close");
+    expect(translate("en", "账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。").split("\n")).toEqual([
+      "Bills import here, grouped by time on this computer.",
+      "You write the story; nothing is sent to a model.",
+    ]);
+    expect(translate("zh", "笔记")).toBe("笔记");
+    expect(translate("zh", "展开全部属性")).toBe("展开全部属性");
+    expect(translate("zh", "AI 对话")).toBe("AI 对话");
+  });
+
+  it("translates the life-record progress, links, delete, move, and show-more chrome", () => {
+    expect(translate("en", "消费账单构建进度")).toBe("Spending-bill build progress");
+    expect(translate("en", "账单解析")).toBe("Read the bill");
+    expect(translate("en", "对话完善")).toBe("Fill in through chat");
+    expect(translate("en", "构建入 Wiki")).toBe("Build into the Wiki");
+    expect(translate("en", "查看关联结果 · ${count}", { count: 11 })).toBe("See linked results · 11");
+    expect(translate("en", "查看全部 ${count} 个关联页面", { count: 10 })).toBe("See all 10 linked pages");
+    expect(translate("en", "删除这份生活记录？")).toBe("Delete this Life record?");
+    expect(translate("en", "删除这个文件夹？")).toBe("Delete this folder?");
+    expect(translate("en", "其中包含 ${count} 份记录。已有理解不会自动删除，但之后将无法再回到这些原始材料；此操作不能撤销。", { count: 3 })).toBe("This includes 3 records. Understanding isn’t deleted automatically, but you won’t be able to return to these source materials. This can’t be undone.");
+    expect(translate("en", "这会删除记忆报告并隐藏人物影像关联，但不会删除隐藏目录中保留的原图。")).toBe("This deletes the memory report and hides people links in the images, but keeps the originals in the hidden folder.");
+    expect(translate("en", "沿着这篇记录，留下一封可以从未来回看的信。")).toBe("From this record, leave a letter you can look back on later.");
+    expect(translate("en", "移动「${name}」", { name: "note.md" })).toBe("Move “note.md”");
+    expect(translate("en", "选择目标文件夹")).toBe("Choose a destination folder");
+    expect(translate("en", "移动到这里")).toBe("Move here");
+    expect(translate("en", "知识库已切换，请重新选择文件")).toBe("The library changed. Choose the file again.");
+    expect(translate("en", "继续显示 ${count} 份", { count: 12 })).toBe("Show 12 more");
+    expect(translate("en", "关闭删除确认")).toBe("Close delete confirmation");
+    expect(translate("en", "暂时无法删除，请稍后再试")).toBe("Couldn’t delete it. Try again in a moment.");
+    expect(translate("en", "让 The Way Here 先认识你的思考方式")).toBe("Let The Way Here learn how you think");
+    expect(translate("en", "尚未配置 AI 模型，部分功能不可用")).toBe("No AI model is set up yet, so some features are unavailable");
+    expect(translate("en", "去配置")).toBe("Set up");
+    expect(translate("zh", "继续显示 ${count} 份", { count: 12 })).toBe("继续显示 12 份");
+    expect(translate("zh", "查看关联结果 · ${count}", { count: 11 })).toBe("查看关联结果 · 11");
+    expect(translate("zh", "移动「${name}」", { name: "note.md" })).toBe("移动「note.md」");
+  });
+
   it("fills placeholders and falls back to Chinese when English is missing", () => {
     expect(translate("en", "从 ${from}", { from: "2020-01-01" })).toBe("From 2020-01-01");
     expect(translate("en", "${progress} / 100，目标 ${score.threshold} 分", { progress: 40, "score.threshold": 60 })).toBe("40 / 100, target 60");

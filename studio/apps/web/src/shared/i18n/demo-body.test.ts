@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { demoBodies } from "./demo-body-data";
-import { demoEnglishDocument, demoFingerprint } from "./demo-body";
+import { demoEnglishDocument, demoExcerptFromMarkdown, demoFingerprint, demoListExcerpt } from "./demo-body";
+import { demoLibraryLabel } from "./demo-overlay";
+import { demoSeedExcerpts } from "./demo-excerpt-data";
 import { demoJsonStrings } from "./demo-json-data";
 import { demoJsonText, overlayDemoJson } from "./demo-json";
 
@@ -31,6 +33,28 @@ describe("demo markdown overlay", () => {
     expect(demoEnglishDocument("demo", "en", source, `${sourceMarkdown}\nedited`)).toBeUndefined();
     expect(demoEnglishDocument("personal", "en", source, sourceMarkdown)).toBeUndefined();
     expect(demoEnglishDocument("demo", "zh", source, sourceMarkdown)).toBeUndefined();
+  });
+
+  it("overlays a demo list excerpt only when the indexed opening still matches", () => {
+    const path = "sources/照片记忆/一张新城市餐桌的照片.md";
+    const markdown = readVault(path);
+    expect(demoSeedExcerpts[path]).toBe(demoExcerptFromMarkdown(markdown));
+    expect(demoFingerprint(markdown)).toBe(demoBodies[path]!.fingerprint);
+    const english = demoListExcerpt("demo", "en", path, demoSeedExcerpts[path]!);
+    expect(english.startsWith("This is a fully fictional demo photo memory.")).toBe(true);
+    expect(english).not.toMatch(/[\u4e00-\u9fff]/);
+    expect(demoListExcerpt("personal", "en", path, demoSeedExcerpts[path]!)).toBe(demoSeedExcerpts[path]);
+    expect(demoListExcerpt("demo", "zh", path, demoSeedExcerpts[path]!)).toBe(demoSeedExcerpts[path]);
+    expect(demoListExcerpt("demo", "en", path, "我改过的摘要")).toBe("我改过的摘要");
+    expect(demoLibraryLabel("demo", "en", "The Way Here 演示 Wiki")).toBe("The Way Here demo");
+    expect(demoLibraryLabel("personal", "en", "The Way Here 演示 Wiki")).toBe("The Way Here 演示 Wiki");
+    expect(demoLibraryLabel("demo", "zh", "The Way Here 演示 Wiki")).toBe("The Way Here 演示 Wiki");
+    expect(demoLibraryLabel("demo", "en", "改过的库名")).toBe("改过的库名");
+    const windowLibrary = (id: string, locale: "en" | "zh", name?: string) => demoLibraryLabel(id, locale, name || "The Way Here");
+    expect(`Life records · ${windowLibrary("demo", "en", "The Way Here 演示 Wiki")}`).toBe("Life records · The Way Here demo");
+    expect(`生活记录 · ${windowLibrary("demo", "zh", "The Way Here 演示 Wiki")}`).toBe("生活记录 · The Way Here 演示 Wiki");
+    expect(`Life records · ${windowLibrary("personal", "en", "我的生活")}`).toBe("Life records · 我的生活");
+    expect(`Life records · ${windowLibrary("demo", "en")}`).toBe("Life records · The Way Here");
   });
 });
 

@@ -1,5 +1,6 @@
 import type { AppLocale } from "./locale";
 import { demoBodies } from "./demo-body-data";
+import { demoSeedExcerpts } from "./demo-excerpt-data";
 
 /** Display-only English markdown for the demo library.
  *
@@ -38,6 +39,37 @@ function rewriteDemoWikilinks(markdown: string, links?: DemoBodyLink[]): string 
     const fragment = rawTarget.includes("#") ? `#${encodeURIComponent(rawTarget.slice(rawTarget.indexOf("#") + 1).trim())}` : "";
     return `[${label}](/page/${href}${fragment})`;
   });
+}
+
+/** Same opening excerpt the indexer stores: frontmatter off, first heading removed, 260 chars. */
+export function demoExcerptFromMarkdown(markdown: string): string {
+  const normalized = markdown.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+  const fenced = /^---\n[\s\S]*?\n---\n?/.exec(normalized);
+  const body = (fenced ? normalized.slice(fenced[0].length) : normalized).trim().replace(/^#\s+.+$/m, "");
+  return body
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target: string, label?: string) => label || target)
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[>*_`~|-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 260);
+}
+
+/** List excerpt for a fingerprinted demo file. Personal libraries and edited openings stay as stored. */
+export function demoListExcerpt(
+  libraryId: string | null | undefined,
+  locale: AppLocale,
+  relativePath: string,
+  excerpt: string,
+): string {
+  if (locale !== "en" || (libraryId || "").toLowerCase() !== "demo" || !excerpt) return excerpt;
+  const key = demoPathKey(relativePath);
+  const row = demoBodies[key];
+  if (!row || demoSeedExcerpts[key] !== excerpt) return excerpt;
+  return demoExcerptFromMarkdown(row.markdown).replace(/ +([.,;:!?，。；：！？])/g, "$1");
 }
 
 export function demoEnglishDocument(

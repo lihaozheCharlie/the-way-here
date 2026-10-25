@@ -1,6 +1,7 @@
 import { useDismissLayer } from "./use-dismiss-layer";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./ui";
+import { useI18n } from "./i18n";
 
 export function ConfirmDeleteDialog({ title, description, itemName, impact, confirmLabel, onClose, onConfirm }: {
   title: string;
@@ -11,6 +12,7 @@ export function ConfirmDeleteDialog({ title, description, itemName, impact, conf
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLElement>(null);
@@ -52,7 +54,7 @@ export function ConfirmDeleteDialog({ title, description, itemName, impact, conf
       onClose();
     } catch (reason: any) {
       setDeleting(false);
-      setError(reason.message || "暂时无法删除，请稍后再试");
+      setError(reason.message || t("暂时无法删除，请稍后再试"));
     }
   }
 
@@ -62,7 +64,7 @@ export function ConfirmDeleteDialog({ title, description, itemName, impact, conf
         <header>
           <div className="kb-dialog-symbol delete-dialog-symbol"><Icon name="trash" size={21} /></div>
           <div><h2 id="delete-dialog-title">{title}</h2><p id="delete-dialog-description">{description}</p></div>
-          <button type="button" className="icon-button" onClick={onClose} disabled={deleting} aria-label="关闭删除确认"><Icon name="close" size={18} /></button>
+          <button type="button" className="icon-button" onClick={onClose} disabled={deleting} aria-label={t("关闭删除确认")}><Icon name="close" size={18} /></button>
         </header>
         <div className="kb-dialog-body delete-dialog-body">
           <strong>{itemName}</strong>
@@ -70,8 +72,8 @@ export function ConfirmDeleteDialog({ title, description, itemName, impact, conf
           {error ? <div className="kb-dialog-error" role="alert">{error}</div> : null}
         </div>
         <footer>
-          <button ref={cancelRef} type="button" className="secondary-action" onClick={onClose} disabled={deleting}>取消</button>
-          <button className="danger-action" disabled={deleting}>{deleting ? "正在删除…" : confirmLabel}</button>
+          <button ref={cancelRef} type="button" className="secondary-action" onClick={onClose} disabled={deleting}>{t("取消")}</button>
+          <button className="danger-action" disabled={deleting}>{deleting ? t("正在删除…") : confirmLabel}</button>
         </footer>
       </form>
     </section>

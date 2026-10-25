@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { SourceKnowledgeConnections } from "./Sources";
 
@@ -29,5 +29,23 @@ describe("source related results", () => {
     expect(html).toContain('source-letter-feature');
     expect(html).not.toContain('source-related-knowledge');
     expect(render([])).toBe('');
+  });
+  it("shows English link chrome when the desktop locale is English", () => {
+    const store = new Map([["desktop.locale", "en"]]);
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+      clear: () => store.clear(),
+    });
+    try {
+      const html = render([...Array.from({ length: 9 }, (_, i) => page(`事件${i}`)), page("回信", "letters")]);
+      expect(html).toContain("See linked results · 10");
+      expect(html).toContain("See all 9 linked pages");
+      expect(html).toContain('aria-label="Pages linked from this source record"');
+      expect(html).not.toContain("查看关联结果");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

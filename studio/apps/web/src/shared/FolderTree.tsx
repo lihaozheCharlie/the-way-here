@@ -6,7 +6,7 @@ import { useApi } from "./use-api";
 import { Icon } from "./ui";
 import { useDismissLayer } from "./use-dismiss-layer";
 import "./folder-tree.css";
-import { useDemoLabels } from "./i18n";
+import { useDemoLabels, useI18n } from "./i18n";
 
 const folderLabel = (node: SourceFolderSummary) => { const text = node.label || node.path.split("/").at(-1)!; return text.length > 32 ? `${text.slice(0, 17)}…${text.slice(-12)}` : text; };
 export const folderParent = (path: string) => path.startsWith("外部来源/") && path.split("/").length === 2 ? "" : path.split("/").slice(0, -1).join("/");
@@ -18,6 +18,7 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
 }) {
   const { data: vault } = useApi<VaultInfo>("/api/vault");
   const demo = useDemoLabels();
+  const { t } = useI18n();
   const tree = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<SourceFolderSummary[]>([]);
   const [loaded, setLoaded] = useState<Set<string>>(new Set());
@@ -156,13 +157,13 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
     return editing?.parent === parent && editing.node?.path === node?.path ? <div className="folder-tree-input" key={`input-${node?.path || parent}`} style={{ paddingLeft: 24 + folderAncestors(node?.path || `${parent}/new`).length * 16 }}><Icon name="folder" size={16} /><input autoFocus aria-label={node ? "重命名文件夹" : "新文件夹名称"} value={name} placeholder="新建文件夹" disabled={busy} onChange={event => setName(event.target.value)} onBlur={event => { if (!busy && !(event.relatedTarget instanceof Element && event.relatedTarget.closest(".folder-tree-input"))) setEditing(undefined); }} onKeyDown={event => { if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); void save(); } if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setEditing(undefined); focus(node?.path || parent); } }} /><button type="button" aria-label="保存文件夹" disabled={busy || !name.trim()} onClick={() => void save()}><Icon name="check" size={14} /></button><button type="button" aria-label="取消" onClick={() => setEditing(undefined)}><Icon name="close" size={14} /></button></div> : null;
   }
   let lastGroup = "";
-  return <><div ref={tree} className="folder-tree" role="tree" aria-label={internalOnly ? "保存位置" : "文件夹树"} aria-busy={!loaded.has("")}>
-    <div role="treeitem" aria-level={1} aria-selected={!selected} tabIndex={focused === "" || !visible.some(n => n.path === focused) ? 0 : -1} data-folder="" className={`folder-tree-row${!selected ? " selected" : ""}`} onFocus={() => setFocused("")} onClick={() => onSelect("")} onKeyDown={event => key(event)}><span className="folder-tree-chevron" /><Icon name="source" size={16} /><span className="folder-tree-name">{internalOnly ? "应用资料根目录" : "全部材料"}</span>{!internalOnly && <small>{total}</small>}</div>
+  return <>    <div ref={tree} className="folder-tree" role="tree" aria-label={t(internalOnly ? "保存位置" : "文件夹树")} aria-busy={!loaded.has("")}>
+    <div role="treeitem" aria-level={1} aria-selected={!selected} tabIndex={focused === "" || !visible.some(n => n.path === focused) ? 0 : -1} data-folder="" className={`folder-tree-row${!selected ? " selected" : ""}`} onFocus={() => setFocused("")} onClick={() => onSelect("")} onKeyDown={event => key(event)}><span className="folder-tree-chevron" /><Icon name="source" size={16} /><span className="folder-tree-name">{t(internalOnly ? "应用资料根目录" : "全部材料")}</span>{!internalOnly && <small>{total}</small>}</div>
     {input("")}
     {visible.map(node => {
       const depth = folderAncestors(node.path).length, root = Boolean(node.external && depth === 0), expanded = open.has(node.path), childrenLoaded = loaded.has(node.path);
       const hasChildren = !node.unavailable && (!childrenLoaded || nodes.some(n => folderParent(n.path) === node.path));
-      const group = node.external ? "已打开的文件夹" : "知识库内", label = !internalOnly && group !== lastGroup ? group : ""; lastGroup = group;
+      const group = node.external ? t("已打开的文件夹") : t("知识库内"), label = !internalOnly && group !== lastGroup ? group : ""; lastGroup = group;
       return <React.Fragment key={node.path}>{label && <div className="folder-tree-group" role="presentation">{label}</div>}{editing?.node?.path === node.path ? input(folderParent(node.path), node) : <div role="treeitem" aria-level={depth + 1} aria-expanded={hasChildren ? expanded : undefined} aria-selected={selected === node.path} tabIndex={focused === node.path ? 0 : -1} data-folder={node.path} title={node.absolutePath || node.path} style={{ "--tree-indent": `${Math.min(depth, 6) * 16 + Math.max(0, depth - 6) * 12}px` } as React.CSSProperties} className={`folder-tree-row${dropTarget === node.path ? " is-drop-target" : ""}${root ? " root" : ""}${selected === node.path ? " selected" : ""}${selected.startsWith(node.path + "/") ? " ancestor" : ""}${expanded ? " expanded" : ""}${node.unavailable ? " unavailable" : ""}${menu?.node.path === node.path ? " menu-open" : ""}`} onDragOver={event => {
         if (!node.unavailable && fileDrop?.accepts(event.dataTransfer, node.path)) { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = "move"; setDropTarget(node.path); }
       }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(""); }} onDrop={event => {
@@ -173,8 +174,8 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
         {node.unavailable ? <button className="folder-reconnect" type="button" disabled={busy} onClick={event => { event.stopPropagation(); void action(node, "reconnect"); }}>重新连接</button> : <>{counts && <small className={`folder-tree-count${counts.get(node.path) ? "" : " is-empty"}`}>{counts.get(node.path) || 0}</small>}{!internalOnly && <button type="button" className="folder-tree-more" aria-label={`更多文件夹操作：${node.label || node.path}`} aria-haspopup="menu" tabIndex={-1} onClick={event => { event.stopPropagation(); showMenu(node, event.currentTarget.getBoundingClientRect()); }}><Icon name="more" size={15} /></button>}</>}
       </div>}{expanded && input(node.path)}{expanded && !childrenLoaded && <div className="folder-tree-loading" role="status">正在读取…</div>}</React.Fragment>;
     })}
-    {loaded.has("") && !internalOnly && nodes.length === 0 && <div className="folder-tree-empty"><Icon name="folder" size={25} /><b>还没有打开文件夹</b><p>打开磁盘上的一个文件夹，<br />里面的多级目录会原样显示</p><button type="button" onClick={() => window.dispatchEvent(new Event("open-source-folder"))}>打开文件夹…</button></div>}
-  </div>{internalOnly && <button type="button" className="folder-picker-create" onClick={() => create(selected)}><Icon name="plus" size={14} />新建文件夹</button>}
+    {loaded.has("") && !internalOnly && nodes.length === 0 && <div className="folder-tree-empty"><Icon name="folder" size={25} /><b>{t("还没有打开文件夹")}</b><p>{t("打开磁盘上的一个文件夹，")}<br />{t("里面的多级目录会原样显示")}</p><button type="button" onClick={() => window.dispatchEvent(new Event("open-source-folder"))}>{t("打开文件夹…")}</button></div>}
+  </div>{internalOnly && <button type="button" className="folder-picker-create" onClick={() => create(selected)}><Icon name="plus" size={14} />{t("新建文件夹")}</button>}
   {error && <p className="folder-tree-error" role="alert">{error}<button type="button" onClick={() => { setError(""); void load("", true); }}>重试</button></p>}
   {menu && createPortal(<div ref={menuRef} className="folder-tree-menu" role="menu" style={{ left: menu.x, top: menu.y }} onKeyDown={event => { const buttons = [...menuRef.current!.querySelectorAll<HTMLButtonElement>("button")]; const i = buttons.indexOf(document.activeElement as HTMLButtonElement); if (event.key === "Tab") { setMenu(undefined); return; } if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); buttons[(i + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus(); } }}>
     <button type="button" role="menuitem" onClick={() => { create(menu.node.path); setMenu(undefined); }}>新建子文件夹</button>

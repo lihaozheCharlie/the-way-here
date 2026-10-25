@@ -216,4 +216,22 @@ describe("letter reader", () => {
     expect(render()).toContain("历史版本暂时无法读取");
     expect(render()).toContain("原始回信正文。");
   });
+
+  it("keeps both letters when English would have stored the translated word for all", () => {
+    const store = new Map([["desktop.locale", "en"]]);
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+      clear: () => store.clear(),
+    });
+    try {
+      const html = render();
+      expect(html).toContain("All years");
+      expect(html).toContain("2026-02-20 给自己的信");
+      expect(html).toContain("较早的回信");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
