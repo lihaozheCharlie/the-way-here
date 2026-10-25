@@ -30,6 +30,7 @@ export interface DesktopBridge {
   stopSpeech: (discard?: boolean) => Promise<string>;
   openWindow: (route: string, kind?: "reader" | "focus" | "settings" | "capture") => Promise<void>;
   onCommand: (callback: (command: DesktopCommand) => void) => () => void;
+  setLocale?: (locale: "zh" | "en") => Promise<void>;
   notify: (payload: { title: string; body: string; route: string }) => Promise<void>;
   setBadge: (count: number) => Promise<void>;
   revealWorkspace: () => Promise<void>;

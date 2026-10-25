@@ -14,6 +14,7 @@ import { constants } from 'node:fs';
 import { access, realpath, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { localRoute, allowedExternal, trustedSender } from './policy.mjs';
+import { t, setLocale, readPersistedLocale, persistLocale } from './locale.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const studio = path.resolve(here, '../../..');
 const windows = new Set();
@@ -25,7 +26,7 @@ const speechRecordings = new WeakMap();
 const photoLibraries = new Map();
 const photoWatchers = new WeakSet();
 function photosFor(sender) {
-  if (process.platform !== 'darwin') throw new Error('照片库目前仅支持 macOS 桌面应用');
+  if (process.platform !== 'darwin') throw new Error(t('照片库目前仅支持 macOS 桌面应用'));
   if (!photoLibraries.has(sender)) {
     const binary = app.isPackaged ? path.join(process.resourcesPath, 'native/photo-library') : path.join(studio, 'apps/desktop/dist/photo-library');
     const library = new PhotoLibrary(binary);
@@ -99,9 +100,9 @@ async function restartForAccess() {
 }
 
 async function connectCodex() {
-  const program = process.mas ? null : await dialog.showOpenDialog({title:'选择已安装的 Codex CLI 程序', properties:['openFile','showHiddenFiles']});
+  const program = process.mas ? null : await dialog.showOpenDialog({title:t('选择已安装的 Codex CLI 程序'), properties:['openFile','showHiddenFiles']});
   if (program?.canceled) return false;
-  const home = await dialog.showOpenDialog({title:'选择 Codex 登录与配置目录', message:'选择已通过 ChatGPT 登录的 Codex 配置目录，通常名为 .codex。商店版只导入登录，不导入历史对话、插件或自定义模型配置。连接后会重启本机运行时并停止活动 AI 任务，请先完成当前工作。', properties:['openDirectory','showHiddenFiles'], securityScopedBookmarks:!!process.mas});
+  const home = await dialog.showOpenDialog({title:t('选择 Codex 登录与配置目录'), message:t('选择已通过 ChatGPT 登录的 Codex 配置目录，通常名为 .codex。商店版只导入登录，不导入历史对话、插件或自定义模型配置。连接后会重启本机运行时并停止活动 AI 任务，请先完成当前工作。'), properties:['openDirectory','showHiddenFiles'], securityScopedBookmarks:!!process.mas});
   if (home.canceled) return false;
   if (program) await scopes.grant(program.filePaths[0], program.bookmarks?.[0], 'codex-bin');
   await scopes.grant(home.filePaths[0], home.bookmarks?.[0], 'codex-home');
@@ -110,8 +111,14 @@ async function connectCodex() {
 }
 
 function registerIPC() {
-  function handle(name, fn, withSender = false) { ipcMain.handle(name, (event,...args) => { if (!trustedSender(event.senderFrame?.url,origin)) throw new Error('不受信任的页面'); return withSender ? fn(event.sender, ...args) : fn(...args); }); }
-  handle('desktop:window', (route,kind) => { if (!['reader','focus','settings','capture',undefined].includes(kind)) throw new Error('无效的窗口类型'); openWindow(route,kind); });
+  function handle(name, fn, withSender = false) { ipcMain.handle(name, (event,...args) => { if (!trustedSender(event.senderFrame?.url,origin)) throw new Error(t('不受信任的页面')); return withSender ? fn(event.sender, ...args) : fn(...args); }); }
+  handle('desktop:set-locale', (next) => {
+    const chosen = next === 'en' ? 'en' : 'zh';
+    setLocale(chosen);
+    persistLocale(path.join(app.getPath('userData'), 'locale.json'), chosen);
+    installMenu();
+  });
+  handle('desktop:window', (route,kind) => { if (!['reader','focus','settings','capture',undefined].includes(kind)) throw new Error(t('无效的窗口类型')); openWindow(route,kind); });
   handle('desktop:connect-codex', connectCodex);
   handle('desktop:privacy', async () => { openWindow('/privacy', 'reader'); });
   handle('desktop:photos-status', sender => photosFor(sender).status(), true);
@@ -125,19 +132,19 @@ function registerIPC() {
   handle('desktop:photos-close', sender => { photoLibraries.get(sender)?.close(); photoLibraries.delete(sender); }, true);
   handle('desktop:photos-settings', () => shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Photos'));
   handle('desktop:folder-permission', async () => {
-    const result = await dialog.showMessageBox({ type: 'warning', title: '需要文件夹权限', message: '无法读写文件，请在系统设置中允许 The Way Here 访问该文件夹，然后重试。', buttons: ['打开系统设置', '取消'], cancelId: 1 });
+    const result = await dialog.showMessageBox({ type: 'warning', title: t('需要文件夹权限'), message: t('无法读写文件，请在系统设置中允许 The Way Here 访问该文件夹，然后重试。'), buttons: [t('打开系统设置'), t('取消')], cancelId: 1 });
     if (result.response === 0) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
   });
   handle('desktop:choose-source-directory', async () => {
-    const result = await dialog.showOpenDialog({ title: '打开文件夹', properties: ['openDirectory'], securityScopedBookmarks:!!process.mas });
+    const result = await dialog.showOpenDialog({ title: t('打开文件夹'), properties: ['openDirectory'], securityScopedBookmarks:!!process.mas });
     if (result.canceled) return null;
     const selected = result.filePaths[0];
-    const consent = await dialog.showMessageBox({ type: 'question', title: '允许 AI 修改文件夹', message: '允许 AI 修改此文件夹及子文件夹中的内容？', detail: selected + (process.mas ? '\n授权后会重启本机运行时并停止活动 AI 任务，请先完成当前工作。' : ''), buttons: ['允许并打开', '取消'], defaultId: 0, cancelId: 1 });
+    const consent = await dialog.showMessageBox({ type: 'question', title: t('允许 AI 修改文件夹'), message: t('允许 AI 修改此文件夹及子文件夹中的内容？'), detail: selected + (process.mas ? `\n${t('授权后会重启本机运行时并停止活动 AI 任务，请先完成当前工作。')}` : ''), buttons: [t('允许并打开'), t('取消')], defaultId: 0, cancelId: 1 });
     if (consent.response !== 0) return null;
     await scopes.grant(selected, result.bookmarks?.[0]);
     try { await access(selected, constants.R_OK | constants.W_OK); }
     catch {
-      await dialog.showMessageBox({ type: 'warning', title: '需要文件夹权限', message: '无法读写此文件夹，请允许 The Way Here 访问后重新选择。', detail: selected, buttons: ['打开系统设置', '取消'], cancelId: 1 }).then(async result => { if (result.response === 0) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders'); });
+      await dialog.showMessageBox({ type: 'warning', title: t('需要文件夹权限'), message: t('无法读写此文件夹，请允许 The Way Here 访问后重新选择。'), detail: selected, buttons: [t('打开系统设置'), t('取消')], cancelId: 1 }).then(async result => { if (result.response === 0) await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders'); });
       return null;
     }
     await restartForAccess(); return selected;
@@ -187,38 +194,43 @@ function registerIPC() {
   });
 }
 async function openExistingWorkspace() {
-  const selection = await dialog.showOpenDialog({title:'打开已有知识空间', message:'选择之前使用的知识空间文件夹。日记与笔记请使用“打开文件夹”。', properties:['openDirectory'], securityScopedBookmarks:!!process.mas});
+  const selection = await dialog.showOpenDialog({title:t('打开已有知识空间'), message:t('选择之前使用的知识空间文件夹。日记与笔记请使用“打开文件夹”。'), properties:['openDirectory'], securityScopedBookmarks:!!process.mas});
   if (selection.canceled) return;
   const root = selection.filePaths[0];
   await scopes.grant(root, selection.bookmarks?.[0], 'workspace');
   try { await access(path.join(root,'the-way-here.config.yaml')); }
-  catch { dialog.showErrorBox('这不是已有的知识空间','请选之前由 The Way Here 创建的知识空间。普通文档文件夹可以在应用的“资料”中连接。'); return; }
+  catch { dialog.showErrorBox(t('这不是已有的知识空间'), t('请选之前由 The Way Here 创建的知识空间。普通文档文件夹可以在应用的“资料”中连接。')); return; }
   await saveWorkspace(app.getPath('userData'), await realpath(root));
   app.relaunch(); app.quit();
 }
 function installMenu() {
-  const action = (label,accelerator,value) => ({label,accelerator,click:() => command(value)});
+  const action = (label,accelerator,value) => ({label:t(label),accelerator,click:() => command(value)});
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    {label:'The Way Here',submenu:[{role:'about'},action('偏好设置…','CmdOrCtrl+,','settings'),{label:'隐私与数据使用',click:() => openWindow('/privacy','reader')},...(process.mas ? [{label:'连接 Codex CLI…',click:() => void connectCodex().catch(error => dialog.showErrorBox('未能连接 Codex',error.message))}] : []),{type:'separator'},{role:'services'},{type:'separator'},{role:'hide'},{role:'hideOthers'},{role:'unhide'},{type:'separator'},{role:'quit'}]},
-    {label:'文件',submenu:[{label:'打开已有知识空间…',click:() => void openExistingWorkspace()}, {type:'separator'},action('随手记','CmdOrCtrl+N','capture'),action('导入生活记录…','CmdOrCtrl+O','import'),action('在独立窗口打开','CmdOrCtrl+Return','detach'),action('深入聊聊','CmdOrCtrl+Shift+F','focus'),{type:'separator'},{role:'close'}]},
-    {label:'编辑',submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}, {type:'separator'}, {role:'startSpeaking'},{role:'stopSpeaking'}]},
-    {label:'显示',submenu:[action('搜索与命令','CmdOrCtrl+K','search'),action('AI 协作面板','CmdOrCtrl+Alt+I','inspector'),action('看见未来',undefined,'predict-self'),action('返回','CmdOrCtrl+[','back'),action('前进','CmdOrCtrl+]','forward'),{type:'separator'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'},...(!app.isPackaged ? [{role:'toggleDevTools'}] : [])]},
-    {label:'知识库',submenu:Array.from({length:9},(_,i) => action(`打开知识库 ${i+1}`,`CmdOrCtrl+${i+1}`,`knowledge-base:${i+1}`))},
-    {label:'窗口',submenu:[{role:'minimize'},{role:'zoom'},{role:'front'}, {label:'主窗口',click:showMain}]},
+    {label:'The Way Here',submenu:[{role:'about'},action('偏好设置…','CmdOrCtrl+,','settings'),{label:t('隐私与数据使用'),click:() => openWindow('/privacy','reader')},...(process.mas ? [{label:t('连接 Codex CLI…'),click:() => void connectCodex().catch(error => dialog.showErrorBox(t('未能连接 Codex'),error.message))}] : []),{type:'separator'},{role:'services'},{type:'separator'},{role:'hide'},{role:'hideOthers'},{role:'unhide'},{type:'separator'},{role:'quit'}]},
+    {label:t('文件'),submenu:[{label:t('打开已有知识空间…'),click:() => void openExistingWorkspace()}, {type:'separator'},action('随手记','CmdOrCtrl+N','capture'),action('导入生活记录…','CmdOrCtrl+O','import'),action('在独立窗口打开','CmdOrCtrl+Return','detach'),action('深入聊聊','CmdOrCtrl+Shift+F','focus'),{type:'separator'},{role:'close'}]},
+    {label:t('编辑'),submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}, {type:'separator'}, {role:'startSpeaking'},{role:'stopSpeaking'}]},
+    {label:t('显示'),submenu:[action('搜索与命令','CmdOrCtrl+K','search'),action('AI 协作面板','CmdOrCtrl+Alt+I','inspector'),action('看见未来',undefined,'predict-self'),action('返回','CmdOrCtrl+[','back'),action('前进','CmdOrCtrl+]','forward'),{type:'separator'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'},...(!app.isPackaged ? [{role:'toggleDevTools'}] : [])]},
+    {label:t('知识库'),submenu:Array.from({length:9},(_,i) => ({label:t('打开知识库 ${n}', { n: i + 1 }),accelerator:`CmdOrCtrl+${i+1}`,click:() => command(`knowledge-base:${i+1}`)}))},
+    {label:t('窗口'),submenu:[{role:'minimize'},{role:'zoom'},{role:'front'}, {label:t('主窗口'),click:showMain}]},
   ]));
-  const trayPath = app.isPackaged ? path.join(process.resourcesPath,'native/trayTemplate.png') : path.join(studio,'apps/desktop/dist/trayTemplate.png');
-  const image = nativeImage.createFromPath(trayPath);
-  image.setTemplateImage(true);
-  tray = new Tray(image); tray.setToolTip('The Way Here'); tray.setContextMenu(Menu.buildFromTemplate([{label:'随手记',click:() => openWindow('/capture','capture')},{label:'打开 The Way Here',click:showMain},{type:'separator'},{role:'quit'}]));
+  if (!tray) {
+    const trayPath = app.isPackaged ? path.join(process.resourcesPath,'native/trayTemplate.png') : path.join(studio,'apps/desktop/dist/trayTemplate.png');
+    const image = nativeImage.createFromPath(trayPath);
+    image.setTemplateImage(true);
+    tray = new Tray(image);
+    tray.setToolTip('The Way Here');
+  }
+  tray.setContextMenu(Menu.buildFromTemplate([{label:t('随手记'),click:() => openWindow('/capture','capture')},{label:t('打开 The Way Here'),click:showMain},{type:'separator'},{role:'quit'}]));
 }
 app.whenReady().then(async () => {
+  setLocale(readPersistedLocale(path.join(app.getPath('userData'), 'locale.json')));
   if (app.isPackaged) {
     try { distribution = JSON.parse(await readFile(path.join(process.resourcesPath,'release-metadata.json'),'utf8')); }
     catch (error) { if (process.mas || error.code !== 'ENOENT') throw error; }
   }
   scopes = new ScopedAccess(app, app.getPath('userData'), !!process.mas);
   await scopes.restore();
-  if (scopes.unavailable.length && !app.commandLine.hasSwitch('diagnostics')) await dialog.showMessageBox({type:'warning',message:'部分目录需要重新授权',detail:'请通过“打开文件夹”重新选择失效目录。原始资料不会被删除。',buttons:['继续']});
+  if (scopes.unavailable.length && !app.commandLine.hasSwitch('diagnostics')) await dialog.showMessageBox({type:'warning',message:t('部分目录需要重新授权'),detail:t('请通过“打开文件夹”重新选择失效目录。原始资料不会被删除。'),buttons:[t('继续')]});
   if (process.mas) masCodex = await prepareMasCodexHome(app.getPath('userData'));
   workspace = await chooseWorkspace(); if (!workspace) return app.quit();
   workspace = await realpath(workspace);
@@ -238,7 +250,7 @@ app.whenReady().then(async () => {
   app.dock?.setIcon(nativeImage.createFromPath(iconPath));
   app.setAboutPanelOptions({ applicationName: 'The Way Here', iconPath });
   registerIPC(); installMenu(); openWindow('/','main');
-}).catch(async (error) => { console.error('Desktop startup failed:',error); if (!app.commandLine.hasSwitch('diagnostics')) { const result = await dialog.showMessageBox({type:'error',message:'暂时无法打开知识空间',detail:error.message,buttons:['退出','打开已有知识空间…'],defaultId:0,cancelId:0}); if (result.response === 1) await openExistingWorkspace(); } app.quit(); });
+}).catch(async (error) => { console.error('Desktop startup failed:',error); if (!app.commandLine.hasSwitch('diagnostics')) { const result = await dialog.showMessageBox({type:'error',message:t('暂时无法打开知识空间'),detail:error.message,buttons:[t('退出'),t('打开已有知识空间…')],defaultId:0,cancelId:0}); if (result.response === 1) await openExistingWorkspace(); } app.quit(); });
 app.on('activate',showMain);
 app.on('before-quit', () => { quitting = true; speech?.cancel(); for (const library of photoLibraries.values()) library.close(); photoLibraries.clear(); worker?.kill(); scopes?.close(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

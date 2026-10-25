@@ -22,7 +22,7 @@ export function UnderstandingDetails({ score, compact = false }: { score: Unders
     <summary>{compact ? t("查看了解度依据") : t("查看四个维度的评估依据")}</summary>
     <div className="prediction-assessment-body">
       {score.facets.map(facet => <div className="prediction-facet" key={facet.id}>
-        <span>{facet.label}</span><meter min={0} max={facet.max} value={facet.value} aria-label={facet.label} /><span>{facet.value} / {facet.max}</span>
+        <span>{t(facet.label)}</span><meter min={0} max={facet.max} value={facet.value} aria-label={t(facet.label)} /><span>{facet.value} / {facet.max}</span>
         {(facet.reason || facet.gaps?.length || facet.evidence?.length) ? <details className="prediction-facet-detail">
           <summary>{t("查看判断与缺口")}</summary>
           {facet.reason && <p>{facet.reason}</p>}

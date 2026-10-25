@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import type { PhotoLibraryImage } from "@the-way-here/shared";
 
 /** Bound native image work and discard queued work when leaving a result set. */
@@ -10,11 +11,11 @@ export function photoImageQueue(load: (assetId: string, size: "thumbnail" | "pre
   return {
     image(assetId: string, size: "thumbnail" | "preview", network: boolean) {
       return new Promise<PhotoLibraryImage>((resolve, reject) => {
-        if (closed) { reject(new Error("照片结果已关闭")); return; }
+        if (closed) { reject(new Error(tr("照片结果已关闭"))); return; }
         jobs.push({ reject, run: () => { void load(assetId, size, network).then(resolve, reject).finally(() => { active -= 1; drain(); }); } });
         drain();
       });
     },
-    close() { closed = true; for (const job of jobs.splice(0)) job.reject(new Error("照片结果已关闭")); },
+    close() { closed = true; for (const job of jobs.splice(0)) job.reject(new Error(tr("照片结果已关闭"))); },
   };
 }

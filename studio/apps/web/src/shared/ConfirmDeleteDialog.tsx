@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useDismissLayer } from "./use-dismiss-layer";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./ui";
@@ -69,7 +70,7 @@ export function ConfirmDeleteDialog({ title, description, itemName, impact, conf
         <div className="kb-dialog-body delete-dialog-body">
           <strong>{itemName}</strong>
           <p>{impact}</p>
-          {error ? <div className="kb-dialog-error" role="alert">{error}</div> : null}
+          {error ? <div className="kb-dialog-error" role="alert">{tr(error)}</div> : null}
         </div>
         <footer>
           <button ref={cancelRef} type="button" className="secondary-action" onClick={onClose} disabled={deleting}>{t("取消")}</button>

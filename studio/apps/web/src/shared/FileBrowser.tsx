@@ -3,10 +3,10 @@ import type { WikiPageSummary } from "@the-way-here/shared";
 import { PaneShelf } from "./PaneShelf";
 import { QuietScroll } from "./QuietScroll";
 import "./file-browser.css";
-import { useDemoLabels } from "./i18n";
+import { useDemoLabels, tr } from "./i18n";
 
 /** Both records and letters use the same collapsible file column and row markup. */
-export function FileBrowserPane({ label, count, open, onToggle, toolbar, headerAction, onCreate, createLabel, createDisabled, inlineCreate, children, toggleLabel = "文件列表" }: {
+export function FileBrowserPane({ label, count, open, onToggle, toolbar, headerAction, onCreate, createLabel, createDisabled, inlineCreate, children, toggleLabel = tr("文件列表") }: {
   label: string; count: string; open: boolean; onToggle: () => void;
   toolbar?: ReactNode; headerAction?: ReactNode; onCreate?: () => void; createLabel?: string; createDisabled?: boolean; inlineCreate?: ReactNode; children: ReactNode; toggleLabel?: string;
 }) {

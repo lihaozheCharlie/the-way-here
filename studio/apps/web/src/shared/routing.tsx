@@ -3,7 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import type { WikiPageSummary } from "@the-way-here/shared";
 
 import { subscribeLiveRevision } from "./live-revision";
-import { useDemoLabels } from "./i18n";
+import { useDemoLabels, tr } from "./i18n";
 
 export type ReturnContext = { returnTo: string; returnLabel: string };
 
@@ -63,21 +63,21 @@ export function PageLink({ page, className = "", children }: { page: WikiPageSum
 }
 
 function returnLabelForPath(pathname: string): string {
-  if (pathname === "/") return "返回此刻";
-  if (pathname === "/questions" || pathname.startsWith("/focus/")) return "返回值得聊聊";
-  if (pathname === "/insights") return "返回理解自己";
-  if (pathname === "/timeline") return "返回人生轨迹";
-  if (pathname === "/letters") return "返回近况回信";
-  if (pathname === "/predict-self") return "返回看见未来";
-  if (pathname === "/capture") return "返回随手记";
-  if (pathname === "/relationships") return "返回人与世界";
-  if (pathname === "/mental-models") return "返回思维模型";
-  if (pathname.startsWith("/sources")) return "返回生活记录";
-  if (pathname === "/knowledge") return "返回已有理解";
-  if (pathname === "/search") return "返回搜索结果";
-  if (pathname.startsWith("/cards/personal-lines")) return "返回个人主线";
-  if (pathname.startsWith("/cards/cycles")) return "返回反复循环";
-  if (pathname.startsWith("/cards/systems")) return "返回现实系统";
-  if (pathname.startsWith("/page/")) return "返回上一篇内容";
-  return "返回上一页";
+  if (pathname === "/") return tr("返回此刻");
+  if (pathname === "/questions" || pathname.startsWith("/focus/")) return tr("返回值得聊聊");
+  if (pathname === "/insights") return tr("返回理解自己");
+  if (pathname === "/timeline") return tr("返回人生轨迹");
+  if (pathname === "/letters") return tr("返回近况回信");
+  if (pathname === "/predict-self") return tr("返回看见未来");
+  if (pathname === "/capture") return tr("返回随手记");
+  if (pathname === "/relationships") return tr("返回人与世界");
+  if (pathname === "/mental-models") return tr("返回思维模型");
+  if (pathname.startsWith("/sources")) return tr("返回生活记录");
+  if (pathname === "/knowledge") return tr("返回已有理解");
+  if (pathname === "/search") return tr("返回搜索结果");
+  if (pathname.startsWith("/cards/personal-lines")) return tr("返回个人主线");
+  if (pathname.startsWith("/cards/cycles")) return tr("返回反复循环");
+  if (pathname.startsWith("/cards/systems")) return tr("返回现实系统");
+  if (pathname.startsWith("/page/")) return tr("返回上一篇内容");
+  return tr("返回上一页");
 }

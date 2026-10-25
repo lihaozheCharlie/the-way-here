@@ -334,9 +334,9 @@ export function AiConfiguration({ id, agent, runtimeId, heading }: { id: string;
       <p>{tr("资料会离开设备。服务商的保留、训练使用及处理地区以其政策和账户设置为准。撤回许可会阻止新请求并停止活动任务，已发送的资料需向服务商申请删除。更换服务后需重新同意。")}{!(typeof window !== "undefined" && window.desktop?.isMacAppStore) && tr("修改 Codex 内部服务配置前请先撤回许可。")}</p>
       <label><input type="checkbox" disabled={agent.loading || agent.saving} checked={agent.draft.dataConsent?.version === 1 && agent.draft.dataConsent.recipientId === (codexSelected ? "codex" : `pi:${agent.selectedProvider.id}`)} onChange={event => void agent.changeDataConsent(event.target.checked).catch(() => undefined)} /><span>{tr("我已了解并允许向上述服务发送任务所需资料，包括我启用的自动更新")}</span></label>
       <a href="/privacy" target="_blank" rel="noreferrer">{tr("隐私与数据使用说明")}</a>
-      {typeof window !== "undefined" && window.desktop?.isMacAppStore && codexSelected && <button type="button" disabled={agent.saving} onClick={() => void window.desktop?.connectCodexCLI?.().then(connected => { if (connected) window.location.reload(); }).catch(reason => window.alert(reason instanceof Error ? reason.message : tr("未能连接 Codex，请重试。")))}>{tr("连接已登录的 Codex…")}</button>}
+      {typeof window !== "undefined" && window.desktop?.isMacAppStore && codexSelected && <button type="button" disabled={agent.saving} onClick={() => void window.desktop?.connectCodexCLI?.().then(connected => { if (connected) window.location.reload(); }).catch(reason => window.alert(reason instanceof Error ? tr(reason.message) : tr("未能连接 Codex，请重试。")))}>{tr("连接已登录的 Codex…")}</button>}
     </section>
-    {(agent.error || agent.loadError) && <p className="ai-config-error" role="alert">{agent.error || agent.loadError}</p>}
+    {(agent.error || agent.loadError) && <p className="ai-config-error" role="alert">{tr(agent.error || agent.loadError || "")}</p>}
     </div>
   </fieldset>;
 }

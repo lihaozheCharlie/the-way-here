@@ -2,7 +2,7 @@ import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { TextInput } from "../../shared/form-controls";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/ui";
-import { useI18n } from "../../shared/i18n";
+import { useI18n, tr } from "../../shared/i18n";
 
 export function DemoKnowledgeBaseNotice({ hasPersonalKnowledgeBase, onCreate, onOpenPersonal }: {
   hasPersonalKnowledgeBase: boolean;
@@ -29,7 +29,7 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
   onSubmit: (name: string) => Promise<void>;
 }) {
   const { t } = useI18n();
-  const [name, setName] = useState("我的 The Way Here");
+  const [name, setName] = useState(tr("我的 The Way Here"));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,14 +53,14 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (saving) return;
-    if (!name.trim()) { setError("请输入空间名称"); inputRef.current?.focus(); return; }
+    if (!name.trim()) { setError(tr("请输入空间名称")); inputRef.current?.focus(); return; }
     setSaving(true);
     setError("");
     try {
       await onSubmit(name.trim());
     } catch (reason: any) {
       setSaving(false);
-      setError(reason.message || "个人空间暂时无法创建，请稍后再试");
+      setError(reason.message || tr("个人空间暂时无法创建，请稍后再试"));
     }
   }
 
@@ -76,7 +76,7 @@ export function CreateKnowledgeBaseDialog({ onClose, onSubmit }: {
           <label htmlFor="knowledge-base-name">{t("空间名称")}</label>
           <TextInput ref={inputRef} id="knowledge-base-name" value={name} maxLength={40} disabled={saving} aria-invalid={Boolean(error)} aria-describedby={error ? "knowledge-base-name-error" : undefined} onFocus={(event) => event.currentTarget.select()} onChange={(event) => { setName(event.target.value); setError(""); }} />
           <p>{t("创建后会打开一个空白空间。演示内容不会被复制，你可以从第一句话慢慢开始。")}</p>
-          {error ? <div id="knowledge-base-name-error" className="kb-dialog-error" role="alert">{error}</div> : null}
+          {error ? <div id="knowledge-base-name-error" className="kb-dialog-error" role="alert">{tr(error)}</div> : null}
         </div>
         <footer>
           <button type="button" className="secondary-action" onClick={onClose} disabled={saving}>{t("取消")}</button>

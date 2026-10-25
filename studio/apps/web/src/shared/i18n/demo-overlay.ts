@@ -1,5 +1,5 @@
 import type { AppLocale } from "./locale";
-import { useActiveLibraryId, useI18n } from "./locale";
+import { translate, translateInterpolated, useActiveLibraryId, useI18n } from "./locale";
 import { demoEnglishDocument, demoListExcerpt, type DemoBodyLink } from "./demo-body";
 
 /** Display-only English for the demo library.
@@ -34,10 +34,6 @@ const demoFolders: Record<string, string> = {
   "12 近况对话": "12 Recent letters",
   "照片记忆": "Photo memories",
   "账单记忆": "Bill memories",
-};
-
-const demoLibraryNames: Record<string, string> = {
-  "The Way Here 演示 Wiki": "The Way Here demo",
 };
 
 const demoTitles: Record<string, string> = {
@@ -103,8 +99,17 @@ const demoTitles: Record<string, string> = {
   "2026-09-20 马斯克视角：先找到作品的瓶颈": "2026-09-20 Musk: find the bottleneck in the work first",
 };
 
+const demoLibraries: Record<string, string> = {
+  "The Way Here 演示 Wiki": "The Way Here demo",
+};
+
 export function isDemoLibrary(id?: string | null): boolean {
   return (id || "").toLowerCase() === "demo";
+}
+
+/** Display name for a library. The stored id and name stay as written. */
+export function demoLibraryLabel(libraryId: string | null | undefined, locale: AppLocale, name: string): string {
+  return overlay(libraryId, locale, name, demoLibraries);
 }
 
 function overlay(libraryId: string | null | undefined, locale: AppLocale, value: string, table: Record<string, string>): string {
@@ -117,26 +122,38 @@ export function demoFolderLabel(libraryId: string | null | undefined, locale: Ap
 }
 
 export function demoTitleLabel(libraryId: string | null | undefined, locale: AppLocale, title: string): string {
-  return overlay(libraryId, locale, title.trim(), demoTitles);
+  const trimmed = title.trim();
+  const overlaid = overlay(libraryId, locale, trimmed, demoTitles);
+  if (overlaid !== trimmed) return overlaid;
+  if (locale === "en" && trimmed === "未命名") return translate(locale, trimmed);
+  return translateInterpolated(locale, trimmed);
+}
+
+/** Demo seed folders stay Chinese on disk. In English, the demo library shows the seed
+ * overlay, and the product capture folder「随手记」shows its catalog name in every library.
+ */
+export function chromeFolderLabel(libraryId: string | null | undefined, locale: AppLocale, segment: string): string {
+  const overlaid = demoFolderLabel(libraryId, locale, segment);
+  if (overlaid !== segment.trim()) return overlaid;
+  if (locale === "en" && ["随手记", "外部来源", "AI聊天记录", "聊天记录", "消费账单", "知识库"].includes(segment.trim())) return translate(locale, segment.trim());
+  const generated = translateInterpolated(locale, segment.trim());
+  return generated === segment.trim() ? segment : generated;
 }
 
 export function demoFolderPath(libraryId: string | null | undefined, locale: AppLocale, folder: string): string {
-  if (!folder || locale !== "en" || !isDemoLibrary(libraryId)) return folder;
-  return folder.split(" / ").map((part) => demoFolderLabel(libraryId, locale, part)).join(" / ");
-}
-
-export function demoLibraryLabel(libraryId: string | null | undefined, locale: AppLocale, name: string): string {
-  if (locale !== "en" || !isDemoLibrary(libraryId) || !name) return name;
-  return demoLibraryNames[name.trim()] ?? name;
+  if (!folder || locale !== "en") return folder;
+  return folder.split(" / ").map((part) => chromeFolderLabel(libraryId, locale, part)).join(" / ");
 }
 
 export function demoFileLabel(libraryId: string | null | undefined, locale: AppLocale, fileName: string): string {
+  const generated = translateInterpolated(locale, fileName);
+  if (generated !== fileName) return generated;
   const match = /^(.*?)(\.(?:md|txt))$/i.exec(fileName);
   const stem = match?.[1] ?? fileName;
   const ext = match?.[2] ?? "";
   const mapped = demoTitleLabel(libraryId, locale, stem);
   if (mapped !== stem) return `${mapped}${ext}`;
-  const folder = demoFolderLabel(libraryId, locale, stem);
+  const folder = chromeFolderLabel(libraryId, locale, stem);
   return folder === stem.trim() ? fileName : `${folder}${ext}`;
 }
 
@@ -147,8 +164,9 @@ export function useDemoLabels() {
     libraryId,
     locale,
     title: (value: string) => demoTitleLabel(libraryId, locale, value),
-    folder: (value: string) => demoFolderLabel(libraryId, locale, value),
+    folder: (value: string) => chromeFolderLabel(libraryId, locale, value),
     folderPath: (value: string) => demoFolderPath(libraryId, locale, value),
+    library: (value: string) => demoLibraryLabel(libraryId, locale, value),
     file: (value: string) => demoFileLabel(libraryId, locale, value),
     excerpt: (relativePath: string, excerpt: string) => demoListExcerpt(libraryId, locale, relativePath, excerpt),
     libraryName: (id: string | null | undefined, name: string) => demoLibraryLabel(id, locale, name),

@@ -6,7 +6,7 @@ import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
 import { Empty, Icon, Loading } from "../../shared/ui";
 import { UnderstandingGlyph } from "../knowledge/UnderstandingLayout";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { useDemoLabels, useI18n, tr } from "../../shared/i18n";
 
 export function KnowledgeHome({ revision }: { revision: number }) {
   const { t } = useI18n();
@@ -14,16 +14,16 @@ export function KnowledgeHome({ revision }: { revision: number }) {
   const { data: vault, loading, error } = useApi<VaultInfo>("/api/vault", revision);
   const { data: pages, loading: pagesLoading, error: pagesError } = useApi<WikiPageSummary[]>("/api/pages?sources=false", revision);
   if (loading) return <Loading label={t("正在整理已有理解")} />;
-  if (error || !vault) return <Empty>{error || t("暂时无法读取知识库，请刷新重试。")}</Empty>;
+  if (error || !vault) return <Empty>{error ? t(error) : t("暂时无法读取知识库，请刷新重试。")}</Empty>;
   const selfCount = (vault.categories["personal-lines"] || 0) + (vault.categories.cycles || 0) + (vault.categories.systems || 0) + (vault.categories["mental-models"] || 0);
   const lifeCount = (vault.categories["life-stages"] || 0) + (vault.categories.events || 0);
   const letterCount = vault.categories.letters || 0;
   const peopleCount = (vault.categories.entities || 0) + (vault.categories["relationship-roles"] || 0);
   const groups = [
-    { to: "/insights", tone: "self" as const, title: "理解自己", description: "把个人主线、反复循环、现实系统与思维模型放在同一张判断地图里。", count: selfCount, label: "条自我理解" },
-    { to: "/timeline", tone: "life" as const, title: "人生轨迹", description: "沿着阶段与转折，回到一段经历当时真实的处境。", count: lifeCount, label: "个阶段与转折" },
-    { to: "/letters", tone: "letter" as const, title: "近况回信", description: "从过去的记录回望此刻，让当时的经历与现在重新发生联系。", count: letterCount, label: "封近况回信" },
-    { to: "/relationships", tone: "people" as const, title: "人与世界", description: "看见具体的人，也看见一段关系在生命中长期承担的功能。", count: peopleCount, label: "个人与关系页面" },
+    { to: "/insights", tone: "self" as const, title: tr("理解自己"), description: tr("把个人主线、反复循环、现实系统与思维模型放在同一张判断地图里。"), count: selfCount, label: tr("条自我理解") },
+    { to: "/timeline", tone: "life" as const, title: tr("人生轨迹"), description: tr("沿着阶段与转折，回到一段经历当时真实的处境。"), count: lifeCount, label: tr("个阶段与转折") },
+    { to: "/letters", tone: "letter" as const, title: tr("近况回信"), description: tr("从过去的记录回望此刻，让当时的经历与现在重新发生联系。"), count: letterCount, label: tr("封近况回信") },
+    { to: "/relationships", tone: "people" as const, title: tr("人与世界"), description: tr("看见具体的人，也看见一段关系在生命中长期承担的功能。"), count: peopleCount, label: tr("个人与关系页面") },
   ];
   return <div className="knowledge-home understanding-overview">
     <header className="understanding-overview-lede">
@@ -48,6 +48,6 @@ export function KnowledgeHome({ revision }: { revision: number }) {
       <button type="button" onClick={() => openContextAgent({ mode: "read" })}><Icon name="spark" size={16} />{t("一起核对")}</button>
     </section>
     <details className="understanding-detail-disclosure"><summary>{t("展开自我理解摘要与校准")}</summary><UnderstandingDigest revision={revision} /></details>
-    <PageAgentContext context={{ scope: "已有理解", title: "已有理解总览", summary: `当前有 ${vault.pageCount} 条已有理解，来自 ${vault.sourceCount} 份生活记录。`, defaultMode: "read", suggestions: ["当前哪些理解证据最充分，哪些地方还需要我亲自补充？", "结合最近更新的内容，现在最值得继续聊什么？"] }} />
+    <PageAgentContext context={{ scope: tr("已有理解"), title: tr("已有理解总览"), summary: tr("当前有 ${vault.pageCount} 条已有理解，来自 ${vault.sourceCount} 份生活记录。", { "vault.pageCount": vault.pageCount, "vault.sourceCount": vault.sourceCount }), defaultMode: "read", suggestions: [tr("当前哪些理解证据最充分，哪些地方还需要我亲自补充？"), tr("结合最近更新的内容，现在最值得继续聊什么？")] }} />
   </div>;
 }

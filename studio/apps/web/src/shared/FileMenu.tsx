@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useDismissLayer } from "./use-dismiss-layer";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -47,7 +48,7 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
     if (!page.relativePath || !page.modifiedAt) {
       setBusy(true);
       try { setResolved(await api<WikiPage>(`/api/pages/${page.id.split("/").map(encodeURIComponent).join("/")}`)); }
-      catch (reason) { setError(reason instanceof Error ? reason.message : "暂时无法读取文件"); return; }
+      catch (reason) { setError(reason instanceof Error ? reason.message : tr("暂时无法读取文件")); return; }
       finally { setBusy(false); }
     }
     setOpen(true);
@@ -55,7 +56,7 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
   async function reveal() {
     setBusy(true); setError("");
     try { await api("/api/files/reveal", { method: "POST", body: JSON.stringify({ pageId: page.id }) }); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "暂时无法打开原始目录"); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : tr("暂时无法打开原始目录")); }
     finally { setBusy(false); }
   }
   async function rename() {
@@ -64,24 +65,24 @@ export function FileMenu({ page: entry, extraActions = [], onRename, onDelete, o
     try {
       const renamed = await api<WikiPage>("/api/pages/rename", { method: "POST", body: JSON.stringify({ pageId: page.id, fileName: name.trim(), expectedModifiedAt: page.modifiedAt }) });
       onRenamed?.(renamed); closeDialog();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "重命名失败"); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : tr("重命名失败")); }
     finally { setBusy(false); }
   }
   const actions: FileAction[] = [
     ...extraActions,
-    { label: "重命名", onSelect: () => { if (onRename) onRename(); else { setName(fileName); setDialog("rename"); } } },
-    { label: "打开原始目录", onSelect: () => void reveal() },
-    { label: "删除", onSelect: () => onDelete ? onDelete() : setDialog("delete") },
+    { label: tr("重命名"), onSelect: () => { if (onRename) onRename(); else { setName(fileName); setDialog("rename"); } } },
+    { label: tr("打开原始目录"), onSelect: () => void reveal() },
+    { label: tr("删除"), onSelect: () => onDelete ? onDelete() : setDialog("delete") },
   ];
   return <>
-    <button ref={trigger} type="button" className="file-menu-trigger" aria-label={`更多文件操作：${fileName}`} aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={(event) => { event.stopPropagation(); void toggleMenu(); }}><Icon name="more" size={16} /></button>
-    {open && createPortal(<div ref={menu} className="file-menu-popover" role="menu" aria-label={`${fileName}的文件操作`} style={position} onKeyDown={event => {
+    <button ref={trigger} type="button" className="file-menu-trigger" aria-label={tr("更多文件操作：${fileName}", { "fileName": fileName })} aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={(event) => { event.stopPropagation(); void toggleMenu(); }}><Icon name="more" size={16} /></button>
+    {open && createPortal(<div ref={menu} className="file-menu-popover" role="menu" aria-label={tr("${fileName}的文件操作", { "fileName": fileName })} style={position} onKeyDown={event => {
       if (event.key === "Tab") { setOpen(false); trigger.current?.focus(); }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); const buttons = [...menu.current!.querySelectorAll<HTMLButtonElement>("button")]; const index = buttons.indexOf(document.activeElement as HTMLButtonElement); buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus(); }
     }}>{actions.map(action => <button role="menuitem" type="button" className={action.label === "删除" ? "danger" : ""} key={action.label} onClick={() => { setOpen(false); trigger.current?.focus(); action.onSelect(); }}>{action.label}</button>)}</div>, document.body)}
-    {dialog === "rename" && createPortal(<dialog ref={renameDialog} className="file-rename-dialog" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}><form onSubmit={event => { event.preventDefault(); void rename(); }}><h2>重命名文件</h2><label>文件名<input autoFocus value={name} disabled={busy} onFocus={event => event.currentTarget.select()} onChange={event => setName(event.target.value)} /></label>{error && <p role="alert">{error}</p>}<footer><button type="button" disabled={busy} onClick={closeDialog}>取消</button><button type="submit" disabled={busy || !name.trim()}>{busy ? "正在保存…" : "保存"}</button></footer></form></dialog>, document.body)}
-    {dialog === "delete" && createPortal(<ConfirmDeleteDialog title="删除这个文件？" description="文件会从当前知识库中永久移除。" itemName={fileName} impact="引用此文件的页面不会一并删除；此操作不能撤销。" confirmLabel="删除文件" onClose={closeDialog} onConfirm={async () => { await api(page.isSource ? "/api/sources/file" : "/api/pages/file", { method: "DELETE", body: JSON.stringify({ pageId: page.id, expectedModifiedAt: page.modifiedAt }) }); onDeleted?.(); }} />, document.body)}
-    {error && !dialog && createPortal(<div className="file-menu-error" role="alert">{error}<button type="button" onClick={() => setError("")}>关闭</button></div>, document.body)}
+    {dialog === "rename" && createPortal(<dialog ref={renameDialog} className="file-rename-dialog" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}><form onSubmit={event => { event.preventDefault(); void rename(); }}><h2>{tr("重命名文件")}</h2><label>{tr("文件名")}<input autoFocus value={name} disabled={busy} onFocus={event => event.currentTarget.select()} onChange={event => setName(event.target.value)} /></label>{error && <p role="alert">{tr(error)}</p>}<footer><button type="button" disabled={busy} onClick={closeDialog}>{tr("取消")}</button><button type="submit" disabled={busy || !name.trim()}>{busy ? tr("正在保存…") : tr("保存")}</button></footer></form></dialog>, document.body)}
+    {dialog === "delete" && createPortal(<ConfirmDeleteDialog title={tr("删除这个文件？")} description={tr("文件会从当前知识库中永久移除。")} itemName={fileName} impact={tr("引用此文件的页面不会一并删除；此操作不能撤销。")} confirmLabel={tr("删除文件")} onClose={closeDialog} onConfirm={async () => { await api(page.isSource ? "/api/sources/file" : "/api/pages/file", { method: "DELETE", body: JSON.stringify({ pageId: page.id, expectedModifiedAt: page.modifiedAt }) }); onDeleted?.(); }} />, document.body)}
+    {error && !dialog && createPortal(<div className="file-menu-error" role="alert">{tr(error)}<button type="button" onClick={() => setError("")}>{tr("关闭")}</button></div>, document.body)}
   </>;
 }
 export function FileListRow({ page, children, onRenamed, onDeleted }: { page: FileEntry; children: ReactNode; onRenamed?: (page: WikiPage) => void; onDeleted?: () => void }) {

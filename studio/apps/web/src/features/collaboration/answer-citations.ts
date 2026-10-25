@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { pageHref } from "../../shared/routing";
 
 type MarkdownNode = { type: string; value?: string; url?: string; children?: MarkdownNode[] };
@@ -32,7 +33,7 @@ function citationNodes(value: string): MarkdownNode[] {
     if (!pageId) continue;
     if (match.index > cursor) nodes.push({ type: "text", value: value.slice(cursor, match.index) });
     const fileName = pageId.split("/").at(-1) || pageId;
-    nodes.push({ type: "link", url: `${pageHref(pageId)}?${new URLSearchParams({ agentCitation: fileName })}`, children: [{ type: "text", value: "引用" }] });
+    nodes.push({ type: "link", url: `${pageHref(pageId)}?${new URLSearchParams({ agentCitation: fileName })}`, children: [{ type: "text", value: tr("引用") }] });
     cursor = match.index + match[0].length;
   }
   if (cursor < value.length) nodes.push({ type: "text", value: value.slice(cursor) });

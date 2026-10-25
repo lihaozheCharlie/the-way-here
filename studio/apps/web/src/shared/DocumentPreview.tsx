@@ -14,7 +14,7 @@ export function DocumentPreview({ pageId, revision, startEditing, fileNameFocusT
   const { data, loading, error } = useApi<WikiPage>(apiPageHref(pageId), revision);
   const { t } = useI18n();
   return <article className="source-preview" aria-live="polite">
-    {loading ? <Loading label={t("正在展开正文")} /> : error || !data ? <Empty>{error || t("正文暂时无法读取")}</Empty> : snapshot ?
+    {loading ? <Loading label={t("正在展开正文")} /> : error || !data ? <Empty>{error ? t(error) : t("正文暂时无法读取")}</Empty> : snapshot ?
       <ReadOnlyDocument relations={relations?.(data)} readOnlyReason={t("历史版本")} page={data} id={snapshot.id} markdown={snapshot.markdown} headerContent={controls} headerActions={headerActions} showMetadata={showMetadata} afterContent={afterContent?.(data)} /> : data.importChannel === "photos" ?
       <ReadOnlyDocument afterContent={afterContent?.(data)} page={data} relations={relations?.(data)} readOnlyReason={t("通过照片记忆编辑")} id={data.id} markdown={data.renderedMarkdown || data.markdown} toolbar={<span>{t("通过“打开照片记忆”修改人物和讲述")}</span>} /> :
       <EditableDocument relations={relations?.(data)} key={data.id} page={data} variant="preview" showOutline startEditing={startEditing} fileNameFocusToken={fileNameFocusToken} onRenamed={onRenamed} headerContent={controls} headerActions={headerActions} showMetadata={showMetadata} identityActions={identityActions} beforeContent={beforeContent} afterContent={afterContent?.(data)} />}

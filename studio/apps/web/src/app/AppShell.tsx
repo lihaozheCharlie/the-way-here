@@ -39,7 +39,7 @@ import { Relationships } from "../features/knowledge/Relationships";
 import { SearchResults } from "../features/knowledge/SearchResults";
 import { Timeline } from "../features/knowledge/Timeline";
 import { CreateKnowledgeBaseDialog, DemoKnowledgeBaseNotice } from "../features/knowledge-bases/KnowledgeBaseOnboarding";
-import { ActiveLibraryProvider, demoLibraryLabel, useI18n } from "../shared/i18n";
+import { ActiveLibraryProvider, demoLibraryLabel, tr, useI18n } from "../shared/i18n";
 
 type KnowledgeBaseSummary = VaultInfo["knowledgeBases"][number];
 
@@ -78,12 +78,13 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
         {vault.knowledgeBases.map((knowledgeBase) => {
           const selected = knowledgeBase.id === vault.knowledgeBaseId;
           const demo = knowledgeBase.id.toLowerCase() === "demo";
+          const libraryName = demoLibraryLabel(knowledgeBase.id, locale, knowledgeBase.name);
           return <div className="global-kb-option-row" key={knowledgeBase.id}>
             <button className="global-kb-option-main" type="button" role="menuitemradio" aria-checked={selected} onClick={() => chooseKnowledgeBase(knowledgeBase.id)}>
               <span className="global-kb-check">{selected ? <Icon name="check" size={15} /> : null}</span>
               <span className="global-kb-option-copy"><span>{demoLibraryLabel(knowledgeBase.id, locale, knowledgeBase.name)}{demo ? <small>{t("演示")}</small> : null}</span><small>{demo ? t("预置的示例记忆，可以先感受被记住的体验") : t("来自「${knowledgeBase.name}」的生活记录与已有理解", { "knowledgeBase.name": knowledgeBase.name })}</small></span>
             </button>
-            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={t("删除知识库「${name}」", { name: knowledgeBase.name })} title={t("删除知识库")}><Icon name="trash" size={15} /></button> : null}
+            {!demo && vault.knowledgeBases.length > 1 ? <button className="global-kb-delete" type="button" role="menuitem" onClick={() => { setOpen(false); onDelete(knowledgeBase); }} aria-label={t("删除知识库「${name}」", { name: libraryName })} title={t("删除知识库")}><Icon name="trash" size={15} /></button> : null}
           </div>;
         })}
       </div>
@@ -271,10 +272,12 @@ export function AppShell({ revision }: { revision: number }) {
 
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
 
-  const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
+  const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || tr("阅读");
+  const libraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "The Way Here";
   const windowTitle = utilityWindow
     ? (location.pathname === "/capture" ? t("随手记") : t("偏好设置"))
-    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${demoLibraryLabel(vault?.knowledgeBaseId, locale, vault?.name || "The Way Here")}`;
+    : `${location.pathname === "/search" ? t("搜索") : t(sectionLabel)} · ${libraryName}`;
+  useEffect(() => { document.title = windowTitle; }, [windowTitle]);
   return (
     <ReaderLocationProvider publish={setReaderLocation}><ActiveLibraryProvider id={vault?.knowledgeBaseId}><div className={`app-shell desktop-shell${utilityWindow ? " utility-window" : ""}${detached ? " detached-window" : ""}${inspectorOpen && !utilityWindow && !detached && !localConversation ? " inspector-visible" : ""}${localConversation ? " local-conversation-mode" : ""}${window.desktop ? " native-desktop" : ""}`}>
       <a className="skip-link" href="#main-content">{t("跳到主要内容")}</a>
@@ -297,7 +300,7 @@ export function AppShell({ revision }: { revision: number }) {
       </aside>
       <main className="main-area" id="main-content" tabIndex={-1}>
         {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />{t("正在打开「${name}」…", { name: switchingKnowledgeBaseName })}</div> : null}
-        {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{knowledgeBaseError}</div> : null}
+        {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{tr(knowledgeBaseError)}</div> : null}
         <div className="page-frame">
           {!utilityWindow && !detached ? <ModelOnboarding revision={revision} initialOpen={location.pathname === "/"} onOpenPreferences={openPreferences} /> : null}
           {!utilityWindow && vault?.knowledgeBaseId.toLowerCase() === "demo" ? <DemoKnowledgeBaseNotice
@@ -337,7 +340,7 @@ export function AppShell({ revision }: { revision: number }) {
       {deleteKnowledgeBaseTarget ? <ConfirmDeleteDialog
         title={t("删除这个知识库？")}
         description={t("其中的生活记录和已有理解会从本机永久删除。")}
-        itemName={deleteKnowledgeBaseTarget.name}
+        itemName={demoLibraryLabel(deleteKnowledgeBaseTarget.id, locale, deleteKnowledgeBaseTarget.name)}
         impact={deleteKnowledgeBaseTarget.id === vault?.knowledgeBaseId ? t("这是当前打开的知识库。删除后会自动打开另一个保留的空间；此操作不能撤销。") : t("这个知识库的日记、导入材料和构建出的理解都会一起删除；此操作不能撤销。")}
         confirmLabel={t("删除知识库")}
         onClose={closeDeleteKnowledgeBaseDialog}

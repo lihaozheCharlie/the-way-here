@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import type { PhotoBox } from "@the-way-here/shared";
 
 export type PhotoDetectionPhase = "loading" | "locating" | "grouping";
@@ -26,7 +27,7 @@ function createBatchDetector(groupFaces: boolean) {
     worker = undefined;
   }
   const detect: DetectPhotoFaces = (url, signal, onProgress) => {
-    if (signal.aborted) return Promise.reject(new DOMException("已取消", "AbortError"));
+    if (signal.aborted) return Promise.reject(new DOMException(tr("已取消"), "AbortError"));
     return new Promise((resolve, reject) => {
       let settled = false;
       let detectedBoxes: PhotoBox[] | undefined;
@@ -47,11 +48,11 @@ function createBatchDetector(groupFaces: boolean) {
       const fail = (error: Error) => {
         if (settled) return;
         if (detectedBoxes && error.name !== "AbortError") {
-          finish({ boxes: detectedBoxes, groupingError: "自动分组未完成，已保留检测到的人脸，请逐个确认。" }, true);
+          finish({ boxes: detectedBoxes, groupingError: tr("自动分组未完成，已保留检测到的人脸，请逐个确认。") }, true);
         } else { cleanup(); release(); reject(error); }
       };
-      const cancel = () => fail(new DOMException("已取消", "AbortError"));
-      const timedOut = () => fail(new Error("人脸识别超时，可以重试或先讲故事。"));
+      const cancel = () => fail(new DOMException(tr("已取消"), "AbortError"));
+      const timedOut = () => fail(new Error(tr("人脸识别超时，可以重试或先讲故事。")));
       timeout = setTimeout(timedOut, 30_000);
       signal.addEventListener("abort", cancel, { once: true });
       try {
@@ -66,12 +67,12 @@ function createBatchDetector(groupFaces: boolean) {
             onProgress?.(data.phase);
             return;
           }
-          if (data.error || !Array.isArray(data.boxes)) { fail(new Error(data.error || "本地检测未完成，请重试。")); return; }
+          if (data.error || !Array.isArray(data.boxes)) { fail(new Error(data.error || tr("本地检测未完成，请重试。"))); return; }
           finish({ boxes: data.boxes.slice(0, 40), descriptors: data.descriptors, groupingError: data.groupingError });
         };
-        worker.onerror = () => fail(new Error("人脸识别暂不可用，可以重试或先讲故事。"));
+        worker.onerror = () => fail(new Error(tr("人脸识别暂不可用，可以重试或先讲故事。")));
         worker.postMessage({ url: new URL(url, window.location.origin).href, origin: window.location.origin, groupFaces: groupingEnabled });
-      } catch { fail(new Error("无法读取照片，请重试。")); }
+      } catch { fail(new Error(tr("无法读取照片，请重试。"))); }
     });
   };
   return { detect, release };
@@ -107,7 +108,7 @@ export async function detectPhotoBatch(photos: Array<{ id: string; url: string }
         options.onStatus(photo.id, { state: "done", count: boxes.length, ...(groupingError ? { groupingError } : {}) });
       } catch (error) {
         if (options.signal.aborted) return;
-        options.onStatus(photo.id, { state: "failed", error: error instanceof Error ? error.message : "本地检测未完成，请重试。" });
+        options.onStatus(photo.id, { state: "failed", error: error instanceof Error ? error.message : tr("本地检测未完成，请重试。") });
       }
     }
   } finally { session.release(); }

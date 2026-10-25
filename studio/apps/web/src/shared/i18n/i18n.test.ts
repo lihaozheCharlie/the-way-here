@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseLocale, translate } from "./locale";
-import { demoFileLabel, demoFolderLabel, demoTitleLabel } from "./demo-overlay";
+import { chromeFolderLabel, demoFileLabel, demoFolderLabel, demoLibraryLabel, demoTitleLabel } from "./demo-overlay";
 
 describe("translate", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -121,5 +121,15 @@ describe("demo overlay", () => {
     expect(demoFolderLabel("personal", "en", "照片记忆")).toBe("照片记忆");
     expect(demoFileLabel("demo", "en", "奶奶.md")).toBe("Grandma.md");
     expect(demoFileLabel("demo", "zh", "奶奶.md")).toBe("奶奶.md");
+    expect(chromeFolderLabel("personal", "en", "随手记")).toBe("Quick note");
+    expect(chromeFolderLabel("personal", "en", "知识库")).toBe("Library");
+    expect(demoTitleLabel("personal", "en", "未命名")).toBe("Untitled");
+    expect(chromeFolderLabel("demo", "en", "照片记忆")).toBe("Photo memories");
+    expect(chromeFolderLabel("personal", "en", "照片记忆")).toBe("照片记忆");
+    expect(demoLibraryLabel("demo", "en", "The Way Here 演示 Wiki")).toBe("The Way Here demo");
+    expect(demoLibraryLabel("personal", "en", "The Way Here 演示 Wiki")).toBe("The Way Here 演示 Wiki");
+    expect(demoLibraryLabel("demo", "zh", "The Way Here 演示 Wiki")).toBe("The Way Here 演示 Wiki");
+    expect(demoTitleLabel("personal", "en", "ChatGPT 对话 2")).toBe("ChatGPT conversation 2");
+    expect(translate("en", "无法解码「trip.jpg」，请导出为普通 JPG 后重试")).toBe("Couldn’t decode “trip.jpg”. Export it as a regular JPG and try again.");
   });
 });

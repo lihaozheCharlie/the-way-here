@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { GraphViewport } from "../../shared/GraphViewport";
 import { ReadOnlyPageDialog } from "../knowledge/ReadOnlyPageDialog";
 import { ConversationWorkspace } from "../../shared/ConversationWorkspace";
@@ -33,8 +34,8 @@ function ContextGraph({ data, revision }: { data: GraphData; revision: number })
   });
   const shown = new Set([focus?.id, ...others.map((node) => node.id)].filter(Boolean));
   return <div className="context-graph">
-    <GraphViewport label="局部关系图谱" width={640} height={420}>
-      <title id="context-graph-title">当前问题与相关知识页面之间的局部关系</title>
+    <GraphViewport label={tr("局部关系图谱")} width={640} height={420}>
+      <title id="context-graph-title">{tr("当前问题与相关知识页面之间的局部关系")}</title>
       <g className="graph-links">{data.links.filter((link) => shown.has(link.source) && shown.has(link.target)).map((link) => {
         const source = positions.get(link.source); const target = positions.get(link.target);
         return source && target ? <line key={`${link.source}-${link.target}`} x1={source.x} y1={source.y} x2={target.x} y2={target.y} /> : null;
@@ -42,14 +43,14 @@ function ContextGraph({ data, revision }: { data: GraphData; revision: number })
       <g>{[focus, ...others].filter(Boolean).map((node) => {
         const position = positions.get(node!.id)!;
         const isFocus = node!.id === focus?.id;
-        return <g role="button" tabIndex={0} aria-label={`预览 ${node!.title}`} onClick={() => preview.open(node!.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); preview.open(node!.id); } }} key={node!.id} className={`context-graph-node ${isFocus ? "focus" : ""}`} transform={`translate(${position.x} ${position.y})`}>
+        return <g role="button" tabIndex={0} aria-label={tr("预览 ${p0}", { "p0": node!.title })} onClick={() => preview.open(node!.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); preview.open(node!.id); } }} key={node!.id} className={`context-graph-node ${isFocus ? "focus" : ""}`} transform={`translate(${position.x} ${position.y})`}>
           <circle r={isFocus ? 27 : 8} />
           <text textAnchor="middle" y={isFocus ? 45 : 22}>{node!.title.slice(0, isFocus ? 12 : 8)}</text>
         </g>;
       })}</g>
     </GraphViewport>
     {preview.pageId && <ReadOnlyPageDialog pageId={preview.pageId} revision={revision} onClose={preview.close} />}
-    <div className="context-graph-list" aria-label="局部关系的可访问列表">{others.slice(0, 12).map((node) => <NavLink key={node.id} to={pageHref(node.id)} state={returnContext}><span>{graphCategoryNames[node.category] || node.category}</span><b>{node.title}</b></NavLink>)}</div>
+    <div className="context-graph-list" aria-label={tr("局部关系的可访问列表")}>{others.slice(0, 12).map((node) => <NavLink key={node.id} to={pageHref(node.id)} state={returnContext}><span>{tr(graphCategoryNames[node.category] || node.category)}</span><b>{node.title}</b></NavLink>)}</div>
   </div>;
 }
 
@@ -58,30 +59,30 @@ export function FocusWorkspace({ revision }: { revision: number }) {
   const [allEvidence, setAllEvidence] = useState(false);
   const { signalId = "" } = useParams();
   const { data, loading, error } = useApi<FocusWorkspaceView>(`/api/views/focus/${encodeURIComponent(signalId)}`, revision);
-  if (loading) return <Loading label="正在把当前问题与证据放到一起" />;
-  if (error || !data) return <Empty>{error || "当前没有可展开的问题"}</Empty>;
+  if (loading) return <Loading label={tr("正在把当前问题与证据放到一起")} />;
+  if (error || !data) return <Empty>{error ? tr(error) : tr("当前没有可展开的问题")}</Empty>;
   const sourceEvents = data.evidenceTimeline.filter((item) => item.kind === "source" || item.kind === "event");
   return <div className="focus-workspace">
-    <ParentBack to="/questions" label="返回值得聊聊" />
-    <PageHero title={data.signal.name} description={data.signal.judgment} tone="tinted" className="focus-page-hero" aside={<div className="page-hero-rationale"><b>为什么是现在</b><p>{data.signal.reason}</p><span>{data.signal.kind}</span></div>} />
+    <ParentBack to="/questions" label={tr("返回值得聊聊")} />
+    <PageHero title={data.signal.name} description={data.signal.judgment} tone="tinted" className="focus-page-hero" aside={<div className="page-hero-rationale"><b>{tr("为什么是现在")}</b><p>{data.signal.reason}</p><span>{data.signal.kind}</span></div>} />
     <ConversationWorkspace>
-      <div className="focus-conversation"><AgentDock embedded revision={revision} context={{ scope:"值得聊聊", title:data.signal.name, summary:data.signal.judgment, defaultMode:"read", suggestions:[signalConversationPrompt(data.signal)] }} /></div>
-      <AuxPanel className="focus-evidence-panel" label="相关证据" open={evidenceOpen} onToggle={() => setEvidenceOpen(value => !value)} width={400}><header><h2>相关证据 · {data.evidenceTimeline.length} 条</h2><button type="button" aria-expanded={allEvidence} onClick={() => setAllEvidence(value => !value)}>{allEvidence ? "收起" : "展开"}</button></header>{data.evidenceTimeline.slice(0, allEvidence ? undefined : 2).map(item => <article key={`${item.page.id}-${item.kind}`}><PageLink page={item.page}>{item.label}</PageLink><time>{item.date.slice(0,10)}</time><p>{item.excerpt}</p></article>)}</AuxPanel>
+      <div className="focus-conversation"><AgentDock embedded revision={revision} context={{ scope:tr("值得聊聊"), title:data.signal.name, summary:data.signal.judgment, defaultMode:"read", suggestions:[signalConversationPrompt(data.signal)] }} /></div>
+      <AuxPanel className="focus-evidence-panel" label={tr("相关证据")} open={evidenceOpen} onToggle={() => setEvidenceOpen(value => !value)} width={400}><header><h2>{tr("相关证据 ·") + " "}{data.evidenceTimeline.length} {tr("条")}</h2><button type="button" aria-expanded={allEvidence} onClick={() => setAllEvidence(value => !value)}>{allEvidence ? tr("收起") : tr("展开")}</button></header>{data.evidenceTimeline.slice(0, allEvidence ? undefined : 2).map(item => <article key={`${item.page.id}-${item.kind}`}><PageLink page={item.page}>{item.label}</PageLink><time>{item.date.slice(0,10)}</time><p>{item.excerpt}</p></article>)}</AuxPanel>
     </ConversationWorkspace>
-    <details className="focus-more-evidence"><summary>查看完整证据脉络与关系</summary>
-    <nav className="focus-switcher" aria-label="切换当前问题">{data.candidates.map((candidate) => <NavLink key={candidate.id} className={candidate.id === data.signal.id ? "active" : ""} to={`/focus/${encodeURIComponent(candidate.id)}`}><b>{candidate.name}</b><small>{candidate.kind}</small></NavLink>)}</nav>
-    <section className="epistemic-board" aria-label="证据、当前理解与仍然未知">
-      <article className="evidence"><span>事实证据</span><b>{sourceEvents.length ? `${sourceEvents.length} 条可追溯材料` : "暂未找到直接原始材料"}</b><p>{sourceEvents[0]?.excerpt || "这不等于没有发生，只表示当前知识系统还缺少可追溯证据。"}</p></article>
-      <article className="judgment"><span>现在的理解</span><b>{data.signal.judgment}</b><p>这只是一个仍在验证的观察，可以被新的经历和反例修正。</p></article>
-      <article className="unknown"><span>还不知道</span><b>{data.signal.observation || "还没有找到最值得继续观察的地方"}</b><p>它需要回到生活里继续看，不是已经成立的结论。</p></article>
+    <details className="focus-more-evidence"><summary>{tr("查看完整证据脉络与关系")}</summary>
+    <nav className="focus-switcher" aria-label={tr("切换当前问题")}>{data.candidates.map((candidate) => <NavLink key={candidate.id} className={candidate.id === data.signal.id ? "active" : ""} to={`/focus/${encodeURIComponent(candidate.id)}`}><b>{candidate.name}</b><small>{candidate.kind}</small></NavLink>)}</nav>
+    <section className="epistemic-board" aria-label={tr("证据、当前理解与仍然未知")}>
+      <article className="evidence"><span>{tr("事实证据")}</span><b>{sourceEvents.length ? tr("${sourceEvents.length} 条可追溯材料", { "sourceEvents.length": sourceEvents.length }) : tr("暂未找到直接原始材料")}</b><p>{sourceEvents[0]?.excerpt || tr("这不等于没有发生，只表示当前知识系统还缺少可追溯证据。")}</p></article>
+      <article className="judgment"><span>{tr("现在的理解")}</span><b>{data.signal.judgment}</b><p>{tr("这只是一个仍在验证的观察，可以被新的经历和反例修正。")}</p></article>
+      <article className="unknown"><span>{tr("还不知道")}</span><b>{data.signal.observation || tr("还没有找到最值得继续观察的地方")}</b><p>{tr("它需要回到生活里继续看，不是已经成立的结论。")}</p></article>
     </section>
 
     <div className="focus-workspace-grid">
-      <section className="evidence-history"><SectionHeading title="证据怎样变化" />{data.evidenceTimeline.length ? <ol>{data.evidenceTimeline.map((item) => <li key={`${item.page.id}-${item.kind}`}><time>{item.date.slice(0, 10)}</time><i /><div><span>{evidenceKindLabels[item.kind]}</span><PageLink page={item.page}>{item.label}</PageLink><p>{item.excerpt}</p></div></li>)}</ol> : <Empty>相关页面已经找到，但还没有可排序的证据切片。</Empty>}</section>
-      <aside className="focus-relations"><SectionHeading title="它连接到什么" />{data.related.map((group) => <section key={group.category}><h3>{group.label}<span>{group.pages.length}</span></h3>{group.pages.map((page) => <PageLink key={page.id} page={page}><b>{page.title}</b><small>{page.excerpt}</small></PageLink>)}</section>)}</aside>
+      <section className="evidence-history"><SectionHeading title={tr("证据怎样变化")} />{data.evidenceTimeline.length ? <ol>{data.evidenceTimeline.map((item) => <li key={`${item.page.id}-${item.kind}`}><time>{item.date.slice(0, 10)}</time><i /><div><span>{tr(evidenceKindLabels[item.kind])}</span><PageLink page={item.page}>{item.label}</PageLink><p>{item.excerpt}</p></div></li>)}</ol> : <Empty>{tr("相关页面已经找到，但还没有可排序的证据切片。")}</Empty>}</section>
+      <aside className="focus-relations"><SectionHeading title={tr("它连接到什么")} />{data.related.map((group) => <section key={group.category}><h3>{tr(group.label)}<span>{group.pages.length}</span></h3>{group.pages.map((page) => <PageLink key={page.id} page={page}><b>{page.title}</b><small>{page.excerpt}</small></PageLink>)}</section>)}</aside>
     </div>
-    <section className="local-graph-section"><SectionHeading title="这件事在知识系统里的位置" /><p>只显示与当前问题相距两步以内的页面；下方列表是同一关系的可访问入口。</p><ContextGraph data={data.graph} revision={revision} /></section>
+    <section className="local-graph-section"><SectionHeading title={tr("这件事在知识系统里的位置")} /><p>{tr("只显示与当前问题相距两步以内的页面；下方列表是同一关系的可访问入口。")}</p><ContextGraph data={data.graph} revision={revision} /></section>
     </details>
-    <PageAgentContext context={{ scope: `值得聊聊 · ${data.signal.name}`, title: data.signal.judgment, summary: `仍在观察：${data.signal.observation}。相关上下文：${data.related.map((group) => `${group.label} ${group.pages.map((page) => page.title).join("、")}`).join("；")}`, defaultMode: "read", suggestions: [signalConversationPrompt(data.signal), `我觉得关于“${data.signal.name}”的理解不完全符合我。请先让我说明哪里不准确，再一起找反例。`, "基于当前证据，给我设计一个未来两周可观察、但不会制造额外压力的验证方式。"] }} />
+    <PageAgentContext context={{ scope: tr("值得聊聊 · ${data.signal.name}", { "data.signal.name": data.signal.name }), title: data.signal.judgment, summary: tr("仍在观察：${data.signal.observation}。相关上下文：${p1}", { "data.signal.observation": data.signal.observation, "p1": data.related.map((group) => `${group.label} ${group.pages.map((page) => page.title).join(tr("、"))}`).join(tr("；")) }), defaultMode: "read", suggestions: [signalConversationPrompt(data.signal), tr("我觉得关于“${data.signal.name}”的理解不完全符合我。请先让我说明哪里不准确，再一起找反例。", { "data.signal.name": data.signal.name }), tr("基于当前证据，给我设计一个未来两周可观察、但不会制造额外压力的验证方式。")] }} />
   </div>;
 }

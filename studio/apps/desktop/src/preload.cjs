@@ -32,4 +32,5 @@ contextBridge.exposeInMainWorld('desktop', {
   onSpeechLevel: (callback) => { const listener = (_event, level) => callback(level); ipcRenderer.on('desktop:speech-level', listener); return () => ipcRenderer.removeListener('desktop:speech-level', listener); },
   onSpeechEnded: (callback) => { const listener = () => callback(); ipcRenderer.on('desktop:speech-ended', listener); return () => ipcRenderer.removeListener('desktop:speech-ended', listener); },
   stopSpeech: (discard = false) => ipcRenderer.invoke('desktop:speech-stop', discard),
+  setLocale: (locale) => ipcRenderer.invoke('desktop:set-locale', locale),
 });

@@ -35,12 +35,12 @@ function stageIntent(request: LetterRequest): string {
   const page = request.stage!.pageId ? tr("页面 ${request.stage!.pageId}", { "request.stage!.pageId": request.stage!.pageId }) : "";
   const detail = [request.stage!.range, page].filter(Boolean).join(currentLocale() === "en" ? ", " : "，");
   const wrapped = detail ? (currentLocale() === "en" ? ` (${detail})` : `（${detail}）`) : "";
-  return currentLocale() === "en" ? `Experience: ${request.stage!.title}${wrapped}` : `经历：${request.stage!.title}${wrapped}`;
+  return currentLocale() === "en" ? `Experience: ${request.stage!.title}${wrapped}` : tr("经历：${p0}${wrapped}", { "p0": request.stage!.title, "wrapped": wrapped });
 }
 
 function lensLine(lens: { name: string; attention?: string }): string {
   const note = lens.attention ? (currentLocale() === "en" ? ` (${lens.attention})` : `（${lens.attention}）`) : "";
-  return currentLocale() === "en" ? `Lens: ${lens.name}${note}` : `视角：${lens.name}${note}`;
+  return currentLocale() === "en" ? `Lens: ${lens.name}${note}` : tr("视角：${lens.name}${note}", { "lens.name": lens.name, "note": note });
 }
 
 export function requestPrompt(request: LetterRequest): { prompt: string; label: string } {
@@ -69,7 +69,7 @@ export function requestPrompt(request: LetterRequest): { prompt: string; label: 
 
 export function perspectiveLetterRequest(letter: LetterViewItem, lens: ReasoningLens): { prompt: string; context: AgentContext } {
   const sources = [...new Set([...(letter.evidenceSources || []), ...letter.page.sources].filter(source => source && source !== "wiki synthesis"))];
-  const period = [letter.evidenceFrom, letter.evidenceTo].filter(Boolean).join(" 至 ") || letter.letterDate;
+  const period = [letter.evidenceFrom, letter.evidenceTo].filter(Boolean).join(tr(" 至 ")) || letter.letterDate;
   const clues = [
     tr("材料时间：${period}", { "period": period }),
     sources.length ? tr("原始来源线索：${sources.join(\"；\")}", { "sources.join(\"；\")": sources.join("；") }) : tr("原始来源线索：请按材料时间和主题检索，无法定位到具体原始材料时停止。"),
@@ -93,7 +93,7 @@ export function Letters({ revision }: { revision: number }) {
   const [thread, setThread] = useState("");
   const [indexOpen, setIndexOpen] = useState(true);
   if (loading || runsLoading) return <Loading label={t("正在整理回信")} />;
-  if (error || !data) return <Empty>{error || t("回信暂时无法读取，请刷新重试。")}</Empty>;
+  if (error || !data) return <Empty>{error ? t(error) : t("回信暂时无法读取，请刷新重试。")}</Empty>;
   const selectedThread = data.threads.find((item) => item.id === thread);
   const filtered = data.letters.filter((letter) => (view === "chronology" ? year === "" || letter.letterDate.startsWith(year) : thread === "" || selectedThread?.letters.includes(letter.page.id))).sort((a, b) => b.letterDate.localeCompare(a.letterDate));
   const selected = filtered.find((letter) => letter.page.id === params.get("letter")) || filtered[0];

@@ -11,8 +11,8 @@ export function LockedUnderstanding({ score, scan, busy }: {
   const scanning = score.scanStatus === "running";
   const progress = Math.min(100, Math.max(0, score.score));
   const gaps = score.facets.filter(facet => facet.gaps?.length);
-  const gapSummary = gaps.slice(0, 2).map(facet => `${facet.label}：${facet.gaps![0]}`).join("；");
   const { t } = useI18n();
+  const gapSummary = gaps.slice(0, 2).map(facet => t("${label}：${gap}", { label: t(facet.label), gap: facet.gaps![0] })).join(t("；"));
   return <section className="prediction-lock" aria-labelledby="prediction-lock-heading" aria-busy={scanning}>
     {scanned ? <div className="prediction-ring" role="progressbar" aria-label={t("对你的了解程度")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-valuetext={t("${progress} / 100，目标 ${score.threshold} 分", { progress, "score.threshold": score.threshold })}>
       <svg viewBox="0 0 160 160" aria-hidden="true">
@@ -36,7 +36,7 @@ export function LockedUnderstanding({ score, scan, busy }: {
       </button>
     </div>
     {score.stale && <p>{t("资料已有变化，可以重新扫描。")}</p>}
-    {score.error && <p className="prediction-notice prediction-error" role="alert">{score.error}</p>}
+    {score.error && <p className="prediction-notice prediction-error" role="alert">{t(score.error)}</p>}
     {scanning && <p role="status">{t("正在阅读资料，完成后会更新了解程度。")}{scanned && t("当前显示上次扫描结果。")}</p>}
   </section>;
 }

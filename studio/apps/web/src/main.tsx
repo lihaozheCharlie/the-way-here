@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "@fontsource-variable/noto-sans-sc";
 import App from "./App";
+import { currentLocale } from "./shared/i18n";
 import "./styles/theme-tokens.css";
 import "./styles/base.css";
 import "./styles/form-controls.css";
@@ -15,6 +16,8 @@ import "./styles/relationships.css";
 import "./styles/sources-redesign.css";
 import "./styles/letters-redesign.css";
 import "./styles/agent-conversation.css";
+
+if (currentLocale() === "en") document.title = "The Way Here";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

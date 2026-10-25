@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import type { PhotoBox } from "@the-way-here/shared";
 import { mergeDetectedFaces, photoFaceTiles, remapDetectedFace, type DetectedFace, type FaceTile } from "./photo-face-candidates";
@@ -12,7 +13,7 @@ self.onmessage = async (event: MessageEvent<{ url: string; origin: string; group
     const faceDetector = await detector;
     self.postMessage({ phase: "locating" });
     const response = await fetch(url);
-    if (!response.ok) throw new Error("照片无法读取");
+    if (!response.ok) throw new Error(tr("照片无法读取"));
     bitmap = await createImageBitmap(await response.blob());
     const { width, height } = bitmap;
     const fullTile: FaceTile = { x: 0, y: 0, width, height };
@@ -53,11 +54,11 @@ self.onmessage = async (event: MessageEvent<{ url: string; origin: string; group
           descriptors.push(box.width >= 48 && box.height >= 48 && face.score >= 0.8
             ? await describePhotoFace(bitmap, face.keypoints, origin) : undefined);
         }
-      } catch { groupingError = "部分照片未能自动分组，仍可逐个确认人物。"; }
+      } catch { groupingError = tr("部分照片未能自动分组，仍可逐个确认人物。"); }
     }
     self.postMessage({ boxes, ...(event.data.groupFaces ? { descriptors, groupingError } : {}) });
   } catch (error) {
     detector = undefined;
-    self.postMessage({ error: error instanceof Error ? error.message : "本地人脸检测不可用" });
+    self.postMessage({ error: error instanceof Error ? error.message : tr("本地人脸检测不可用") });
   } finally { bitmap?.close(); }
 };

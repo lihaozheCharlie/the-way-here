@@ -1,9 +1,10 @@
+import { tr } from "../../shared/i18n";
 import type { PhotoBox } from "@the-way-here/shared";
 
 export const PHOTO_LIMIT = 50;
 export function photoSelectionError(file: Pick<File, "name" | "size">): string | undefined {
-  if (!/\.(jpe?g|png|webp)$/i.test(file.name)) return `${file.name}：请使用 JPG、PNG 或 WebP，HEIC 请先导出为 JPG`;
-  if (!file.size || file.size > 100 * 1024 * 1024) return `${file.name}：单张照片最多 100 MB，且不能是空文件`;
+  if (!/\.(jpe?g|png|webp)$/i.test(file.name)) return tr("${file.name}：请使用 JPG、PNG 或 WebP，HEIC 请先导出为 JPG", { "file.name": file.name });
+  if (!file.size || file.size > 100 * 1024 * 1024) return tr("${file.name}：单张照片最多 100 MB，且不能是空文件", { "file.name": file.name });
   return undefined;
 }
 export function clampPhotoBox(box: PhotoBox): PhotoBox {

@@ -5,7 +5,7 @@ import type { WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { pageDestination, returnContextFor } from "../../shared/routing";
 import { Icon } from "../../shared/ui";
-import { useDemoLabels, useI18n } from "../../shared/i18n";
+import { useDemoLabels, useI18n, tr } from "../../shared/i18n";
 export function CommandPalette({ onClose, onCapture, onSettings, routes }: { routes: Array<{ title: string; to: string }>; onClose: () => void; onCapture: () => void; onSettings: () => void }) {
   const panel = useRef<HTMLElement>(null);
   useDismissLayer(true, onClose, { priority: 1, element: panel, outside: true });
@@ -41,7 +41,7 @@ export function CommandPalette({ onClose, onCapture, onSettings, routes }: { rou
       if (e.key === "Enter" && !e.nativeEvent.isComposing && commands.length) { e.preventDefault(); choose(selected); }
     }}>
       <div className="command-input"><Icon name="search" size={20} /><input ref={input} role="combobox" aria-label={t("搜索记录、理解或命令")} aria-expanded="true" aria-controls="command-results" aria-activedescendant={commands.length ? `command-${selected}` : undefined} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("搜索记录、理解，或前往…")} /><button onClick={onClose}>esc</button></div>
-      <div id="command-results" className="command-results" role="listbox">{commands.map((item, index) => <button id={`command-${index}`} tabIndex={-1} role="option" aria-selected={index === selected} className={index === selected ? "selected" : ""} key={`${item.title}-${index}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(index)}><span>{item.title}</span><small>{item.detail}</small></button>)}{loading ? <p role="status">{t("正在查找…")}</p> : error ? <p role="alert">{error}</p> : !commands.length ? <p>{t("没有找到相关内容，试试其他关键词。")}</p> : null}</div>
+      <div id="command-results" className="command-results" role="listbox">{commands.map((item, index) => <button id={`command-${index}`} tabIndex={-1} role="option" aria-selected={index === selected} className={index === selected ? "selected" : ""} key={`${item.title}-${index}`} onMouseEnter={() => setSelected(index)} onClick={() => choose(index)}><span>{item.title}</span><small>{item.detail}</small></button>)}{loading ? <p role="status">{t("正在查找…")}</p> : error ? <p role="alert">{tr(error)}</p> : !commands.length ? <p>{t("没有找到相关内容，试试其他关键词。")}</p> : null}</div>
     </section>
   </div>;
 }

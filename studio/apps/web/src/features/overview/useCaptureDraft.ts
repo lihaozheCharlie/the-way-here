@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { useEffect, useRef, useState } from "react";
 import type { CaptureEntry, CaptureHistory } from "@the-way-here/shared";
 import { api } from "../../api";
@@ -13,7 +14,7 @@ export function useCaptureDraft(knowledgeBaseId: string, legacyKey: string) {
     return { id: crypto.randomUUID(), revision: 0, text: title ? `${title}\n\n${text}` : text, folder: "随手记", diaryDate: localDiaryDate() };
   });
   const [history, setHistory] = useState<CaptureEntry[]>([]), [defaultFolder, setDefaultFolder] = useState("随手记");
-  const [status, setStatus] = useState(draft.text ? "草稿已恢复，可编辑或接着说" : "");
+  const [status, setStatus] = useState(draft.text ? tr("草稿已恢复，可编辑或接着说") : "");
   const [error, setError] = useState(""), [ready, setReady] = useState(false);
   const current = useRef(draft); current.current = draft;
   const live = useRef(true), queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -42,10 +43,10 @@ export function useCaptureDraft(knowledgeBaseId: string, legacyKey: string) {
         }
       } else if (!value.text && !value.revision) setDraft(v => ({ ...v, folder: next.defaultFolder }));
       setReady(true);
-    }).catch(reason => { if (live.current) setError(reason instanceof Error ? reason.message : "无法读取历史记录，当前文字已留在本机"); });
+    }).catch(reason => { if (live.current) setError(reason instanceof Error ? reason.message : tr("无法读取历史记录，当前文字已留在本机")); });
     return () => { live.current = false; };
   }, [knowledgeBaseId]);
-  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(draft)); } catch { setError("本机备份空间不足，请先暂存当前文字"); } }, [key, draft]);
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(draft)); } catch { setError(tr("本机备份空间不足，请先暂存当前文字")); } }, [key, draft]);
   function flush(): Promise<CaptureEntry | undefined> {
     const value = { ...current.current };
     const task = queue.current.catch(() => {}).then(async () => {
@@ -53,17 +54,17 @@ export function useCaptureDraft(knowledgeBaseId: string, legacyKey: string) {
       const signature = fingerprint(value);
       if (stored.current.get(value.id) === signature) {
         const entry = persisted.current.get(value.id);
-        if (live.current && current.current.id === value.id) setStatus(status => status === "正在暂存…" ? entry?.status === "saved" ? "补充已暂存，再次保存将更新原文件" : "草稿已暂存" : status);
+        if (live.current && current.current.id === value.id) setStatus(status => status === "正在暂存…" ? entry?.status === "saved" ? tr("补充已暂存，再次保存将更新原文件") : tr("草稿已暂存") : status);
         return entry;
       }
-      if (live.current) setStatus("正在暂存…");
+      if (live.current) setStatus(tr("正在暂存…"));
       const entry = await api<CaptureEntry>("/api/capture/draft", { method: "PUT", body: JSON.stringify({ ...value, knowledgeBaseId, revision: revisions.current.get(value.id) || 0 }) });
       revisions.current.set(entry.id, entry.revision); stored.current.set(entry.id, signature); persisted.current.set(entry.id, entry);
       if (live.current) {
         setHistory(values => [entry, ...values.filter(e => e.id !== entry.id)]);
         if (current.current.id === entry.id) {
           setDraft(v => ({ ...v, revision: entry.revision, status: entry.status }));
-          if (fingerprint(current.current) === signature) setStatus(entry.status === "saved" ? "补充已暂存，再次保存将更新原文件" : "草稿已暂存");
+          if (fingerprint(current.current) === signature) setStatus(entry.status === "saved" ? tr("补充已暂存，再次保存将更新原文件") : tr("草稿已暂存"));
         }
         setError("");
       }
@@ -72,7 +73,7 @@ export function useCaptureDraft(knowledgeBaseId: string, legacyKey: string) {
     queue.current = task;
     return task;
   }
-  function fail(reason: unknown) { if (live.current) { setError(reason instanceof Error ? reason.message : "暂存失败，当前文字已留在本机"); setStatus("暂存未完成，文字已留在本机"); } }
+  function fail(reason: unknown) { if (live.current) { setError(reason instanceof Error ? reason.message : tr("暂存失败，当前文字已留在本机")); setStatus(tr("暂存未完成，文字已留在本机")); } }
   useEffect(() => {
     if (!ready) return;
     const timer = window.setTimeout(() => void flush().catch(fail), 600);
@@ -87,9 +88,9 @@ export function useCaptureDraft(knowledgeBaseId: string, legacyKey: string) {
     await flush();
     revisions.current.set(entry.id, entry.revision); stored.current.set(entry.id, fingerprint(entry)); persisted.current.set(entry.id, entry);
     const value: Draft = { id: entry.id, revision: entry.revision, text: entry.text, folder: entry.folder, diaryDate: entry.diaryDate, status: entry.status };
-    current.current = value; setDraft(value); setStatus(entry.status === "saved" ? "再次保存将更新原文件" : "草稿已恢复，可编辑或接着说");
+    current.current = value; setDraft(value); setStatus(entry.status === "saved" ? tr("再次保存将更新原文件") : tr("草稿已恢复，可编辑或接着说"));
   }
-  function setText(text: string) { setStatus("正在暂存…"); const value = { ...current.current, text }; current.current = value; setDraft(value); }
+  function setText(text: string) { setStatus(tr("正在暂存…")); const value = { ...current.current, text }; current.current = value; setDraft(value); }
   async function chooseFolder(folder: string, makeDefault: boolean) {
     if (makeDefault) { await api("/api/capture/default-folder", { method:"PUT", body: JSON.stringify({ knowledgeBaseId, folder }) }); setDefaultFolder(folder); }
     const value = { ...current.current, folder }; current.current = value; setDraft(value);

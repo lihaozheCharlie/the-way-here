@@ -1,3 +1,4 @@
+import { tr } from "./shared/i18n";
 let windowKnowledgeBaseId: string | undefined;
 export async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -10,7 +11,7 @@ export async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (data.permissionRequired) void window.desktop?.requestFolderAccess?.();
-    const message = data.error || `请求失败：${response.status}`;
+    const message = data.error || tr("请求失败：${response.status}", { "response.status": response.status });
     if (typeof message === "string" && message.includes("请先完成全局 AI 设置")) window.dispatchEvent(new Event("model-configuration-required"));
     throw new Error(message);
   }

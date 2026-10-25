@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 import { useRef, useState, type FormEvent } from "react";
 import { TextInput } from "./form-controls";
 import { Icon } from "./ui";
@@ -15,11 +16,11 @@ export function InlineNameForm({ label, placeholder, onCreate, onCancel, initial
     setBusy(true);
     setError("");
     try { await onCreate(name.trim()); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "创建失败，请重试。"); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : tr("创建失败，请重试。")); }
     finally { setBusy(false); }
   }
   return <form ref={form} className="inline-name-form" aria-label={label} aria-busy={busy} onSubmit={submit}>
-    <div><TextInput onFocus={event => event.currentTarget.select()} autoFocus autoComplete="off" aria-label={label} placeholder={placeholder} value={name} disabled={busy} onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && event.nativeEvent.isComposing) event.preventDefault(); }} /><button type="submit" disabled={busy || !name.trim()} aria-label={label} title={label}><Icon name="arrow" size={14} /></button><button type="button" disabled={busy} aria-label="取消新建" title="取消新建" onClick={onCancel}><Icon name="close" size={14} /></button></div>
-    {error && <p role="alert">{error}</p>}
+    <div><TextInput onFocus={event => event.currentTarget.select()} autoFocus autoComplete="off" aria-label={label} placeholder={placeholder} value={name} disabled={busy} onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && event.nativeEvent.isComposing) event.preventDefault(); }} /><button type="submit" disabled={busy || !name.trim()} aria-label={label} title={label}><Icon name="arrow" size={14} /></button><button type="button" disabled={busy} aria-label={tr("取消新建")} title={tr("取消新建")} onClick={onCancel}><Icon name="close" size={14} /></button></div>
+    {error && <p role="alert">{tr(error)}</p>}
   </form>;
 }

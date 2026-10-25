@@ -1,3 +1,4 @@
+import { tr } from "../../shared/i18n";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { isTerminalRunStatus, type VaultInfo, type WikiRun } from "@the-way-here/shared";
@@ -28,11 +29,11 @@ export function BillEntryCount({ cluster }: { cluster: PaymentJourneyCluster }) 
   const tooltipId = useId();
   const preview = billEvidencePreview(cluster, Math.max(cluster.entryCount, cluster.transactions?.length || 0, cluster.evidence.length));
   const details = preview.rows.map((item) => item.detail).join("\n");
-  const label = `${cluster.entryCount} 笔${cluster.confidence === "high" ? " · 高置信" : ""}`;
+  const label = tr("${cluster.entryCount} 笔${p1}", { "cluster.entryCount": cluster.entryCount, "p1": cluster.confidence === "high" ? tr(" · 高置信") : "" });
   return <span
     className={`bill-clue-count${details ? " has-tooltip" : ""}`}
     tabIndex={details ? 0 : undefined}
-    aria-label={details ? `${label}，悬停或聚焦查看账单明细` : undefined}
+    aria-label={details ? tr("${label}，悬停或聚焦查看账单明细", { "label": label }) : undefined}
     aria-describedby={details ? tooltipId : undefined}
   >
     {label}
@@ -44,15 +45,15 @@ function BillEvidence({ cluster }: { cluster: PaymentJourneyCluster }) {
   const preview = billEvidencePreview(cluster);
   const moreTooltipId = `bill-evidence-${cluster.id}-more`;
   return <div className="bill-clue-evidence">
-    <span>账单明细</span>
+    <span>{tr("账单明细")}</span>
     <ul>{preview.rows.map((item, index) => {
       const tooltipId = `bill-evidence-${cluster.id}-${index}`;
       return <li key={item.id} className="bill-clue-evidence-row" tabIndex={0} aria-describedby={tooltipId}>
         <span>{item.summary}</span><BillEvidenceTooltip id={tooltipId}>{item.detail}</BillEvidenceTooltip>
       </li>;
     })}
-    {preview.omitted ? <li className="bill-clue-evidence-more" tabIndex={preview.omittedDetail ? 0 : undefined} aria-label={`另有 ${preview.omitted} 笔账单未展示`} aria-describedby={preview.omittedDetail ? moreTooltipId : undefined}>
-      <span>另有 {preview.omitted} 笔，悬停查看详情</span>{preview.omittedDetail ? <BillEvidenceTooltip id={moreTooltipId}>{preview.omittedDetail}</BillEvidenceTooltip> : null}
+    {preview.omitted ? <li className="bill-clue-evidence-more" tabIndex={preview.omittedDetail ? 0 : undefined} aria-label={tr("另有 ${preview.omitted} 笔账单未展示", { "preview.omitted": preview.omitted })} aria-describedby={preview.omittedDetail ? moreTooltipId : undefined}>
+      <span>{tr("另有") + " "}{preview.omitted} {tr("笔，悬停查看详情")}</span>{preview.omittedDetail ? <BillEvidenceTooltip id={moreTooltipId}>{preview.omittedDetail}</BillEvidenceTooltip> : null}
     </li> : null}</ul>
   </div>;
 }
@@ -80,12 +81,12 @@ function BuildConfirmation({ batch, busy, onClose, onConfirm }: { batch: SourceI
   }, [busy, onClose]);
   return <div className="bill-build-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
     <section ref={dialogRef} className="bill-build-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <header><h3 id={titleId}>确认构建这份记录</h3><p>只摄取下面已确认或讲述的内容；跳过的线索继续留在账单证据中。</p></header>
+      <header><h3 id={titleId}>{tr("确认构建这份记录")}</h3><p>{tr("只摄取下面已确认或讲述的内容；跳过的线索继续留在账单证据中。")}</p></header>
       <div className="bill-build-list">{journey.clusters.map((cluster) => {
         const state = states.get(cluster.id)!;
-      return <div key={cluster.id} className={`bill-build-row is-${state.status}`}><i aria-hidden="true" /><span><b>{cluster.title}</b><small>{state.status === "skipped" ? "不会摄取" : state.resultText || cluster.proposedMemory || cluster.summary}</small></span><em>{journeyStatusLabel(state)}</em></div>;
+      return <div key={cluster.id} className={`bill-build-row is-${state.status}`}><i aria-hidden="true" /><span><b>{cluster.title}</b><small>{state.status === "skipped" ? tr("不会摄取") : state.resultText || cluster.proposedMemory || cluster.summary}</small></span><em>{journeyStatusLabel(state)}</em></div>;
       })}</div>
-      <footer><button ref={cancelRef} type="button" disabled={busy} onClick={onClose}>返回继续处理</button><button type="button" className="primary" disabled={busy} onClick={onConfirm}>{busy ? "正在准备…" : "确认构建"}</button></footer>
+      <footer><button ref={cancelRef} type="button" disabled={busy} onClick={onClose}>{tr("返回继续处理")}</button><button type="button" className="primary" disabled={busy} onClick={onConfirm}>{busy ? tr("正在准备…") : tr("确认构建")}</button></footer>
     </section>
   </div>;
 }
@@ -134,7 +135,7 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
         if (isTerminalRunStatus(run.status)) {
           const text = run.result?.finalAnswer?.trim();
           if (run.status === "completed" && text) setBriefs((current) => ({ ...current, [writing!.clusterId]: text }));
-          else setError(run.error || "没有生成内容，请重试；原文仍已保留。");
+          else setError(run.error || tr("没有生成内容，请重试；原文仍已保留。"));
           setWriting(undefined);
         } else timer = setTimeout(poll, 1500);
       } catch (reason: any) {
@@ -169,7 +170,7 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
       if (showUndo && status !== "pending" && status !== "deep") setUndo({ clusterId: cluster.id, title: cluster.title, previous, expiresAt: Date.now() + 8_000 });
       return updated;
     } catch (reason: any) {
-      setError(reason.message || "线索暂时没有保存，请再试一次");
+      setError(reason.message || tr("线索暂时没有保存，请再试一次"));
       return undefined;
     } finally {
       setSaving(undefined);
@@ -202,12 +203,12 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
 
   return <section className="bill-memory-wall" aria-labelledby="bill-memory-title">
     <header className="bill-memory-head">
-      <div className="bill-memory-title"><h2 id="bill-memory-title">{journey.title}</h2><p>{journey.clusters.length} 条候选线索 · 账单只提供参考证据，不代表已经确认的经历</p></div>
-      <div className="bill-memory-progress" aria-label={`已处理 ${progress.total - progress.pending} 条，共 ${progress.total} 条`}>
+      <div className="bill-memory-title"><h2 id="bill-memory-title">{journey.title}</h2><p>{journey.clusters.length} {tr("条候选线索 · 账单只提供参考证据，不代表已经确认的经历")}</p></div>
+      <div className="bill-memory-progress" aria-label={tr("已处理 ${p0} 条，共 ${progress.total} 条", { "p0": progress.total - progress.pending, "progress.total": progress.total })}>
         <div className="bill-memory-progress-track"><span style={{ transform: `scaleX(${progress.total ? (progress.total - progress.pending) / progress.total : 0})` }} /></div>
-        <div className="bill-memory-legend" aria-live="polite"><span className="confirmed">已确认 {progress.confirmed}</span><span className="brief">已简答 {progress.brief}</span><span className="deep">已细聊 {progress.deep}</span><span className="skipped">已跳过 {progress.skipped}</span><span className="pending">待处理 {progress.pending}</span></div>
+        <div className="bill-memory-legend" aria-live="polite"><span className="confirmed">{tr("已确认") + " "}{progress.confirmed}</span><span className="brief">{tr("已简答") + " "}{progress.brief}</span><span className="deep">{tr("已细聊") + " "}{progress.deep}</span><span className="skipped">{tr("已跳过") + " "}{progress.skipped}</span><span className="pending">{tr("待处理") + " "}{progress.pending}</span></div>
       </div>
-      <div className="bill-memory-build"><button ref={buildButtonRef} type="button" disabled={!progress.canBuild || busy || writingBusy} onClick={() => setConfirmBuild(true)}><Icon name="build" size={14} />{busy ? "正在准备…" : "构建这份记录"}</button><small>{progress.canBuild ? `将摄取 ${progress.included} 条，跳过 ${progress.skipped} 条` : progress.pending ? `还有 ${progress.pending} 条待处理，也可以逐条跳过` : "至少保留一条想收录的线索"}</small></div>
+      <div className="bill-memory-build"><button ref={buildButtonRef} type="button" disabled={!progress.canBuild || busy || writingBusy} onClick={() => setConfirmBuild(true)}><Icon name="build" size={14} />{busy ? tr("正在准备…") : tr("构建这份记录")}</button><small>{progress.canBuild ? tr("将摄取 ${progress.included} 条，跳过 ${progress.skipped} 条", { "progress.included": progress.included, "progress.skipped": progress.skipped }) : progress.pending ? tr("还有 ${progress.pending} 条待处理，也可以逐条跳过", { "progress.pending": progress.pending }) : tr("至少保留一条想收录的线索")}</small></div>
     </header>
 
     <div className="bill-clue-grid">{journey.clusters.map((cluster) => {
@@ -219,32 +220,32 @@ export function BillMemoryPanel({ record, busy, onBuild, onDeep }: { record: Sou
         <header><h3>{cluster.title}</h3><BillEntryCount cluster={cluster} /></header>
         <p className="bill-clue-summary">{cluster.summary}</p>
         <span className={`bill-clue-status is-${state.status}`}><i aria-hidden="true" />{journeyStatusLabel(state)}</span>
-        {related ? <p className="bill-clue-related"><Icon name="route" size={13} />可能也和「{related.title}」有关，可分开处理</p> : null}
+        {related ? <p className="bill-clue-related"><Icon name="route" size={13} />{tr("可能也和「${title}」有关，可分开处理", { title: related.title })}</p> : null}
 
         {isEditing && editing.mode === "confirm" ? <div className="bill-clue-panel">
-          <p>即将收录为：<b>「{cluster.proposedMemory || cluster.summary}」</b></p>
+          <p>{tr("即将收录为：")}<b>{tr("「")}{cluster.proposedMemory || cluster.summary}{tr("」")}</b></p>
           <BillEvidence cluster={cluster} />
-          <footer><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>不对，简单说说</button><button type="button" className="primary" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "confirmed")}>{saving === cluster.id ? "正在保存…" : "确认收录"}</button></footer>
+          <footer><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>{tr("不对，简单说说")}</button><button type="button" className="primary" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "confirmed")}>{saving === cluster.id ? tr("正在保存…") : tr("确认收录")}</button></footer>
         </div> : isEditing && editing.mode === "brief" ? <div className="bill-clue-panel is-brief">
           <BillEvidence cluster={cluster} />
-          <MemoryWritingAssist background={backgrounds[cluster.id] || ""} onBackground={(value) => setBackgrounds((current) => ({ ...current, [cluster.id]: value }))} placeholder="补充一两句，比如是怎么开始的、跟谁有关……" disabled={Boolean(saving) || writingBusy || !vault} generating={writing?.clusterId === cluster.id || starting} onGenerate={() => void generateBrief(cluster, note)} />
-          <label htmlFor={`bill-brief-${cluster.id}`}>这条记录准备收录的说法</label>
-          <TextArea id={`bill-brief-${cluster.id}`} rows={3} value={note} disabled={Boolean(saving) || writingBusy} onChange={(event) => setBriefs((current) => ({ ...current, [cluster.id]: event.target.value }))} placeholder="在这里写一两句，比如是怎么开始的、跟谁有关……" />
-          {briefNeedsDeepSuggestion(note) ? <p className="bill-clue-deep-hint"><Icon name="message" size={13} />这段内容已经很丰富，也可以展开细聊；直接提交也会完整保留。</p> : null}
-          <footer><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing(undefined)}>取消</button><button type="button" className="primary" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "brief", note)}>{saving === cluster.id ? "正在保存…" : note.trim() ? "提交这句话" : "跳过补充，认这个摘要"}</button></footer>
+          <MemoryWritingAssist background={backgrounds[cluster.id] || ""} onBackground={(value) => setBackgrounds((current) => ({ ...current, [cluster.id]: value }))} placeholder={tr("补充一两句，比如是怎么开始的、跟谁有关……")} disabled={Boolean(saving) || writingBusy || !vault} generating={writing?.clusterId === cluster.id || starting} onGenerate={() => void generateBrief(cluster, note)} />
+          <label htmlFor={`bill-brief-${cluster.id}`}>{tr("这条记录准备收录的说法")}</label>
+          <TextArea id={`bill-brief-${cluster.id}`} rows={3} value={note} disabled={Boolean(saving) || writingBusy} onChange={(event) => setBriefs((current) => ({ ...current, [cluster.id]: event.target.value }))} placeholder={tr("在这里写一两句，比如是怎么开始的、跟谁有关……")} />
+          {briefNeedsDeepSuggestion(note) ? <p className="bill-clue-deep-hint"><Icon name="message" size={13} />{tr("这段内容已经很丰富，也可以展开细聊；直接提交也会完整保留。")}</p> : null}
+          <footer><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing(undefined)}>{tr("取消")}</button><button type="button" className="primary" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "brief", note)}>{saving === cluster.id ? tr("正在保存…") : note.trim() ? tr("提交这句话") : tr("跳过补充，认这个摘要")}</button></footer>
         </div> : state.status === "pending" ? <div className="bill-clue-actions">
-          <button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "confirm" })}>确认为事实</button><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>简单说说</button><button type="button" className="deep" disabled={Boolean(saving) || writingBusy} onClick={() => void startDeep(cluster)}>展开细聊</button><button type="button" className="skip" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "skipped")}>暂时不收录</button>
+          <button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "confirm" })}>{tr("确认为事实")}</button><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => setEditing({ clusterId: cluster.id, mode: "brief" })}>{tr("简单说说")}</button><button type="button" className="deep" disabled={Boolean(saving) || writingBusy} onClick={() => void startDeep(cluster)}>{tr("展开细聊")}</button><button type="button" className="skip" disabled={Boolean(saving) || writingBusy} onClick={() => void save(cluster, "skipped")}>{tr("暂时不收录")}</button>
         </div> : <div className="bill-clue-result">
           <button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => state.status === "deep" ? void startDeep(cluster) : state.status === "skipped" ? void save(cluster, "pending", undefined, false) : setEditing({ clusterId: cluster.id, mode: state.status === "brief" ? "brief" : "confirm" })}>
-            <span>{state.status === "skipped" ? "这条线索不会进入最终叙述。" : state.resultText || cluster.proposedMemory}</span><small>{state.status === "deep" ? "点击查看或继续完整对话" : state.status === "skipped" ? "点击重新处理" : "点击可重新核对或改用其他方式"}</small>
+            <span>{state.status === "skipped" ? tr("这条线索不会进入最终叙述。") : state.resultText || cluster.proposedMemory}</span><small>{state.status === "deep" ? tr("点击查看或继续完整对话") : state.status === "skipped" ? tr("点击重新处理") : tr("点击可重新核对或改用其他方式")}</small>
           </button>
         </div>}
       </article>;
     })}</div>
 
-    {writing ? <p className="bill-writing-progress" role="status">AI 正在起草，完成后会填回当前线索。<button type="button" onClick={() => openContextAgent({ runId: writing.run.id })}>查看进度</button></p> : null}
-    {error ? <p className="bill-memory-error" role="alert">{error}</p> : null}
-    {undo ? <div className="bill-memory-toast" role="status" aria-live="polite"><span>已保存「{undo.title}」</span><small>{seconds} 秒后关闭</small><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => void undoLast()}>撤销</button></div> : null}
+    {writing ? <p className="bill-writing-progress" role="status">{tr("AI 正在起草，完成后会填回当前线索。")}<button type="button" onClick={() => openContextAgent({ runId: writing.run.id })}>{tr("查看进度")}</button></p> : null}
+    {error ? <p className="bill-memory-error" role="alert">{tr(error)}</p> : null}
+    {undo ? <div className="bill-memory-toast" role="status" aria-live="polite"><span>{tr("已保存「${title}」", { title: undo.title })}</span><small>{seconds} {tr("秒后关闭")}</small><button type="button" disabled={Boolean(saving) || writingBusy} onClick={() => void undoLast()}>{tr("撤销")}</button></div> : null}
     {confirmBuild ? <BuildConfirmation batch={batch} busy={busy} onClose={closeBuildConfirmation} onConfirm={() => onBuild(batch)} /> : null}
   </section>;
 }
