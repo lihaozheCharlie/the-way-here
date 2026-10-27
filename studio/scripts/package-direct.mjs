@@ -97,10 +97,12 @@ if (notarization.status !== 'Accepted') {
 run('xcrun', ['stapler', 'staple', dmg]);
 run('xcrun', ['stapler', 'validate', dmg]);
 run('/usr/sbin/spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', '--verbose=2', dmg]);
+// A valid signature does not prove the app can start. Install and launch the DMG.
+run(process.execPath, ['scripts/verify-installed-desktop.mjs', dmg]);
 const hash = createHash('sha256');
 for await (const chunk of createReadStream(dmg)) hash.update(chunk);
 const sha256 = hash.digest('hex');
 const minimumSystemVersion = run('/usr/bin/plutil', ['-extract', 'LSMinimumSystemVersion', 'raw', path.join(app, 'Contents/Info.plist')], true).trim();
 await writeFile(path.join(output, 'SHA256SUMS.txt'), `${sha256}  ${filename}\n`);
-await writeFile(path.join(output, 'release.json'), JSON.stringify({ ready:true, version, arch:process.arch, filename, size:(await stat(dmg)).size, sha256, minimumSystemVersion, notarizationId:notarization.id }, null, 2));
+await writeFile(path.join(output, 'release.json'), JSON.stringify({ ready:true, startupVerified:true, version, arch:process.arch, filename, size:(await stat(dmg)).size, sha256, minimumSystemVersion, notarizationId:notarization.id }, null, 2));
 console.log(`签名、公证与 Gatekeeper 校验完成：${dmg}。上传该文件后才可启用网页下载。`);

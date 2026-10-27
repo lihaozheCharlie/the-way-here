@@ -1,6 +1,8 @@
-import { readFile, mkdir, cp, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, cp, writeFile, rename, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +16,7 @@ if (urlValue) {
   const url = new URL(urlValue);
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('下载地址必须为不含凭据的公开 HTTPS 地址');
   const release = JSON.parse(await readFile(path.join(studio, '.runtime/direct/release.json'), 'utf8'));
-  if (release.ready !== true || !['arm64','x64'].includes(release.arch) || !/^[a-f0-9]{64}$/.test(release.sha256)) throw new Error('正式发布记录未通过校验，拒绝启用下载按钮');
+  if (release.ready !== true || release.startupVerified !== true || !['arm64','x64'].includes(release.arch) || !/^[a-f0-9]{64}$/.test(release.sha256)) throw new Error('正式发布记录或安装启动验证未通过，拒绝启用下载按钮');
   if (path.basename(release.filename) !== release.filename || !release.filename.endsWith('.dmg')) throw new Error('安装包文件名无效');
   const artifact = path.join(studio, '.runtime/direct', release.filename);
   const hash = createHash('sha256');
@@ -31,8 +33,15 @@ if (urlValue) {
   const response = await fetch(url);
   if (!response.ok || !response.body) throw new Error('下载地址尚不可用');
   const hostedHash = createHash('sha256');
-  for await (const chunk of response.body) hostedHash.update(chunk);
-  if (hostedHash.digest('hex') !== release.sha256) throw new Error('线上安装包与已公证文件不一致');
+  const downloadDirectory = path.join(studio, '.runtime/direct-site/downloads');
+  await mkdir(downloadDirectory, { recursive:true });
+  const downloaded = path.join(downloadDirectory, release.filename);
+  const partial = downloaded + '.part';
+  await pipeline(Readable.fromWeb(response.body), new Transform({ transform(chunk, _encoding, done) { hostedHash.update(chunk); done(null, chunk); } }), createWriteStream(partial, { mode:0o600 }));
+  if (hostedHash.digest('hex') !== release.sha256) { await rm(partial, { force:true }); throw new Error('线上安装包与已公证文件不一致'); }
+  await rename(partial, downloaded);
+  const installed = spawnSync(process.execPath, ['scripts/verify-installed-desktop.mjs', downloaded], { cwd:studio, stdio:'inherit' });
+  if (installed.status !== 0) throw new Error('线上安装包实际安装或启动失败，拒绝启用下载按钮');
   const chip = release.arch === 'arm64' ? 'Apple Silicon' : 'Intel';
   const system = /^\d+(?:\.\d+){0,2}$/.test(release.minimumSystemVersion || '') ? ` · macOS ${escape(release.minimumSystemVersion)} 或更新版本` : '';
   slot = `<a id="download" href="${escape(url.href)}">下载 Mac 版 · ${chip}</a><p id="details">版本 ${escape(release.version)}${system} · ${Math.ceil(release.size / 1000 / 1000)} MB</p>`;

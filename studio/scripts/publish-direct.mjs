@@ -11,7 +11,7 @@ const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(studio, '.runtime/direct');
 const release = JSON.parse(await readFile(path.join(output, 'release.json'), 'utf8'));
 const manifest = JSON.parse(await readFile(path.join(studio, 'apps/desktop/package.json'), 'utf8'));
-if (!release.ready || release.version !== manifest.version || path.basename(release.filename) !== release.filename) throw new Error('Build and notarize the current version first');
+if (!release.ready || !release.startupVerified || release.version !== manifest.version || path.basename(release.filename) !== release.filename) throw new Error('Build, notarize and verify startup of the current version first');
 const artifact = path.join(output, release.filename);
 const hash = createHash('sha256'); for await (const chunk of createReadStream(artifact)) hash.update(chunk);
 if (hash.digest('hex') !== release.sha256) throw new Error('Artifact changed after notarization');

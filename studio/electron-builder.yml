@@ -9,6 +9,8 @@ files:
   - package.json
 asar: true
 extraResources:
+  - from: apps/desktop/dist/locales
+    to: locales
   - from: .runtime/package/workspace-template
     to: workspace-template
   - from: .runtime/package/python

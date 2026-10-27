@@ -6,6 +6,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const messagesPath = path.join(here, "../../web/src/shared/i18n/en-messages.ts");
 
 function loadMessages() {
+  if (process.resourcesPath && !process.defaultApp) {
+    return JSON.parse(readFileSync(path.join(process.resourcesPath, 'locales/en-messages.json'), 'utf8'));
+  }
   const src = readFileSync(messagesPath, "utf8");
   const expr = src.replace(/export const enMessages:\s*Record<string,\s*string>\s*=\s*/, "return ").replace(/;\s*$/, "");
   return new Function(expr)();

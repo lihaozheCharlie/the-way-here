@@ -474,3 +474,7 @@ CaptureRecordStore 在写日记前保存输入缓存，Markdown 仅含整理正�
 经过验证的 URL 只留在主进程。preload 向可信来源暴露状态、检查与下载三个操作和状态订阅；renderer 不能提交任意下载地址。主窗口显示非模态更新条，可展开纯文本说明、点击下载或稍后；设置持续提供当前版本、检查、错误恢复与下载。菜单手动检查使用系统提示。只有用户点击才调用 shell.openExternal，由浏览器下载并由用户退出替换安装，不自动覆盖、重启或执行安装包。退出会终止检查并清理定时器。
 
 `prepare-update-feed.mjs` 从已通过公证的 release.json 生成 schemaVersion=1 的 version / notes.zh,en / downloads.arch 信息。`publish-direct.mjs` 复核当前构建、签名票据与哈希，只发布高于当前公开版的版本；先上传 DMG、SHA256SUMS.txt 和 update.json 到草稿，验证托管端安装包及 feed 摘要后才公开并设为 latest。已公开版不可原地覆盖；失败草稿可重试。用户需手动安装一次 0.1.4，后续版本沿用固定检查地址。
+
+正式桌面包的原生菜单文案从 `Resources/locales/en-messages.json` 读取。`prepare-desktop-locales.mjs` 在原生构建阶段从 Web 唯一英文词典生成数据副本，所有桌面打包入口均分发该目录；开发模式继续读源码。生产启动不再依赖 Web 源码目录。打包结构回归测试只复制原生 locale 模块和生成的 JSON，验证没有 Web 源码时仍可启动并插值翻译。
+
+官网发布在公证后追加真实 DMG 安装验收：只读挂载、复制至独立 Applications 目录、关闭磁盘、执行签名与票据检查、启动真实应用，验证新用户目录、本地 API、偏好设置、中英文界面及原生菜单、生产更新桥接。全部通过才记录 startupVerified 并开放发布与网页下载；结束或失败均清理测试实例、资料和挂载。签名与公证本身不代表应用可启动。
