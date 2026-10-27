@@ -1,8 +1,20 @@
 export type DesktopCommand = "search" | "inspector" | "capture" | "settings" | "detach" | "focus" | "import" | "back" | "forward" | "predict-self" | `knowledge-base:${number}`;
 import type { PhotoLibraryAuthorization, PhotoLibraryFilters, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult } from "@the-way-here/shared";
+export interface DesktopUpdateState {
+  version: string;
+  status: 'idle' | 'disabled' | 'checking' | 'available' | 'current' | 'unsupported' | 'incompatible' | 'error';
+  latestVersion?: string;
+  minimumSystemVersion?: string;
+  size?: number;
+  notes?: { zh: string; en: string };
+}
 export interface DesktopBridge {
   platform: string;
   isMacAppStore?: boolean;
+  getUpdateState?: () => Promise<DesktopUpdateState>;
+  checkForUpdates?: () => Promise<DesktopUpdateState>;
+  downloadUpdate?: () => Promise<void>;
+  onUpdateState?: (callback: (state: DesktopUpdateState) => void) => () => void;
   connectCodexCLI?: () => Promise<boolean>;
   openPrivacy?: () => Promise<void>;
   photoLibraryStatus?: () => Promise<PhotoLibraryAuthorization>;

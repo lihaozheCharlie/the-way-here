@@ -24,6 +24,10 @@ state.update(segment: 4, text: "  ")
 assert(state.text == "第一段最终文字\\n第二段\\n第三段\\n第四段")
 assert(state.hasText(segment: 4))
 assert(!state.hasText(segment: 5))
+// A successful final result may legitimately be shorter after correcting a repetition.
+state.finalize(segment: 1, text: "最终稿。")
+state.finalize(segment: 2, text: " ")
+assert(state.text == "最终稿。\\n第二段\\n第三段\\n第四段")
 `);
   const build = spawnSync('xcrun', ['swiftc', file, '-o', path.join(folder, 'test')], { encoding: 'utf8' });
   assert.equal(build.status, 0, build.stderr);

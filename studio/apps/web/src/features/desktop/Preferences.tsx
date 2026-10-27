@@ -5,6 +5,7 @@ import { useI18n, type AppLocale } from "../../shared/i18n";
 import { useDesktopPreference } from "./preferences-store";
 import { AiConfiguration, useAgentSelection } from "../collaboration/AgentSettings";
 import "./preferences.css";
+import { AppUpdatePreferences } from "./AppUpdates";
 
 const shortcutKeys = [
   ["搜索与命令", "⌘ K"], ["随手记", "⌘ N"],
@@ -38,6 +39,7 @@ export function Preferences({ revision }: { revision: number }) {
           <PreferenceHeading kind="keyboard" id="shortcuts-heading" title={t("键盘快捷键")} description={t("常用操作，随时触达。")} />
           <dl className="preferences-shortcuts">{shortcutKeys.map(([label, keys]) => <div key={label}><dt>{t(label)}</dt><dd><kbd>{keys}</kbd></dd></div>)}</dl>
         </section>
+        <AppUpdatePreferences />
         <p className="preferences-footnote"><Icon name="info" size={15} /><span>{window.desktop ? t("生活记录保留在本机。关闭主窗口后，仍可通过菜单栏随手记。") : t("生活记录保存在本地服务所在的电脑上。")} <a href="/privacy" target="_blank" rel="noreferrer">{t("隐私与数据使用")}</a></span></p>
       </> : <section className="preferences-ai" aria-labelledby="ai-heading">
         <AiConfiguration id="desktop-agent" agent={agent} heading={<PreferenceHeading kind="ai" id="ai-heading" title={t("模型与连接")} description={t("选择 AI 服务与思考深度，修改会自动保存并应用到所有 AI 对话。")} />} />

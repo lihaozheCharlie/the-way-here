@@ -4,8 +4,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 if(process.platform !== 'darwin') throw new Error('Native desktop packaging requires macOS.');
-const { prepareSpeechEngine } = await import('./prepare-speech-engine.mjs');
-await prepareSpeechEngine();
 const destination=path.join(studio,'apps/desktop/dist');
 await mkdir(destination,{recursive:true});
 if(process.platform !== 'darwin') throw new Error('Native desktop packaging requires macOS.');

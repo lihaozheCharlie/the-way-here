@@ -1,15 +1,13 @@
 import { spawn } from 'node:child_process';
-export function speechSession(binary, onEvent = () => {}, recordingRoot, transcribe) {
+export function speechSession(binary, onEvent = () => {}, recordingRoot) {
   const child = spawn(binary, recordingRoot ? [recordingRoot] : [], { stdio:['pipe','pipe','pipe'] });
-  const controller = new AbortController();
-  let refine = true;
   let pauseWaiter;
   let transcript = '', recordingPath = '';
   let output = '', pending = '', errors = '', closed = false, stopped = false;
   // Auto-stop can finish before the renderer asks for the transcript.
   child.stdin.on('error', () => {});
   child.stdout.setEncoding('utf8');
-  const preview = new Promise((resolve,reject) => {
+  const result = new Promise((resolve,reject) => {
     child.stdout.on('data', data => {
       pending += data;
       let end;
@@ -18,6 +16,8 @@ export function speechSession(binary, onEvent = () => {}, recordingRoot, transcr
         try {
           const value = JSON.parse(line);
           if (value.event === 'paused' && pauseWaiter) { pauseWaiter.resolve(); pauseWaiter = undefined; }
+          else if (value.event === 'processing') onEvent({ event: 'processing' });
+          else if (value.event === 'progress' && Number.isFinite(value.percent)) onEvent({ event: 'progress', percent: Math.max(0, Math.min(100, value.percent)) });
           else if (value.event === 'ready') onEvent({ event: 'ready' });
           else if (value.event === 'level' && Number.isFinite(value.level)) onEvent({ event: 'level', level: Math.max(0, Math.min(1, value.level)) });
           else if (value.event === 'transcript' && typeof value.text === 'string' && value.text.trim()) {
@@ -38,37 +38,15 @@ export function speechSession(binary, onEvent = () => {}, recordingRoot, transcr
         if (value.error && !text) throw new Error(value.error);
         if (typeof text !== 'string') throw new Error('语音识别结果无效');
         if (String(value.warning || '').startsWith('录音备份')) onEvent({ event: 'warning', message: value.warning });
-        else if ((value.warning || value.error) && (!transcribe || !refine)) onEvent({ event: 'warning', message: '部分语音未能完成识别，已保留识别文字和原始录音。' });
+        else if ((value.warning || value.error)) onEvent({ event: 'warning', message: '部分语音未能完成识别，已保留识别文字和原始录音。' });
         resolve(text);
       } catch (error) {
         if (transcript) {
-          if (!transcribe || !refine) onEvent({ event: 'warning', message: '识别意外中断，已保留识别文字和原始录音。' });
+          onEvent({ event: 'warning', message: '识别意外中断，已保留识别文字和原始录音。' });
           resolve(transcript);
         } else reject(new Error(recordingPath ? '未能识别这段语音，原始录音已保留，可打开录音重试。' : output ? error.message : '语音识别未启动。请在系统设置中允许麦克风和语音识别后重试，也可以直接输入文字。'));
       }
     });
-  });
-  const result = preview.then(async text => {
-    if (!transcribe || !recordingPath || !refine) return text;
-    onEvent({ event: 'processing' });
-    try {
-      const finalText = await transcribe(recordingPath, { signal: controller.signal, onProgress: percent => onEvent({ event: 'progress', percent }) });
-      if (typeof finalText !== 'string' || !finalText.trim()) throw new Error('语音精确识别结果为空');
-      onEvent({ event: 'transcript', text: finalText });
-      return finalText;
-    } catch (error) {
-      if (!refine) return text;
-      onEvent({ event: 'warning', message: '精确识别未完成，当前保留的是预览文字；原始录音已保留。' });
-      if (!text.trim()) throw error;
-      return text;
-    }
-  }, async error => {
-    // Even a failed live recognizer may have captured a perfectly usable full recording.
-    if (!transcribe || !recordingPath || !refine) throw error;
-    onEvent({ event: 'processing' });
-    const finalText = await transcribe(recordingPath, { signal: controller.signal, onProgress: percent => onEvent({ event: 'progress', percent }) });
-    onEvent({ event: 'transcript', text: finalText });
-    return finalText;
   });
   // Early rejection is retained until the renderer requests the result.
   result.catch(() => {});
@@ -79,5 +57,5 @@ export function speechSession(binary, onEvent = () => {}, recordingRoot, transcr
       pauseWaiter = { resolve: () => { clearTimeout(timer); resolve(); }, reject: error => { clearTimeout(timer); reject(error); } };
       child.stdin.write(paused ? 'pause\n' : 'resume\n');
     });
-  }, stop:(discard = false) => { if (discard) { refine = false; controller.abort(); } if (!closed && !stopped) { stopped = true; child.stdin.end('\n'); } }, cancel:() => { refine = false; controller.abort(); child.kill(); } };
+  }, stop:(discard = false) => { if (!closed && !stopped) { stopped = true; child.stdin.end(discard ? 'discard\n' : '\n'); } }, cancel:() => { child.kill(); } };
 }

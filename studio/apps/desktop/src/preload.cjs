@@ -2,6 +2,10 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
   isMacAppStore: process.argv.includes('--twh-mas'),
+  getUpdateState: () => ipcRenderer.invoke('desktop:update-state'),
+  checkForUpdates: () => ipcRenderer.invoke('desktop:update-check'),
+  downloadUpdate: () => ipcRenderer.invoke('desktop:update-download'),
+  onUpdateState: (callback) => { const listener = (_event, state) => callback(state); ipcRenderer.on('desktop:update-state', listener); return () => ipcRenderer.removeListener('desktop:update-state', listener); },
   connectCodexCLI: () => ipcRenderer.invoke('desktop:connect-codex'),
   openPrivacy: () => ipcRenderer.invoke('desktop:privacy'),
   photoLibraryStatus: () => ipcRenderer.invoke('desktop:photos-status'),

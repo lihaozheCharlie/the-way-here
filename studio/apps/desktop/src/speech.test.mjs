@@ -71,26 +71,31 @@ test('audio-only failure points to recovery rather than claiming microphone sile
   const binary = await fixture(t, `console.log(JSON.stringify({event:'recording',recordingPath:'/anonymous/recording.caf'}));console.log(JSON.stringify({text:'',error:'No speech detected'}));`);
   await assert.rejects(speechSession(binary).result, /原始录音已保留/);
 });
-test('whole-recording transcription replaces a nonempty truncated live preview', async t => {
-  const binary = await fixture(t, `console.log(JSON.stringify({event:'recording',recordingPath:'/anonymous/recording.caf'}));console.log(JSON.stringify({event:'transcript',text:'只剩结尾'}));console.log(JSON.stringify({text:'只剩结尾',error:''}));`);
-  const events=[];
-  const session=speechSession(binary,event=>events.push(event),undefined,async(file,{onProgress})=>{assert.equal(file,'/anonymous/recording.caf');onProgress(50);return '开头，完整的五分钟内容。\n最后一句。';});
-  assert.equal(await session.result,'开头，完整的五分钟内容。\n最后一句。');
-  assert.ok(events.some(event=>event.event==='processing'));
-  assert.ok(events.some(event=>event.event==='progress'&&event.percent===50));
-  assert.equal(events.at(-1).text,'开头，完整的五分钟内容。\n最后一句。');
+test('native finalization reports progress and replaces a truncated live preview', async t => {
+  const binary = await fixture(t, `
+    console.log(JSON.stringify({event:'transcript',text:'只剩结尾'}));
+    console.log(JSON.stringify({event:'processing'}));
+    console.log(JSON.stringify({event:'progress',percent:50}));
+    console.log(JSON.stringify({event:'progress',percent:500}));
+    console.log(JSON.stringify({event:'transcript',text:'开头，完整内容。最后一句。'}));
+    console.log(JSON.stringify({text:'开头，完整内容。最后一句。',error:''}));
+  `);
+  const events = [];
+  assert.equal(await speechSession(binary, event => events.push(event)).result, '开头，完整内容。最后一句。');
+  assert.ok(events.some(event => event.event === 'processing'));
+  assert.deepEqual(events.filter(event => event.event === 'progress').map(event => event.percent), [50,100]);
 });
-test('whole-recording transcription can recover when live recognition returned no text', async t => {
-  const binary=await fixture(t, `console.log(JSON.stringify({event:'recording',recordingPath:'/anonymous/recording.caf'}));console.log(JSON.stringify({text:'',error:'No speech detected'}));`);
-  assert.equal(await speechSession(binary,()=>{},undefined,async()=> '从原始音频找回。').result,'从原始音频找回。');
+test('failed segment finalization retains the preview and surfaces the incomplete result', async t => {
+  const binary = await fixture(t, `console.log(JSON.stringify({text:'预览文字',warning:'segment timeout'}));`);
+  const events = [];
+  assert.equal(await speechSession(binary, event => events.push(event)).result, '预览文字');
+  assert.match(events.at(-1).message, /部分语音未能完成识别/);
 });
-test('offline failure preserves the preview and cancellation skips costly retranscription', async t => {
-  const binary=await fixture(t, `console.log(JSON.stringify({event:'recording',recordingPath:'/anonymous/recording.caf'}));process.stdin.resume();process.stdin.on('end',()=>console.log(JSON.stringify({text:'预览文字',error:''})));`);
-  const events=[];
-  const session=speechSession(binary,event=>events.push(event),undefined,async()=>{throw Error('offline failed')});session.stop();
-  assert.equal(await session.result,'预览文字');assert.ok(events.some(event=>event.event==='warning'));
-  let called=false;const cancelled=speechSession(binary,()=>{},undefined,async()=>{called=true;return 'unused'});cancelled.stop(true);
-  assert.equal(await cancelled.result,'预览文字');assert.equal(called,false);
+test('discard explicitly skips native finalization', async t => {
+  const binary = await fixture(t, `let command='';process.stdin.on('data', data=>command+=data);process.stdin.on('end',()=>console.log(JSON.stringify({text:command.trim()==='discard'?'已取消':'错误'})));`);
+  const session = speechSession(binary);
+  session.stop(true);
+  assert.equal(await session.result, '已取消');
 });
 test('pause and resume are acknowledged without ending or losing the recording', async t => {
   const binary = await fixture(t, `

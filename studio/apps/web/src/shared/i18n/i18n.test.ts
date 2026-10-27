@@ -46,7 +46,7 @@ describe("translate", () => {
     expect(translate("en", "点选照片即可选中，最多 50 张 · 放大查看请点右下角")).toBe("Click a photo to select it — up to 50. Zoom from the lower-right corner.");
   });
 
-  it("uses stable English for life-record filters and the import hint", () => {
+  it("uses stable English for life-record filters and import controls", () => {
     expect(translate("en", "全部")).toBe("All");
     expect(translate("en", "笔记")).toBe("Notes");
     expect(translate("en", "AI 对话")).toBe("Chats");
@@ -60,10 +60,6 @@ describe("translate", () => {
     expect(translate("en", "让 The Way Here 先认识你的思考方式")).toBe("Let The Way Here learn how you think");
     expect(translate("en", "思考深度关闭")).toBe("Off");
     expect(translate("en", "关闭")).toBe("Close");
-    expect(translate("en", "账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。").split("\n")).toEqual([
-      "Bills import here, grouped by time on this computer.",
-      "You write the story; nothing is sent to a model.",
-    ]);
     expect(translate("zh", "笔记")).toBe("笔记");
     expect(translate("zh", "展开全部属性")).toBe("展开全部属性");
     expect(translate("zh", "AI 对话")).toBe("AI 对话");

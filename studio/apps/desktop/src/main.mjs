@@ -1,9 +1,9 @@
 import { DesktopRuntime } from './runtime-process.mjs';
 import { assetResponse } from './asset-response.mjs';
 import { prepareWorkspace, saveWorkspace } from './workspace.mjs';
-import { assertSpeechEngine, transcribeRecording } from "./speech-transcriber.mjs";
 import { speechSession } from "./speech.mjs";
 import { PhotoLibrary } from './photo-library.mjs';
+import { UpdateChecker } from './updates.mjs';
 import { app, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, shell, dialog, Notification, utilityProcess, session, systemPreferences, net, safeStorage } from 'electron';
 import { ScopedAccess } from './scoped-access.mjs';
 import { prepareMasCodexHome } from './codex-home.mjs';
@@ -14,13 +14,25 @@ import { constants } from 'node:fs';
 import { access, realpath, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { localRoute, allowedExternal, trustedSender } from './policy.mjs';
-import { t, setLocale, readPersistedLocale, persistLocale } from './locale.mjs';
+import { t, getLocale, setLocale, readPersistedLocale, persistLocale } from './locale.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const studio = path.resolve(here, '../../..');
 const windows = new Set();
 let origin, runtimeClient, workspace, worker, tray, speech, scopes, quitting = false, speechStarting = false;
 let serviceRestart = Promise.resolve();
 let distribution = {};
+let updates, updateTimer, lastUpdateCheck = 0;
+function checkUpdatesAutomatically() {
+  if (!updates || Date.now() - lastUpdateCheck < 6 * 60 * 60 * 1000) return;
+  lastUpdateCheck = Date.now(); void updates.check();
+}
+async function showUpdateCheck() {
+  const state = await updates.check();
+  const available = state.status === 'available';
+  const message = available ? t('发现新版本 ${version}', { version:state.latestVersion }) : state.status === 'current' ? t('当前已是最新版本') : state.status === 'incompatible' ? t('新版需要 macOS ${version} 或更新版本', { version:state.minimumSystemVersion }) : t('暂时无法检查更新，请稍后重试。');
+  const result = await dialog.showMessageBox({ type:'info', message, detail:available ? (state.notes?.[getLocale()] || state.notes?.zh || '') + '\n\n' + t('点击后将在浏览器下载安装包。退出应用后替换安装，已有资料保留。') : `The Way Here ${state.version}`, buttons:available ? [t('下载更新'),t('稍后')] : [t('好')], cancelId:available ? 1 : 0 });
+  if (available && result.response === 0) await shell.openExternal(updates.downloadURL());
+}
 let masCodex;
 const speechRecordings = new WeakMap();
 const photoLibraries = new Map();
@@ -47,6 +59,7 @@ app.setName('The Way Here');
 if (!app.requestSingleInstanceLock()) app.exit(0);
 app.on('second-instance', () => showMain());
 function showMain() {
+  checkUpdatesAutomatically();
   const main = [...windows].find((win) => win.kind === 'main');
   if (main) { if (main.isMinimized()) main.restore(); main.show(); main.focus(); }
   else if (origin) openWindow('/', 'main');
@@ -112,6 +125,9 @@ async function connectCodex() {
 
 function registerIPC() {
   function handle(name, fn, withSender = false) { ipcMain.handle(name, (event,...args) => { if (!trustedSender(event.senderFrame?.url,origin)) throw new Error(t('不受信任的页面')); return withSender ? fn(event.sender, ...args) : fn(...args); }); }
+  handle('desktop:update-state', () => updates.state);
+  handle('desktop:update-check', () => updates.check());
+  handle('desktop:update-download', () => shell.openExternal(updates.downloadURL()));
   handle('desktop:set-locale', (next) => {
     const chosen = next === 'en' ? 'en' : 'zh';
     setLocale(chosen);
@@ -157,8 +173,6 @@ function registerIPC() {
     if (process.platform !== 'darwin' || !await systemPreferences.askForMediaAccess('microphone')) throw new Error('请在系统设置中允许麦克风访问');
     const binary = app.isPackaged ? path.join(process.resourcesPath,'native/speech-capture') : path.join(studio,'apps/desktop/dist/speech-capture');
     await access(binary);
-    const engineRoot = app.isPackaged ? path.join(process.resourcesPath, 'native/speech-engine') : path.join(studio, 'apps/desktop/dist/speech-engine');
-    try { await assertSpeechEngine(engineRoot); } catch { throw new Error('本地语音识别组件尚未就绪，请更新或重新安装客户端。'); }
     let ready;
     const started = new Promise(resolve => { ready = resolve; });
     const current = speechSession(binary, event => {
@@ -173,7 +187,7 @@ function registerIPC() {
         else if (event.event === 'transcript') sender.send('desktop:speech-transcript', event.text);
         else if (event.event === 'warning') sender.send('desktop:speech-warning', event.message);
       }
-    }, path.join(app.getPath('userData'), 'cache', 'speech-recordings'), (file, options) => transcribeRecording(file, engineRoot, options));
+    }, path.join(app.getPath('userData'), 'cache', 'speech-recordings'));
     current.owner = sender;
     speech = current;
     current.result.finally(() => { if (!sender.isDestroyed()) sender.send('desktop:speech-ended'); }).catch(() => {});
@@ -206,7 +220,7 @@ async function openExistingWorkspace() {
 function installMenu() {
   const action = (label,accelerator,value) => ({label:t(label),accelerator,click:() => command(value)});
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    {label:'The Way Here',submenu:[{role:'about'},action('偏好设置…','CmdOrCtrl+,','settings'),{label:t('隐私与数据使用'),click:() => openWindow('/privacy','reader')},...(process.mas ? [{label:t('连接 Codex CLI…'),click:() => void connectCodex().catch(error => dialog.showErrorBox(t('未能连接 Codex'),error.message))}] : []),{type:'separator'},{role:'services'},{type:'separator'},{role:'hide'},{role:'hideOthers'},{role:'unhide'},{type:'separator'},{role:'quit'}]},
+    {label:'The Way Here',submenu:[{role:'about'},...(!process.mas && app.isPackaged ? [{label:t('\u68c0\u67e5\u66f4\u65b0...'),click:() => void showUpdateCheck().catch(() => {})}] : []),action('偏好设置…','CmdOrCtrl+,','settings'),{label:t('隐私与数据使用'),click:() => openWindow('/privacy','reader')},...(process.mas ? [{label:t('连接 Codex CLI…'),click:() => void connectCodex().catch(error => dialog.showErrorBox(t('未能连接 Codex'),error.message))}] : []),{type:'separator'},{role:'services'},{type:'separator'},{role:'hide'},{role:'hideOthers'},{role:'unhide'},{type:'separator'},{role:'quit'}]},
     {label:t('文件'),submenu:[{label:t('打开已有知识空间…'),click:() => void openExistingWorkspace()}, {type:'separator'},action('随手记','CmdOrCtrl+N','capture'),action('导入生活记录…','CmdOrCtrl+O','import'),action('在独立窗口打开','CmdOrCtrl+Return','detach'),action('深入聊聊','CmdOrCtrl+Shift+F','focus'),{type:'separator'},{role:'close'}]},
     {label:t('编辑'),submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}, {type:'separator'}, {role:'startSpeaking'},{role:'stopSpeaking'}]},
     {label:t('显示'),submenu:[action('搜索与命令','CmdOrCtrl+K','search'),action('AI 协作面板','CmdOrCtrl+Alt+I','inspector'),action('看见未来',undefined,'predict-self'),action('返回','CmdOrCtrl+[','back'),action('前进','CmdOrCtrl+]','forward'),{type:'separator'},{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{role:'togglefullscreen'},...(!app.isPackaged ? [{role:'toggleDevTools'}] : [])]},
@@ -249,10 +263,12 @@ app.whenReady().then(async () => {
   const iconPath = app.isPackaged ? path.join(process.resourcesPath,'native/app-icon.png') : path.join(studio,'apps/desktop/dist/app-icon.png');
   app.dock?.setIcon(nativeImage.createFromPath(iconPath));
   app.setAboutPanelOptions({ applicationName: 'The Way Here', iconPath });
+  updates = new UpdateChecker({ version:app.getVersion(), arch:process.arch, systemVersion:process.getSystemVersion(), enabled:app.isPackaged && !process.mas, fetch:(url, options) => net.fetch(url, { ...options, bypassCustomProtocolHandlers:true }), onChange:state => { for (const win of windows) if (!win.isDestroyed()) win.webContents.send('desktop:update-state', state); } });
+  updateTimer = setTimeout(checkUpdatesAutomatically, 10_000); updateTimer.unref();
   registerIPC(); installMenu(); openWindow('/','main');
 }).catch(async (error) => { console.error('Desktop startup failed:',error); if (!app.commandLine.hasSwitch('diagnostics')) { const result = await dialog.showMessageBox({type:'error',message:t('暂时无法打开知识空间'),detail:error.message,buttons:[t('退出'),t('打开已有知识空间…')],defaultId:0,cancelId:0}); if (result.response === 1) await openExistingWorkspace(); } app.quit(); });
 app.on('activate',showMain);
-app.on('before-quit', () => { quitting = true; speech?.cancel(); for (const library of photoLibraries.values()) library.close(); photoLibraries.clear(); worker?.kill(); scopes?.close(); });
+app.on('before-quit', () => { quitting = true; clearTimeout(updateTimer); updates?.dispose(); speech?.cancel(); for (const library of photoLibraries.values()) library.close(); photoLibraries.clear(); worker?.kill(); scopes?.close(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 app.whenReady().then(() => { globalShortcut.register('CommandOrControl+Shift+N', () => { if (origin) openWindow('/capture', 'capture'); }); });

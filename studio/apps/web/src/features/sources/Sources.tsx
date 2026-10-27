@@ -546,7 +546,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       <div className="source-toolbar-right">
       <SearchField className="source-global-search" name="organized-source-search" autoComplete="off" aria-label={t("搜索生活记录标题或内容")} value={query} onChange={(event) => { setCreatedPageId(undefined); update({ q: event.target.value || undefined, file: undefined, limit: undefined }); }} placeholder={t("搜索标题或内容…")} />
       </div>
-      <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />{t("导入资料")}</button><p className="source-bills-hint">{t("账单从这里导入，在本机按时间聚成线索；故事由你来填，不会自动发给模型。")}</p></div></div>
+      <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />{t("导入资料")}</button></div></div>
     </section>
 
     <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label={t("生活记录工作区")}>

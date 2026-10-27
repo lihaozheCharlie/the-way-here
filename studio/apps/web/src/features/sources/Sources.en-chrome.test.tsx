@@ -59,8 +59,8 @@ describe("English life-record and model chrome", () => {
     expect(html).toContain("Bills");
     expect(html).toContain('placeholder="Search titles or text…"');
     expect(html).toContain("Import materials");
-    expect(html).toContain("Bills import here, grouped by time on this computer.");
-    expect(html).toContain("You write the story; nothing is sent to a model.");
+    expect(html).not.toContain("Bills import here, grouped by time on this computer.");
+    expect(html).not.toContain("You write the story; nothing is sent to a model.");
     expect(html).toContain("Show <b>1</b> more");
     expect(html).not.toContain("导入资料");
     expect(html).not.toContain("继续显示");
