@@ -1,3 +1,4 @@
+import { captureTimeZone } from "../modules/content/capture-dates.js";
 import { JOURNEY_REPORT_OUTPUT_END, JOURNEY_REPORT_OUTPUT_START, type AgentOutputTarget, type AgentReasoningEffort, type AgentRuntimePreference, type VaultConfig, type WikiRun } from "@the-way-here/shared";
 
 const runModes = new Set<WikiRun["mode"]>(["auto", "read", "write", "validate"]);
@@ -28,9 +29,10 @@ export function parseAgentOutputTarget(value: unknown): AgentOutputTarget | unde
   if (target.kind === "life-record") {
     if (typeof target.originalText !== "string" || !target.originalText.trim() || target.originalText.length > 50_000) return undefined;
     if (target.diaryDate !== undefined && (typeof target.diaryDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(target.diaryDate) || !Number.isFinite(Date.parse(target.diaryDate)) || new Date(target.diaryDate).toISOString().slice(0, 10) !== target.diaryDate)) return undefined;
+    try { captureTimeZone(target.diaryTimeZone); } catch { return undefined; }
     if (target.captureId !== undefined && (typeof target.captureId !== "string" || !/^[a-zA-Z0-9-]{1,100}$/.test(target.captureId) || !Number.isInteger(target.captureRevision) || Number(target.captureRevision) < 1)) return undefined;
     if (target.folder !== undefined && (typeof target.folder !== "string" || target.folder.length > 500)) return undefined;
-    return { kind: "life-record", label: "随手记", originalText: target.originalText, ...(typeof target.captureId === "string" ? { captureId: target.captureId, captureRevision: Number(target.captureRevision) } : {}), ...(typeof target.folder === "string" ? { folder: target.folder } : {}), ...(typeof target.diaryDate === "string" ? { diaryDate: target.diaryDate } : {}) };
+    return { kind: "life-record", label: "随手记", originalText: target.originalText, ...(typeof target.diaryTimeZone === "string" ? { diaryTimeZone: captureTimeZone(target.diaryTimeZone) } : {}), ...(typeof target.captureId === "string" ? { captureId: target.captureId, captureRevision: Number(target.captureRevision) } : {}), ...(typeof target.folder === "string" ? { folder: target.folder } : {}), ...(typeof target.diaryDate === "string" ? { diaryDate: target.diaryDate } : {}) };
   }
   if (target.kind === "photo-memory") {
     if (target.phase !== "enrich" && target.phase !== "draft") return undefined;

@@ -1,0 +1,32 @@
+import { afterEach, expect, it } from "vitest";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
+import { createHash } from "node:crypto";
+import { stateRootForVault } from "@the-way-here/run-manager";
+import { CaptureHistoryStore } from "./capture-history-store.js";
+const roots: string[] = [];
+afterEach(async () => { for (const root of roots.splice(0)) { await rm(stateRootForVault(root), { recursive: true, force: true }); await rm(root, { recursive: true, force: true }); } });
+it("keeps a changed default across store restarts and capture-history removal, isolated per library", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "twh-capture-preferences-")); roots.push(root);
+  const store = new CaptureHistoryStore(root);
+  await store.setDefault("demo", "我的日记/今年");
+  await rm(path.join(stateRootForVault(root), "captures"), { recursive: true, force: true });
+  expect((await new CaptureHistoryStore(root).list("demo")).defaultFolder).toBe("我的日记/今年");
+  expect((await store.list("other")).defaultFolder).toBe("随手记");
+  await store.put("demo", { id: "anonymous", revision: 0, text: "匿名草稿", folder: "临时目录", diaryDate: "2026-10-28" });
+  expect((await store.list("demo")).defaultFolder).toBe("我的日记/今年");
+});
+it("reads legacy choices without replacing them and gives explicit new settings precedence", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "twh-legacy-preferences-")); roots.push(root);
+  const file = path.join(stateRootForVault(root), "captures", createHash("sha256").update("demo").digest("hex") + ".json");
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, JSON.stringify({ entries: [], deleted: [], defaultFolder: "旧目录" }));
+  const store = new CaptureHistoryStore(root);
+  expect((await store.list("demo")).defaultFolder).toBe("旧目录");
+  await rm(file);
+  expect((await new CaptureHistoryStore(root).list("demo")).defaultFolder).toBe("旧目录");
+  await store.setDefault("demo", "新目录");
+  expect((await new CaptureHistoryStore(root).list("demo")).defaultFolder).toBe("新目录");
+  await expect(store.setDefault("demo", "../unsafe")).rejects.toThrow();
+});

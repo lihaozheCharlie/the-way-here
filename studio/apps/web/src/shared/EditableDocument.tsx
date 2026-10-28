@@ -1,3 +1,4 @@
+import { useUpdateGuard } from "./update-readiness";
 import React, { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { WikiPage } from "@the-way-here/shared";
 import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor";
@@ -56,6 +57,7 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   const documentBodyRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef<{ line: number; top: number } | null>(null);
   const [activeLine, setActiveLine] = useState(1);
+  useUpdateGuard(() => !savingRef.current && !renamingRef.current && pendingRef.current === null && draftRef.current === lastSavedRef.current && fileNameRef.current === lastSavedFileNameRef.current);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -199,8 +201,8 @@ function EditableDocumentEditor({ page, variant = "reader", startEditing = false
   useEffect(() => {
     if (fileName === lastSavedFileNameRef.current) return;
     noteSave("idle", "文件名有未保存更改");
-    const timer = window.setTimeout(() => void persistFileName(fileName), 1000);
-    return () => window.clearTimeout(timer);
+    // Renaming changes the page identity and may remount this editor. Commit
+    // only on blur/Enter, never while the user is moving the caret or composing.
   }, [fileName]);
 
   function changeDraft(value: string) {

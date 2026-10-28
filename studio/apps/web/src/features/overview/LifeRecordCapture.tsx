@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "../../shared/preference-storage";
 import { useEffect, useId, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { isTerminalRunStatus, type WikiRun } from "@the-way-here/shared";
@@ -23,7 +24,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
   const [source, setSource] = useState<"write" | "photo">("write");
   const [photoCount, setPhotoCount] = useState(0);
   const photoFolderKey = `photo-capture.folder.${knowledgeBaseId}`;
-  const [photoDefaultFolder, setPhotoDefaultFolder] = useState(() => localStorage.getItem(photoFolderKey) || "照片记忆");
+  const [photoDefaultFolder, setPhotoDefaultFolder] = useState(() => readPreference(photoFolderKey) || "照片记忆");
   const [photoFolder, setPhotoFolder] = useState(photoDefaultFolder);
   const [photoStatus, setPhotoStatus] = useState(tr("照片库不会被改动，也不会发送给 AI"));
   const photosBridge = !standalone ? photoLibraryBridge() : undefined;
@@ -88,7 +89,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
     try {
       const savedDraft = await capture.flush();
       const page = await api<{ id: string }>("/api/capture/original", { method: "POST", body: JSON.stringify({
-        knowledgeBaseId, id: draft.id, revision: savedDraft?.revision || draft.revision, text: draft.text, folder: draft.folder, diaryDate: draft.diaryDate,
+        knowledgeBaseId, id: draft.id, revision: savedDraft?.revision || draft.revision, text: draft.text, folder: draft.folder, diaryDate: draft.diaryDate, diaryTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }) });
       setSavedOriginalId(page.id);
       capture.reset();
@@ -103,7 +104,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       const savedDraft = await capture.flush();
       const next = await api<WikiRun>("/api/runs", { method: "POST", body: JSON.stringify({
         knowledgeBaseId, mode: "read", title: "整理当天日记", sourceModule: standalone ? "随手记" : "此刻", prompt: "请将原话整理成当天的日记。", displayPrompt: draft.text,
-        outputTarget: { kind: "life-record", label: "随手记", originalText: draft.text, diaryDate: draft.diaryDate, folder: draft.folder, captureId: draft.id, captureRevision: savedDraft?.revision || draft.revision },
+        outputTarget: { kind: "life-record", label: "随手记", originalText: draft.text, diaryDate: draft.diaryDate, diaryTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, folder: draft.folder, captureId: draft.id, captureRevision: savedDraft?.revision || draft.revision },
       }) });
       localStorage.setItem(`${key}.run`, next.id); setRunId(next.id); setRun(next);
     } catch (reason) { setError(reason instanceof Error ? reason.message : tr("发送失败，原话已保留。")); }
@@ -157,7 +158,7 @@ export function LifeRecordCapture({ knowledgeBaseId, standalone = false }: { kno
       return <NavLink key={change.path} to={pageHref(pageId)} state={returnContextFor(standalone ? "/capture" : "/")}>{t("理解有更新")}</NavLink>;
     })}</p>}
     {dialog === "history" && <CaptureHistoryDialog photoHistory={!standalone ? <PhotoCaptureHistory knowledgeBaseId={knowledgeBaseId} closeHistory={() => setDialog(null)} /> : undefined} entries={capture.history} restore={capture.restore} remove={capture.remove} close={() => setDialog(null)} />}
-    {dialog === "photo-folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={photoFolder} defaultFolder={photoDefaultFolder} choose={async (folder, makeDefault) => { setPhotoFolder(folder); if (makeDefault) { localStorage.setItem(photoFolderKey, folder); setPhotoDefaultFolder(folder); } }} close={() => setDialog(null)} />}
+    {dialog === "photo-folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={photoFolder} defaultFolder={photoDefaultFolder} choose={async (folder, makeDefault) => { setPhotoFolder(folder); if (makeDefault) { writePreference(photoFolderKey, folder); setPhotoDefaultFolder(folder); } }} close={() => setDialog(null)} />}
     {dialog === "folder" && <CaptureFolderDialog knowledgeBaseId={knowledgeBaseId} folder={draft.folder} defaultFolder={capture.defaultFolder} choose={capture.chooseFolder} close={() => setDialog(null)} />}
   </section>;
 }

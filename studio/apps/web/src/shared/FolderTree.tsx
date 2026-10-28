@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "./preference-storage";
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { SourceFolderSummary, VaultInfo } from "@the-way-here/shared";
@@ -70,7 +71,7 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
       loadedRef.current = new Set(); setLoaded(new Set()); setNodes([]); setError("");
       setEditing(undefined); setMenu(undefined);
       let saved: string[] = [];
-      try { const value = JSON.parse(localStorage.getItem(storageKey) || "[]"); if (Array.isArray(value)) saved = value.filter(p => typeof p === "string"); } catch { /* Optional preference. */ }
+      try { const value = JSON.parse(readPreference(storageKey) || "[]"); if (Array.isArray(value)) saved = value.filter(p => typeof p === "string"); } catch { /* Optional preference. */ }
       expanded = new Set([...saved, ...folderAncestors(selected)]); setOpen(expanded);
     }
     const restoreGeneration = generation.current;
@@ -94,7 +95,7 @@ export function FolderTree({ selected, onSelect, revision = 0, counts, total = 0
   useEffect(() => { const ancestors = folderAncestors(selected); setOpen(current => new Set([...current, ...ancestors])); if (loadedRef.current.has("")) ancestors.forEach(path => void load(path)); setFocused(selected); }, [selected]);
   function toggle(path: string) {
     const next = new Set(open); if (next.has(path)) next.delete(path); else { next.add(path); void load(path, true); } setOpen(next);
-    try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch { /* Optional preference. */ }
+    try { writePreference(storageKey, JSON.stringify([...next])); } catch { /* Optional preference. */ }
   }
   function create(parent: string) { if (!parent && !internalOnly) return; setEditing({ parent }); setName(""); setError(""); if (parent) { setOpen(current => new Set([...current, parent])); void load(parent); } }
   const previousToken = useRef(createToken);

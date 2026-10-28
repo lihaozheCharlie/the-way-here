@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "./preference-storage";
 import { useEffect, useState, type ReactNode } from "react";
 import type { WikiPage } from "@the-way-here/shared";
 import { Icon } from "./ui";
@@ -9,7 +10,7 @@ import { useDemoLabels, useI18n } from "./i18n";
 
 export function DocumentFrame({ variant, showIdentity = false, showOutline, markdown, headingPrefix, children, relations, onNavigate, activeLine, readOnly = false, recordStyle = false, recordHeader }: { variant: "reader" | "preview"; showIdentity?: boolean; showOutline: boolean; markdown: string; headingPrefix: string; children: ReactNode; relations?: ReactNode; onNavigate?: (line: number) => void; activeLine?: number; readOnly?: boolean; recordStyle?: boolean; recordHeader?: ReactNode }) {
   const preferenceKey = recordStyle ? "the-way-here.record-outline-open" : "the-way-here.outline-pinned";
-  const [pinned, setPinned] = useState(() => { try { return recordStyle ? localStorage.getItem(preferenceKey) !== "false" : localStorage.getItem(preferenceKey) === "true"; } catch { return recordStyle; } });
+  const [pinned, setPinned] = useState(() => { try { return recordStyle ? readPreference(preferenceKey) !== "false" : readPreference(preferenceKey) === "true"; } catch { return recordStyle; } });
   const [compact, setCompact] = useState(() => typeof window !== "undefined" && window.innerWidth < 980);
   const hasOutline = recordStyle ? markdownOutline(markdown, headingPrefix).some(item => item.level >= 2) : markdownOutline(markdown, headingPrefix).length > 1;
   const navigationRelations = recordStyle ? undefined : relations;
@@ -18,7 +19,7 @@ export function DocumentFrame({ variant, showIdentity = false, showOutline, mark
   return <section className={`editable-document document-surface${recordStyle ? " life-record-document" : ""} editable-document--${variant}${showIdentity ? "" : " knowledge-document"}${auxiliaryVisible ? " has-outline" : ""}${pinned && (!compact || recordStyle) && auxiliaryVisible ? " outline-pinned" : ""}${compact ? " document-compact" : ""}`}>
     {recordHeader}
     <div className="document-content">{children}</div>
-    {auxiliaryVisible && <div className="document-navigation-host"><DocumentOutline markdown={markdown} headingPrefix={headingPrefix} recordStyle={recordStyle} onNavigate={onNavigate} activeLine={activeLine} pinned={pinned && (!compact || recordStyle)} compact={compact} readOnly={readOnly} relations={navigationRelations} onPin={() => { setPinned(value => { try { localStorage.setItem(preferenceKey, String(!value)); } catch { /* Preference is optional. */ } return !value; }); }} /></div>}
+    {auxiliaryVisible && <div className="document-navigation-host"><DocumentOutline markdown={markdown} headingPrefix={headingPrefix} recordStyle={recordStyle} onNavigate={onNavigate} activeLine={activeLine} pinned={pinned && (!compact || recordStyle)} compact={compact} readOnly={readOnly} relations={navigationRelations} onPin={() => { setPinned(value => { try { writePreference(preferenceKey, String(!value)); } catch { /* Preference is optional. */ } return !value; }); }} /></div>}
   </section>;
 }
 

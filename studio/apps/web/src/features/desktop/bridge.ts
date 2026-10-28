@@ -2,7 +2,8 @@ export type DesktopCommand = "search" | "inspector" | "capture" | "settings" | "
 import type { PhotoLibraryAuthorization, PhotoLibraryFilters, PhotoLibraryImage, PhotoLibrarySearchInput, PhotoLibrarySearchResult } from "@the-way-here/shared";
 export interface DesktopUpdateState {
   version: string;
-  status: 'idle' | 'disabled' | 'checking' | 'available' | 'current' | 'unsupported' | 'incompatible' | 'error';
+  status: 'idle' | 'disabled' | 'checking' | 'available' | 'current' | 'unsupported' | 'incompatible' | 'error' | 'downloading' | 'ready' | 'installing' | 'download-error' | 'install-error';
+  progress?: number;
   latestVersion?: string;
   minimumSystemVersion?: string;
   size?: number;
@@ -10,10 +11,16 @@ export interface DesktopUpdateState {
 }
 export interface DesktopBridge {
   platform: string;
+  onPreferenceChange?: (callback: (key: string) => void) => () => void;
+  readPreference?: (key: string) => string | null;
+  writePreference?: (key: string, value: string, source?: "user" | "legacy-import") => string;
   isMacAppStore?: boolean;
   getUpdateState?: () => Promise<DesktopUpdateState>;
   checkForUpdates?: () => Promise<DesktopUpdateState>;
   downloadUpdate?: () => Promise<void>;
+  installUpdate?: () => Promise<boolean>;
+  onPrepareUpdate?: (prepare: () => Promise<boolean>) => () => void;
+  onResumeAfterUpdate?: (callback: () => void) => () => void;
   onUpdateState?: (callback: (state: DesktopUpdateState) => void) => () => void;
   connectCodexCLI?: () => Promise<boolean>;
   openPrivacy?: () => Promise<void>;

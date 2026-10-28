@@ -1,10 +1,16 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
+  onPreferenceChange: (callback) => { const listener = (_event, key) => callback(key); ipcRenderer.on('desktop:preference-changed', listener); return () => ipcRenderer.removeListener('desktop:preference-changed', listener); },
+  readPreference: (key) => { const result = ipcRenderer.sendSync('desktop:preference', 'get', key); if (result.error) throw new Error(result.error); return result.value; },
+  writePreference: (key, value, source = 'user') => { const result = ipcRenderer.sendSync('desktop:preference', 'set', key, value, source); if (result.error) throw new Error(result.error); return result.value; },
   isMacAppStore: process.argv.includes('--twh-mas'),
   getUpdateState: () => ipcRenderer.invoke('desktop:update-state'),
   checkForUpdates: () => ipcRenderer.invoke('desktop:update-check'),
   downloadUpdate: () => ipcRenderer.invoke('desktop:update-download'),
+  installUpdate: () => ipcRenderer.invoke('desktop:update-install'),
+  onPrepareUpdate: (prepare) => { const listener = async (_event, token) => { let ready = false; try { ready = await prepare() === true; } catch {} await ipcRenderer.invoke('desktop:update-prepared', token, ready).catch(() => {}); }; ipcRenderer.on('desktop:update-prepare', listener); return () => ipcRenderer.removeListener('desktop:update-prepare', listener); },
+  onResumeAfterUpdate: (callback) => { const listener = () => callback(); ipcRenderer.on('desktop:update-resume', listener); return () => ipcRenderer.removeListener('desktop:update-resume', listener); },
   onUpdateState: (callback) => { const listener = (_event, state) => callback(state); ipcRenderer.on('desktop:update-state', listener); return () => ipcRenderer.removeListener('desktop:update-state', listener); },
   connectCodexCLI: () => ipcRenderer.invoke('desktop:connect-codex'),
   openPrivacy: () => ipcRenderer.invoke('desktop:privacy'),

@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "../../shared/preference-storage";
 import { useEffect, useRef, useState } from "react";
 import type { AgentGlobalSettings, AgentProviderPreset, AgentRuntimeDescriptor, UpdateAgentGlobalSettings } from "@the-way-here/shared";
 import { api } from "../../api";
@@ -27,7 +28,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
   const codex = runtimes?.find(runtime => runtime.id === "codex");
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"setup" | "leave">("setup");
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem(dismissedKey) === "true");
+  const [dismissed, setDismissed] = useState(() => readPreference(dismissedKey) === "true");
   const [neverRemind, setNeverRemind] = useState(false);
   const [mode, setMode] = useState<"codex" | "api">("api");
   const [providerId, setProviderId] = useState("deepseek");
@@ -40,7 +41,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
   const configured = Boolean(settings?.thirdParty.apiKeyConfiguredProviders.length);
 
   useEffect(() => {
-    if (!initialOpen || !ready || configured || localStorage.getItem(confirmedKey) === "true" || dismissed) return;
+    if (!initialOpen || !ready || configured || readPreference(confirmedKey) === "true" || dismissed) return;
     setMode(codex?.available ? "codex" : "api");
     const timer = window.setTimeout(() => setOpen(true), 600);
     return () => window.clearTimeout(timer);
@@ -48,7 +49,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
 
   useEffect(() => {
     const show = () => {
-      if (configured || dismissed || localStorage.getItem(confirmedKey) === "true") return;
+      if (configured || dismissed || readPreference(confirmedKey) === "true") return;
       setMode(codex?.available ? "codex" : "api");
       setOpen(true);
     };
@@ -77,7 +78,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
 
   const postpone = () => {
     if (neverRemind) {
-      localStorage.setItem(dismissedKey, "true");
+      writePreference(dismissedKey, "true");
       setDismissed(true);
     }
     setKey("");
@@ -110,7 +111,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
         },
       };
       await api("/api/agent-settings", { method: "PUT", body: JSON.stringify(payload) });
-      localStorage.setItem(confirmedKey, "true");
+      writePreference(confirmedKey, "true");
       setKey("");
       setStep("setup");
       setOpen(false);
@@ -122,7 +123,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
     }
   }
 
-  if (!ready || configured || localStorage.getItem(confirmedKey) === "true") return null;
+  if (!ready || configured || readPreference(confirmedKey) === "true") return null;
   return <>
     {dismissed ? <div className="model-onboarding-strip" role="status"><Icon name="info" size={15} />{t("尚未配置 AI 模型，部分功能不可用")}<button type="button" onClick={onOpenPreferences}>{t("去配置")}</button></div> : null}
     {open ? <div className="model-onboarding-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) requestClose(); }}>

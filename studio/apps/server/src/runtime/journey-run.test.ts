@@ -46,8 +46,11 @@ describe("journey output orchestration", () => {
     const run = await coordinator.start({ knowledgeBaseId: "demo", mode: "read", prompt: "聊聊这段经历", outputTarget: target });
     expect(run.outputTarget).toMatchObject({ kind: "journey-report", expectedContentHash: expect.any(String) });
     await knowledge.activate("other");
+    expect(await coordinator.list()).toHaveLength(0);
+    expect(await coordinator.hasAnyActiveRuns()).toBe(true);
     finish(run);
     await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("completed"));
+    expect(await coordinator.hasAnyActiveRuns()).toBe(false);
     const saved = await coordinator.get(run.id);
     expect(saved).toMatchObject({ knowledgeBaseId: "demo", result: { finalAnswer: "记下来了。", outputSavedAt: expect.any(String) } });
     expect(await readFile(path.join(root, reportPath), "utf8")).toBe(original.replace("旧草稿", "用户确认的匿名出游。"));

@@ -1,3 +1,4 @@
+import { useUpdateGuard } from "../../shared/update-readiness";
 import { tr } from "../../shared/i18n";
 import { RECORDING_LIMIT_MS } from "./recording-limit";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -14,6 +15,7 @@ export function CaptureVoice({ onText, onActive, onProgress, disabled, hasText, 
   const transcript = useRef(""), pausedRef = useRef(false), seconds = useRef(0);
   const callbacks = useRef({ onProgress, onText, onActive }); callbacks.current = { onProgress, onText, onActive };
   const live = useRef(true), owned = useRef(false), active = useRef(false), pending = useRef(false), ended = useRef(false), discarded = useRef(false), backed = useRef(false);
+  useUpdateGuard(() => !owned.current && !pending.current && !active.current);
   const stopRef = useRef<(discard?: boolean) => Promise<void>>(async () => {});
   useEffect(() => {
     live.current = true;

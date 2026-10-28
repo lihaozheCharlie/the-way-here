@@ -1,10 +1,14 @@
+import { readWindowBounds, rememberWindowBounds } from './window-preferences.mjs';
+import { UserPreferences } from './user-preferences.mjs';
 import { DesktopRuntime } from './runtime-process.mjs';
 import { assetResponse } from './asset-response.mjs';
 import { prepareWorkspace, saveWorkspace } from './workspace.mjs';
 import { speechSession } from "./speech.mjs";
 import { PhotoLibrary } from './photo-library.mjs';
 import { UpdateChecker } from './updates.mjs';
-import { app, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, shell, dialog, Notification, utilityProcess, session, systemPreferences, net, safeStorage } from 'electron';
+import { createMacInstaller } from './update-installer.mjs';
+import { UpdateReadiness } from './update-readiness.mjs';
+import { app, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, shell, dialog, Notification, utilityProcess, session, systemPreferences, net, safeStorage, screen } from 'electron';
 import { ScopedAccess } from './scoped-access.mjs';
 import { prepareMasCodexHome } from './codex-home.mjs';
 import { attachSecretService } from './secret-service.mjs';
@@ -18,20 +22,34 @@ import { t, getLocale, setLocale, readPersistedLocale, persistLocale } from './l
 const here = path.dirname(fileURLToPath(import.meta.url));
 const studio = path.resolve(here, '../../..');
 const windows = new Set();
+let userPreferences;
 let origin, runtimeClient, workspace, worker, tray, speech, scopes, quitting = false, speechStarting = false;
 let serviceRestart = Promise.resolve();
 let distribution = {};
-let updates, updateTimer, lastUpdateCheck = 0;
+let updates, updateTimer, updateInterval, installInterval, lastUpdateCheck = 0;
+const updateReadiness = new UpdateReadiness();
 function checkUpdatesAutomatically() {
-  if (!updates || Date.now() - lastUpdateCheck < 6 * 60 * 60 * 1000) return;
+  if (!updates || Date.now() - lastUpdateCheck < 15 * 60 * 1000) return;
   lastUpdateCheck = Date.now(); void updates.check();
 }
 async function showUpdateCheck() {
   const state = await updates.check();
+  if (['downloading','ready','installing','download-error','install-error'].includes(state.status)) { openWindow('/preferences', 'settings'); return; }
   const available = state.status === 'available';
   const message = available ? t('发现新版本 ${version}', { version:state.latestVersion }) : state.status === 'current' ? t('当前已是最新版本') : state.status === 'incompatible' ? t('新版需要 macOS ${version} 或更新版本', { version:state.minimumSystemVersion }) : t('暂时无法检查更新，请稍后重试。');
-  const result = await dialog.showMessageBox({ type:'info', message, detail:available ? (state.notes?.[getLocale()] || state.notes?.zh || '') + '\n\n' + t('点击后将在浏览器下载安装包。退出应用后替换安装，已有资料保留。') : `The Way Here ${state.version}`, buttons:available ? [t('下载更新'),t('稍后')] : [t('好')], cancelId:available ? 1 : 0 });
-  if (available && result.response === 0) await shell.openExternal(updates.downloadURL());
+  const result = await dialog.showMessageBox({ type:'info', message, detail:available ? (state.notes?.[getLocale()] || state.notes?.zh || '') + '\n\n' + t('下载完成后将自动重启并安装更新。') : `The Way Here ${state.version}`, buttons:available ? [t('下载更新'),t('稍后')] : [t('好')], cancelId:available ? 1 : 0 });
+  if (available && result.response === 0) await updates.download();
+}
+async function safeToInstallUpdate() {
+  try {
+    if (speech || speechStarting || !runtimeClient || runtimeClient.closed || runtimeClient.pending.size) return false;
+    const response = await runtimeClient.request(new Request(origin + '/api/updates/readiness', { signal:AbortSignal.timeout(5000) }));
+    if (!response.ok || (await response.json()).ready !== true) return false;
+    if (!await updateReadiness.prepare(windows)) return false;
+    const check = await runtimeClient.request(new Request(origin + '/api/updates/readiness', { signal:AbortSignal.timeout(5000) }));
+    if (speech || speechStarting || !check.ok || (await check.json()).ready !== true || runtimeClient.pending.size) { updateReadiness.resume(windows); return false; }
+    return true;
+  } catch { updateReadiness.resume(windows); return false; }
 }
 let masCodex;
 const speechRecordings = new WeakMap();
@@ -56,6 +74,8 @@ function photosFor(sender) {
   return photoLibraries.get(sender);
 }
 app.setName('The Way Here');
+// Keep Chromium storage in the same explicitly selected profile as app state.
+app.setPath('sessionData', app.getPath('userData'));
 if (!app.requestSingleInstanceLock()) app.exit(0);
 app.on('second-instance', () => showMain());
 function showMain() {
@@ -66,11 +86,13 @@ function showMain() {
 }
 function command(value) { (BrowserWindow.getFocusedWindow() || [...windows][0])?.webContents.send('desktop:command', value); }
 function openWindow(route, kind = 'reader') {
+  if (quitting) return;
   route = localRoute(route);
   if (['settings', 'capture'].includes(kind)) { const existing = [...windows].find((win) => win.kind === kind); if (existing) { existing.show(); existing.focus(); return; } }
   const compact = kind === 'capture';
-  const win = new BrowserWindow({ title: 'The Way Here', width: compact ? 420 : kind === 'settings' ? 800 : 1380, height: compact ? 580 : 900, minWidth: compact ? 380 : kind === 'settings' ? 700 : 900, minHeight:480, alwaysOnTop:compact, skipTaskbar:compact, show:false, titleBarStyle:'hiddenInset', trafficLightPosition:{x:14,y:12}, backgroundColor:'#f3f7fd', webPreferences:{ preload:path.join(here,'preload.cjs'), additionalArguments:process.mas ? ['--twh-mas'] : [], sandbox:true, contextIsolation:true, nodeIntegration:false, spellcheck:true, backgroundThrottling:kind !== 'main' } });
+  const win = new BrowserWindow({ title: 'The Way Here', width: compact ? 420 : kind === 'settings' ? 800 : 1380, height: compact ? 580 : 900, ...readWindowBounds(userPreferences, workspace, kind, screen.getAllDisplays().map(display => display.workArea)), minWidth: compact ? 380 : kind === 'settings' ? 700 : 900, minHeight:480, alwaysOnTop:compact, skipTaskbar:compact, show:false, titleBarStyle:'hiddenInset', trafficLightPosition:{x:14,y:12}, backgroundColor:'#f3f7fd', webPreferences:{ preload:path.join(here,'preload.cjs'), additionalArguments:process.mas ? ['--twh-mas'] : [], sandbox:true, contextIsolation:true, nodeIntegration:false, spellcheck:true, backgroundThrottling:kind !== 'main' } });
   win.kind = kind; windows.add(win);
+  rememberWindowBounds(win, userPreferences, workspace, kind);
   win.webContents.setWindowOpenHandler(({url}) => { if (trustedSender(url, origin)) openWindow(new URL(url).pathname + new URL(url).search); else if (allowedExternal(url)) void shell.openExternal(url); return {action:'deny'}; });
   win.webContents.on('will-navigate', (event,url) => { if (!trustedSender(url,origin)) { event.preventDefault(); if (allowedExternal(url)) void shell.openExternal(url); } });
   win.once('ready-to-show', () => win.show());
@@ -124,10 +146,20 @@ async function connectCodex() {
 }
 
 function registerIPC() {
+  ipcMain.on('desktop:preference', (event, operation, key, value, source) => {
+    try {
+      if (!trustedSender(event.senderFrame?.url, origin)) throw new Error('不受信任的页面');
+      if (!['get', 'set'].includes(operation)) throw new Error('Invalid preference operation');
+      event.returnValue = { value: operation === 'get' ? userPreferences.get(workspace, key) : userPreferences.set(workspace, key, value, source) };
+      if (operation === 'set') for (const win of windows) if (!win.isDestroyed()) win.webContents.send('desktop:preference-changed', key);
+    } catch (error) { event.returnValue = { error: error.message }; }
+  });
   function handle(name, fn, withSender = false) { ipcMain.handle(name, (event,...args) => { if (!trustedSender(event.senderFrame?.url,origin)) throw new Error(t('不受信任的页面')); return withSender ? fn(event.sender, ...args) : fn(...args); }); }
   handle('desktop:update-state', () => updates.state);
   handle('desktop:update-check', () => updates.check());
-  handle('desktop:update-download', () => shell.openExternal(updates.downloadURL()));
+  handle('desktop:update-download', () => updates.download());
+  handle('desktop:update-install', () => updates.installWhenReady());
+  handle('desktop:update-prepared', (sender, token, ready) => { if (typeof token !== 'string' || !updateReadiness.reply(sender.id, token, ready)) sender.send('desktop:update-resume'); }, true);
   handle('desktop:set-locale', (next) => {
     const chosen = next === 'en' ? 'en' : 'zh';
     setLocale(chosen);
@@ -242,6 +274,7 @@ app.whenReady().then(async () => {
     try { distribution = JSON.parse(await readFile(path.join(process.resourcesPath,'release-metadata.json'),'utf8')); }
     catch (error) { if (process.mas || error.code !== 'ENOENT') throw error; }
   }
+  userPreferences = new UserPreferences(app.getPath('userData'));
   scopes = new ScopedAccess(app, app.getPath('userData'), !!process.mas);
   await scopes.restore();
   if (scopes.unavailable.length && !app.commandLine.hasSwitch('diagnostics')) await dialog.showMessageBox({type:'warning',message:t('部分目录需要重新授权'),detail:t('请通过“打开文件夹”重新选择失效目录。原始资料不会被删除。'),buttons:[t('继续')]});
@@ -263,12 +296,19 @@ app.whenReady().then(async () => {
   const iconPath = app.isPackaged ? path.join(process.resourcesPath,'native/app-icon.png') : path.join(studio,'apps/desktop/dist/app-icon.png');
   app.dock?.setIcon(nativeImage.createFromPath(iconPath));
   app.setAboutPanelOptions({ applicationName: 'The Way Here', iconPath });
-  updates = new UpdateChecker({ version:app.getVersion(), arch:process.arch, systemVersion:process.getSystemVersion(), enabled:app.isPackaged && !process.mas, fetch:(url, options) => net.fetch(url, { ...options, bypassCustomProtocolHandlers:true }), onChange:state => { for (const win of windows) if (!win.isDestroyed()) win.webContents.send('desktop:update-state', state); } });
+  const installer = createMacInstaller({ onError:() => updates?.installationFailed() });
+  updates = new UpdateChecker({ version:app.getVersion(), arch:process.arch, systemVersion:process.getSystemVersion(), enabled:app.isPackaged && !process.mas, installer, canInstall:safeToInstallUpdate, fetch:(url, options) => net.fetch(url, { ...options, bypassCustomProtocolHandlers:true }), onChange:state => {
+    if (state.status === 'install-error') { quitting = false; updateReadiness.resume(windows); }
+    if (state.status === 'installing') quitting = true;
+    for (const win of windows) if (!win.isDestroyed()) win.webContents.send('desktop:update-state', state);
+  } });
   updateTimer = setTimeout(checkUpdatesAutomatically, 10_000); updateTimer.unref();
+  updateInterval = setInterval(checkUpdatesAutomatically, 60_000); updateInterval.unref();
+  installInterval = setInterval(() => { if (updates.state.status === 'ready') void updates.installWhenReady(); }, 2000); installInterval.unref();
   registerIPC(); installMenu(); openWindow('/','main');
 }).catch(async (error) => { console.error('Desktop startup failed:',error); if (!app.commandLine.hasSwitch('diagnostics')) { const result = await dialog.showMessageBox({type:'error',message:t('暂时无法打开知识空间'),detail:error.message,buttons:[t('退出'),t('打开已有知识空间…')],defaultId:0,cancelId:0}); if (result.response === 1) await openExistingWorkspace(); } app.quit(); });
 app.on('activate',showMain);
-app.on('before-quit', () => { quitting = true; clearTimeout(updateTimer); updates?.dispose(); speech?.cancel(); for (const library of photoLibraries.values()) library.close(); photoLibraries.clear(); worker?.kill(); scopes?.close(); });
+app.on('before-quit', () => { quitting = true; clearTimeout(updateTimer); clearInterval(updateInterval); clearInterval(installInterval); updateReadiness.dispose(); updates?.dispose(); speech?.cancel(); for (const library of photoLibraries.values()) library.close(); photoLibraries.clear(); worker?.kill(); scopes?.close(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 app.whenReady().then(() => { globalShortcut.register('CommandOrControl+Shift+N', () => { if (origin) openWindow('/capture', 'capture'); }); });

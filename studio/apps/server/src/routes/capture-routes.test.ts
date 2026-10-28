@@ -1,3 +1,4 @@
+import { captureCalendarDate } from "../modules/content/capture-dates.js";
 import { mkdtemp, realpath, rm, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -66,7 +67,8 @@ it("saves original words into life records without calling a model", async () =>
   const reply = await app.inject({ method: "POST", url: "/api/capture/original", payload: { ...draft, revision: saved.json().revision } });
   expect(reply.statusCode).toBe(201);
   const markdown = await readFile(path.join(root, reply.json().relativePath), "utf8");
-  expect(markdown).toBe("# 2026-10-24 原文\n\n原话留在这里。\n");
+  expect(markdown).toBe(`# ${captureCalendarDate(new Date())} 原文\n\n原话留在这里。\n`);
+  expect(reply.json().relativePath).toContain(captureCalendarDate(new Date()));
   const history = await app.inject({ method: "GET", url: `/api/capture/history?knowledgeBaseId=${id}` });
   expect(history.json().entries[0]).toMatchObject({ status: "saved", text: draft.text, pageId: reply.json().id });
   expect((await app.inject({ method: "POST", url: "/api/capture/original", payload: { ...draft, revision: saved.json().revision } })).statusCode).toBe(409);

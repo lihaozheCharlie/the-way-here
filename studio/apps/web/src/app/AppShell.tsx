@@ -6,7 +6,8 @@ import { useDesktopNotifications } from "../features/desktop/use-desktop-notific
 import { CommandPalette } from "../features/desktop/CommandPalette";
 import { Preferences } from "../features/desktop/Preferences";
 import { Privacy } from "../features/desktop/Privacy";
-import { AppUpdateBanner } from "../features/desktop/AppUpdates";
+import { AppUpdateSidebar } from "../features/desktop/AppUpdates";
+import { useUpdatePreparation } from "../shared/update-readiness";
 import { ModelOnboarding } from "../features/desktop/ModelOnboarding";
 import { QuickCapture } from "../features/desktop/QuickCapture";
 import { useInspector } from "../features/desktop/InspectorContext";
@@ -102,6 +103,7 @@ function GlobalKnowledgeBaseSwitcher({ vault, disabled, onChange, onCreate, onDe
 }
 
 export function AppShell({ revision }: { revision: number }) {
+  useUpdatePreparation();
   const { t, locale } = useI18n();
   const { data: vault } = useApi<VaultInfo>("/api/vault", revision);
   const initialKnowledgeBase = useRef<string | undefined>(undefined);
@@ -313,13 +315,12 @@ export function AppShell({ revision }: { revision: number }) {
             {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{t(child.label)}</NavLink>)}</div> : null}
           </React.Fragment>)}
         </nav>
-        <div className="desktop-sidebar-bottom"><button onClick={openPreferences}><Icon name="controls" size={16} />{t("偏好设置")}</button></div>
+        <div className="desktop-sidebar-bottom"><div className="desktop-settings-row"><button onClick={openPreferences}><Icon name="controls" size={16} /><span>{t("偏好设置")}</span></button><AppUpdateSidebar /></div></div>
       </aside>
       <main className="main-area" id="main-content" tabIndex={-1}>
         {knowledgeBaseSwitching ? <div className="knowledge-base-transition" role="status" aria-live="polite"><span />{t("正在打开「${name}」…", { name: switchingKnowledgeBaseName })}</div> : null}
         {knowledgeBaseError ? <div className="knowledge-base-error" role="alert">{tr(knowledgeBaseError)}</div> : null}
         <div className="page-frame">
-          {!utilityWindow && !detached ? <AppUpdateBanner /> : null}
           {!utilityWindow && !detached ? <ModelOnboarding revision={revision} initialOpen={location.pathname === "/"} onOpenPreferences={openPreferences} /> : null}
           {!utilityWindow && vault?.knowledgeBaseId.toLowerCase() === "demo" ? <DemoKnowledgeBaseNotice
             hasPersonalKnowledgeBase={Boolean(personalKnowledgeBase)}

@@ -4,6 +4,7 @@ import type { RunCoordinator } from "../runtime/run-coordinator.js";
 import { RunRequestError, type StartRunInput } from "../services/run-request.js";
 
 export function registerRunRoutes(app: FastifyInstance, runs: RunCoordinator): void {
+  app.get("/api/updates/readiness", async () => ({ ready: !await runs.hasAnyActiveRuns() }));
   app.get("/api/runs", async () => runs.list());
   app.get<{ Params: { id: string } }>("/api/runs/:id", async (request, reply) => (await runs.get(request.params.id)) || reply.code(404).send({ error: "任务不存在" }));
   app.delete<{ Params: { id: string } }>("/api/runs/:id", async (request, reply) => handleRun(reply, () => runs.deleteConversation(request.params.id)));

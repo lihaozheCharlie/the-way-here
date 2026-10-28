@@ -1,3 +1,4 @@
+import { useUpdateGuard } from "../../shared/update-readiness";
 import { tr } from "../../shared/i18n";
 import { useEffect, useRef, useState } from "react";
 import type { CaptureEntry, CaptureHistory } from "@the-way-here/shared";
@@ -20,6 +21,7 @@ export function useCaptureDraft(knowledgeBaseId: string, legacyKey: string) {
   const live = useRef(true), queue = useRef<Promise<unknown>>(Promise.resolve());
   const revisions = useRef(new Map<string, number>([[draft.id, draft.revision]]));
   const stored = useRef(new Map<string, string>());
+  useUpdateGuard(async () => { if (!ready) return false; await flush(); return true; });
   const persisted = useRef(new Map<string, CaptureEntry>());
   function fingerprint(value: Draft) { return JSON.stringify([value.text, value.folder, value.diaryDate]); }
   async function refresh() {

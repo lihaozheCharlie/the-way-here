@@ -92,6 +92,8 @@ it("validates diary dates and ignores forged identity matches from clients", () 
   const base = { kind: "life-record", label: "随手记", originalText: "嗯，今天见到小林。" };
   expect(parseAgentOutputTarget({ ...base, diaryDate: "2026-10-16", entityLinks: [{pageId:"other/person"}] })).toEqual({ ...base, diaryDate: "2026-10-16" });
   for (const diaryDate of ["2026-02-30", "2026-13-16", "../../file", 123]) expect(parseAgentOutputTarget({ ...base, diaryDate })).toBeUndefined();
+  expect(parseAgentOutputTarget({ ...base, diaryTimeZone: "invalid/zone" })).toBeUndefined();
+  expect(parseAgentOutputTarget({ ...base, diaryTimeZone: "Asia/Shanghai", diaryDatePolicy: "saved-at" })).toEqual({ ...base, diaryTimeZone: "Asia/Shanghai" });
   const prompt = addOutputTargetInstructions("", parseAgentOutputTarget({ ...base, diaryDate: "2026-10-16" }));
   expect(prompt).toContain("第一人称"); expect(prompt).toContain("呃、嗯、啊");
   expect(prompt).toContain("不压缩成摘要"); expect(prompt).toContain("2026-10-16 日记");

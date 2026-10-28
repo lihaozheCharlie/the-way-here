@@ -1,3 +1,4 @@
+import { captureCalendarDate } from "./capture-dates.js";
 import { mkdir, readFile, realpath, writeFile, rename } from "node:fs/promises";
 import path from "node:path";
 import { cacheRootForVault } from "@the-way-here/run-manager";
@@ -16,16 +17,16 @@ export class CaptureRecordStore {
 
   async prepare(config: VaultConfig, target: CaptureOutputTarget): Promise<CaptureOutputTarget> {
     const folder = captureFolder(target.folder || "随手记");
-    if (!target.captureId) return { ...target, folder };
+    if (!target.captureId) return { ...target, folder, diaryDate: captureCalendarDate(new Date(), target.diaryTimeZone), diaryDatePolicy: "saved-at" };
     const state = await new CaptureHistoryStore(this.vaultRoot).list(config.knowledgeBaseId);
     const entry = state.entries.find(e => e.id === target.captureId);
     if (!entry || entry.revision !== target.captureRevision || entry.text !== target.originalText) throw new ContentRequestError(409, "草稿已经变化，请暂存后重新整理");
-    if (entry.status !== "saved") return { ...target, folder: entry.folder };
+    if (entry.status !== "saved") return { ...target, folder: entry.folder, diaryDate: captureCalendarDate(new Date(), target.diaryTimeZone), diaryDatePolicy: "saved-at" };
     if (!entry.storedPath || !entry.fileHash) throw new ContentRequestError(409, "原日记不可用，请新建记录");
     const file = await this.safeFile(config, entry.storedPath);
     const hash = createHash("sha256").update(await readFile(file)).digest("hex");
     if (hash !== entry.fileHash) throw new ContentRequestError(409, "原日记已被修改，请先查看文件；草稿已保留");
-    return { ...target, folder: entry.folder, storedPath: entry.storedPath, expectedFileHash: hash };
+    return { ...target, diaryDate: entry.diaryDate, diaryDatePolicy: undefined, folder: entry.folder, storedPath: entry.storedPath, expectedFileHash: hash };
   }
 
   private async safeFile(config: VaultConfig, storedPath: string) {
@@ -34,21 +35,20 @@ export class CaptureRecordStore {
     return file;
   }
 
-  async materialize(run: WikiRun): Promise<{ pageId: string; savedAt: string }> {
+  async materialize(run: WikiRun): Promise<{ pageId: string; savedAt: string; diaryDate: string; content: string }> {
     const target = run.outputTarget;
     if (target?.kind !== "life-record" || !target.captureId) return this.writeRecord(run);
     return new CaptureHistoryStore(this.vaultRoot).mutate(run.knowledgeBaseId, async state => {
       const entry = state.entries.find(e => e.id === target.captureId);
       if (!entry || entry.revision !== target.captureRevision) throw new ContentRequestError(409, "草稿已修改或删除，整理结果未覆盖它");
       const saved = await this.writeRecord(run);
-      const content = linkDiaryEntities(run.result!.finalAnswer!.trim(), target.entityLinks || []);
       if (entry.status === "saved") entry.versions = [...(entry.versions || []), { savedAt: entry.updatedAt, text: entry.originalText || "", content: entry.content || "" }];
-      Object.assign(entry, { status: "saved", text: target.originalText, originalText: target.originalText, content, pageId: saved.pageId, storedPath: saved.storedPath, fileHash: saved.fileHash, savedRunId: run.id, updatedAt: saved.savedAt, revision: entry.revision + 1 });
+      Object.assign(entry, { status: "saved", text: target.originalText, originalText: target.originalText, content: saved.content, diaryDate: saved.diaryDate, pageId: saved.pageId, storedPath: saved.storedPath, fileHash: saved.fileHash, savedRunId: run.id, updatedAt: saved.savedAt, revision: entry.revision + 1 });
       return saved;
     });
   }
 
-  private async writeRecord(run: WikiRun): Promise<{ pageId: string; savedAt: string; storedPath: string; fileHash: string }> {
+  private async writeRecord(run: WikiRun): Promise<{ pageId: string; savedAt: string; storedPath: string; fileHash: string; diaryDate: string; content: string }> {
     const target = run.outputTarget;
     if (target?.kind !== "life-record") throw new Error("记录目标无效");
     const answer = run.result?.finalAnswer?.trim();
@@ -68,10 +68,12 @@ export class CaptureRecordStore {
     await mkdir(manifestFolder).catch(error => { if (error.code !== "EEXIST") throw error; });
     if (await realpath(manifestFolder) !== manifestFolder) throw new Error("记录登记目录不能使用符号链接");
     const suffix = createHash("sha256").update(run.id).digest("hex").slice(0, 16);
-    const date = target.diaryDate || run.createdAt.slice(0, 10);
+    const saveInstant = run.result?.outputSaveStartedAt || run.result?.outputSavedAt || new Date().toISOString();
+    const date = target.diaryDatePolicy === "saved-at" ? captureCalendarDate(saveInstant, target.diaryTimeZone) : target.diaryDate || captureCalendarDate(run.createdAt, target.diaryTimeZone);
     const title = `随手记 ${date} ${suffix}`;
     const file = target.storedPath ? await this.safeFile(run.configSnapshot, target.storedPath) : path.join(folder, `${title}.md`);
-    const diary = linkDiaryEntities(answer, target.entityLinks || []);
+    const datedAnswer = target.diaryDatePolicy === "saved-at" ? answer.replace(/^# \d{4}-\d{2}-\d{2}(?=[ \t]|$)/, `# ${date}`) : answer;
+    const diary = linkDiaryEntities(datedAnswer, target.entityLinks || []);
     const markdown = `${diary}\n`;
     // Persist input before the knowledge file, so a cache write failure cannot discard the only input.
     await new CaptureInputCache(root).write(run.knowledgeBaseId, run.id, target.originalText);
@@ -97,6 +99,6 @@ export class CaptureRecordStore {
     if (!(await imports.list()).some(batch => batch.files.some(item => item.storedPath === relativePath))) {
       await imports.trackCreatedSource({ relativePath, title, markdown });
     }
-    return { pageId: pageIdForPath(relativePath, run.configSnapshot), savedAt: new Date().toISOString(), storedPath: relativePath, fileHash: createHash("sha256").update(markdown).digest("hex") };
+    return { pageId: pageIdForPath(relativePath, run.configSnapshot), savedAt: saveInstant, diaryDate: date, content: diary, storedPath: relativePath, fileHash: createHash("sha256").update(markdown).digest("hex") };
   }
 }

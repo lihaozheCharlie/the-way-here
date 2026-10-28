@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, readdir, stat, mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
@@ -39,11 +40,12 @@ config.forceCodeSigning = true;
 config.mac.identity = env.TWH_DEVELOPER_ID || 'Developer ID Application';
 config.mac.hardenedRuntime = true;
 config.mac.notarize = !signOnly;
-config.mac.target = [{ target:'dmg', arch:[process.arch] }];
+config.mac.target = [{ target:'dmg', arch:[process.arch] }, { target:'zip', arch:[process.arch] }];
+config.publish = [{ provider:'generic', url:'https://github.com/lihaozheCharlie/the-way-here/releases/latest/download/' }];
 config.mac.entitlements = 'apps/desktop/build/entitlements.direct.plist';
 config.mac.entitlementsInherit = 'apps/desktop/build/entitlements.direct.plist';
 config.mac.signIgnore = ['\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$'];
-config.mac.artifactName = 'The-Way-Here-${version}-${arch}.dmg';
+config.mac.artifactName = 'The-Way-Here-${version}-${arch}.${ext}';
 config.dmg = { ...config.dmg, sign:true };
 config.extraResources.push({ from:'.runtime/package/licenses', to:'licenses' });
 config.extraResources.push({ from:'.runtime/direct/release-metadata.json', to:'release-metadata.json' });
@@ -74,7 +76,7 @@ run(process.execPath, ['scripts/build-desktop-native.mjs']);
 await packageServer(studio, path.join(studio, '.runtime/package/server'));
 await packageKnowledge(studio);
 await packageLicenses(studio);
-run(process.execPath, ['node_modules/electron-builder/out/cli/cli.js', '--config', path.join(output, 'builder.yml'), '--mac', 'dmg', '--publish', 'never']);
+run(process.execPath, ['node_modules/electron-builder/out/cli/cli.js', '--config', path.join(output, 'builder.yml'), '--mac', 'dmg', 'zip', '--publish', 'never']);
 const app = path.join(output, process.arch === 'arm64' ? 'mac-arm64' : 'mac', 'The Way Here.app');
 run(process.execPath, ['scripts/verify-package-links.mjs', app]);
 run('/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', app]);
@@ -99,10 +101,23 @@ run('xcrun', ['stapler', 'validate', dmg]);
 run('/usr/sbin/spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', '--verbose=2', dmg]);
 // A valid signature does not prove the app can start. Install and launch the DMG.
 run(process.execPath, ['scripts/verify-installed-desktop.mjs', dmg]);
+// Automatic installation consumes the ZIP, so verify that delivery artifact too.
+const zipFilename = `The-Way-Here-${version}-${process.arch}.zip`;
+const zip = path.join(output, zipFilename);
+const extracted = await mkdtemp(path.join(os.tmpdir(), 'twh-update-zip-'));
+try {
+  run('/usr/bin/ditto', ['-x', '-k', zip, extracted]);
+  run(process.execPath, ['scripts/verify-installed-desktop.mjs', path.join(extracted, 'The Way Here.app')]);
+} finally { await rm(extracted, { recursive:true, force:true }); }
+run(process.execPath, ['scripts/verify-preferences.mjs', app]);
+run(process.execPath, ['scripts/verify-native-update.mjs', app, '--require-bundled-updater']);
+const zipHash = createHash('sha512');
+for await (const chunk of createReadStream(zip)) zipHash.update(chunk);
+const installer = { filename:zipFilename, size:(await stat(zip)).size, sha512:zipHash.digest('base64') };
 const hash = createHash('sha256');
 for await (const chunk of createReadStream(dmg)) hash.update(chunk);
 const sha256 = hash.digest('hex');
 const minimumSystemVersion = run('/usr/bin/plutil', ['-extract', 'LSMinimumSystemVersion', 'raw', path.join(app, 'Contents/Info.plist')], true).trim();
 await writeFile(path.join(output, 'SHA256SUMS.txt'), `${sha256}  ${filename}\n`);
-await writeFile(path.join(output, 'release.json'), JSON.stringify({ ready:true, startupVerified:true, version, arch:process.arch, filename, size:(await stat(dmg)).size, sha256, minimumSystemVersion, notarizationId:notarization.id }, null, 2));
+await writeFile(path.join(output, 'release.json'), JSON.stringify({ ready:true, startupVerified:true, autoUpdateVerified:true, preferencesVerified:true, installer, version, arch:process.arch, filename, size:(await stat(dmg)).size, sha256, minimumSystemVersion, notarizationId:notarization.id }, null, 2));
 console.log(`签名、公证与 Gatekeeper 校验完成：${dmg}。上传该文件后才可启用网页下载。`);

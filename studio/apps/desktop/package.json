@@ -1,6 +1,6 @@
 {
   "name": "@the-way-here/desktop",
-  "version": "0.1.5",
+  "version": "0.1.8",
   "private": true,
   "productName": "The Way Here",
   "type": "module",
@@ -11,6 +11,7 @@
     "typecheck": "node --check src/main.mjs && node --check src/preload.cjs"
   },
   "dependencies": {
+    "electron-updater": "6.8.11",
     "yaml": "^2.9.0"
   }
 }

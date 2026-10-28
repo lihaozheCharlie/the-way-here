@@ -2,9 +2,51 @@
 
 官网版与 MAS 使用独立发布入口。原来的 `desktop:package` 仍只生成本机测试包，不可当作官网正式包。
 
+## 客户端内自动更新（0.1.7 起）
+
+新客户端启动后、激活时及每十五分钟检查版本。侧栏偏好设置右侧提供下载按钮，点击后在应用内显示进度，校验完成且当前工作安全后自动重启安装。录音、未保存内容、正在写入的请求及任一知识库的任务未完成时会等待，失败提供重试。0.1.6 及更早客户端需手动安装支持此机制的版本一次。
+
+发布仍使用 `desktop:ship`，现同时生成 DMG 与 ZIP。ZIP 来自同一签名、公证并附票据的应用，并单独进行启动验收；两个格式均通过后才记录 `autoUpdateVerified`。GitHub 发布增加 ZIP 和 `latest-mac.yml`，继续提供旧客户端可读的 `update.json`，固定更新地址不变。ZIP 下载锁定检查时的版本，发布前核对全部托管资产摘要。
+
+组件测试覆盖显式下载、进度、摘要篡改、重试、退出清理、跨窗口准备和跨知识库任务保护；匿名浏览器验收覆盖中英文按钮及保存准备。类型检查、671 项测试及构建通过，独立界面复核的失败反馈和英文空间问题均已解决。
+
+`verify-native-update.mjs` 已用独立 Bundle ID、两份临时 Developer ID 签名应用与匿名资料目录，实测生产 UpdateChecker/安装适配器、真实 electron-updater/Squirrel.Mac 下载、原地替换、自动重启和草稿保留。测试仅将网络传输指向本机夹具，保持版本及摘要校验；没有发布虚构版本或访问真实资料。所有测试应用、进程、端口、资料及缓存均清理，结果位于 `.runtime/update-ui/native-upgrade.json`。本轮使用既有签名应用模板与工作区中的更新组件；正式发布还会对当版新包执行 `--require-bundled-updater`，要求自动更新依赖确实随包分发，并通过同一替换验收，成功后才写 `autoUpdateVerified`。
+
+### 官网同步验证（2026-10-28）
+
+0.1.7 的官网下载页、使用帮助及更新隐私说明已通过 Sites 第 12 版部署，源码提交 `38760457e1e29ddd2c9524a67e6bcb386c2e44ef`，部署 ID `appgdep_6ae164078df081919f417dd8015d1c50`，状态 succeeded。页面显示 0.1.7 / Apple Silicon / macOS 13.0+ / 231 MB，按钮指向本次已公证并完整下载校验的 DMG。帮助说明应用内下载与自动安装，并提示旧版手动安装一次；其他托管页面内容不变。
+
+原地址 `https://the-way-here-support.finedeer64.chatgpt.site/download/` 实测自动转到当前标准地址 `https://the-way-here-support.charlielii.chatgpt.site/download/`，两者均成功返回 0.1.7 与正确下载链接。今后将官网下载页同步作为每次客户端发布的必要步骤。类型检查、671 项测试及构建通过，临时预览与安装测试已退出，5213 端口已释放。
+
+## 0.1.8 发布验收（2026-10-28）
+
+本版修复三项问题：用户选择的目录、语言、通知、界面和窗口偏好独立持久化，升级补缺失字段并保留已有选择；跨天草稿首次生成日记使用最终保存时的本地日期，补充既有日记保留原日期；标题在 Enter 或失焦时提交，停顿、移动光标和输入法组合输入不再触发自动退出编辑。配置清单及边界见 `USER-PREFERENCES.md`。本轮未改动用户现有配置或私人笔记。
+
+679 项测试、类型检查、构建和标题浏览器回归通过。用户恢复既有 `twh-direct` 后，应用公证 `ac7cced2-771e-4f1c-8bbd-3c55d7c8f768`、DMG 公证 `972a43b5-c65d-418b-86b3-b4f5c4308595` 均为 Accepted，签名、票据和 Gatekeeper 验证通过。最终 DMG、ZIP 真实安装启动、打包应用配置重启保留，以及真实 Squirrel.Mac 替换后偏好与草稿保留均通过。
+
+DMG 为 230529744 字节，SHA-256 `b37e43285f5adf179761a3a731ffe10b00ce897652622b6772fe7da875fe6c81`；ZIP 为 237094305 字节。正式 `release.json` 的 ready、startupVerified、autoUpdateVerified、preferencesVerified 均为 true。正式发布验收已取代早期未公证预检记录。
+
+0.1.8 已在 GitHub 正式公开，草稿中的 DMG、ZIP、更新信息及校验文件大小与 SHA-256 全部匹配后才切换 latest。GitHub CLI 多文件上传遇到 HTTP 408，本轮通过官方 REST 接口逐个传输并复用已验证资产；上传直连与 HTTP/2 流式方式完成，不更改系统代理。凭据仅从既有登录读取到内存并通过 stdin 交给 curl，不写入文件或日志。公开 DMG 已完整下载并校验通过，下载文件的真实安装启动、界面与更新桥接验收通过。公开 ZIP 的完整下载大小与 SHA-512 也已匹配。客户端更新 feed、原生 feed 与安装器元数据一致：当前版检查为 current，模拟旧版检查为 available，并指向本次版本固定文件。结果见 `.runtime/direct/public-verification-0.1.8.json`。发布下载工具支持保留断点并续传，完整文件仍强制检查大小和摘要，篡改及超长文件拒绝用例通过。
+
+Sites 第 13 版已部署成功，源码提交 `1bbb9cbe4add4b1193d4517e39e9c36f8ecc4a37`，部署 ID `appgdep_6ae1ab0b4e0c81918625f3becf857de0`。新旧两个 `/download/` 地址均返回 200、显示 0.1.8、正确 DMG 链接及同版更新说明；旧地址跳转到当前 charlielii 标准地址。六个其他托管文件摘要保持不变。网站临时预览已停止，49469 端口释放；本次发布及安装测试进程、临时挂载均已清理。
+
+## 用户长期授权与常用入口
+
+### 0.1.7 发布验证（2026-10-28）
+
+2026-10-28 在已授权发布的正常钥匙串访问环境中，原 `twh-direct` 配置验证成功，无需重建凭据；先前受限预检的“未找到”不能据此断言凭据已删除。0.1.7 合并客户端内自动更新与长语音逐句累计修复，已完成正式构建、公证、DMG 与 ZIP 真实安装启动验收，以及随包更新组件的真实替换、重启与匿名草稿保留验收。
+
+语音修复使用四段既有录音在本机设备端实速重放，未上传录音，也未将私人音频或转写加入仓库：37.8 秒录音旧结果 47 字、修复后 82 字；315.4 秒录音旧结果 454 字、修复后 1146 字且完整保留 15139200 帧；42.1 秒及 31.8 秒录音额外测试暂停、继续及停止重识别，结果分别 126 字、77 字，全部音频帧保留，无识别中断警告。这是本次已复现故障的回归结果，不是识别准确率或所有环境完整性的保证。类型检查、671 项测试、前后端构建和原生构建均通过。
+
+正式发布：https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.7 。DMG 为 230528390 字节，SHA-256 `8a5a823e1488d885576bb42df5b613133d6d171d616d7c9771ed1a43f51814d2`；自动更新 ZIP 为 237090542 字节。应用公证 ID `b0033596-b783-453a-82bb-89599b1b0d50`、DMG 公证 ID `dbcb6868-7188-4319-a04d-20baf31d7bf7`，均为 Accepted。GitHub 草稿的全部资产大小与摘要验证后公开，固定 latest 更新信息已切换 0.1.7。公开 DMG 的 SHA-256、ZIP 的 SHA-512 与完整下载大小均再次匹配，当前版检查为 current、模拟旧版检查为 available，原生更新 feed 与安装器元数据一致；结果保存在 `.runtime/direct/public-verification-0.1.7.json`。0.1.6 及更早版本需手动安装这一次，以后可使用应用内下载和自动安装。测试助手、安装实例、更新夹具服务、进程和临时挂载均已清理，没有覆盖或重启用户正在使用的应用。
+
+用户在 2026-10-27 明确允许当前 0.1.6 构建包提交 Apple 公证，并授权今后频繁要求推送本软件更新时自动执行完整常规发布流程。收到更新发布请求后，沿用 `studio/AGENTS.md` 的授权范围，无需反复询问 Apple 公证或 GitHub 发布许可；不自动发起无用户请求的发布，不更改平台审批设置。
+
+常规顺序：检查当前公开版本 → 递增 `apps/desktop/package.json` 版本号 → 准备中英文说明 → `pnpm typecheck`、`pnpm test`、`pnpm build` → 使用现有 `twh-direct` 钥匙串 profile 执行下文 `desktop:ship` → 核验最新公开 feed、版本、下载大小及 SHA-256。签名、公证和最终 DMG 隔离安装验收由发布脚本串联；GitHub 上传只包含签名安装包、校验和及更新 feed。每次发布必须同步官网的版本、下载按钮及相关帮助说明，完成下文 Sites 源码同步与部署，并记录成功结果；客户端 feed 切换和官网部署都完成才结束发布。所有测试进程和临时挂载必须清理，不替用户重启或覆盖正在使用的应用。
+
 ## 当前准备
 
-`pnpm desktop:release:prepare` 生成 `.runtime/direct/builder.yml` 和公开运营信息，不签名、不上传。`pnpm desktop:release:check` 核验本机 Developer ID Application 身份与钥匙串公证凭据。没有对应私钥、没有公证凭据或苹果拒绝公证时必须停止，不能退回未签名发布。
+`pnpm desktop:release:prepare` 生成 `.runtime/direct/builder.yml` 和公开运营信息，不签名、不上传。`pnpm desktop:release:check` 核验本机 Developer ID Application 身份与钥匙串公证凭据。没有对应私钥、没有公证凭据或苹果拒绝公证时必须停止，不能退回未签名发布。若受限环境报告找不到既有 profile，先通过已授权发布流程验证钥匙串访问，再判断是否真的缺失；不要仅凭受限预检结果要求用户重新配置。
 
 需要账号持有人在 Apple Developer 的 Certificates 中创建 **Developer ID Application**，不是 Mac App Distribution 或 Developer ID Installer。证书必须与本机 CSR 私钥配对。不要吊销现有商店证书，也不要将私钥或密码提交到仓库。
 
@@ -101,3 +143,11 @@ pnpm desktop:ship
 正式文件为 230,039,760 字节，SHA-256 为 `f4647279bf6687ec44e38000f582d54b0904ef9c2858729ae42716a2d3495b28`，DMG 公证 ID `620eba3f-16b9-4a8c-bc46-86442cd44fab`，Accepted。665 项测试、类型检查和构建通过；打包结构回归在修复前复现 ENOENT，修复后通过。验收结果与真实界面截图保存在 `.runtime/installed-verification/`。
 
 网页生成器现在保留并验证公开下载的实际 DMG，再运行同一套安装启动验收，通过后才恢复下载按钮。网站第 10 版曾暂停故障下载，第 11 版已恢复到 0.1.5，源码提交 `0458a3270cb7bc99cfeea48d4e7cee60c0724a39`。固定更新地址与新安装包摘要已再次验证匹配。
+
+## 0.1.6 转写覆盖保护（已发布）
+
+修复停止录音后明显变短的最终识别结果覆盖较完整预览的问题：最终文字不足对应预览的一半时，保留较完整预览及分段录音，并提示识别未完成。这是疑似截断保护，不是识别完整性保证。
+
+匿名输入对照确认：旧版将 94 字预览覆盖为 21 字，修复后保留 94 字；空结果、较短的正常纠正和多段顺序的回归检查通过。类型检查、665 项测试及构建通过。最终 DMG 通过签名、Apple 公证及 Gatekeeper 校验，并复制到隔离目录完成真实安装启动、本地 API、中英文界面与菜单及更新桥接验收。测试进程、资料和临时挂载均已清理。
+
+正式发布：https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.6 。安装包 230,032,632 字节，SHA-256 为 `4d809f6ce9253953fe483a6fcff0141fe1f530e302c4d3d142a9fac496efd06c`；应用公证 ID `acfc6830-e7f2-4d85-9375-00808c4e7cd2`，DMG 公证 ID `44ee11c5-6d25-4ba6-9a1c-86ed16db2c3d`，均为 Accepted。GitHub 草稿资产大小及摘要核对后公开，固定 latest-release 更新 feed 已切换 0.1.6。公开完整下载的大小和 SHA-256 再次匹配，0.1.5 检查器返回 available，0.1.6 返回 current；结果保存在 `.runtime/direct/public-verification-0.1.6.json`。本次未重新部署官网下载网站，客户端推送通过固定更新 feed 生效。

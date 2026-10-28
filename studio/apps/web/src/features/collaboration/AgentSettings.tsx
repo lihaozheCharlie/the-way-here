@@ -1,3 +1,4 @@
+import { useUpdateGuard } from "../../shared/update-readiness";
 import { SelectInput, TextInput } from "../../shared/form-controls";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
@@ -114,6 +115,7 @@ export function useAgentSelection(revision: number) {
   const savedKeyForProvider = draft.thirdParty.apiKeyConfiguredProviders.includes(selectedProvider.id);
   const configuredApiKey = !clearApiKey && (savedKeyForProvider || Boolean(apiKey));
   const dirty = Boolean(baseline) && (JSON.stringify(draft) !== baseline || Boolean(apiKey) || clearApiKey);
+  useUpdateGuard(() => !dirty && !saving);
 
   function update(next: (current: AgentGlobalSettings) => AgentGlobalSettings) {
     const value = next(draftRef.current);

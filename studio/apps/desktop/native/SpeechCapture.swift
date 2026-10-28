@@ -7,12 +7,46 @@ struct SpeechTranscript {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !value.isEmpty && value.count >= (segments[segment]?.count ?? 0) { segments[segment] = value }
     }
-    mutating func finalize(segment: Int, text: String) {
+    // The utterance accumulator already preserves completed audio ranges, so a
+    // live correction may safely shorten its current utterance.
+    mutating func revise(segment: Int, text: String) {
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !value.isEmpty { segments[segment] = value }
     }
+    // A final callback can contain only the tail of a segment. Treat a large
+    // loss of text as incomplete recognition, while allowing small corrections.
+    @discardableResult
+    mutating func finalize(segment: Int, text: String) -> Bool {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let previous = segments[segment] ?? ""
+        guard previous.isEmpty || value.count * 2 >= previous.count else { return false }
+        if !value.isEmpty { segments[segment] = value }
+        return true
+    }
     func hasText(segment: Int) -> Bool { !(segments[segment] ?? "").isEmpty }
     var text: String { segments.keys.sorted().compactMap { segments[$0] }.joined(separator: "\n") }
+}
+
+// SFSpeechRecognizer may emit several completed utterances before isFinal.
+// Timed results replace their own audio range; untimed results revise only the
+// current utterance. Text length cannot distinguish a correction from a reset.
+struct SpeechRecognitionText {
+    struct Utterance { let start: Double; let end: Double; let text: String }
+    private var utterances: [Utterance] = []
+    private var pending = ""
+    mutating func update(text: String, start: Double = 0, end: Double = 0) {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        if end > start {
+            utterances.removeAll { $0.start < end && $0.end > start }
+            utterances.append(Utterance(start: start, end: end, text: value))
+            utterances.sort { $0.start < $1.start }
+            pending = ""
+        } else {
+            pending = value
+        }
+    }
+    var text: String { (utterances.map { $0.text } + [pending]).filter { !$0.isEmpty }.joined(separator: "\n") }
 }
 
 // Native capture runtime
@@ -25,7 +59,9 @@ var activeRequest: SFSpeechAudioBufferRecognitionRequest?
 var recognizer: SFSpeechRecognizer?
 var tasks: [Int: SFSpeechRecognitionTask] = [:]
 var transcripts = SpeechTranscript()
+var liveTranscripts: [Int: SpeechRecognitionText] = [:]
 var currentSegment = 0
+var recognitionFailures = 0
 var paused = false
 var stopping = false
 var finished = false
@@ -36,7 +72,13 @@ var lastLevelTime: TimeInterval = 0
 var recordingFile: AVAudioFile?
 var segmentFile: AVAudioFile?
 var segmentURLs: [Int: URL] = [:]
-let recordingDirectory = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
+// Explicit offline replay uses the same capture/recognition path without a microphone.
+let replayIndex = CommandLine.arguments.firstIndex(of: "--replay")
+let replayURL = replayIndex.flatMap { $0 + 1 < CommandLine.arguments.count ? URL(fileURLWithPath: CommandLine.arguments[$0 + 1]) : nil }
+let recordingRoot = CommandLine.arguments.dropFirst().first ?? NSTemporaryDirectory()
+let recordingDirectory = URL(fileURLWithPath: recordingRoot).appendingPathComponent(UUID().uuidString)
+var replayFile: AVAudioFile?
+var replayTimer: DispatchSourceTimer?
 let recordingURL = recordingDirectory.appendingPathComponent("recording.caf")
 var recordingError: String?
 var recognitionError: String?
@@ -53,7 +95,7 @@ func retain(_ text: String, segment: Int) {
     let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
     // Empty final callbacks must never erase a usable partial result.
     guard !value.isEmpty else { return }
-    transcripts.update(segment: segment, text: value)
+    transcripts.revise(segment: segment, text: value)
     try? transcript().write(to: recordingDirectory.appendingPathComponent("transcript-preview.txt"), atomically: true, encoding: .utf8)
     emit(["event": "transcript", "text": transcript()])
 }
@@ -63,6 +105,7 @@ let segmentLength: TimeInterval = 45
 func finish(_ error: String? = nil) {
     if finished { return }
     finished = true
+    replayTimer?.cancel(); replayTimer = nil
     engine.stop()
     audioLock.lock(); activeRequest?.endAudio(); activeRequest = nil; audioLock.unlock()
     for task in tasks.values { task.cancel() }
@@ -88,14 +131,15 @@ func transcribeSegments(_ remaining: ArraySlice<Int>, total: Int, error: String?
     request.addsPunctuation = true
     request.taskHint = .dictation
     var completed = false
-    var best = ""
+    var recognized = SpeechRecognitionText()
     func complete(_ successful: Bool) {
         guard !completed, !finished else { return }
         completed = true
         finalTask?.cancel(); finalTask = nil
-        if successful { transcripts.finalize(segment: segment, text: best) }
-        else { transcripts.update(segment: segment, text: best) }
-        if !successful {
+        let best = recognized.text
+        let accepted = successful && transcripts.finalize(segment: segment, text: best)
+        if !accepted { transcripts.update(segment: segment, text: best) }
+        if !accepted {
             failedSegments.insert(segment)
             recognitionError = "部分语音未能完成识别，已保留识别文字和原始录音。"
         }
@@ -110,12 +154,14 @@ func transcribeSegments(_ remaining: ArraySlice<Int>, total: Int, error: String?
             guard !completed, !finished else { return }
             if let result = result {
                 let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !text.isEmpty { best = text }
+                let words = result.bestTranscription.segments
+                recognized.update(text: text, start: words.first?.timestamp ?? 0,
+                                  end: words.last.map { $0.timestamp + $0.duration } ?? 0)
                 if result.isFinal { complete(true); return }
             }
             if let failure = failure {
                 // Silence in a segment is valid; do not warn merely because no words were spoken.
-                complete((failure as NSError).code == 1110 && best.isEmpty && !transcripts.hasText(segment: segment))
+                complete((failure as NSError).code == 1110 && recognized.text.isEmpty && !transcripts.hasText(segment: segment))
             }
         }
     }
@@ -125,6 +171,7 @@ func transcribeSegments(_ remaining: ArraySlice<Int>, total: Int, error: String?
 func stop(_ error: String? = nil, discard: Bool = false) {
     if stopping || finished { return }
     stopping = true
+    replayTimer?.cancel(); replayTimer = nil
     engine.stop()
     audioLock.lock(); activeRequest?.endAudio(); activeRequest = nil
     recordingFile = nil; segmentFile = nil; audioLock.unlock()
@@ -143,6 +190,7 @@ func startSegment() {
     let previous = currentSegment
     currentSegment += 1
     let segment = currentSegment
+    if replayURL != nil { emit(["event": "replay-segment", "segment": segment]) }
     let request = SFSpeechAudioBufferRecognitionRequest()
     request.shouldReportPartialResults = true
     request.requiresOnDeviceRecognition = true
@@ -162,11 +210,30 @@ func startSegment() {
     tasks[segment] = recognizer.recognitionTask(with: request) { result, error in
         DispatchQueue.main.async {
             guard !finished, !finalizing else { return }
-            if let result = result { retain(result.bestTranscription.formattedString, segment: segment) }
+            if let result = result {
+                let words = result.bestTranscription.segments
+                if !result.bestTranscription.formattedString.isEmpty { recognitionFailures = 0 }
+                var recognized = liveTranscripts[segment] ?? SpeechRecognitionText()
+                recognized.update(text: result.bestTranscription.formattedString,
+                                  start: words.first?.timestamp ?? 0,
+                                  end: words.last.map { $0.timestamp + $0.duration } ?? 0)
+                liveTranscripts[segment] = recognized
+                retain(recognized.text, segment: segment)
+            }
             if result?.isFinal == true || error != nil {
                 tasks.removeValue(forKey: segment)
-                // Keep capturing this segment even if the live task ends early.
-                // The saved segment is independently transcribed after recording.
+                if segment == currentSegment {
+                    audioLock.lock(); activeRequest = nil; audioLock.unlock()
+                }
+                // A task may end on silence or a service interruption. Never keep
+                // appending to that dead request until the 45-second timer fires.
+                if segment == currentSegment && !paused && !stopping {
+                    recognitionFailures = error == nil ? 0 : min(recognitionFailures + 1, 5)
+                    let delay = error == nil ? 0.25 : min(5, pow(2, Double(recognitionFailures - 1)) * 0.25)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        if segment == currentSegment { startSegment() }
+                    }
+                }
             }
         }
     }
@@ -179,6 +246,7 @@ func startSegment() {
     }
 }
 
+if replayURL != nil { emit(["event": "replay-start", "pid": ProcessInfo.processInfo.processIdentifier]) }
 SFSpeechRecognizer.requestAuthorization { status in
     DispatchQueue.main.async {
         guard !stopping, !finished else { return }
@@ -189,15 +257,20 @@ SFSpeechRecognizer.requestAuthorization { status in
         guard recognizer?.isAvailable == true, recognizer?.supportsOnDeviceRecognition == true else {
             finish("本机中文语音识别尚不可用，请在系统设置中启用中文听写并完成系统语音资源下载后重试。"); return
         }
-        let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0 else { finish("没有可用的麦克风。"); return }
+        let input = replayURL == nil ? engine.inputNode : nil
+        if let url = replayURL {
+            do { replayFile = try AVAudioFile(forReading: url) }
+            catch { finish("无法读取重放录音：\(error.localizedDescription)"); return }
+        }
+        guard let format = replayFile?.processingFormat ?? input?.outputFormat(forBus: 0), format.sampleRate > 0 else {
+            finish("没有可用的音频输入。"); return
+        }
         do {
             try FileManager.default.createDirectory(at: recordingDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             recordingFile = try AVAudioFile(forWriting: recordingURL, settings: format.settings)
         } catch { finish("无法建立录音备份，请检查本机存储空间后重试。"); return }
         emit(["event": "recording", "recordingPath": recordingURL.path])
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+        let consume: (AVAudioPCMBuffer) -> Void = { buffer in
             audioLock.lock()
             activeRequest?.append(buffer)
             do { try recordingFile?.write(from: buffer); try segmentFile?.write(from: buffer) }
@@ -217,12 +290,28 @@ SFSpeechRecognizer.requestAuthorization { status in
             }
         }
         startSegment()
-        do { engine.prepare(); try engine.start() } catch { finish(error.localizedDescription); return }
+        if let file = replayFile {
+            let timer = DispatchSource.makeTimerSource(queue: .main)
+            replayTimer = timer
+            timer.schedule(deadline: .now(), repeating: 1024 / format.sampleRate)
+            timer.setEventHandler {
+                guard !stopping, !finished, !paused else { return }
+                do {
+                    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024)!
+                    try file.read(into: buffer)
+                    if buffer.frameLength == 0 { stop() } else { consume(buffer) }
+                } catch { stop(error.localizedDescription) }
+            }
+            timer.resume()
+        } else {
+            input?.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in consume(buffer) }
+            do { engine.prepare(); try engine.start() } catch { finish(error.localizedDescription); return }
+        }
         print("{\"event\":\"ready\"}"); fflush(stdout)
         DispatchQueue.main.asyncAfter(deadline: .now() + recordingLimit) { stop() }
     }
 }
-DispatchQueue.global().async {
+if replayURL == nil || CommandLine.arguments.contains("--replay-commands") { DispatchQueue.global().async {
     while let command = readLine() {
         DispatchQueue.main.async {
             guard !stopping, !finished else { return }
@@ -232,12 +321,12 @@ DispatchQueue.global().async {
                 emit(["event": "paused", "paused": true])
             } else if command == "resume" {
                 do {
-                    paused = false; startSegment(); try engine.start()
+                    paused = false; startSegment(); if replayURL == nil { try engine.start() }
                     emit(["event": "paused", "paused": false])
                 } catch { stop(error.localizedDescription) }
             } else { stop(discard: command == "discard") }
         }
     }
     DispatchQueue.main.async { stop() }
-}
+} }
 RunLoop.main.run()

@@ -1,3 +1,4 @@
+import { readPreference } from "../../shared/preference-storage";
 import { useEffect } from "react";
 import type { WikiRun } from "@the-way-here/shared";
 import { api } from "../../api";
@@ -9,7 +10,7 @@ export function useDesktopNotifications(pathname: string) {
     if (!window.desktop || pathname === "/preferences" || pathname === "/capture" || new URLSearchParams(location.search).has("detached")) return;
     const desktop = window.desktop;
     const tracker = new AgentNotificationTracker((message) => {
-      if (localStorage.getItem("desktop.notifications") === "false") return;
+      if (readPreference("desktop.notifications") === "false") return;
       void desktop.notify(message);
     });
     let disposed = false;

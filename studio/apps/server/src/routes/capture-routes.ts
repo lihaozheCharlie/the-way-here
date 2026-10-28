@@ -1,3 +1,4 @@
+import { captureCalendarDate, captureTimeZone } from "../modules/content/capture-dates.js";
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
@@ -42,7 +43,7 @@ export function registerCaptureRoutes(app: FastifyInstance, knowledge: Knowledge
     if (page) await new ImportStore(boundWorkspace).trackCreatedSource(page);
     return page;
   }, 201));
-  app.post<{ Body: { knowledgeBaseId?: unknown; id?: unknown; revision?: unknown; text?: unknown; folder?: unknown; diaryDate?: unknown } }>("/api/capture/original", async (request, reply) => handleContent(reply, async () => {
+  app.post<{ Body: { knowledgeBaseId?: unknown; id?: unknown; revision?: unknown; text?: unknown; folder?: unknown; diaryDate?: unknown; diaryTimeZone?: unknown } }>("/api/capture/original", async (request, reply) => handleContent(reply, async () => {
     const body = request.body;
     const knowledgeBaseId = knowledge.index.config.knowledgeBaseId;
     if (body?.knowledgeBaseId !== knowledgeBaseId) throw new ContentRequestError(409, "知识库已切换，原文仍留在本机");
@@ -54,19 +55,21 @@ export function registerCaptureRoutes(app: FastifyInstance, knowledge: Knowledge
     const captureId = body.id;
     const revision = body.revision as number;
     const text = body.text;
-    const diaryDate = body.diaryDate;
-    const markdown = `# ${diaryDate} 原文\n\n${text.trim()}\n`;
+    const timeZone = captureTimeZone(body.diaryTimeZone);
     return captures.mutate(knowledgeBaseId, async state => {
       const entry = state.entries.find((item) => item.id === captureId);
-      if (!entry || entry.revision !== revision || entry.text !== text || entry.folder !== folder || entry.diaryDate !== diaryDate) throw new ContentRequestError(409, "草稿已经变化，请重新保存原文");
+      if (!entry || entry.revision !== revision || entry.text !== text || entry.folder !== folder) throw new ContentRequestError(409, "草稿已经变化，请重新保存原文");
       if (entry.status === "saved") throw new ContentRequestError(409, "这份已经保存过。继续整理会更新原文件；只存原文不会覆盖它。");
+      const savedAt = new Date().toISOString();
+      const diaryDate = captureCalendarDate(savedAt, timeZone);
+      const markdown = `# ${diaryDate} 原文\n\n${text.trim()}\n`;
       const title = `原文 ${diaryDate} ${captureId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)}`;
       const bound = bindContentWorkspace(knowledge);
       const page = await new PageWriter(bound).createSource(title, folder, markdown);
       if (!page) throw new ContentRequestError(500, "原文没有写入生活记录");
       await new ImportStore(bound).trackCreatedSource(page);
-      const savedAt = new Date().toISOString();
       Object.assign(entry, {
+        diaryDate,
         status: "saved",
         text,
         originalText: text,

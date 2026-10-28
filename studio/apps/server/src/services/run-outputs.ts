@@ -45,7 +45,7 @@ export class RunOutputs {
       try { prepared = await this.captures.prepare(config, input.outputTarget); }
       catch (error) { if (error instanceof ContentRequestError) throw new RunRequestError(error.statusCode, error.message); throw error; }
       input.outputTarget = { ...prepared,
-        diaryDate: input.outputTarget.diaryDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+        diaryDate: prepared.diaryDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
         entityLinks: diaryEntityLinks(input.outputTarget.originalText, index.list(), id => index.get(id)?.markdown),
       };
     }
@@ -98,7 +98,7 @@ export class RunOutputs {
     const answer = run.result?.finalAnswer || "";
     if (target?.kind === "life-record") {
       const saved = await this.captures.materialize(run);
-      return { result: { ...run.result, outputPageId: saved.pageId, outputSavedAt: saved.savedAt, completedAt: saved.savedAt }, rebuild: true };
+      return { result: { ...run.result, finalAnswer: saved.content, outputPageId: saved.pageId, outputSavedAt: saved.savedAt, completedAt: saved.savedAt }, rebuild: true };
     }
     const saved = target?.kind === "photo-memory"
       ? await this.photoMemories.materialize(run.configSnapshot, target, answer)

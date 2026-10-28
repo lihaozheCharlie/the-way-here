@@ -5,16 +5,24 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import YAML from 'yaml';
 import { compareVersions } from '../apps/desktop/src/updates.mjs';
 import { writeUpdateFeed, readReleaseNotes } from './prepare-update-feed.mjs';
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(studio, '.runtime/direct');
 const release = JSON.parse(await readFile(path.join(output, 'release.json'), 'utf8'));
 const manifest = JSON.parse(await readFile(path.join(studio, 'apps/desktop/package.json'), 'utf8'));
-if (!release.ready || !release.startupVerified || release.version !== manifest.version || path.basename(release.filename) !== release.filename) throw new Error('Build, notarize and verify startup of the current version first');
+if (!release.ready || !release.startupVerified || !release.autoUpdateVerified || !release.preferencesVerified || !release.installer || release.installer.filename !== `The-Way-Here-${release.version}-${release.arch}.zip` || release.version !== manifest.version || path.basename(release.filename) !== release.filename) throw new Error('Build, notarize and verify DMG/ZIP startup of the current version first');
 const artifact = path.join(output, release.filename);
 const hash = createHash('sha256'); for await (const chunk of createReadStream(artifact)) hash.update(chunk);
 if (hash.digest('hex') !== release.sha256) throw new Error('Artifact changed after notarization');
+const zip = path.join(output, release.installer.filename);
+const zipHash = createHash('sha512'); for await (const chunk of createReadStream(zip)) zipHash.update(chunk);
+if (zipHash.digest('base64') !== release.installer.sha512) throw new Error('ZIP changed after verification');
+// Use absolute versioned URLs: publishing another release cannot redirect an
+// in-progress download to a different ZIP.
+const nativeFeed = path.join(output, 'latest-mac.yml');
+await writeFile(nativeFeed, YAML.stringify({ version:release.version, files:[{url:`https://github.com/lihaozheCharlie/the-way-here/releases/download/mac-v${release.version}/${release.installer.filename}`,sha512:release.installer.sha512,size:release.installer.size}], path:release.installer.filename, sha512:release.installer.sha512, releaseDate:new Date().toISOString() }));
 function run(command, args, capture = false) {
   const result = spawnSync(command, args, { cwd:studio, encoding:'utf8', stdio:capture ? 'pipe' : 'inherit', env:process.env });
   if (result.status !== 0) throw new Error(`${command} failed${capture ? ': ' + result.stderr : ''}`);
@@ -34,15 +42,19 @@ if (!/^mac-v/.test(previous.tagName) || compareVersions(release.version, previou
 const probe = spawnSync('gh', ['release','view',tag,'--repo',repo,'--json','isDraft'], { cwd:studio, encoding:'utf8' });
 if (probe.status === 0) {
   if (!JSON.parse(probe.stdout).isDraft) throw new Error('This version is already public; increment the version before publishing');
-  run('gh', ['release','upload',tag,artifact,path.join(output,'SHA256SUMS.txt'),path.join(output,'update.json'),'--clobber','--repo',repo]);
+  run('gh', ['release','upload',tag,artifact,zip,nativeFeed,path.join(output,'SHA256SUMS.txt'),path.join(output,'update.json'),'--clobber','--repo',repo]);
 } else {
   if (!/release not found|HTTP 404/.test(probe.stderr)) throw new Error('Cannot determine release state; check GitHub login/network');
-  run('gh', ['release','create',tag,artifact,path.join(output,'SHA256SUMS.txt'),path.join(output,'update.json'),'--repo',repo,'--title',`The Way Here ${release.version}`,'--notes-file',notePath,'--draft']);
+  run('gh', ['release','create',tag,artifact,zip,nativeFeed,path.join(output,'SHA256SUMS.txt'),path.join(output,'update.json'),'--repo',repo,'--title',`The Way Here ${release.version}`,'--notes-file',notePath,'--draft']);
 }
 const hosted = JSON.parse(run('gh', ['release','view',tag,'--repo',repo,'--json','assets,isDraft'], true));
 const dmg = hosted.assets.find(asset => asset.name === release.filename);
 const expectedFeed = createHash('sha256').update(await readFile(path.join(output,'update.json'))).digest('hex');
 const remoteFeed = hosted.assets.find(asset => asset.name === 'update.json');
-if (!hosted.isDraft || dmg?.size !== release.size || dmg?.digest !== `sha256:${release.sha256}` || remoteFeed?.digest !== `sha256:${expectedFeed}`) throw new Error('Uploaded artifact/feed verification failed; draft remains unpublished');
+const zipSha256 = createHash('sha256'); for await (const chunk of createReadStream(zip)) zipSha256.update(chunk);
+const remoteZip = hosted.assets.find(asset => asset.name === release.installer.filename);
+const remoteNativeFeed = hosted.assets.find(asset => asset.name === 'latest-mac.yml');
+const nativeDigest = createHash('sha256').update(await readFile(nativeFeed)).digest('hex');
+if (!hosted.isDraft || dmg?.size !== release.size || dmg?.digest !== `sha256:${release.sha256}` || remoteFeed?.digest !== `sha256:${expectedFeed}` || remoteZip?.size !== release.installer.size || remoteZip?.digest !== `sha256:${zipSha256.digest('hex')}` || remoteNativeFeed?.digest !== `sha256:${nativeDigest}`) throw new Error('Uploaded artifact/feed verification failed; draft remains unpublished');
 run('gh', ['release','edit',tag,'--repo',repo,'--draft=false','--latest','--notes-file',notePath]);
 console.log(`Published ${feed.version}. Installed clients check the fixed latest-release update.json address.`);

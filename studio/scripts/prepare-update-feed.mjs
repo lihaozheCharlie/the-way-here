@@ -12,6 +12,7 @@ export async function writeUpdateFeed(release, output, notes = {}) {
     downloads:{ [release.arch]:{
       url:`https://github.com/lihaozheCharlie/the-way-here/releases/download/mac-v${release.version}/${release.filename}`,
       size:release.size, sha256:release.sha256, minimumSystemVersion:release.minimumSystemVersion,
+      ...(release.installer ? { installer:release.installer } : {}),
     } },
   };
   if (!validateUpdateFeed(feed, release.arch)) throw new Error('Unsupported release architecture');

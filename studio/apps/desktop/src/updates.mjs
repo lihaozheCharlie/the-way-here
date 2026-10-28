@@ -25,7 +25,8 @@ export function validateUpdateFeed(feed, arch) {
   systemParts(item.minimumSystemVersion);
   const notes = feed.notes ?? {};
   if (typeof notes !== 'object' || Array.isArray(notes) || ['zh','en'].some(locale => notes[locale] !== undefined && (typeof notes[locale] !== 'string' || notes[locale].length > 4000))) throw new Error('Invalid release notes');
-  return { version: feed.version, notes: { zh:notes.zh || '', en:notes.en || '' }, url:url.href, size:item.size, minimumSystemVersion:item.minimumSystemVersion };
+  if (item.installer && (item.installer.filename !== `The-Way-Here-${feed.version}-${arch}.zip` || !Number.isSafeInteger(item.installer.size) || item.installer.size <= 0 || item.installer.size > 2_000_000_000 || typeof item.installer.sha512 !== 'string' || Buffer.from(item.installer.sha512, 'base64').length !== 64 || Buffer.from(item.installer.sha512, 'base64').toString('base64') !== item.installer.sha512)) throw new Error('Invalid automatic update artifact');
+  return { version: feed.version, notes: { zh:notes.zh || '', en:notes.en || '' }, url:url.href, size:item.size, minimumSystemVersion:item.minimumSystemVersion, ...(item.installer ? { installer:item.installer } : {}) };
 }
 async function readFeed(response) {
   if (!response.ok || !response.body) throw new Error('Update request failed');
@@ -43,13 +44,16 @@ async function readFeed(response) {
 }
 export class UpdateChecker {
   #fetch; #arch; #systemVersion; #onChange; #pending; #controller; #download; #disposed = false;
-  constructor({ version, arch, systemVersion, enabled = true, fetch, onChange = () => {} }) {
+  #installer; #artifact; #transfer; #installAttempt; #canInstall;
+  constructor({ version, arch, systemVersion, enabled = true, fetch, onChange = () => {}, installer, canInstall = async () => true }) {
     this.#fetch = fetch; this.#arch = arch; this.#systemVersion = systemVersion; this.#onChange = onChange;
     this.state = { version, status:enabled ? 'idle' : 'disabled' };
+    this.#installer = installer; this.#canInstall = canInstall;
   }
   #publish(state) { if (!this.#disposed) { this.state = state; this.#onChange(this.state); } return this.state; }
   check() {
     if (this.state.status === 'disabled' || this.#disposed) return Promise.resolve(this.state);
+    if (['downloading','ready','installing','install-error'].includes(this.state.status)) return Promise.resolve(this.state);
     if (this.#pending) return this.#pending;
     const version = this.state.version;
     this.#publish({ version, status:'checking' }); this.#download = undefined;
@@ -60,7 +64,8 @@ export class UpdateChecker {
         const latest = validateUpdateFeed(await readFeed(response), this.#arch);
         if (!latest) return this.#publish({ version, status:'unsupported' });
         if (compareVersions(latest.version, version) <= 0) return this.#publish({ version, status:'current' });
-        const { url, ...details } = latest;
+        const { url, installer, ...details } = latest;
+        this.#artifact = installer;
         const compatible = compareVersions(systemParts(this.#systemVersion), systemParts(latest.minimumSystemVersion)) >= 0;
         if (compatible && !this.#disposed) this.#download = url;
         return this.#publish({ ...details, latestVersion:latest.version, version, status:compatible ? 'available' : 'incompatible' });
@@ -73,5 +78,36 @@ export class UpdateChecker {
     if (this.#disposed || this.state.status !== 'available' || !this.#download) throw new Error('没有可下载的更新，请先检查更新。');
     return this.#download;
   }
-  dispose() { this.#disposed = true; this.#controller?.abort(); this.#download = undefined; }
+  download() {
+    if (this.#transfer) return this.#transfer;
+    if (this.#disposed || !['available','download-error'].includes(this.state.status) || !this.#installer || !this.#artifact) return Promise.reject(new Error('当前版本暂不支持自动安装，请稍后检查更新。'));
+    this.#publish({ ...this.state, status:'downloading', progress:0 });
+    this.#transfer = (async () => {
+      try {
+        await this.#installer.download(this.state.latestVersion, this.#artifact, progress => {
+          if (this.state.status === 'downloading' && Number.isFinite(progress)) this.#publish({ ...this.state, progress:Math.max(0, Math.min(100, progress)) });
+        });
+        if (this.#disposed) return;
+        this.#publish({ ...this.state, status:'ready', progress:100 });
+      } catch (error) {
+        this.#publish({ ...this.state, status:'download-error', progress:undefined }); throw error;
+      } finally { this.#transfer = undefined; }
+    })();
+    return this.#transfer;
+  }
+  installWhenReady() {
+    if (this.#installAttempt) return this.#installAttempt;
+    if (this.#disposed || !['ready','install-error'].includes(this.state.status)) return Promise.resolve(false);
+    this.#installAttempt = (async () => {
+      try {
+        if (!await this.#canInstall() || this.#disposed) return false;
+        this.#publish({ ...this.state, status:'installing' });
+        await this.#installer.install(); return true;
+      } catch { this.installationFailed(); return false; }
+      finally { this.#installAttempt = undefined; }
+    })();
+    return this.#installAttempt;
+  }
+  installationFailed() { if (this.state.status === 'installing') this.#publish({ ...this.state, status:'install-error' }); }
+  dispose() { this.#disposed = true; this.#controller?.abort(); this.#installer?.dispose(); this.#download = undefined; }
 }

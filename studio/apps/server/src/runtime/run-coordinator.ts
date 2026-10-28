@@ -44,6 +44,10 @@ export class RunCoordinator {
     return (await this.runs.list()).some((run) => run.knowledgeBaseId === knowledgeBaseId && !isTerminalRunStatus(run.status));
   }
 
+  async hasAnyActiveRuns(): Promise<boolean> {
+    return (await this.runs.list()).some((run) => !isTerminalRunStatus(run.status));
+  }
+
   async get(id: string): Promise<WikiRun | undefined> {
     const run = await this.runs.get(id);
     return run && this.liveDrafts.has(id) ? { ...run, liveDraft: this.liveDrafts.get(id) } : run;
@@ -364,7 +368,10 @@ export class RunCoordinator {
   private async finish(runId: string): Promise<void> {
     const stored = await this.runs.get(runId);
     if (!stored || ["validating", "completed", "failed", "interrupted"].includes(stored.status)) return;
-    const run = await this.ensureContext(stored);
+    let run = await this.ensureContext(stored);
+    if (run.outputTarget?.kind === "life-record" && !run.result?.outputSaveStartedAt) {
+      run = await this.runs.update(runId, { result: { ...run.result, outputSaveStartedAt: new Date().toISOString() } });
+    }
     if (run.suggestionForRunId) {
       const suggestion = parseWikiSuggestion(run.result?.finalAnswer);
       if (suggestion) {

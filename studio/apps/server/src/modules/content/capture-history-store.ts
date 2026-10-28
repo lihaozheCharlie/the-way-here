@@ -1,8 +1,10 @@
+import { captureCalendarDate } from "./capture-dates.js";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { RunStore, stateRootForVault } from "@the-way-here/run-manager";
 import type { CaptureEntry, CaptureHistory } from "@the-way-here/shared";
+import { CapturePreferencesStore } from "./capture-preferences-store.js";
 import { CaptureInputCache } from "./capture-input-cache.js";
 import { ContentRequestError } from "./page-writer.js";
 
@@ -16,8 +18,10 @@ export class CaptureHistoryStore {
   constructor(private root: string) {}
   private file(id: string) { return path.join(stateRootForVault(this.root), "captures", `${createHash("sha256").update(id).digest("hex")}.json`); }
   async list(id: string): Promise<State> {
+    const preferredFolder = await new CapturePreferencesStore(this.root).get(id);
     try {
       const state: State = JSON.parse(await readFile(this.file(id), "utf8"));
+      state.defaultFolder = preferredFolder ?? (await new CapturePreferencesStore(this.root).set(id, captureFolder(state.defaultFolder), "legacy-import")).defaultFolder;
       const cache = new CaptureInputCache(this.root);
       for (const entry of state.entries) {
         if (entry.status !== "saved" || !entry.savedRunId) continue;
@@ -29,7 +33,7 @@ export class CaptureHistoryStore {
       }
       return state;
     }
-    catch (error: any) { if (error.code !== "ENOENT") throw error; return { entries: [], defaultFolder: "随手记", deleted: [] }; }
+    catch (error: any) { if (error.code !== "ENOENT") throw error; return { entries: [], defaultFolder: preferredFolder ?? "随手记", deleted: [] }; }
   }
   async mutate<T>(id: string, action: (state: State) => Promise<T>): Promise<T> {
     const file = this.file(id), previous = locks.get(file) || Promise.resolve();
@@ -72,7 +76,7 @@ export class CaptureHistoryStore {
         const input = await new CaptureInputCache(this.root).read(id, run.id);
         const originalText = pieces.length === 2 ? pieces[1]!.trimEnd() : input?.originalText;
         const fileHash = createHash("sha256").update(page.markdown).digest("hex");
-        state.entries.push({ id: recordId, revision: 1, createdAt: run.createdAt, updatedAt: run.result?.outputSavedAt || run.updatedAt, diaryDate: target.diaryDate || run.createdAt.slice(0,10), text: originalText ?? pieces[0] ?? "", originalText, content: pieces[0], status: "saved", folder: path.posix.dirname(path.posix.relative(index.config.paths.sources, page.relativePath)), pageId: page.id, storedPath: page.relativePath, fileHash, savedRunId: run.id });
+        state.entries.push({ id: recordId, revision: 1, createdAt: run.createdAt, updatedAt: run.result?.outputSavedAt || run.updatedAt, diaryDate: target.diaryDatePolicy === "saved-at" ? captureCalendarDate(run.result?.outputSavedAt || run.result?.outputSaveStartedAt || run.createdAt, target.diaryTimeZone) : target.diaryDate || captureCalendarDate(run.createdAt, target.diaryTimeZone), text: originalText ?? pieces[0] ?? "", originalText, content: pieces[0], status: "saved", folder: path.posix.dirname(path.posix.relative(index.config.paths.sources, page.relativePath)), pageId: page.id, storedPath: page.relativePath, fileHash, savedRunId: run.id });
       }
       state.entries.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
     });
@@ -98,5 +102,5 @@ export class CaptureHistoryStore {
       return { ok: true };
     });
   }
-  async setDefault(id: string, folder: unknown) { const valid = captureFolder(folder); return this.mutate(id, async state => { state.defaultFolder = valid; return { defaultFolder: valid }; }); }
+  async setDefault(id: string, folder: unknown) { return new CapturePreferencesStore(this.root).set(id, captureFolder(folder)); }
 }

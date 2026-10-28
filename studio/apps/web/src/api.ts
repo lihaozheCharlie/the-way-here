@@ -1,6 +1,11 @@
 import { tr } from "./shared/i18n";
 let windowKnowledgeBaseId: string | undefined;
+let pendingWrites = 0;
+export const hasPendingWrites = () => pendingWrites > 0;
 export async function api<T>(url: string, init?: RequestInit): Promise<T> {
+  const writing = Boolean(init?.method && !['GET','HEAD'].includes(init.method));
+  if (writing) pendingWrites++;
+  try {
   const headers = new Headers(init?.headers);
   if (init?.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (windowKnowledgeBaseId && init?.method && init.method !== "GET") headers.set("X-TWH-Knowledge-Base", windowKnowledgeBaseId);
@@ -17,4 +22,5 @@ export async function api<T>(url: string, init?: RequestInit): Promise<T> {
   }
   if (url === "/api/vault" && !init?.method && typeof data.knowledgeBaseId === "string" && !windowKnowledgeBaseId) windowKnowledgeBaseId = data.knowledgeBaseId;
   return data as T;
+  } finally { if (writing) pendingWrites--; }
 }

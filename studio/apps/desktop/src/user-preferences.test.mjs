@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { UserPreferences } from './user-preferences.mjs';
+import { readWindowBounds } from './window-preferences.mjs';
+
+test('explicit preferences survive restarts and new browser origins without default writes', async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'twh-preferences-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const preferences = new UserPreferences(root), workspace = '/anonymous/workspace';
+  assert.equal(preferences.get(workspace, 'desktop.notifications'), null);
+  await assert.rejects(readFile(preferences.file), { code: 'ENOENT' });
+  preferences.set(workspace, 'desktop.notifications', 'false');
+  preferences.set(workspace, 'photo-capture.folder.demo', '旅行照片');
+  preferences.set(workspace, 'the-way-here.agent-panel-width', '480');
+  const upgraded = new UserPreferences(root);
+  assert.equal(upgraded.get(workspace, 'desktop.notifications'), 'false');
+  assert.equal(upgraded.get('/another/workspace', 'desktop.notifications'), 'false');
+  assert.equal(upgraded.get(workspace, 'photo-capture.folder.demo'), '旅行照片');
+  assert.equal(upgraded.get(workspace, 'photo-capture.folder.other'), null);
+  assert.equal(upgraded.get('/another/workspace', 'photo-capture.folder.demo'), null);
+  assert.equal(upgraded.set(workspace, 'desktop.notifications', 'true', 'legacy-import'), 'false');
+  assert.equal(new UserPreferences(root).get(workspace, 'the-way-here.agent-panel-width'), '480');
+  assert.throws(() => upgraded.set(workspace, 'apiKey', 'secret'));
+  const previous = JSON.parse(await readFile(preferences.file + '.previous', 'utf8'));
+  assert.equal(previous.version, 1);
+  await writeFile(preferences.file, 'broken');
+  assert.throws(() => new UserPreferences(root), /无法读取用户偏好/);
+  assert.equal(await readFile(preferences.file, 'utf8'), 'broken');
+});
+test('window dimensions persist and offscreen positions are not restored', async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'twh-window-preferences-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const preferences = new UserPreferences(root);
+  preferences.set('/anonymous', 'desktop.window.main', JSON.stringify({ x: 100, y: 50, width: 1200, height: 800 }));
+  assert.deepEqual(readWindowBounds(new UserPreferences(root), '/anonymous', 'main', [{ x: 0, y: 0, width: 1440, height: 900 }]), { x: 100, y: 50, width: 1200, height: 800 });
+  assert.deepEqual(readWindowBounds(preferences, '/anonymous', 'main', [{ x: 2000, y: 0, width: 1000, height: 700 }]), { width: 1000, height: 700 });
+});

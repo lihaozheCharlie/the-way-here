@@ -13,7 +13,7 @@ import { CaptureRecordStore } from "../modules/content/capture-record-store.js";
 import { ImportStore } from "../modules/imports/import-store.js";
 
 const cleanups: Array<() => Promise<void>> = [];
-afterEach(async () => { for (const close of cleanups.splice(0)) await close(); });
+afterEach(async () => { for (const close of cleanups.splice(0)) await close(); vi.useRealTimers(); });
 async function fixture(early = false) {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-capture-run-")));
   await writeFile(path.join(root, "the-way-here.config.yaml"), "version: 3\nknowledgeBases:\n  demo:\n    paths:\n      wiki: demo/wiki\n      sources: demo/sources\n  other:\n    paths:\n      wiki: other/wiki\n      sources: other/sources\n");
@@ -83,6 +83,8 @@ it("does not follow a capture folder symlink", async () => {
 });
 
 it("writes a dated diary with frozen existing identities and unchanged original words", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-16T02:00:00Z"));
   const { mkdir } = await import("node:fs/promises");
   const { root, knowledge, coordinator, request, start, finish } = await fixture();
   const entityFolder = path.join(root, "demo/wiki/07 人物与城市");
@@ -90,7 +92,7 @@ it("writes a dated diary with frozen existing identities and unchanged original 
   await writeFile(path.join(entityFolder, "林舟.md"), "---\naliases: [小林]\n---\n# 林舟\n\n匿名人物。\n");
   await knowledge.index.rebuild();
   const originalText = "嗯，啊，今天和小林去公园。呃，后来聊了很久。";
-  const run = await coordinator.start({ ...request, outputTarget: { ...request.outputTarget, diaryDate: "2026-10-16", originalText } });
+  const run = await coordinator.start({ ...request, outputTarget: { ...request.outputTarget, diaryDate: "2026-10-01", originalText } });
   expect(run.outputTarget).toMatchObject({ diaryDate: "2026-10-16", entityLinks: [{ title: "林舟", matchedNames: ["小林"] }] });
   const input = (start.mock.calls as unknown[][])[0]![0] as { prompt: string };
   expect(input.prompt).toContain("林舟"); expect(input.prompt).toContain("不压缩成摘要");
@@ -235,4 +237,41 @@ it("does not resurrect cleared input from run snapshots when importing a diary f
   expect(entry.originalText).toBeUndefined();
   expect(entry.text).toBe(entry.content);
   expect(await new CaptureInputCache(root).read("demo", run.id)).toBeUndefined();
+});
+
+
+it("dates reused drafts by final local save time across midnight and preserves dates on later supplements", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-17T02:00:00Z"));
+  const { root, knowledge, coordinator, request, finish } = await fixture();
+  const { CaptureHistoryStore } = await import("../modules/content/capture-history-store.js");
+  const history = new CaptureHistoryStore(root);
+  const entry = await history.put("demo", { id: "old-draft", revision: 0, text: "十月十七日去过公园。", folder: "日记", diaryDate: "2026-10-17" });
+  vi.setSystemTime(new Date("2026-10-28T15:59:00Z"));
+  const run = await coordinator.start({ ...request, outputTarget: { ...request.outputTarget, originalText: entry.text, captureId: entry.id, captureRevision: entry.revision, diaryDate: "2026-10-17", diaryTimeZone: "Asia/Shanghai" } });
+  expect(run.outputTarget).toMatchObject({ diaryDate: "2026-10-28", diaryDatePolicy: "saved-at" });
+  vi.setSystemTime(new Date("2026-10-28T16:01:00Z"));
+  finish("# 2026-10-28 日记\n\n十月十七日去过公园。");
+  await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("completed"));
+  const saved = (await history.list("demo")).entries[0]!;
+  expect(saved.diaryDate).toBe("2026-10-29");
+  expect(saved.storedPath).toContain("2026-10-29");
+  expect(saved.content).toBe("# 2026-10-29 日记\n\n十月十七日去过公园。");
+  expect((await coordinator.get(run.id))?.result?.finalAnswer).toBe(saved.content);
+  // Rebuilding history after a crash uses the persisted final timestamp as well.
+  await rm(path.join(stateRootForVault(root), "captures"), { recursive: true, force: true });
+  await knowledge.index.rebuild();
+  await history.importCompleted("demo", knowledge.index);
+  const recovered = (await history.list("demo")).entries[0]!;
+  expect(recovered.diaryDate).toBe("2026-10-29");
+  vi.setSystemTime(new Date("2026-10-30T02:00:00Z"));
+  const changed = await history.put("demo", { ...recovered, text: recovered.text + "后来想起了晚霞。" });
+  const supplement = await coordinator.start({ ...request, outputTarget: { ...request.outputTarget, originalText: changed.text, captureId: changed.id, captureRevision: changed.revision, diaryDate: "2026-10-17", diaryTimeZone: "Asia/Shanghai" } });
+  expect(supplement.outputTarget).toMatchObject({ diaryDate: "2026-10-29", storedPath: recovered.storedPath });
+  expect(supplement.outputTarget?.kind === "life-record" && supplement.outputTarget.diaryDatePolicy).toBeUndefined();
+  finish("# 2026-10-29 日记\n\n十月十七日去过公园，后来想起了晚霞。");
+  await vi.waitFor(async () => expect((await coordinator.get(supplement.id))?.status).toBe("completed"));
+  const updated = (await history.list("demo")).entries[0]!;
+  expect(updated.diaryDate).toBe("2026-10-29");
+  expect(updated.storedPath).toBe(saved.storedPath);
 });

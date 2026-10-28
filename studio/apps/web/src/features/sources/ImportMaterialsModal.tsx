@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "../../shared/preference-storage";
 import { tr } from "../../shared/i18n";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { FolderTree } from "../../shared/FolderTree";
@@ -31,7 +32,7 @@ const rememberedImportProviderKey = "the-way-here.import-provider";
 
 function rememberedImportRoute(fallback: ImportRoute): ImportRoute {
   try {
-    const saved = window.localStorage.getItem(rememberedImportRouteKey);
+    const saved = readPreference(rememberedImportRouteKey);
     return saved === "chat" || saved === "bill" || saved === "photos" ? saved : fallback;
   } catch {
     return fallback;
@@ -40,7 +41,7 @@ function rememberedImportRoute(fallback: ImportRoute): ImportRoute {
 
 function rememberedImportProvider(): ChatImportProvider {
   try {
-    const saved = window.localStorage.getItem(rememberedImportProviderKey);
+    const saved = readPreference(rememberedImportProviderKey);
     return chatImportProviders.some(({ id }) => id === saved) ? saved as ChatImportProvider : "chatgpt";
   } catch {
     return "chatgpt";
@@ -141,8 +142,8 @@ export function ImportMaterialsModal({ folders, currentFolder, initialRoute, onC
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(rememberedImportRouteKey, route);
-      if (route === "chat") window.localStorage.setItem(rememberedImportProviderKey, provider);
+      writePreference(rememberedImportRouteKey, route);
+      if (route === "chat") writePreference(rememberedImportProviderKey, provider);
     } catch {
       // Import still works when browser storage is unavailable.
     }

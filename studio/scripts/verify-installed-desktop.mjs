@@ -37,6 +37,7 @@ try{
   observed=await app.evaluate(({app})=>app.getAppMetrics().map(item=>item.pid));
   const profile=await app.evaluate(({app})=>app.getPath('userData'));
   if(profile!==path.join(root,'profile'))throw Error('The test did not use its isolated user profile');
+  if(await app.evaluate(({app})=>app.getPath('sessionData'))!==profile)throw Error('Chromium storage did not use the isolated user profile');
   const page=await app.firstWindow();page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
   await page.waitForURL('https://workspace-*.localhost/**');
   await expect(page.locator('main h1').first()).toBeVisible();

@@ -34,6 +34,8 @@ export interface RunFileChange {
 export interface AgentRunResult {
   finalAnswer?: string;
   completedAt?: string;
+  /** Server-owned save intent, retained across crash recovery. */
+  outputSaveStartedAt?: string;
   outputSavedAt?: string;
   outputPageId?: string;
 }
@@ -76,8 +78,11 @@ export interface CaptureOutputTarget {
   kind: "life-record";
   label: string;
   originalText: string;
-  /** Local calendar date frozen at submission. */
+  /** Record date. New capture drafts use the final save instant in diaryTimeZone. */
   diaryDate?: string;
+  diaryTimeZone?: string;
+  /** Server-owned; never accepted as a client destination override. */
+  diaryDatePolicy?: "saved-at";
   /** Server-owned identity candidates and relationship evidence, frozen with the run. Never accepted from clients. */
   entityLinks?: Array<{ pageId: string; title: string; matchedNames: string[]; relationshipContext?: string; titleIsAmbiguous?: boolean }>;
 }

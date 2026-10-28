@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "../preference-storage";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { enMessages } from "./en-messages";
 
@@ -9,7 +10,7 @@ export function parseLocale(value: string | null | undefined): AppLocale {
 }
 
 export function readStoredLocale(): AppLocale {
-  try { return parseLocale(globalThis.localStorage?.getItem(DESKTOP_LOCALE_KEY)); }
+  try { return parseLocale(readPreference(DESKTOP_LOCALE_KEY)); }
   catch { return "zh"; }
 }
 
@@ -107,7 +108,7 @@ export function uiDateLocale(locale: AppLocale = currentLocale()): string {
 }
 
 function readDesktopString(key: string): string | null {
-  try { return globalThis.localStorage?.getItem(key) ?? null; }
+  try { return readPreference(key) ?? null; }
   catch { return null; }
 }
 
@@ -122,7 +123,7 @@ function useDesktopStringPreference(key: string, fallback: string) {
     return () => { window.removeEventListener("storage", refresh); window.removeEventListener("desktop-preference", refresh); };
   }, [key, fallback]);
   const update = (next: string) => {
-    try { localStorage.setItem(key, next); } catch { /* The choice stays in memory when storage is unavailable. */ }
+    try { writePreference(key, next); } catch { /* The choice stays in memory when storage is unavailable. */ }
     setValue(next);
     if (typeof window !== "undefined") window.dispatchEvent(new Event("desktop-preference"));
   };

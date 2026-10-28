@@ -1,3 +1,4 @@
+import { useUpdateGuard } from "../../shared/update-readiness";
 import { isTerminalRunStatus } from "@the-way-here/shared";
 import { TextArea, VoiceInputForTextArea } from "../../shared/form-controls";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -76,6 +77,7 @@ export function AgentDock({ revision, context, initialRunId = "", embedded = fal
   runIdRef.current = runId;
   const submittingRef = useRef(false);
   const pendingAutoSubmissionRef = useRef<AgentAutoSubmission | undefined>(undefined);
+  useUpdateGuard(() => !draft.trim() && !submitting);
   const threads = groupAgentThreads(runList || []);
   const contextIdentity = agentContextIdentity(context);
   const boundRunId = boundAgentThreadForPage(runList || [], context.pageId)?.latest.id || "";
@@ -349,6 +351,7 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
   const [actionRevision, setActionRevision] = useState(0);
   const { data: run, loading, error } = useApi<WikiRun>(`/api/runs/${runId}`, revision + actionRevision);
   const [reply, setReply] = useState("");
+  useUpdateGuard(() => !reply.trim());
   const [sending, setSending] = useState(false);
   const [finishingJourney, setFinishingJourney] = useState(false);
   const [continuingAfterWrapUp, setContinuingAfterWrapUp] = useState(false);

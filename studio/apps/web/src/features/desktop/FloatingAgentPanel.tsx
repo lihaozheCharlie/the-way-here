@@ -1,3 +1,4 @@
+import { readPreference, writePreference } from "../../shared/preference-storage";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import "./floating-agent-panel.css";
@@ -15,7 +16,7 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
   const id = useId();
   const [preferredWidth, setPreferredWidth] = useState(() => {
     try {
-      const saved = Number(localStorage.getItem(WIDTH_KEY));
+      const saved = Number(readPreference(WIDTH_KEY));
       return Number.isFinite(saved) && saved >= MIN_WIDTH ? Math.min(saved, MAX_WIDTH) : DEFAULT_WIDTH;
     } catch { return DEFAULT_WIDTH; }
   });
@@ -28,7 +29,7 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
   function updateWidth(value: number) {
     const next = Math.round(Math.max(minWidth, Math.min(maxWidth, value)));
     setPreferredWidth(next);
-    try { localStorage.setItem(WIDTH_KEY, String(next)); } catch { /* Resizing also works without storage. */ }
+    try { writePreference(WIDTH_KEY, String(next)); } catch { /* Resizing also works without storage. */ }
   }
   useEffect(() => {
     const resize = () => setViewportWidth(window.innerWidth);

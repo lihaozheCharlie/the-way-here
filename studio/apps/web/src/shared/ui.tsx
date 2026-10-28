@@ -3,7 +3,7 @@ import { useQuietScroll } from "./QuietScroll";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
-export type IconName = "folder" | "pin" | "heart" | "link" | "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
+export type IconName = "folder" | "pin" | "heart" | "link" | "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "cloud-download" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -30,6 +30,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     up: <><path d="M12 19V5M7 10l5-5 5 5" /></>,
     stop: <rect x="5" y="5" width="14" height="14" rx="1.5" fill="currentColor" stroke="none" />,
     refresh: <><path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 5v6h-6" /></>,
+    "cloud-download": <><path d="M5 16.5a4.5 4.5 0 0 1 1-8.8 6 6 0 0 1 12-.2 4.5 4.5 0 0 1 1 8.8" /><path d="M12 11v10m-4-4 4 4 4-4" /></>,
     journal: <><path d="M6 3h11a2 2 0 0 1 2 2v16H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M8 3v18M11 8h5M11 12h5" /></>,
     message: <><path d="M4 5h16v11H9l-5 4V5Z" /><path d="M8 9h8M8 12h6" /></>,
     receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 8h6M9 12h6M9 16h4" /></>,
