@@ -39,7 +39,8 @@ validation:
   const env = { ...process.env, THE_WAY_HERE_VAULT: root, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo', TWH_APP_CACHE_ROOT: path.join(root, 'cache') };
   delete env.THE_WAY_HERE_DEV;
   delete env.THE_WAY_HERE_DESKTOP_TOKEN;
-  app = await electron.launch({ ...(process.env.TWH_DESKTOP_EXECUTABLE ? { executablePath: process.env.TWH_DESKTOP_EXECUTABLE, args: ['--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] } : { args: [path.join(studio, 'apps/desktop'), '--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] }), env, timeout: 60000 });
+  const launchOptions = { ...(process.env.TWH_DESKTOP_EXECUTABLE ? { executablePath: process.env.TWH_DESKTOP_EXECUTABLE, args: ['--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] } : { args: [path.join(studio, 'apps/desktop'), '--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] }), env, timeout: 60000 };
+  app = await electron.launch(launchOptions);
   pid = app.process().pid;
   console.log(`Verification App PID ${pid}`);
   const page = await app.firstWindow();
@@ -94,6 +95,24 @@ validation:
   await page.keyboard.press('Escape');
   expect(errors).toEqual([]);
   console.log('PASS: App IPC shares Web routes, folder open/remove semantics and three import types; native Cmd/Ctrl+O opens import.');
+  const savedSettings = await page.evaluate(async () => {
+    const response = await fetch('/api/agent-settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ runtimeId: 'codex', codex: { model: 'gpt-6.1-sol', effort: 'high' }, thirdParty: { providerId: 'deepseek', model: 'deepseek-v4-pro', effort: 'high', apiKey: 'anonymous-restart-fixture' } }) });
+    if (!response.ok) throw new Error('Failed to save anonymous AI settings');
+    return response.json();
+  });
+  const settingsFile = path.join(stateRoot, 'agent-settings.json');
+  const encryptedSettings = await readFile(settingsFile, 'utf8');
+  expect(JSON.parse(encryptedSettings).version).toBe(3);
+  expect(encryptedSettings).not.toContain('anonymous-restart-fixture');
+  await app.close();
+  app = await electron.launch(launchOptions);
+  pid = app.process().pid;
+  const restarted = await app.firstWindow();
+  await restarted.waitForURL('**/');
+  expect(await restarted.evaluate(() => fetch('/api/agent-settings').then(response => response.json()))).toEqual(savedSettings);
+  expect(await readFile(settingsFile, 'utf8')).toBe(encryptedSettings);
+  console.log('PASS: desktop restarts with encrypted AI settings, preserving model choices and ciphertext.');
+
 } finally {
   try {
     const pids = app ? await app.evaluate(({ app }) => app.getAppMetrics().map(item => item.pid)).catch(() => [pid]) : [];

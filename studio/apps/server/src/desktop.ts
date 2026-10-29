@@ -1,4 +1,5 @@
 import path from "node:path";
+import { startupErrorMessage } from "./services/startup-error.js";
 import { StudioApplication } from "./studio-application.js";
 
 type ParentPort = {
@@ -10,6 +11,9 @@ if (!port || !process.env.THE_WAY_HERE_VAULT) throw new Error("Desktop runtime r
 const runtime = await StudioApplication.create({
   vaultRoot: path.resolve(process.env.THE_WAY_HERE_VAULT),
   knowledgeBaseId: process.env.THE_WAY_HERE_KNOWLEDGE_BASE,
+}).catch((error: unknown) => {
+  port.postMessage({ type: "runtime-startup-error", protocol: 1, message: startupErrorMessage(error) });
+  throw error;
 });
 await runtime.app.ready();
 runtime.subscribe((event, data) => port.postMessage({ type: "runtime-event", event, data }));

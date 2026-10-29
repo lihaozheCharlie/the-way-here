@@ -107,8 +107,8 @@ async function chooseWorkspace() {
 }
 async function startRuntime() {
   const entry = app.isPackaged ? path.join(process.resourcesPath,'server/dist/desktop.js') : path.join(studio,'apps/server/dist/desktop.js');
-    worker = utilityProcess.fork(entry,[],{ env:{...process.env,
-      ...(app.isPackaged ? {TWH_DESKTOP_SECURE_SETTINGS:'1', TWH_BUNDLED_ENGINE:path.join(process.resourcesPath,'workspace-template/knowledge-engine'), TWH_BUNDLED_PYTHON:path.join(process.resourcesPath,'python/bin/python3'), TWH_KNOWLEDGE_RUNNER:path.join(process.resourcesPath,'native/run-knowledge-tool.py'), TWH_OPERATOR:distribution.operator || '', TWH_PRIVACY_URL:distribution.privacyUrl || '', TWH_SUPPORT_URL:distribution.supportUrl || ''} : {}),
+    worker = utilityProcess.fork(entry,[],{ env:{...process.env, TWH_DESKTOP_SECURE_SETTINGS:'1',
+      ...(app.isPackaged ? {TWH_BUNDLED_ENGINE:path.join(process.resourcesPath,'workspace-template/knowledge-engine'), TWH_BUNDLED_PYTHON:path.join(process.resourcesPath,'python/bin/python3'), TWH_KNOWLEDGE_RUNNER:path.join(process.resourcesPath,'native/run-knowledge-tool.py'), TWH_OPERATOR:distribution.operator || '', TWH_PRIVACY_URL:distribution.privacyUrl || '', TWH_SUPPORT_URL:distribution.supportUrl || ''} : {}),
       ...(process.mas ? {TWH_MAS:'1', TWH_CODEX_COMMAND:path.join(process.resourcesPath,'codex/bin/codex'), CODEX_HOME:masCodex.home, TWH_CODEX_WORKDIR:masCodex.cwd} : {}),
       TWH_APP_CACHE_ROOT:path.join(app.getPath('userData'), 'cache'), THE_WAY_HERE_VAULT:workspace, PATH:[...(app.isPackaged ? [path.join(process.resourcesPath,'python/bin')] : []), path.join(app.getPath('home'),'.local/bin'), '/opt/homebrew/bin', '/usr/local/bin', process.env.PATH || '/usr/bin:/bin'].join(path.delimiter), THE_WAY_HERE_DEV:''}, stdio:'pipe', serviceName:'The Way Here knowledge runtime' });
   attachSecretService(worker, safeStorage);
@@ -306,7 +306,7 @@ app.whenReady().then(async () => {
   updateInterval = setInterval(checkUpdatesAutomatically, 60_000); updateInterval.unref();
   installInterval = setInterval(() => { if (updates.state.status === 'ready') void updates.installWhenReady(); }, 2000); installInterval.unref();
   registerIPC(); installMenu(); openWindow('/','main');
-}).catch(async (error) => { console.error('Desktop startup failed:',error); if (!app.commandLine.hasSwitch('diagnostics')) { const result = await dialog.showMessageBox({type:'error',message:t('暂时无法打开知识空间'),detail:error.message,buttons:[t('退出'),t('打开已有知识空间…')],defaultId:0,cancelId:0}); if (result.response === 1) await openExistingWorkspace(); } app.quit(); });
+}).catch(async (error) => { console.error('Desktop startup failed:',error); if (!app.commandLine.hasSwitch('diagnostics')) { const settingsFailure = error.message?.startsWith('AI 设置暂时无法读取'); const result = await dialog.showMessageBox({type:'error',message:t(settingsFailure ? 'AI 设置暂时无法读取' : '暂时无法打开知识空间'),detail:t(error.message),buttons:settingsFailure ? [t('退出')] : [t('退出'),t('打开已有知识空间…')],defaultId:0,cancelId:0}); if (!settingsFailure && result.response === 1) await openExistingWorkspace(); } app.quit(); });
 app.on('activate',showMain);
 app.on('before-quit', () => { quitting = true; clearTimeout(updateTimer); clearInterval(updateInterval); clearInterval(installInterval); updateReadiness.dispose(); updates?.dispose(); speech?.cancel(); for (const library of photoLibraries.values()) library.close(); photoLibraries.clear(); worker?.kill(); scopes?.close(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

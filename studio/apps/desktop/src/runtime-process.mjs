@@ -14,6 +14,8 @@ export class DesktopRuntime {
     this.onMessage = message => {
       if (message?.type === 'runtime-ready' && message.protocol === 1) {
         clearTimeout(this.startupTimer); this.resolveReady();
+      } else if (message?.type === 'runtime-startup-error' && message.protocol === 1 && typeof message.message === 'string') {
+        this.close(new Error(message.message));
       } else if (message?.type === 'runtime-response') {
         this.pending.get(message.id)?.resolve(message);
       } else if (message?.type === 'runtime-event' && typeof message.event === 'string' && /^[a-zA-Z0-9_-]+$/.test(message.event)) {

@@ -1,6 +1,6 @@
 import { tr } from "../../shared/i18n";
 import type { AgentSelection } from "./AgentSettings";
-import { isTerminalRunStatus, JOURNEY_REPORT_OUTPUT_END, JOURNEY_REPORT_OUTPUT_START, type AgentOutputTarget, type AgentRuntimeEvent, type SourceRunContext, type WikiRun } from "@the-way-here/shared";
+import { JOURNEY_REPORT_OUTPUT_END, JOURNEY_REPORT_OUTPUT_START, type AgentOutputTarget, type AgentRuntimeEvent, type SourceRunContext, type WikiRun } from "@the-way-here/shared";
 
 export type AgentContext = {
   scope: string;
@@ -49,18 +49,6 @@ export const JOURNEY_WRAP_UP_PROMPT = "这段旅程已经聊得差不多了，�
 
 export function isJourneyWrapUpRun(run: WikiRun): boolean {
   return run.outputTarget?.kind === "journey-report" && run.displayPrompt === JOURNEY_WRAP_UP_DISPLAY_PROMPT;
-}
-
-/** The visible in-progress conversation is abandoned when the page context changes. */
-export function abandonedRunOnContextChange(input: {
-  previousContext: string;
-  previousRunId: string;
-  nextRunId: string;
-  status?: WikiRun["status"];
-}): string | undefined {
-  if (!input.previousContext || !input.previousRunId || input.previousRunId === input.nextRunId) return undefined;
-  if (!input.status || isTerminalRunStatus(input.status) || input.status === "validating") return undefined;
-  return input.previousRunId;
 }
 
 export function agentContextIdentity(context: AgentContext): string {

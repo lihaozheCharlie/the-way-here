@@ -51,3 +51,12 @@ test('oversized bodies never enter the runtime and aborted calls release correla
     await new Promise(resolve=>setImmediate(resolve));abort.abort();await assert.rejects(pending);assert.equal(runtime.pending.size,0);
   } finally {runtime.close();}
 });
+
+test('startup diagnostics reach the caller before a generic worker-exit error',async()=>{
+  const worker=new EventEmitter(); worker.kill=()=>{};
+  const runtime=new DesktopRuntime(worker);
+  worker.emit('message',{type:'runtime-startup-error',protocol:1,message:'AI 设置暂时无法读取，请检查系统钥匙串。'});
+  worker.emit('exit',1);
+  await assert.rejects(runtime.ready,/AI 设置暂时无法读取/);
+  assert.equal(runtime.closed,true);
+});

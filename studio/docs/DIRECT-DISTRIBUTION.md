@@ -151,3 +151,7 @@ pnpm desktop:ship
 匿名输入对照确认：旧版将 94 字预览覆盖为 21 字，修复后保留 94 字；空结果、较短的正常纠正和多段顺序的回归检查通过。类型检查、665 项测试及构建通过。最终 DMG 通过签名、Apple 公证及 Gatekeeper 校验，并复制到隔离目录完成真实安装启动、本地 API、中英文界面与菜单及更新桥接验收。测试进程、资料和临时挂载均已清理。
 
 正式发布：https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.6 。安装包 230,032,632 字节，SHA-256 为 `4d809f6ce9253953fe483a6fcff0141fe1f530e302c4d3d142a9fac496efd06c`；应用公证 ID `acfc6830-e7f2-4d85-9375-00808c4e7cd2`，DMG 公证 ID `44ee11c5-6d25-4ba6-9a1c-86ed16db2c3d`，均为 Accepted。GitHub 草稿资产大小及摘要核对后公开，固定 latest-release 更新 feed 已切换 0.1.6。公开完整下载的大小和 SHA-256 再次匹配，0.1.5 检查器返回 available，0.1.6 返回 current；结果保存在 `.runtime/direct/public-verification-0.1.6.json`。本次未重新部署官网下载网站，客户端推送通过固定更新 feed 生效。
+
+## 启动与加密设置回归
+
+每次正式发布须针对最终安装包执行 `verify-first-install.mjs` 和 `verify-desktop.mjs` 的隔离验收：无开发环境的首次启动、保留记录及偏好的再次启动，以及保存加密 AI 设置后的重启读取。`verify-desktop.mjs` 必须确认加密格式、密钥不以明文落盘、模型设置一致且重启不重写密文。测试失败不得公开新版本。源码开发桌面端也必须执行同样的加密重启验收，不能只验证空配置。初始化失败通过私有运行时通道提供不含原始配置或密钥的原因；AI 设置失败不能引导用户更换知识空间。

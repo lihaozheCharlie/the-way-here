@@ -63,7 +63,7 @@ apps/web
 
 现有 Agent Run 的知识库与配置快照继续决定 Prompt、审批、验证与差异。新增 `POST /api/capture` 验证显式知识库 ID，绑定当时的索引与导入清单，首次写入即包含完整确认正文，使用排他创建避免覆盖同名记录。页面 API 对内容写入携带首次加载的知识库 ID；切库后服务端拒绝旧窗口内容写入，窗口刷新以清除过期页面上下文。随手记草稿按库存储。
 
-各页面通过 `PageAgentContext` 发布上下文，卸载时释放；`AgentDock` 由 Shell 或独立对话窗口挂载，旧浮动入口、模态遮罩、Tab 陷阱和内嵌设置弹层已删除；关闭 Inspector 只隐藏而不销毁会话。独立深聊窗口通过当前 Run ID 恢复对话；独立阅读窗口使用 ReadOnlyDocument。内容、侧栏和 Inspector 分别滚动，Markdown 目录与编辑位置改为跟随内容滚动容器。
+各页面通过 `PageAgentContext` 发布上下文，卸载时释放；`AgentDock` 由 Shell 或独立对话窗口挂载，旧浮动入口、模态遮罩、Tab 陷阱和内嵌设置弹层已删除；关闭 Inspector 只隐藏而不销毁会话。页面浏览、切换记录或切换知识库只更新可见对话，不发送任务中断请求；构建及其他已启动任务在后台继续使用启动时绑定的知识库与配置快照。用户仍可通过对话内的停止按钮主动中断任务。独立深聊窗口通过当前 Run ID 恢复对话；独立阅读窗口使用 ReadOnlyDocument。内容、侧栏和 Inspector 分别滚动，Markdown 目录与编辑位置改为跟随内容滚动容器。
 
 语音遵循录音、原话、整理、确认四步；共享控件依赖可注入的语音插槽，避免 shared 反向依赖 feature。偏好设置复用原有 AI 全局配置服务。桌面主窗口订阅 Run 和预测任务事件，并在 SSE 重连时对 Run 列表补齐状态；旧任务初始静默，完成或失败后将模块标签与任务入口交给 Electron 主进程，由主进程在所有产品窗口均未聚焦时才显示系统通知。通知偏好保存在本机，Dock 不显示任务数量；值得聊聊不再有独立消息提醒。更多操作与验收见 [DESKTOP.md](DESKTOP.md)。
 
@@ -424,7 +424,7 @@ Agent 对话与模型设置使用独立的 `agent-conversation.css` 表面样式
 
 MAS 使用独立签名配置，与 DMG 分发并存。主进程维护 security-scoped bookmarks，启动时恢复；新增授权后重启 utility service。MAS 随包固定 OpenAI Codex 0.162.1，以 app-sandbox + inherit 两项权限签名；不执行外部 CLI。用户通过原生目录选择器连接既有 ChatGPT 登录，只导入 auth.json 的登录材料至应用私有 codex-mas 目录，不导入原有会话、插件、MCP、hooks 或配置；启动时固定 OpenAI 接收方及受控工作目录。商店外版本保留原来的外部 CLI 方式。
 
-AgentSettingsStore 维护按运行时/厂商绑定的显式共享许可，Registry 包装所有 AI runtime start/steer/allow/recover。撤回阻止新请求并中断活动任务；更换接收方使记录失效。商店外 Codex 自己的服务配置变更目前不能自动识别，需用户撤回重授；MAS 固定内置 Codex 的 OpenAI 接收方。打包桌面应用由主进程 safeStorage 处理加密，utilityProcess parentPort 传输加密请求，设置文件保存加密 envelope；解密失败不回退明文。开发服务器保持原文件存储。
+AgentSettingsStore 维护按运行时/厂商绑定的显式共享许可，Registry 包装所有 AI runtime start/steer/allow/recover。撤回阻止新请求并中断活动任务；更换接收方使记录失效。商店外 Codex 自己的服务配置变更目前不能自动识别，需用户撤回重授；MAS 固定内置 Codex 的 OpenAI 接收方。开发和打包桌面应用统一启用私有密钥通道，由主进程 safeStorage 处理加密，utilityProcess parentPort 传输加密请求，设置文件保存加密 envelope；解密失败不回退明文。开发服务器保持原文件存储。桌面初始化失败通过 `runtime-startup-error` 私有消息回传脱敏原因，主进程保留具体的设置读取提示；AI 设置失败不提供更换知识空间入口，且不覆盖已有设置。
 
 确定性 Python 工具从签名 Resources 执行，桌面 bootstrap 从相同 bundle 加载 vault_context 代码，仅把其 __file__ 数据上下文绑定到冻结工作区；不修改共享知识引擎或复制领域逻辑。验证、预测证据读取都走 bundle 路径，用户可写副本用于内容和规则展示。发布元信息经打包资源注入服务，web 只读取 /api/distribution。
 

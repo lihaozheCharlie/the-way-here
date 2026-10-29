@@ -13,7 +13,7 @@ pnpm install
 pnpm desktop
 ```
 
-`pnpm desktop` 构建前后端、编译 macOS 语音辅助程序及图标，然后通过 `.runtime/desktop-dev/The Way Here.app` 打开应用；开发包使用独立副本和正确的系统名称，不修改安装的 Electron 依赖，Dock 悬停显示 The Way Here。需要 macOS、Xcode Command Line Tools、Node.js 22.19+、pnpm。AI 继续使用本机 Codex 登录或偏好设置中的第三方模型配置；没有配置 AI 时，浏览、搜索、记录和导入仍可用。
+`pnpm desktop` 构建前后端、编译 macOS 语音辅助程序及图标，然后通过 `.runtime/desktop-dev/The Way Here.app` 打开应用；开发包使用独立副本和正确的系统名称，不修改安装的 Electron 依赖，Dock 悬停显示 The Way Here。需要 macOS、Xcode Command Line Tools、Node.js 22.19+、pnpm。开发版与正式版均通过主进程的系统钥匙串通道读取及加密 AI 设置，因此可打开已由正式版保存过加密设置的工作区。AI 继续使用本机 Codex 登录或偏好设置中的第三方模型配置；没有配置 AI 时，浏览、搜索、记录和导入仍可用。
 
 ```sh
 pnpm desktop:package

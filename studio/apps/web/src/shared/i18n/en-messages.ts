@@ -2540,4 +2540,7 @@ export const enMessages: Record<string, string> = {
   "下载": "Download",
   "待安装": "Pending",
   "安装中": "Installing",
+  "AI 设置暂时无法读取": "AI settings could not be read",
+  "AI 设置暂时无法读取，请确认系统钥匙串可用后重新打开应用。现有设置和知识内容已保留；更换知识空间无法解决此问题。": "AI settings could not be read. Make sure the system keychain is available, then reopen the app. Your settings and knowledge are preserved. Opening a different workspace will not resolve this issue.",
+  "知识空间初始化未完成，请重新打开应用；若问题持续，请联系支持。现有知识内容已保留。": "Workspace setup did not finish. Reopen the app, and contact support if the issue continues. Your knowledge is preserved.",
 };
