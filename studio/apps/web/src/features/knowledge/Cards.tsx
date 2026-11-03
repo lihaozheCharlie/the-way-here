@@ -1,5 +1,5 @@
 import { tr, useDemoLabels } from "../../shared/i18n";
-import { FileListRow } from "../../shared/FileMenu";
+import { FileMenu } from "../../shared/FileMenu";
 import { SearchField } from "../../shared/form-controls";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -7,8 +7,9 @@ import type { StructuredCard } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { categoryMeta, growthTabs } from "../../features/knowledge/navigation";
 import { PageAgentContext } from "../desktop/InspectorContext";
-import { CollapsibleIndexPane, Empty, Icon, Loading, PageHeader, SectionTabs } from "../../shared/ui";
-import { EditablePageContent } from "./PagePreview";
+import { Empty, Icon, Loading, PageHeader, SectionTabs } from "../../shared/ui";
+import { FileBrowserWorkspace, FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
+import { DocumentPreview } from "../../shared/DocumentPreview";
 
 export function StructuredExplorer({ cards, revision, contextScope, emptyLabel = tr("暂无内容"), suggestions = [] }: { cards: StructuredCard[]; revision: number; contextScope: string; emptyLabel?: string; suggestions?: string[] }) {
   const demo = useDemoLabels();
@@ -26,21 +27,16 @@ export function StructuredExplorer({ cards, revision, contextScope, emptyLabel =
     if (next) selectItem(next.id);
   }
   return <>
-    <div className={`collection-explorer${indexOpen ? "" : " index-collapsed"}`}>
-    <CollapsibleIndexPane open={indexOpen} onToggle={() => setIndexOpen((value) => !value)} label={tr("内容列表")}>
-      <aside className="collection-list">
-        <SearchField name="collection-search" autoComplete="off" aria-label={tr("在当前分类中查找")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tr("在当前分类中查找…")} />
-        <small>{filtered.length} / {cards.length}</small>
-        <div role="list" aria-label={tr("内容列表")}>{filtered.map((card) => { const shown = shownCard(card); return <FileListRow key={card.id} page={card} onRenamed={page => selectItem(page.id)}><button aria-label={shown.title} aria-current={selected?.id === card.id ? "true" : undefined} key={card.id} className={selected?.id === card.id ? "active" : ""} onClick={() => selectItem(card.id)}><b>{shown.title}</b><span>{shown.excerpt}</span></button></FileListRow>; })}</div>
-      </aside>
-    </CollapsibleIndexPane>
-    <article className="collection-detail" aria-live="polite">
-      {selected ? <>
-        <EditablePageContent pageId={selected.id} revision={revision} onRenamed={(renamed) => selectItem(renamed.id)} />
-        <div className="collection-pager"><button disabled={selectedIndex <= 0} onClick={() => moveSelection(-1)}><Icon name="back" size={15} />{tr("上一条")}</button><span>{selectedIndex + 1} / {filtered.length}</span><button disabled={selectedIndex >= filtered.length - 1} onClick={() => moveSelection(1)}>{tr("下一条")}<Icon name="arrow" size={15} /></button></div>
-      </> : <Empty>{tr("没有匹配内容")}</Empty>}
-    </article>
-    </div>
+    <FileBrowserWorkspace label={contextScope} filesOpen={indexOpen}>
+      <FileBrowserPane label={tr("内容列表")} count={`${filtered.length} / ${cards.length}`} open={indexOpen} onToggle={() => setIndexOpen(value => !value)}
+        toolbar={<SearchField name="collection-search" autoComplete="off" aria-label={tr("在当前分类中查找")} value={query} onChange={event => setQuery(event.target.value)} placeholder={tr("在当前分类中查找…")} />}>
+        {filtered.map(card => <FileBrowserItem key={card.id} page={{ ...card, relativePath: card.id }} active={selected?.id === card.id} onSelect={() => selectItem(card.id)}
+          actions={<FileMenu page={card} onRenamed={page => selectItem(page.id)} />} />)}
+      </FileBrowserPane>
+      {selected ? <DocumentPreview pageId={selected.id} revision={revision} onRenamed={renamed => selectItem(renamed.id)}
+        footer={<div className="collection-pager"><button disabled={selectedIndex <= 0} onClick={() => moveSelection(-1)}><Icon name="back" size={15} />{tr("上一条")}</button><span>{selectedIndex + 1} / {filtered.length}</span><button disabled={selectedIndex >= filtered.length - 1} onClick={() => moveSelection(1)}>{tr("下一条")}<Icon name="arrow" size={15} /></button></div>} />
+        : <div className="source-preview-empty"><Empty>{tr("没有匹配内容")}</Empty></div>}
+    </FileBrowserWorkspace>
     {selected && <PageAgentContext context={{ scope: contextScope, title: shownCard(selected).title, pageId: selected.id, summary: shownCard(selected).excerpt, defaultMode: "write", suggestions: suggestions.length ? suggestions : [tr("我想补充一段新经历，请帮我放到当前内容的合适位置。"), tr("请沿着当前页面的证据，告诉我还有什么值得继续追问。")] }} />}
   </>;
 }

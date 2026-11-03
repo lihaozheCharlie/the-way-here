@@ -96,6 +96,20 @@ export class PredictionService {
     return {pages,config:index.config,hash,scanHash,policy,skill,schema,searchRules,scanSkill,scanRules,retrievalRules,reader,commonRetrieval,sourcePolicy,toolGuide,stageRules};
   }
   async hasActive(id: string): Promise<boolean> { return this.queues.has(id) || (await this.load(id)).status === "running"; }
+  cancel(id: string): Promise<void> {
+    return this.serial(id, async () => {
+      const state = await this.load(id);
+      if (state.status !== "running") return;
+      if (state.ref) {
+        await this.runtimes.require(state.ref.runtimeId).interrupt(state.ref);
+        this.executions.delete(key(state.ref));
+      }
+      clearTimeout(this.timers.get(id)); this.timers.delete(id);
+      state.status = "failed"; state.error = "用户已取消本次预测，既有结果与原始资料保留。";
+      state.ref = undefined; state.pages = undefined; state.pipeline = undefined;
+      await this.save(state);
+    });
+  }
   async view(id: string): Promise<PredictionView> {
     const state = await this.load(id);
     const input = await this.input(id);

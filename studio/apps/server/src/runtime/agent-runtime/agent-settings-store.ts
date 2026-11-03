@@ -10,7 +10,7 @@ import type {
   UpdateAgentGlobalSettings,
 } from "@the-way-here/shared";
 import type { PiProviderConfig } from "./pi/pi-model-catalog.js";
-import { desktopSecretCodec, type SecretCodec } from "./desktop-secret-codec.js";
+import { desktopSecretCodec, desktopSharedKeychain, type SharedKeychain, type SecretCodec } from "./desktop-secret-codec.js";
 import { dataConsentVersion } from "./data-consent.js";
 import {
   defaultThirdPartySelection,
@@ -36,6 +36,7 @@ type StoredAgentSettings = {
     model: string;
     effort: AgentReasoningEffort;
     apiKeys: Record<string, string>;
+    keySources?: Record<string, "local" | "shared">;
   };
 };
 
@@ -63,13 +64,14 @@ export class AgentSettingsStore {
     vaultRoot: string,
     stateRoot = stateRootForVault(vaultRoot),
     private readonly codec: SecretCodec | undefined = desktopSecretCodec(),
+    private readonly sharedKeychain: SharedKeychain | undefined = desktopSharedKeychain(),
   ) {
     this.filePath = path.join(stateRoot, "agent-settings.json");
   }
 
   async load(): Promise<AgentSettingsSnapshot> {
     if (!this.loaded) this.loaded = await this.readStored();
-    return snapshotOf(this.loaded);
+    return this.effectiveSnapshot(this.loaded);
   }
 
   update(input: UpdateAgentGlobalSettings): Promise<AgentSettingsSnapshot> {
@@ -81,9 +83,67 @@ export class AgentSettingsStore {
   private async persistUpdate(input: UpdateAgentGlobalSettings): Promise<AgentSettingsSnapshot> {
     const current = this.loaded || await this.readStored();
     const next = normalizeUpdate(input, current);
+    const selectedProvider = next.thirdParty.providerId;
+    if (input.thirdParty?.clearApiKey && current.thirdParty.keySources?.[selectedProvider] === "shared") {
+      if (!this.sharedKeychain) throw new AgentSettingsValidationError("共享钥匙串不可用，未更改来源或本机备份。");
+      await this.sharedKeychain.remove(selectedProvider);
+      // The existing Remove Key action removes the effective shared item, never its recovery backup.
+      if (current.thirdParty.apiKeys[selectedProvider]) next.thirdParty.apiKeys[selectedProvider] = current.thirdParty.apiKeys[selectedProvider]!;
+    }
     await this.writeStored(next);
     this.loaded = next;
-    return snapshotOf(next);
+    return this.effectiveSnapshot(next);
+  }
+
+  async sharedKeyStatus(providerId: string) {
+    if (!hasThirdPartyProvider(providerId)) throw new AgentSettingsValidationError("厂商无效");
+    const stored = this.loaded ||= await this.readStored();
+    const source = stored.thirdParty.keySources?.[providerId] || "local";
+    const localConfigured = Boolean(stored.thirdParty.apiKeys[providerId]);
+    if (!this.sharedKeychain) return { available: false, reason: "此宿主没有共享钥匙串能力；本机加密密钥保留。", source, localConfigured, sharedConfigured: false };
+    try {
+      const capability = await this.sharedKeychain.status();
+      if (!capability.available) return { available: false, reason: capability.reason, source, localConfigured, sharedConfigured: false };
+      const token = await this.sharedKeychain.read(providerId);
+      return { available: true, source, localConfigured, sharedConfigured: Boolean(token), suffix: token?.slice(-4) };
+    } catch { return { available: false, reason: "共享钥匙串暂不可用，未使用本机备份替代。", source, localConfigured, sharedConfigured: false }; }
+  }
+
+  changeSharedKey(providerId: string, action: "publish" | "pull" | "remove" | "local"): Promise<void> {
+    const task = this.mutationQueue.then(async () => {
+      if (!hasThirdPartyProvider(providerId)) throw new AgentSettingsValidationError("厂商无效");
+      const stored = this.loaded ||= await this.readStored();
+      const next = structuredClone(stored); next.thirdParty.keySources ||= {};
+      if (action === "local") { next.thirdParty.keySources[providerId] = "local"; }
+      else {
+        if (!this.sharedKeychain) throw new AgentSettingsValidationError("此安装包没有共享钥匙串能力，本机备份保留。");
+        const capability = await this.sharedKeychain.status();
+        if (!capability.available) throw new AgentSettingsValidationError(capability.reason || "共享钥匙串不可用");
+        if (action === "publish") {
+          const token = stored.thirdParty.apiKeys[providerId];
+          if (!token) throw new AgentSettingsValidationError("没有可发布的本机密钥，请先在 AI 设置配置。");
+          await this.sharedKeychain.write(providerId, token); next.thirdParty.keySources[providerId] = "shared";
+        } else if (action === "pull") {
+          if (!await this.sharedKeychain.read(providerId)) throw new AgentSettingsValidationError("共享钥匙串中没有此厂商密钥，请先在 iPhone 保存或从本机发布。");
+          next.thirdParty.keySources[providerId] = "shared";
+        } else if (action === "remove") { await this.sharedKeychain.remove(providerId); }
+      }
+      await this.writeStored(next); this.loaded = next;
+    });
+    this.mutationQueue = task.catch(() => undefined); return task;
+  }
+
+  private async effectiveSnapshot(stored: StoredAgentSettings): Promise<AgentSettingsSnapshot> {
+    const effective = structuredClone(stored);
+    for (const [providerId, source] of Object.entries(stored.thirdParty.keySources || {})) {
+      if (source !== "shared") continue;
+      delete effective.thirdParty.apiKeys[providerId]; // Never silently fall back to the encrypted backup.
+      if (providerId === stored.thirdParty.providerId && this.sharedKeychain) {
+        try { const token = await this.sharedKeychain.read(providerId); if (token) effective.thirdParty.apiKeys[providerId] = token; }
+        catch { /* Missing capability/key revokes the effective provider without losing local backup. */ }
+      }
+    }
+    return snapshotOf(effective);
   }
 
   private async readStored(): Promise<StoredAgentSettings> {
@@ -99,7 +159,7 @@ export class AgentSettingsStore {
     } catch (error: any) {
       if (error?.code === "ENOENT") return defaultsFrom(this.config);
       if (error instanceof AgentSettingsValidationError) throw error;
-      throw new Error(`全局 Agent 设置无法读取：${error.message || String(error)}`);
+      throw new Error("全局 Agent 设置无法读取或解密，原文件保留；请检查安装版本与系统钥匙串。");
     }
   }
 
@@ -143,7 +203,7 @@ function normalizeStored(value: unknown): StoredAgentSettings {
       model: text(codex.model, "Codex 模型", false),
       effort: effort(codex.effort, "Codex 思考深度"),
     },
-    thirdParty: { ...selection, apiKeys: apiKeys(thirdParty.apiKeys) },
+    thirdParty: { ...selection, apiKeys: apiKeys(thirdParty.apiKeys), keySources: normalizeKeySources(thirdParty.keySources) },
   };
 }
 
@@ -193,7 +253,7 @@ function normalizeUpdate(input: UpdateAgentGlobalSettings, current: StoredAgentS
       model: text(codex.model, "Codex 模型", runtimeId === "codex"),
       effort: effort(codex.effort, "Codex 思考深度"),
     },
-    thirdParty: { ...selection, apiKeys: nextKeys },
+    thirdParty: { ...selection, apiKeys: nextKeys, keySources: current.thirdParty.keySources },
   };
 }
 
@@ -271,6 +331,12 @@ function secret(value: unknown): string | undefined {
 
 function isRecord(value: unknown): value is Record<string, any> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeKeySources(value: unknown): Record<string, "local" | "shared"> {
+  if (value === undefined) return {};
+  if (!isRecord(value) || Object.entries(value).some(([id, source]) => !hasThirdPartyProvider(id) || !["local", "shared"].includes(source as string))) throw new AgentSettingsValidationError("密钥来源设置损坏，原文件已保留；未使用本机密钥替代共享来源。");
+  return { ...value } as Record<string, "local" | "shared">;
 }
 
 function normalizeConsent(value: unknown): AgentGlobalSettings["dataConsent"] {

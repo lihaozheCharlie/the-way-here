@@ -1,0 +1,30 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { AgentRuntimeConfig } from '@the-way-here/shared';
+import { AgentSettingsStore } from './agent-settings-store.js';
+import { AgentRuntimeRegistry } from './registry.js';
+import type { SharedKeychain } from './desktop-secret-codec.js';
+const config:AgentRuntimeConfig={defaultRuntime:'pi',runtimes:{codex:{enabled:false,command:'unused',transport:'stdio'},pi:{enabled:true,providers:[]}}};
+const roots:string[]=[];afterEach(async()=>{await Promise.all(roots.splice(0).map(root=>rm(root,{recursive:true,force:true})));});
+async function fixture(){
+ const root=await mkdtemp(path.join(os.tmpdir(),'twh-shared-key-test-'));roots.push(root);const keys=new Map<string,string>();const calls:string[]=[];let available=true;
+ const shared:SharedKeychain={status:async()=>({available,reason:available?undefined:'Missing signed entitlement'}),read:async id=>{calls.push('read');if(!available)throw new Error('unavailable');return keys.get(id);},write:async(id,key)=>{calls.push('write');keys.set(id,key);},remove:async id=>{calls.push('remove');keys.delete(id);}};
+ const secret=randomBytes(32);const codec={encrypt:async(text:string)=>{const iv=randomBytes(12),c=createCipheriv('aes-256-gcm',secret,iv),body=Buffer.concat([c.update(text),c.final()]);return Buffer.concat([iv,c.getAuthTag(),body]).toString('base64');},decrypt:async(text:string)=>{const b=Buffer.from(text,'base64'),c=createDecipheriv('aes-256-gcm',secret,b.subarray(0,12));c.setAuthTag(b.subarray(12,28));return Buffer.concat([c.update(b.subarray(28)),c.final()]).toString('utf8');}};
+ const store=new AgentSettingsStore(config,root,root,codec,shared);
+ await store.update({runtimeId:'pi',codex:{model:'',effort:'high'},thirdParty:{providerId:'deepseek',model:'deepseek-v4-pro',effort:'high',apiKey:'anonymous-local-token'}});
+ return{store,root,keys,calls,codec,shared,disable:()=>{available=false;}};
+}
+describe('explicit shared Keychain source',()=>{
+ it('never publishes on load/status and never exposes a token in public metadata',async()=>{const f=await fixture();await f.store.load();const status=await f.store.sharedKeyStatus('deepseek');expect(f.calls).not.toContain('write');expect(JSON.stringify(status)).not.toContain('anonymous-local-token');expect(JSON.stringify((await f.store.load()).public)).not.toContain('anonymous-local-token');});
+ it('publishes only explicitly and preserves encrypted local backup',async()=>{const f=await fixture();await f.store.changeSharedKey('deepseek','publish');expect(f.keys.get('deepseek')).toBe('anonymous-local-token');expect((await f.store.sharedKeyStatus('deepseek')).source).toBe('shared');expect(await readFile(path.join(f.root,'agent-settings.json'),'utf8')).not.toContain('anonymous-local-token');});
+ it('phone deletion revokes Mac token across reload until explicit opt-out',async()=>{const f=await fixture();await f.store.changeSharedKey('deepseek','publish');f.keys.delete('deepseek');expect((await f.store.load()).provider).toBeUndefined();const reopened=new AgentSettingsStore(config,f.root,f.root,f.codec,f.shared);expect((await reopened.load()).provider).toBeUndefined();await reopened.changeSharedKey('deepseek','local');expect((await reopened.load()).provider?.apiKey).toBe('anonymous-local-token');});
+ it('pull observes rotation and capability failures without falling back',async()=>{const f=await fixture();f.keys.set('deepseek','anonymous-phone-token');await f.store.changeSharedKey('deepseek','pull');expect((await f.store.load()).provider?.apiKey).toBe('anonymous-phone-token');f.keys.set('deepseek','anonymous-rotated-token');expect((await f.store.load()).provider?.apiKey).toBe('anonymous-rotated-token');f.disable();expect((await f.store.load()).provider).toBeUndefined();});
+ it('removal keeps the shared source selected and original encrypted backup recoverable',async()=>{const f=await fixture();await f.store.changeSharedKey('deepseek','publish');await f.store.changeSharedKey('deepseek','remove');expect((await f.store.sharedKeyStatus('deepseek')).source).toBe('shared');expect((await f.store.load()).provider).toBeUndefined();await f.store.changeSharedKey('deepseek','local');expect((await f.store.load()).provider?.apiKey).toBe('anonymous-local-token');});
+});
+
+ it('registry refreshes on every resolve and clears Pi after phone removal',async()=>{const f=await fixture();const registry=new (AgentRuntimeRegistry as any)(config,f.store,await f.store.load(),f.root);const network=vi.spyOn(globalThis,'fetch').mockRejectedValue(new Error('Network forbidden in anonymous key test'));const configure=vi.spyOn(registry.pi,'configure');const revoke=vi.spyOn(registry.protectedRuntimes.find((r:any)=>r.id==='pi'),'revoke');try{f.keys.set('deepseek','anonymous-phone-key');await f.store.changeSharedKey('deepseek','pull');await expect(registry.resolve('pi',undefined,undefined)).resolves.toMatchObject({runtimeId:'pi'});expect(configure.mock.calls.at(-1)?.[1]).toEqual([expect.objectContaining({apiKey:'anonymous-phone-key'})]);f.keys.delete('deepseek');await expect(registry.resolve('pi',undefined,undefined)).rejects.toThrow();expect(configure.mock.calls.at(-1)?.[1]).toEqual([]);expect(revoke).toHaveBeenCalledTimes(2);expect(network).not.toHaveBeenCalled();}finally{registry.close();network.mockRestore();}});
+
+ it('existing clear-key action removes shared item without destroying local recovery backup',async()=>{const f=await fixture();await f.store.changeSharedKey('deepseek','publish');const current=(await f.store.load()).public;await f.store.update({...current,thirdParty:{...current.thirdParty,clearApiKey:true}});expect(f.keys.has('deepseek')).toBe(false);expect((await f.store.load()).provider).toBeUndefined();await f.store.changeSharedKey('deepseek','local');expect((await f.store.load()).provider?.apiKey).toBe('anonymous-local-token');});

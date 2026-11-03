@@ -30,9 +30,17 @@ export class PredictionStore {
     return file;
   }
   async runtimeDirectory(id: string) {
-    const dir = await this.safeFile(await this.directory(id), ".runtime");
+    const dir = await this.runtimeLocation(id);
     await mkdir(dir, {recursive:true});
     return dir;
+  }
+  private async runtimeLocation(id: string) {
+    const mobile = await this.read(path.join(this.root, "mobile-space.json"));
+    if (mobile?.version === 1) {
+      const root = path.join(stateRootForVault(this.root), "mobile-predictions");
+      return this.safeFile(root, createHash("sha256").update(id).digest("hex"));
+    }
+    return this.safeFile(await this.directory(id), ".runtime");
   }
   private async read(file: string) {
     try { return JSON.parse(await readFile(file, "utf8")); }
@@ -67,7 +75,7 @@ export class PredictionStore {
       await this.save(state);
     }
     if (state.knowledgeBaseId !== id) throw new Error("预测数据与知识库不匹配");
-    const runtimeDir = await this.safeFile(dir,".runtime");
+    const runtimeDir = await this.runtimeLocation(id);
     const runtime = await this.read(await this.safeFile(runtimeDir,"state.json"));
     return runtime && runtime.revision === state.revision ? {...state,...runtime.state} : state;
   }

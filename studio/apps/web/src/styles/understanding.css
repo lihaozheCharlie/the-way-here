@@ -305,11 +305,6 @@ button.understanding-timeline-item:hover > div,
   .understanding-relationship-web > header { align-items: start; flex-direction: column; }
   .understanding-relationship-web { overflow-x: auto; }
   .understanding-relationship-web svg { width: 680px; height: 320px; }
-  .understanding-people-page :where(.collection-explorer, .collection-explorer.index-collapsed, .people-explorer, .people-explorer.index-collapsed) { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .understanding-people-page :where(.collapsible-index-pane, .collection-detail, .person-detail) { min-width: 0; width: 100%; }
-  .understanding-people-page :where(.collection-list, .people-index) { position: static; max-height: 300px; }
-  .understanding-people-page .pane-collapse-button,
-  .understanding-people-page .collapsible-index-pane.collapsed .pane-collapse-button { right: 8px; }
   .understanding-timeline-item.is-parallel > div { margin-left: 14px; }
 }
 

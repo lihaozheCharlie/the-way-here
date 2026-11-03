@@ -29,7 +29,7 @@ export class RunStore {
     mode: WikiRun["mode"],
     knowledgeBaseId: string,
     configSnapshot: VaultConfig,
-    options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "contextTopicId" | "suggestionForRunId" | "chatOnly">> = {},
+    options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "frozenEvidence" | "contextTopicId" | "suggestionForRunId" | "chatOnly">> = {},
   ): Promise<WikiRun> {
     const mayWrite = canWriteRun({ mode, outputTarget: options.outputTarget });
     if (mayWrite && !this.activeWriteRuns.has(knowledgeBaseId)) {

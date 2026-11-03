@@ -1,19 +1,6 @@
-import { tr } from "../../shared/i18n";
 import type { WikiPage, WikiPageSummary } from "@the-way-here/shared";
-import { useApi } from "../../shared/use-api";
-import { EditableDocument } from "../../shared/markdown";
-import { apiPageHref } from "../../shared/routing";
-import { Empty, Loading } from "../../shared/ui";
-
-export function EditablePageContent({ pageId, revision, startEditing = false, onRenamed }: { pageId: string; revision: number; startEditing?: boolean; onRenamed?: (page: WikiPage) => void }) {
-  const { data, loading, error } = useApi<WikiPage>(apiPageHref(pageId), revision);
-  if (loading) return <Loading label={tr("正在展开完整内容")} />;
-  if (error || !data) return <Empty>{error ? tr(error) : tr("完整内容暂时无法读取")}</Empty>;
-  return <EditableDocument page={data} variant="preview" startEditing={startEditing} showOutline showIdentity={false} onRenamed={onRenamed} />;
-}
+import { DocumentPreview } from "../../shared/DocumentPreview";
 
 export function EmbeddedPagePreview({ page, revision, startEditing = false, onRenamed }: { page: Pick<WikiPageSummary, "id">; revision: number; startEditing?: boolean; onRenamed?: (page: WikiPage) => void }) {
-  return <article className="embedded-page" aria-live="polite">
-    <EditablePageContent pageId={page.id} revision={revision} startEditing={startEditing} onRenamed={onRenamed} />
-  </article>;
+  return <div className="embedded-page"><DocumentPreview pageId={page.id} revision={revision} startEditing={startEditing} showIdentity={false} onRenamed={onRenamed} /></div>;
 }

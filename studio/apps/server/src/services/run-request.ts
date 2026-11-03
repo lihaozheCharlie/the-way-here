@@ -14,6 +14,7 @@ export type StartRunInput = {
   sourceModule?: string;
   outputTarget?: AgentOutputTarget;
   sourceContext?: SourceRunContext;
+  frozenEvidence?: { id: string; hash: string };
   contextPageId?: string;
   contextTopicId?: string;
 };

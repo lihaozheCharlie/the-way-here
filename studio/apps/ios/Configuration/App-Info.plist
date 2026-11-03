@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.thewayhere.mobile.refresh</string>
+	</array>
+	<key>CFBundleDisplayName</key>
+	<string>The Way Here</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.thewayhere.capture</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>thewayhere</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>在打开 App 时保护你的私人记录。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>仅在你主动说一段时录音，原音频留在本机。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>只读取你选中的照片，生成压缩副本与本机人脸框，原图不会上传。</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>在这台 iPhone 上把你说的话转成可编辑文字，不使用服务器识别。</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.com.thewayhere.shared</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>The Way Here</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+		</dict>
+	</dict>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.thewayhere.read</string>
+	</array>
+	<key>TWHSharedKeychainAccessGroup</key>
+	<string>$(AppIdentifierPrefix)com.thewayhere.shared</string>
+	<!-- Home Screen actions are registered dynamically by AppModel.systemUpdate.
+	     Static copies consume the system limit before the unread-letter action. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>

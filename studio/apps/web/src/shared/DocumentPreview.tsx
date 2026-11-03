@@ -6,9 +6,9 @@ import { EditableDocument, ReadOnlyDocument } from "./markdown";
 import { Empty, Loading } from "./ui";
 import { useI18n } from "./i18n";
 
-export function DocumentPreview({ pageId, revision, startEditing, fileNameFocusToken, onRenamed, controls, headerActions, showMetadata = true, snapshot, identityActions, beforeContent, afterContent, relations, footer }: {
+export function DocumentPreview({ pageId, revision, startEditing, fileNameFocusToken, onRenamed, controls, headerActions, showMetadata = true, showIdentity = true, snapshot, identityActions, beforeContent, afterContent, relations, footer }: {
   pageId: string; revision: number; startEditing?: boolean; fileNameFocusToken?: number; onRenamed?: (page: WikiPage) => void;
-  controls?: ReactNode; headerActions?: ReactNode; showMetadata?: boolean; snapshot?: { id: string; markdown: string }; footer?: ReactNode;
+  controls?: ReactNode; headerActions?: ReactNode; showMetadata?: boolean; showIdentity?: boolean; snapshot?: { id: string; markdown: string }; footer?: ReactNode;
   identityActions?: ReactNode; beforeContent?: ReactNode; afterContent?: (page: WikiPage) => ReactNode; relations?: (page: WikiPage) => ReactNode;
 }) {
   const { data, loading, error } = useApi<WikiPage>(apiPageHref(pageId), revision);
@@ -17,7 +17,7 @@ export function DocumentPreview({ pageId, revision, startEditing, fileNameFocusT
     {loading ? <Loading label={t("正在展开正文")} /> : error || !data ? <Empty>{error ? t(error) : t("正文暂时无法读取")}</Empty> : snapshot ?
       <ReadOnlyDocument relations={relations?.(data)} readOnlyReason={t("历史版本")} page={data} id={snapshot.id} markdown={snapshot.markdown} headerContent={controls} headerActions={headerActions} showMetadata={showMetadata} afterContent={afterContent?.(data)} /> : data.importChannel === "photos" ?
       <ReadOnlyDocument afterContent={afterContent?.(data)} page={data} relations={relations?.(data)} readOnlyReason={t("通过照片记忆编辑")} id={data.id} markdown={data.renderedMarkdown || data.markdown} toolbar={<span>{t("通过“打开照片记忆”修改人物和讲述")}</span>} /> :
-      <EditableDocument relations={relations?.(data)} key={data.id} page={data} variant="preview" showOutline startEditing={startEditing} fileNameFocusToken={fileNameFocusToken} onRenamed={onRenamed} headerContent={controls} headerActions={headerActions} showMetadata={showMetadata} identityActions={identityActions} beforeContent={beforeContent} afterContent={afterContent?.(data)} />}
+      <EditableDocument relations={relations?.(data)} key={data.id} page={data} variant="preview" showIdentity={showIdentity} showOutline startEditing={startEditing} fileNameFocusToken={fileNameFocusToken} onRenamed={onRenamed} headerContent={controls} headerActions={headerActions} showMetadata={showMetadata} identityActions={identityActions} beforeContent={beforeContent} afterContent={afterContent?.(data)} />}
     {footer}
   </article>;
 }

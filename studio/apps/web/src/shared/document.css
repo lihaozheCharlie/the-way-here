@@ -1,56 +1,118 @@
-/* All document hosts share one paper, measure and editing geometry. */
+/* Shared document layout for editable pages, snapshots and standalone readers. */
 .document-surface {
-  --document-measure: 720px;
-  --document-gutter: 24px;
+  --record-outline-width: 0px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr) var(--record-outline-width);
+  align-items: stretch;
   position: relative;
-  overflow: visible;
   background: var(--paper);
-}
-.desktop-shell .document-surface.has-outline,
-.document-surface.has-outline { grid-template-columns: minmax(0, 1fr) 0; }
-.document-content {
-  position: relative;
-  grid-column: 1;
-  min-width: 0;
-  width: 100%;
-  max-width: calc(var(--document-measure) + 2 * var(--document-gutter));
-  margin-inline: auto;
-  padding-inline: var(--document-gutter);
-  box-sizing: border-box;
-}
-.document-surface .document-content > .editable-document-identity { padding: 24px 0 12px; }
-.document-surface .document-content > .editable-document-properties { padding: 8px 0 16px; background: transparent; border-bottom: 1px solid var(--line); }
-.document-surface .document-content > .document-header-content { padding-inline: 0; }
-/* Host-specific legacy prose rules cannot widen the shared column. */
-.document-surface .document-content > :is(.editable-document-body, .document-editor) {
-  display: block;
-  width: 100%;
-  max-width: none;
-  min-height: 360px;
-  height: auto;
-  margin: 0;
-  padding: 24px 0 64px;
-  box-sizing: border-box;
-  font: 400 17px/1.85 var(--font-display);
-  color: var(--ink);
-  background: transparent;
-  border: 0;
+  min-height: 0;
+  max-height: max(380px, calc(100dvh - 140px));
+  padding: 0;
   border-radius: 0;
-  overflow: visible;
-  overflow-wrap: break-word;
-  resize: none;
-  box-shadow: none;
+  transition: grid-template-columns 320ms cubic-bezier(.2,.7,.2,1);
+}
+.document-surface.has-outline { --record-outline-width: 36px; }
+.document-surface.outline-pinned { --record-outline-width: 232px; }
+.record-document-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; container-type: inline-size; }
+.record-document-toolbar {
+  display: flex; align-items: center; justify-content: flex-end; flex: none; gap: 10px;
+  height: 46px; padding: 0 10px 0 clamp(20px, 3cqw, 32px); border-bottom: 1px solid var(--record-divider, var(--line));
+}
+.record-document-header { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 0; font: 400 12.5px/1.55 var(--font-ui); }
+.record-document-path { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 13.5px; color: var(--ink-soft); }
+.record-document-path > b { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--ink); }
+.record-document-header > span { margin-left: auto; flex: none; color: var(--ink-soft); }
+.record-document-header.editing > span { padding: 3px 11px; border-radius: 99px; background: var(--record-outline-soft); color: var(--record-outline-accent); }
+.record-document-header.editing > span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: currentColor; }
+.record-document-header > span.error { color: var(--danger); }
+.record-document-scroll { flex: 1; min-height: 0; overflow: auto; }
+.document-surface .document-content {
+  --document-measure: 700px;
+  --document-gutter: clamp(36px, 7cqw, 84px);
+  padding-block: 44px 160px;
+}
+.document-surface .document-content > .editable-document-identity { padding: 0; margin: 0 0 30px; min-height: 0; border: 0; }
+.document-surface .document-content :is(.document-file-name input, .document-readonly-title) { font: 800 30px/1.4 var(--font-ui); letter-spacing: -.01em; padding: 0; }
+.document-surface.source-document .document-meta-row { display: none; }
+.document-surface .document-content > .editable-document-properties { padding: 0; border: 0; }
+.document-surface .document-content > .editable-document-properties:has(.source-property-summary:empty) { display: none; }
+.document-surface .document-content > :is(.editable-document-body,.document-editor) { padding: 0; min-height: 0; font: 400 17px/1.95 var(--font-display); color: var(--record-prose); }
+.document-surface .document-content > .editable-document-activate { padding-bottom: 24px; }
+.document-surface .document-content :is(.editable-document-body h2,.document-editor-heading-2) { font: 700 21px/1.5 var(--font-ui); margin: 1.9em 0 .55em; }
+.document-surface .document-content :is(.editable-document-body h3,.document-editor-heading-3) { font: 650 17.5px/1.5 var(--font-ui); margin: 1.5em 0 .35em; }
+.document-surface .document-content .editable-document-body > p { margin: 0 0 .85em; text-wrap: pretty; }
+.record-outline-hint { margin: 28px 0 0; color: var(--ink-soft); font: 400 13px/1.5 var(--font-ui); }
+.record-outline-hint code { background: var(--record-folder-panel, var(--surface-tinted)); border-radius: 5px; padding: 1px 7px; color: var(--ink); }
+
+.document-surface > .document-navigation-host {
+  position: relative; top: auto; width: auto; height: 100%; min-height: 0; min-width: 0;
+  background: var(--record-panel); box-shadow: inset 1px 0 var(--record-divider);
+}
+.document-surface .document-outline { position: relative; inset: auto; height: 100%; width: 100%; }
+.document-surface .document-tick-rail { align-items: center; position: relative; inset: auto; width: 36px; height: 100%; overflow-y: auto; scrollbar-width: none; gap: 0; padding: 9px 0 0; }
+.document-surface .document-tick { flex: none; justify-content: center; width: 36px; height: 22px; padding: 0; }
+.document-surface .document-tick i { width: 8px; height: 3px; background: var(--record-tick); }
+.document-surface .document-tick.major i { width: 14px; }
+.document-surface .document-tick.active i { width: 13px; background: var(--record-outline-accent); }
+.document-surface .document-tick.major.active i { width: 20px; }
+.document-surface .record-outline-control, .document-surface .document-outline-card > header > button {
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--record-control-ink);
+}
+.document-surface .document-tick-rail > .record-outline-control { margin-bottom: 12px; }
+.document-surface .record-outline-control:not(:disabled):hover, .document-surface .document-outline-card > header > button:not(:disabled):hover { background: var(--record-control-hover); color: var(--ink); }
+.document-surface .record-outline-control[aria-pressed=true] { background: var(--record-outline-soft); color: var(--record-outline-accent); }
+.document-surface .record-outline-control:disabled { opacity: .38; cursor: not-allowed; }
+.document-surface .document-outline .document-outline-card {
+  position: absolute; z-index: 3; inset: 0 0 0 auto; width: 232px; max-height: none; border: 0;
+  border-left: 1px solid var(--record-divider); border-radius: 0;
+  background: var(--record-panel); box-shadow: -14px 0 30px -18px var(--record-peek-shadow);
+  transition: opacity 160ms, transform 220ms cubic-bezier(.2,.7,.2,1), visibility 160ms;
+}
+.document-surface .document-outline:not(.pinned):is(:hover,:focus-within) .document-outline-card { transition-delay: 140ms; }
+.document-surface .document-outline.pinned .document-outline-card { width: 100%; box-shadow: none; }
+.document-surface .document-outline-card > header { height: 46px; flex: none; padding: 0 8px 0 16px; border-bottom: 1px solid var(--record-divider); font-size: 11.5px; }
+.document-surface .document-outline-card ol { flex: 1; padding: 12px 14px 20px 16px; }
+.document-surface .document-outline-card .outline-item {
+  min-height: 0; padding: 6px 10px 6px calc(14px + var(--outline-depth, 0) * 14px);
+  border-left: 2px solid var(--record-divider); border-radius: 0 7px 7px 0; color: var(--record-control-ink); font: 400 13px/1.5 var(--font-ui);
+}
+.document-surface .document-outline-card .outline-item.major { font-size: 13.5px; }
+.document-surface .document-outline-card .outline-item.active { border-left-color: var(--record-outline-accent); color: var(--record-outline-accent); font-weight: 600; background: linear-gradient(90deg, var(--record-outline-soft), transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .document-surface, .document-surface .document-outline .document-outline-card { transition: none; }
+}
+
+.source-preview:has(> .document-surface) { display: flex; flex-direction: column; }
+.source-preview > .document-surface { flex: 1; min-height: 0; }
+.source-preview > .document-surface, .stage-document-scroll > .document-surface {
+  height: 100%; max-height: none;
+}
+.document-content {
+  min-width: 0; width: 100%; max-width: calc(var(--document-measure) + 2 * var(--document-gutter));
+  margin-inline: auto; padding-inline: var(--document-gutter); box-sizing: border-box;
+}
+.document-surface .document-content > :is(.editable-document-body,.document-editor) {
+  display: block; width: 100%; max-width: none; height: auto; margin: 0; box-sizing: border-box;
+  background: transparent; border: 0; border-radius: 0; overflow: visible; overflow-wrap: break-word;
+  resize: none; box-shadow: none;
 }
 .document-surface .document-content .editable-document-body > * { max-width: none; margin-inline: 0; }
 .document-surface .document-content .editable-document-body > :first-child { margin-top: 0; }
-.document-surface .document-content .editable-document-body :is(p, li) { color: inherit; }
-.document-surface .document-content .editable-document-body pre { max-width: 100%; overflow-x: auto; }
-.document-surface .document-content .editable-document-body table { display: block; max-width: 100%; overflow-x: auto; }
+.document-surface .document-content .editable-document-body :is(pre,table) { display: block; max-width: 100%; overflow-x: auto; }
 .document-surface .document-content .document-editor:focus { outline: none; box-shadow: none; caret-color: var(--accent); }
 .document-surface .document-content .editable-document-activate:focus-visible { outline: 1px solid var(--accent); outline-offset: 6px; }
+.document-surface .document-readonly-title { margin: 0; overflow-wrap: anywhere; }
+.document-surface .document-content .editable-document-body h1 { font: 800 30px/1.4 var(--font-ui); }
+.document-outline-card { display: flex; flex-direction: column; opacity: 0; visibility: hidden; transform: translateX(5px); pointer-events: none; }
+.document-outline:is(:hover,:focus-within,.expanded,.pinned) .document-outline-card { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+.document-outline-card > header { display: flex; align-items: center; justify-content: space-between; }
+.document-outline-card ol { overflow: auto; min-height: 0; margin: 0; list-style: none; }
+.document-outline-card .outline-item { display: block; width: 100%; border: 0; background: transparent; text-align: left; overflow-wrap: anywhere; }
+.document-outline-card .outline-item:not(.active):hover { background: var(--surface-tinted); }
+.document-tick-rail { display: flex; flex-direction: column; }
+.document-tick { display: flex; align-items: center; border: 0; background: transparent; }
+.document-tick i { display: block; border-radius: 9px; transition: width 140ms ease-out, background 140ms ease-out; }
 .document-save-feedback { display: flex; justify-content: flex-end; padding-block: 4px; }
 .document-navigation-tabs { display: flex; gap: 4px; }
 .document-navigation-tabs button { min-height: 28px; padding: 4px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink-soft); font: 400 12px/1.5 var(--font-ui); cursor: pointer; }
@@ -62,54 +124,16 @@
 .document-relations { min-height: 0; overflow: auto; overflow-wrap: anywhere; }
 .document-relations, .document-outline-empty { padding: 16px; color: var(--ink-soft); font: 400 13px/1.6 var(--font-ui); }
 .document-relations .evidence-panel { width: auto; padding: 0; border: 0; background: transparent; }
-.document-surface .document-readonly-title { margin: 0; font: 700 19px/1.3 var(--font-ui); overflow-wrap: anywhere; }
 .reader-layout:has(.document-surface) { display: block; }
-
-.document-surface .document-content .editable-document-body > p { margin-block: 0 1lh; }
-.document-surface .document-content .editable-document-body > p:last-child { margin-bottom: 0; }
-.document-surface .document-content .document-file-name input { padding: 0; min-height: 32px; font: 700 19px/1.3 var(--font-ui); }
-
-/* The rail overlays the paper's right margin; only an explicitly pinned card takes space. */
-.document-surface > .document-navigation-host { grid-column: 2; grid-row: 1; position: sticky; top: 100px; height: min(560px, calc(100dvh - 180px)); width: 0; align-self: start; z-index: 5; overflow: visible; }
-.desktop-shell .document-surface.outline-pinned, .document-surface.outline-pinned { grid-template-columns: minmax(0, 1fr) 244px; }
-.document-surface.outline-pinned > .document-navigation-host { width: 244px; }
-.document-surface .document-outline { position: sticky; top: 0; display: block; width: 0; max-height: none; padding: 0; border: 0; background: transparent; overflow: visible; }
-.document-surface .document-outline.pinned { width: 244px; }
-.document-tick-rail { position: absolute; z-index: 2; right: 12px; top: 160px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; width: 30px; padding-block: 8px; }
-.document-tick-rail button { display: flex; align-items: center; justify-content: flex-end; width: 30px; height: 15px; border: 0; padding: 0; background: transparent; cursor: pointer; }
-.document-tick-rail i { display: block; width: 11px; height: 2px; border-radius: 2px; background: var(--line-strong); transition: width 140ms ease-out, background 140ms ease-out; }
-.document-tick-rail .major i { width: 20px; }
-.document-tick-rail .active i, .document-tick-rail button:hover i { width: 26px; background: var(--accent); }
-.document-outline-card { position: absolute; z-index: 1; top: 100px; right: 44px; display: flex; flex-direction: column; width: 268px; max-height: min(480px, calc(100dvh - 220px)); border: 1px solid var(--line); border-radius: 14px; background: var(--paper); box-shadow: var(--shadow-float); opacity: 0; visibility: hidden; transform: translateX(5px); transition: opacity 140ms ease-out, transform 140ms ease-out, visibility 140ms; pointer-events: none; }
-.document-outline-card::after { content: ""; position: absolute; top: 0; bottom: 0; right: -44px; width: 44px; }
-.document-outline:not(.compact):is(:hover, :focus-within) .document-outline-card, .document-outline:is(.expanded, .pinned) .document-outline-card { opacity: 1; visibility: visible; transform: translateX(0); pointer-events: auto; }
-.document-outline.pinned .document-outline-card { position: relative; top: 0; right: auto; width: 244px; max-height: calc(100dvh - 180px); border: 0; border-left: 1px solid var(--line); border-radius: 0; box-shadow: none; }
-.document-outline-card > header { display: flex; align-items: center; gap: 8px; padding: 14px 12px 10px; color: var(--ink); font: 400 13px/1.5 var(--font-ui); }
-.document-outline-card > header b { font-weight: 650; }
-.document-outline-card > header small { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
-.document-outline-card > header > button { margin-left: auto; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-soft); cursor: pointer; }
-.document-outline-card > header > button[aria-pressed=true] { color: var(--accent); background: var(--accent-soft); }
-.document-outline-card > header > button:disabled { opacity: .4; cursor: default; }
-.outline-mode { padding: 2px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font-size: 10px; white-space: nowrap; }
-.outline-mode.readonly, .document-readonly-badge { background: var(--attention-soft); color: var(--watch-ink); }
-.document-readonly-badge { display: inline-flex; align-items: center; gap: 6px; margin-block: 8px; padding: 4px 9px; border-radius: 7px; font: 400 12px/1.5 var(--font-ui); }
-.document-surface .document-outline-card ol { display: block; overflow: auto; min-height: 0; margin: 0; padding: 0 8px 10px; list-style: none; }
-.document-outline-card li { position: relative; display: flex; align-items: flex-start; }
-.document-outline-card .outline-item { display: flex; align-items: center; gap: 5px; width: 100%; min-height: 32px; padding: 7px 8px 7px calc(8px + var(--outline-depth, 0) * 14px); border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft); text-align: left; font: 400 13px/1.45 var(--font-ui); cursor: pointer; }
-.document-outline-card .outline-item span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
-.document-outline-card .outline-item.major { color: var(--ink); font-weight: 650; }
-.document-outline-card .outline-item.active { background: var(--accent-soft); color: var(--accent-ink); }
-.document-outline-card .outline-item:hover { background: var(--surface-tinted); }
-.outline-section-toggle { position: relative; flex: none; width: 18px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; }
-.document-outline-card footer { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 11px; }
-.document-outline-card kbd { font: inherit; border: 1px solid var(--line-strong); padding: 1px 4px; border-radius: 4px; }
-@media (prefers-reduced-motion: reduce) { .document-outline-card, .document-tick-rail i { transition: none; } }
-
 .document-markdown-marker { display: inline-block; width: 0; position: relative; overflow: visible; }
 .document-markdown-marker > span { position: absolute; right: 6px; top: -.85em; color: var(--ink-soft); font: 400 12px/1 var(--font-ui); white-space: nowrap; }
-/* Reading and editing share the heading scale as well as body typography. */
-.document-surface .document-content :is(.editable-document-body h1, .document-editor .document-editor-heading-1) { font-size: 28px; }
-.document-surface .document-content :is(.editable-document-body h2, .document-editor .document-editor-heading-2) { font-size: 21px; }
-.document-surface .document-content :is(.editable-document-body h3, .editable-document-body h4, .editable-document-body h5, .editable-document-body h6, .document-editor .document-editor-heading-3, .document-editor .document-editor-heading-4, .document-editor .document-editor-heading-5, .document-editor .document-editor-heading-6) { font-size: 17px; }
-.document-surface .document-content :is(.editable-document-body :is(h1, h2, h3, h4, h5, h6), .document-editor .document-editor-heading) { font-family: var(--font-display); font-weight: 500; line-height: 1.5; letter-spacing: normal; }
-.document-editor .cm-content:focus-visible { outline: none; }
+
+.document-surface .editable-document-identity { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.document-identity-copy { min-width: 0; flex: 1 1 auto; }
+.document-file-name { display: flex; width: 100%; min-width: 0; }
+.document-file-name input.text-control { min-width: 0; max-width: 100%; min-height: 42px; color: var(--ink); background: transparent; border: 1px solid transparent; box-shadow: none; }
+.document-file-name input.text-control:focus { border-color: var(--accent); }
+.editable-document-activate { cursor: text; }
+.editable-document-body p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.editable-document-body img { max-width: 100%; height: auto; }
+.document-surface .editable-document-body :is(h1,h2,h3,h4,h5,h6) { scroll-margin-top: 24px; }

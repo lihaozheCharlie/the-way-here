@@ -1,8 +1,12 @@
+import { receiveMobileHandoff } from "./mobile-handoff.mjs";
 import { readWindowBounds, rememberWindowBounds } from './window-preferences.mjs';
 import { UserPreferences } from './user-preferences.mjs';
 import { DesktopRuntime } from './runtime-process.mjs';
+import { bundledNodeEnvironment } from './node-runtime-layout.mjs';
+import { captureMobilePreparationScope, prepareCapturedMobileWorkspace } from './mobile-prepare-scope.mjs';
 import { assetResponse } from './asset-response.mjs';
 import { prepareWorkspace, saveWorkspace } from './workspace.mjs';
+import { preparePhoneCreatedWorkspace, portableWorkspaceEnvironment, selectedWorkspaceArgument, workspaceRelaunchArguments } from './mobile-workspace.mjs';
 import { speechSession } from "./speech.mjs";
 import { PhotoLibrary } from './photo-library.mjs';
 import { UpdateChecker } from './updates.mjs';
@@ -84,6 +88,11 @@ function showMain() {
   if (main) { if (main.isMinimized()) main.restore(); main.show(); main.focus(); }
   else if (origin) openWindow('/', 'main');
 }
+app.on('continue-activity',(event,type,userInfo)=>{
+  if(type !== 'com.thewayhere.read')return;event.preventDefault();
+  if(!origin || !runtimeClient){dialog.showErrorBox('请先打开共享空间','Xcode以外的客户端需要先打开与手机相同的知识空间。');return;}
+  void receiveMobileHandoff(userInfo,async(route,options)=>{const response=await runtimeClient.request(new Request(origin+route,{...options,headers:{'Content-Type':'application/json'}}));if(!response.ok)throw new Error();return response.json();},openWindow,(title,message)=>dialog.showErrorBox(t(title),t(message)));
+});
 function command(value) { (BrowserWindow.getFocusedWindow() || [...windows][0])?.webContents.send('desktop:command', value); }
 function openWindow(route, kind = 'reader') {
   if (quitting) return;
@@ -101,13 +110,14 @@ function openWindow(route, kind = 'reader') {
   void win.loadURL(origin + route);
 }
 async function chooseWorkspace() {
+  const selected = selectedWorkspaceArgument(process.argv.slice(1)); if (selected) return selected;
   if (process.env.THE_WAY_HERE_VAULT) return path.resolve(process.env.THE_WAY_HERE_VAULT);
   if (!app.isPackaged) return path.resolve(studio,'..');
   return prepareWorkspace({userData:app.getPath('userData'), resources:path.join(process.resourcesPath,'workspace-template')});
 }
 async function startRuntime() {
   const entry = app.isPackaged ? path.join(process.resourcesPath,'server/dist/desktop.js') : path.join(studio,'apps/server/dist/desktop.js');
-    worker = utilityProcess.fork(entry,[],{ env:{...process.env, TWH_DESKTOP_SECURE_SETTINGS:'1',
+    worker = utilityProcess.fork(entry,[],{ env:{...process.env, ...await portableWorkspaceEnvironment(workspace), ...bundledNodeEnvironment({packaged:app.isPackaged,resources:process.resourcesPath}), TWH_DESKTOP_SECURE_SETTINGS:'1', TWH_APP_VERSION:app.getVersion(),
       ...(app.isPackaged ? {TWH_BUNDLED_ENGINE:path.join(process.resourcesPath,'workspace-template/knowledge-engine'), TWH_BUNDLED_PYTHON:path.join(process.resourcesPath,'python/bin/python3'), TWH_KNOWLEDGE_RUNNER:path.join(process.resourcesPath,'native/run-knowledge-tool.py'), TWH_OPERATOR:distribution.operator || '', TWH_PRIVACY_URL:distribution.privacyUrl || '', TWH_SUPPORT_URL:distribution.supportUrl || ''} : {}),
       ...(process.mas ? {TWH_MAS:'1', TWH_CODEX_COMMAND:path.join(process.resourcesPath,'codex/bin/codex'), CODEX_HOME:masCodex.home, TWH_CODEX_WORKDIR:masCodex.cwd} : {}),
       TWH_APP_CACHE_ROOT:path.join(app.getPath('userData'), 'cache'), THE_WAY_HERE_VAULT:workspace, PATH:[...(app.isPackaged ? [path.join(process.resourcesPath,'python/bin')] : []), path.join(app.getPath('home'),'.local/bin'), '/opt/homebrew/bin', '/usr/local/bin', process.env.PATH || '/usr/bin:/bin'].join(path.delimiter), THE_WAY_HERE_DEV:''}, stdio:'pipe', serviceName:'The Way Here knowledge runtime' });
@@ -155,6 +165,25 @@ function registerIPC() {
     } catch (error) { event.returnValue = { error: error.message }; }
   });
   function handle(name, fn, withSender = false) { ipcMain.handle(name, (event,...args) => { if (!trustedSender(event.senderFrame?.url,origin)) throw new Error(t('不受信任的页面')); return withSender ? fn(event.sender, ...args) : fn(...args); }); }
+  handle('desktop:mobile-prepare', async () => {
+    const scope = await captureMobilePreparationScope({root:workspace,client:runtimeClient,origin});
+    if (!await safeToInstallUpdate()) throw new Error(t('请先保存内容并完成正在进行的任务。'));
+    try {
+    const confirmation = await dialog.showMessageBox({ type:'question', message:t('为 iPhone 准备 iCloud 空间'), detail:t('只复制当前知识库与共享知识引擎，不复制其他知识库、外部文件夹、密钥、缓存和历史草稿。原空间保留不变。请选择 iCloud Drive 中 The Way Here 的 Documents/Spaces 文件夹；完成后会重新打开共享空间。') + '\n\n' + t('将复制空间：{name}', {name:scope.name}), buttons:[t('选择位置并复制'),t('取消')], cancelId:1 });
+    if (confirmation.response !== 0) return false;
+    const selection = await dialog.showOpenDialog({ title:t('选择 iCloud 中的 Spaces 文件夹'), properties:['openDirectory','createDirectory'], securityScopedBookmarks:!!process.mas });
+    if (selection.canceled) return false;
+    const destination = selection.filePaths[0]; await scopes.grant(destination, selection.bookmarks?.[0], 'workspace');
+    const response = await prepareCapturedMobileWorkspace(scope, destination);
+    const result = await response.json();
+    if (!response.ok || typeof result.root !== 'string') throw new Error(result.error || t('空间未能准备完成，原空间保持不变。'));
+    const target = await realpath(result.root), portable = await portableWorkspaceEnvironment(target);
+    if (result.sourceKnowledgeBaseId !== scope.knowledgeBaseId || typeof result.knowledgeBaseId !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(result.knowledgeBaseId) || result.knowledgeBaseId === scope.knowledgeBaseId || portable.THE_WAY_HERE_KNOWLEDGE_BASE !== result.knowledgeBaseId) throw new Error(t('新空间身份无法读取，原空间保持不变。'));
+    userPreferences.copyWorkspacePreferences(scope.root, target, {knowledgeBaseIdMap:{[scope.knowledgeBaseId]:result.knowledgeBaseId}});
+    await saveWorkspace(app.getPath('userData'), target); app.relaunch({args:workspaceRelaunchArguments(process.argv.slice(1),target)}); app.quit(); return true;
+    } finally { updateReadiness.resume(windows); }
+  });
+  handle('desktop:mobile-open', openExistingWorkspace);
   handle('desktop:update-state', () => updates.state);
   handle('desktop:update-check', () => updates.check());
   handle('desktop:update-download', () => updates.download());
@@ -246,8 +275,9 @@ async function openExistingWorkspace() {
   await scopes.grant(root, selection.bookmarks?.[0], 'workspace');
   try { await access(path.join(root,'the-way-here.config.yaml')); }
   catch { dialog.showErrorBox(t('这不是已有的知识空间'), t('请选之前由 The Way Here 创建的知识空间。普通文档文件夹可以在应用的“资料”中连接。')); return; }
-  await saveWorkspace(app.getPath('userData'), await realpath(root));
-  app.relaunch(); app.quit();
+  await preparePhoneCreatedWorkspace(root, app.isPackaged ? path.join(process.resourcesPath,'workspace-template') : path.resolve(studio,'..'));
+  const target = await realpath(root); await saveWorkspace(app.getPath('userData'), target);
+  app.relaunch({args:workspaceRelaunchArguments(process.argv.slice(1),target)}); app.quit();
 }
 function installMenu() {
   const action = (label,accelerator,value) => ({label:t(label),accelerator,click:() => command(value)});

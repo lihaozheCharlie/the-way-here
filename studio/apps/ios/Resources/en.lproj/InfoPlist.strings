@@ -1,0 +1,7 @@
+"NSMicrophoneUsageDescription" = "Record only when you choose to speak. Original audio stays on this device.";
+"NSSpeechRecognitionUsageDescription" = "Turn your speech into editable text on this iPhone, without server-based recognition.";
+"NSPhotoLibraryUsageDescription" = "Read only the photos you allow, create compressed copies and on-device face boxes. Originals are not uploaded.";
+"NSFaceIDUsageDescription" = "Protect your private records when you open the app.";
+"说一段" = "Speak";
+"找照片" = "Find photos";
+"写一段" = "Write";

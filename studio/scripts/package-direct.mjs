@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { MOBILE_KEYCHAIN_SIGN_IGNORE } from './mobile-keychain-bundle.mjs';
 import { mkdir, readFile, writeFile, readdir, stat, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
@@ -9,6 +10,7 @@ import YAML from 'yaml';
 import { packageKnowledge } from './package-knowledge.mjs';
 import { packageServer } from './package-server.mjs';
 import { packageLicenses } from './package-licenses.mjs';
+import { prepareNodeRuntime } from './node-runtime.mjs';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(studio, '.runtime/direct');
@@ -44,7 +46,7 @@ config.mac.target = [{ target:'dmg', arch:[process.arch] }, { target:'zip', arch
 config.publish = [{ provider:'generic', url:'https://github.com/lihaozheCharlie/the-way-here/releases/latest/download/' }];
 config.mac.entitlements = 'apps/desktop/build/entitlements.direct.plist';
 config.mac.entitlementsInherit = 'apps/desktop/build/entitlements.direct.plist';
-config.mac.signIgnore = ['\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$'];
+config.mac.signIgnore = [MOBILE_KEYCHAIN_SIGN_IGNORE, '\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$'];
 config.mac.artifactName = 'The-Way-Here-${version}-${arch}.${ext}';
 config.dmg = { ...config.dmg, sign:true };
 config.extraResources.push({ from:'.runtime/package/licenses', to:'licenses' });
@@ -74,6 +76,7 @@ if (!build) process.exit(0);
 run('pnpm', ['build']);
 run(process.execPath, ['scripts/build-desktop-native.mjs']);
 await packageServer(studio, path.join(studio, '.runtime/package/server'));
+await prepareNodeRuntime({ studio, arch: process.arch });
 await packageKnowledge(studio);
 await packageLicenses(studio);
 run(process.execPath, ['node_modules/electron-builder/out/cli/cli.js', '--config', path.join(output, 'builder.yml'), '--mac', 'dmg', 'zip', '--publish', 'never']);

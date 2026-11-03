@@ -23,6 +23,7 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
   private readonly pi: PiRuntimeAdapter;
   private updateQueue: Promise<unknown> = Promise.resolve();
   private catalogPromise?: Promise<AgentRuntimeDescriptor[]>;
+  private sharedKeyRefresh?: NodeJS.Timeout;
   private readonly protectedRuntimes: Array<ReturnType<typeof protectRuntime>> = [];
 
   private constructor(
@@ -38,6 +39,7 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
     this.pi = new PiRuntimeAdapter(vaultRoot, config.runtimes.pi.enabled, globalSettings.provider ? [globalSettings.provider] : []);
     this.register(new CodexRuntimeAdapter(process.env.TWH_CODEX_COMMAND || config.runtimes.codex.command, { allowTools: () => hasDataConsent("codex", this.globalSettings.public) }));
     this.register(this.pi);
+    if (process.env.TWH_DESKTOP_SECURE_SETTINGS === "1") { this.sharedKeyRefresh = setInterval(() => { void this.refreshSharedKeys().catch(() => undefined); }, 15_000); this.sharedKeyRefresh.unref(); }
   }
 
   static async create(config: VaultConfig["agents"], vaultRoot: string): Promise<AgentRuntimeRegistry> {
@@ -80,15 +82,17 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
 
   private async applySettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings> {
     if (input.runtimeId === "pi" && !this.enabled.pi) throw new AgentSettingsValidationError("此工作区未启用第三方模型运行方式");
+    const previousKey = this.globalSettings.provider?.apiKey;
     const next = await this.settingsStore.update(input);
     this.globalSettings = next;
-    await Promise.all(this.protectedRuntimes.filter(runtime => !hasDataConsent(runtime.id, next.public)).map(runtime => runtime.revoke()));
+    await Promise.all(this.protectedRuntimes.filter(runtime => !hasDataConsent(runtime.id, next.public) || runtime.id === "pi" && previousKey !== next.provider?.apiKey).map(runtime => runtime.revoke()));
     this.pi.configure(this.enabled.pi, next.provider ? [next.provider] : []);
     this.catalogPromise = undefined;
     return next.public;
   }
 
   async resolve(preference: AgentRuntimePreference | undefined, requestedModel: string | undefined, requestedEffort: AgentReasoningEffort | undefined): Promise<ResolvedAgentSelection> {
+    await this.refreshSharedKeys();
     const catalog = await this.catalog();
     const available = catalog.filter((runtime) => runtime.available && runtime.models.length);
     const preferredRuntime = preference && preference !== "auto" ? preference : this.globalSettings.public.runtimeId;
@@ -131,8 +135,28 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
   }
 
   close(): void {
+    clearInterval(this.sharedKeyRefresh);
     for (const runtime of this.runtimes.values()) runtime.close();
     this.listeners.clear();
+  }
+
+  mobileKeyStatus(providerId: string) { return this.settingsStore.sharedKeyStatus(providerId); }
+  async changeMobileKey(providerId: string, action: "publish" | "pull" | "remove" | "local") {
+    await this.settingsStore.changeSharedKey(providerId, action);
+    await this.refreshSharedKeys();
+    return this.settingsStore.sharedKeyStatus(providerId);
+  }
+  private refreshSharedKeys(): Promise<void> {
+    const work = this.updateQueue.catch(() => undefined).then(async () => {
+      const next = await this.settingsStore.load();
+      if (next.provider?.apiKey !== this.globalSettings.provider?.apiKey || next.provider?.id !== this.globalSettings.provider?.id) {
+        await Promise.all(this.protectedRuntimes.filter(runtime => runtime.id === "pi").map(runtime => runtime.revoke()));
+        this.pi.configure(this.enabled.pi, next.provider ? [next.provider] : []);
+        this.catalogPromise = undefined;
+      }
+      this.globalSettings = next;
+    });
+    this.updateQueue = work.catch(() => undefined); return work;
   }
 
   private register(runtime: AgentRuntime): void {

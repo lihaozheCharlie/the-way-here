@@ -166,3 +166,16 @@ pnpm desktop:ship
 正式发布：https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.9 。DMG 为 230542128 字节，SHA-256 `5e0072f0a122c97bd1879f2f46e002e48d53f4119e9182e7be32a7f6a99ccacd`；ZIP 为 237095702 字节。草稿托管资产摘要核对后公开并切换 latest。公开 DMG 与 ZIP 均完整下载并核对大小及摘要，当前客户端检查为 current，模拟旧版为 available；官网下载 DMG 再次真实安装启动通过。结果见 `.runtime/direct/public-verification-0.1.9.json`。
 
 官网通过 Sites 第 14 版部署成功，源码提交 `e6a06e2a6518dda253c78c24f8cc427235ae39b8`，部署 ID `appgdep_6ae331ec7a3c8191886f6d428cb705c4`，地址 https://the-way-here-support.charlielii.chatgpt.site/download/ 。仅下载页版本、固定下载链接和本次说明变化，其余八个文件摘要一致。客户端源码提交为 `77508ee34431ed610d46848dbbecb5b9af179882`，已推送 main。本次隔离测试的应用、进程、服务、挂载和资料均由验收脚本清理。
+
+### 公开 iCloud 文档容器声明
+
+桌面包的 `mac.extendInfo.NSUbiquitousContainers` 与 iPhone 声明同一个
+`iCloud.com.thewayhere.shared` 容器：公开 Documents、允许任意目录深度、显示名
+`The Way Here`。这项 Info.plist 元数据补齐不增加桌面 iCloud 签名 entitlement；
+桌面仍沿用用户选择文件夹的访问流程。Apple 的
+[iCloud 文档设计指南](https://developer.apple.com/library/archive/documentation/General/Conceptual/iCloudDesignGuide/Chapters/DesigningForDocumentsIniCloud.html)
+说明 macOS 10.11 起无需启用 iCloud 签名能力访问 iCloud Drive 文档，但仍需声明容器。
+
+`icloud-container-config.test.mjs` 校验实际打包配置、手机 plist 的容器一致性及桌面权限边界。
+配置检查通过仅证明声明完整，不证明一次具体的跨设备上传故障已解决；本地验收包安装注册后，
+仍须仅在独立 UUID 匿名验收目录观察真实文档到达与往返。

@@ -1,3 +1,4 @@
+import { withinImportPeriod, type ImportSelection } from "./import-options.js";
 import path from "node:path";
 import type { PaymentJourneyCluster, PaymentJourneyClusterKind, PaymentJourneySummary, PaymentJourneyTransactionEvidence, SourceImportFile } from "@the-way-here/shared";
 import { JOURNEY_REPORT_DRAFT_END, JOURNEY_REPORT_DRAFT_START } from "@the-way-here/shared";
@@ -58,7 +59,7 @@ function decodeFile(file: SourceImportFile): string {
   for (const encoding of ["utf-8", "gb18030"] as const) {
     try {
       const text = new TextDecoder(encoding, { fatal: true }).decode(bytes).replace(/^\uFEFF/, "");
-      if (text.includes("支付宝交易记录明细查询") || encoding === "utf-8") return text;
+      if (text.includes("支付宝交易记录明细查询") || text.includes("微信") || encoding === "utf-8") return text;
     } catch {
       // Try the next known export encoding.
     }
@@ -352,17 +353,20 @@ function buildReport(title: string, source: string, createdAt: string, entries: 
   const activeDays = new Set(entries.map((entry) => entry.date)).size;
   const clusterSections = clusters.map((item) => `## ${item.title}\n\n${item.summary}\n\n**适合展开：** ${item.question}\n\n**关联类别：** ${item.categories.join("、")}\n\n${item.evidence.map((line) => `- ${line}`).join("\n")}`).join("\n\n");
   const rows = entries.map((entry) => `| ${entry.id} | ${entry.createdAt} | ${markdownEscape(entry.merchant)} | ${markdownEscape(entry.product)} | ${entry.category} | ${entry.amount.toFixed(2)} | ${entry.status} | ${entry.refund.toFixed(2)} |`).join("\n");
-  return `---\ntype: source\nimport_channel: alipay\nsource: ${JSON.stringify(source)}\nimported_at: ${createdAt}\n---\n\n# ${title}\n\n这是一份由支付宝账单确定性解析得到的消费旅程报告。聚类是回忆候选，不代表已经确认的人生事实。\n\n- 交易记录：${entries.length} 笔\n- 活跃日期：${activeDays} 天\n- 净支出：${netExpense.toFixed(2)} 元\n- 退款记录：${entries.filter((entry) => entry.status === "退款成功").length} 笔\n- 旅程线索：${clusters.length} 组\n\n# 已确认的消费旅程\n\n${JOURNEY_REPORT_DRAFT_START}\n尚未经过对话确认。可以从下方线索开始，只留下你愿意讲、也能够确认的部分。\n${JOURNEY_REPORT_DRAFT_END}\n\n# 值得继续讲述的线索\n\n${clusterSections}\n\n# 与 Agent 继续回忆\n\n${agentPrompt}\n\n# 规范化交易证据\n\n| 编号 | 时间 | 交易对方 | 商品或说明 | 类别 | 金额 | 状态 | 成功退款 |\n| --- | --- | --- | --- | --- | ---: | --- | ---: |\n${rows}\n`;
+  return `---\ntype: source\nimport_channel: alipay\nsource: ${JSON.stringify(source)}\nimported_at: ${createdAt}\n---\n\n# ${title}\n\n这是一份由${title.startsWith("微信支付") ? "微信支付" : "支付宝"}账单确定性解析得到的消费旅程报告。聚类是回忆候选，不代表已经确认的人生事实。\n\n- 交易记录：${entries.length} 笔\n- 活跃日期：${activeDays} 天\n- 净支出：${netExpense.toFixed(2)} 元\n- 退款记录：${entries.filter((entry) => entry.status === "退款成功").length} 笔\n- 旅程线索：${clusters.length} 组\n\n# 已确认的消费旅程\n\n${JOURNEY_REPORT_DRAFT_START}\n尚未经过对话确认。可以从下方线索开始，只留下你愿意讲、也能够确认的部分。\n${JOURNEY_REPORT_DRAFT_END}\n\n# 值得继续讲述的线索\n\n${clusterSections}\n\n# 与 Agent 继续回忆\n\n${agentPrompt}\n\n# 规范化交易证据\n\n| 编号 | 时间 | 交易对方 | 商品或说明 | 类别 | 金额 | 状态 | 成功退款 |\n| --- | --- | --- | --- | --- | ---: | --- | ---: |\n${rows}\n`;
 }
 
-export function prepareAlipayStatement(file: SourceImportFile, createdAt: string): PreparedPaymentStatement {
+export function prepareAlipayStatement(file: SourceImportFile, createdAt: string, selection: ImportSelection = {}): PreparedPaymentStatement {
   if (path.posix.extname(file.name).toLocaleLowerCase() !== ".csv") throw new Error("支付宝账单请上传 CSV 文件");
-  const decoded = decodeFile(file);
-  const entries = parseEntries(decoded);
+  const original = decodeFile(file);
+  const decoded = normalizeWechatStatement(original);
+  const entries = parseEntries(decoded).filter(entry => withinImportPeriod(entry.createdAt, selection) && !(selection.excludedMerchants || []).some(merchant => entry.merchant.toLocaleLowerCase().includes(merchant.toLocaleLowerCase())));
+  if (!entries.length) throw new Error("所选范围内没有交易记录，请调整日期或排除商户。");
   const dates = entries.map((entry) => entry.date).sort();
   const start = dates[0]!;
   const end = dates.at(-1)!;
-  const title = `支付宝消费旅程 ${start} 至 ${end}`;
+  const providerLabel = decoded !== original ? "微信支付" : "支付宝";
+  const title = `${providerLabel}消费旅程 ${start} 至 ${end}`;
   const reportPath = `${title}.md`;
   const clusters = selectClusters([
     ...journeyClusters(entries),
@@ -377,7 +381,7 @@ export function prepareAlipayStatement(file: SourceImportFile, createdAt: string
   return {
     files: [
       { originalName: file.name, relativePath: reportPath, content: report, bytes: Buffer.byteLength(report, "utf8") },
-      { originalName: file.name, relativePath: rawPath, content: decoded, bytes: Buffer.byteLength(decoded, "utf8") },
+      { originalName: file.name, relativePath: rawPath, content: selectedStatementCsv(entries), bytes: Buffer.byteLength(selectedStatementCsv(entries), "utf8") },
     ],
     journey: {
       provider: "alipay",
@@ -394,4 +398,23 @@ export function prepareAlipayStatement(file: SourceImportFile, createdAt: string
       clueStates: clusters.map((item) => ({ clusterId: item.id, status: "pending" })),
     },
   };
+}
+
+function csvCell(value: string): string { return '"' + value.replace(/"/g, '""') + '"'; }
+function selectedStatementCsv(entries: PaymentEntry[]): string {
+  return ["交易号,交易创建时间,交易来源地,交易对方,商品名称,金额（元）,收/支,交易状态,成功退款（元）", ...entries.map(entry => [entry.id, entry.createdAt, "导入账单", entry.merchant, entry.product, String(entry.amount), entry.direction, entry.status, String(entry.refund)].map(csvCell).join(","))].join("\n");
+}
+/** WeChat has a different export header; feed the shared transaction pipeline. */
+export function normalizeWechatStatement(text: string): string {
+  const lines = text.split(/\r\n|\n|\r/);
+  const header = lines.findIndex(line => line.includes("交易时间") && line.includes("交易对方") && line.includes("金额(元)"));
+  if (header < 0) return text;
+  const columns = parseCsvLine(lines[header]!);
+  for (const required of ["交易时间", "交易对方", "商品", "收/支", "金额(元)", "当前状态"]) if (!columns.includes(required)) throw new Error(`微信账单缺少字段：${required}`);
+  const rows = lines.slice(header + 1).flatMap(line => {
+    const row = parseCsvLine(line); const get = (name: string) => row[columns.indexOf(name)] || "";
+    if (!/^\d{4}-\d{2}-\d{2} /.test(get("交易时间"))) return [];
+    return [[get("交易单号"), get("交易时间"), "微信支付", get("交易对方"), get("商品"), get("金额(元)").replace(/[¥￥]/g, ""), get("收/支"), get("当前状态"), "0"].map(csvCell).join(",")];
+  });
+  return ["交易号,交易创建时间,交易来源地,交易对方,商品名称,金额（元）,收/支,交易状态,成功退款（元）", ...rows].join("\n");
 }

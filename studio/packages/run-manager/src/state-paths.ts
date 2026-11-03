@@ -3,6 +3,13 @@ import os from "node:os";
 import path from "node:path";
 
 function appStateRoot(): string {
+  // Explicit acceptance runs must never share the user's persisted app state.
+  // Vitest sets VITEST itself; ordinary desktop launches ignore this test option.
+  const testRoot = process.env.VITEST && process.env.TWH_TEST_STATE_ROOT;
+  if (testRoot) {
+    if (!path.isAbsolute(testRoot)) throw new Error("测试状态目录必须是绝对路径");
+    return path.resolve(testRoot);
+  }
   if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "the-way-here");
   if (process.platform === "win32") return path.join(process.env.APPDATA || os.homedir(), "the-way-here");
   return path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), ".local", "state"), "the-way-here");

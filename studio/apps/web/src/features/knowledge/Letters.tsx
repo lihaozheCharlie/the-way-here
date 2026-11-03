@@ -6,7 +6,7 @@ import type { LetterViewItem, LettersView, LifeMapView, ReasoningLens, WikiPageS
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { letterRunVersions, openContextAgent, type AgentContext } from "../collaboration/model";
-import { FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
+import { FileBrowserWorkspace, FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
 import { DocumentPreview } from "../../shared/DocumentPreview";
 import { PageLink } from "../../shared/routing";
 import { Empty, Icon, Loading } from "../../shared/ui";
@@ -133,7 +133,7 @@ export function Letters({ revision }: { revision: number }) {
         leading={<div className="letters-view-switch" role="group" aria-label={t("回信阅读方式")}><button type="button" aria-pressed={view === "chronology"} onClick={() => { setView("chronology"); selectLetter(undefined, true); }}>{t("按时间阅读")}</button><button type="button" aria-pressed={view === "themes"} onClick={() => { setView("themes"); selectLetter(undefined, true); }}>{t("沿主题追踪")}</button></div>}
       />
       {(runsError || lensesError) && <p className="letters-load-warning" role="status">{runsError ? t("历史版本暂时无法读取，当前显示原始回信。") : t("重读视角暂时无法读取。")} {t("请刷新重试。")}</p>}
-      <div className={`source-vault file-browser-documents${indexOpen ? "" : " file-pane-collapsed"}`} aria-label={t("近况回信工作区")}>
+      <FileBrowserWorkspace label={t("近况回信工作区")} filesOpen={indexOpen}>
         <FileBrowserPane label={t("回信列表")} count={t("${count} 封", { count: filtered.length })} open={indexOpen} onToggle={() => setIndexOpen(value => !value)} toggleLabel={t("回信列表")}>
           {pendingRequests.map(run => <button key={run.id} type="button" className="letter-request-pending" onClick={() => openContextAgent({ runId: run.id })}><span className="letter-request-spinner" aria-hidden="true" /><b>{t("正在写信：${title}", { title: run.displayPrompt?.slice(REQUEST_LABEL.length) ?? "" })}</b><small>{t("查看写信进度")}</small></button>)}
           {filtered.map(letter => {
@@ -156,7 +156,7 @@ export function Letters({ revision }: { revision: number }) {
 </>}
           footer={activeVersion && activeVersion.id !== "original" ? <button className="letter-generation-link" type="button" onClick={() => openContextAgent({ runId: activeVersion.runId })}>{t("查看生成对话")} <Icon name="arrow" size={14} /></button> : undefined}
         /> : <div className="source-preview-empty"><Empty>{t("当前范围暂无回信，可以切换筛选查看。")}</Empty></div>}
-      </div>
+      </FileBrowserWorkspace>
       <PageAgentContext context={{ scope: view === "themes" ? tr("近况回信 · ${selectedThread?.title || \"全部主题\"}", { "selectedThread?.title || \"全部主题\"": selectedThread ? demo.title(selectedThread.title) : "全部主题" }) : tr("近况回信 · ${year}", { "year": year || "全部" }), title: selected ? (demo.heading(selected.page.relativePath, selected.page.excerpt) || demo.title(selected.page.title)) : tr("${year === \"全部\" ? \"最近\" : year + \" 年\"}的近况回信", { "year === \"全部\" ? \"最近\" : year + \" 年\"": year ? year + " 年" : "最近" }), pageId: selected?.page.id, summary: selected ? demo.excerpt(selected.page.relativePath, selected.page.excerpt) : tr("从选定年份的日记和已有知识生成回信。"), defaultMode: "write", suggestions: [year ? tr("从 ${year} 年日记中抽样几篇，结合已有知识写一封新的近况回信。", { "year": year }) : tr("从 2025 年日记中抽样几篇，结合已有知识写一封新的近况回信。"), selected ? tr("根据更多原始证据重新写这封回信，保留朋友式回应，不做绩效复盘。") : tr("请先帮我选择最值得回看的一个时间切片，再写回信。")] }} />
     </div>
   );

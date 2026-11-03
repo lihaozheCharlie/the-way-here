@@ -8,6 +8,13 @@ files:
   - '!src/**/*.test.mjs'
   - package.json
 asar: true
+# A signed desktop parent must not be reusable as an arbitrary Node launcher.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
 extraResources:
   - from: apps/desktop/dist/locales
     to: locales
@@ -25,6 +32,8 @@ extraResources:
     to: native/trayTemplate.png
   - from: apps/desktop/dist/trayTemplate@2x.png
     to: native/trayTemplate@2x.png
+  - from: apps/desktop/dist/mobile-keychain
+    to: native/mobile-keychain
   - from: apps/desktop/dist/speech-capture
     to: native/speech-capture
   - from: apps/desktop/dist/photo-library
@@ -36,7 +45,19 @@ mac:
   category: public.app-category.lifestyle
   target: dmg
   identity: null
+  # afterPack installs this independently signed, profile-authorized helper.
+  signIgnore:
+    - '/Contents/Helpers/MobileKeychain\.app(?:/|$)'
   extendInfo:
+    # Public iCloud Drive documents use the same container metadata as iPhone.
+    # This declares document visibility; it does not grant iCloud entitlements.
+    NSUbiquitousContainers:
+      iCloud.com.thewayhere.shared:
+        NSUbiquitousContainerIsDocumentScopePublic: true
+        NSUbiquitousContainerSupportedFolderLevels: Any
+        NSUbiquitousContainerName: The Way Here
+    NSUserActivityTypes:
+      - com.thewayhere.read
     NSMicrophoneUsageDescription: 将你主动录制的生活片段转成文字，确认后才保存。
     NSSpeechRecognitionUsageDescription: 将你说的话转成可编辑的原话，使用设备上的语音识别，录音保留在本机。
     NSCameraUsageDescription: 导入你选择的照片与生活记录。
@@ -45,3 +66,4 @@ dmg:
   title: The Way Here
 
 afterPack: scripts/after-pack.cjs
+afterSign: scripts/after-sign.cjs

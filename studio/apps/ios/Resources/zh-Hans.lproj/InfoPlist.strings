@@ -1,0 +1,7 @@
+"NSMicrophoneUsageDescription" = "仅在你主动说一段时录音，原音频留在本机。";
+"NSSpeechRecognitionUsageDescription" = "在这台 iPhone 上把你说的话转成可编辑文字，不使用服务器识别。";
+"NSPhotoLibraryUsageDescription" = "只读取你选中的照片，生成压缩副本与本机人脸框，原图不会上传。";
+"NSFaceIDUsageDescription" = "在打开 App 时保护你的私人记录。";
+"说一段" = "说一段";
+"找照片" = "找照片";
+"写一段" = "写一段";

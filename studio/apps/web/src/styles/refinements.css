@@ -21,11 +21,10 @@
 
 .people-groups button { min-height: 34px; padding: 7px 11px; font-size: 12px; }
 .people-groups button.active { color: var(--accent-primary); background: color-mix(in srgb, var(--accent) 9%, transparent); border-color: color-mix(in srgb, var(--accent) 20%, transparent); }
-.people-toolbar input, .library-toolbar input, .collection-list input { font-size: 12px; }
-.people-toolbar > span, .library-toolbar > span, .collection-list > small { font-size: 12px; }
-.people-index span, .people-index small,
-.collection-list > div button span { font-size: 12px; }
-.people-index b, .collection-list > div button b { font-size: 12px; }
+.people-toolbar input, .library-toolbar input { font-size: 12px; }
+.people-toolbar > span, .library-toolbar > span { font-size: 12px; }
+.people-index span, .people-index small { font-size: 12px; }
+.people-index b { font-size: 12px; }
 
 .search-result small { font-size: 12px; }
 
@@ -35,9 +34,7 @@
 .source-folder-pane > button small { font-size: 12px; }
 .source-file-list b { font-size: 12px; }
 .source-file-list time, .source-file-list small, .source-file-list > button.source-file-list-more { font-size: 12px; }
-.source-preview > header span, .source-preview-status, .editable-document-identity > div > small,
-.editable-document-toolbar > span, .new-source-form > header span, .new-source-form > label,
-.new-source-form > footer span { font-size: 12px; }
+.source-preview > header span, .source-preview-status, .editable-document-toolbar > span, .new-source-form > header span, .new-source-form > label, .new-source-form > footer span { font-size: 12px; }
 .source-preview > header a, .source-preview > header button, .source-file-tools > button,
 .new-source-form > footer button { font-size: 12px; }
 
@@ -156,44 +153,17 @@
 .working-mark { color: var(--paper); background: var(--accent-primary); box-shadow: var(--shadow-panel); }
 .working-mark i { background: var(--paper); }
 
-.people-explorer, .model-explorer, .collection-explorer { grid-template-columns: minmax(190px, 220px) minmax(0, 1fr); gap: 20px; }
-.editable-document--preview.has-outline { grid-template-columns: minmax(0, 1fr) 176px; }
-.knowledge-document { height: auto; min-height: 0; }
-.knowledge-document > .editable-document-toolbar { grid-column: 1 / -1; }
-.knowledge-document > .editable-document-body { min-height: 0; overflow: visible; padding-right: clamp(24px, 3vw, 40px); padding-left: clamp(24px, 3vw, 40px); }
-.knowledge-document > .document-outline { min-height: 0; overflow: auto; padding: 24px 16px 36px; }
+.people-explorer { grid-template-columns: minmax(190px, 220px) minmax(0, 1fr); gap: 20px; }
 .note-properties { margin: 20px 0 28px; padding-bottom: 22px; }
 .note-property { min-height: 34px; grid-template-columns: 20px minmax(82px, 112px) minmax(0, 1fr); padding-top: 5px; padding-bottom: 5px; }
-
-.pane-collapse-button { width: 24px; height: 36px; right: -12px; transition: color .18s var(--ease), border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); }
-.pane-collapse-button:hover { transform: scale(1.12); }
-.collapsible-index-pane.collapsed .pane-collapse-button { right: -24px; }
-.source-pane-shell > .pane-collapse-button { right: -12px; }
-.source-pane-shell.collapsed > .pane-collapse-button { right: -24px; }
 .source-folder-pane > button span { color: var(--ink-soft); font-weight: 560; }
 .source-folder-pane > button small { min-width: 28px; padding: 2px 6px; color: var(--ink-soft); background: color-mix(in srgb, var(--paper) 65%, transparent); border-radius: var(--radius-pill); text-align: center; }
 .source-folder-pane > button.active span { color: var(--accent-primary); font-weight: 680; }
 .source-folder-pane > button.active small { color: var(--paper); background: var(--accent-primary); }
 
 /* Stable Markdown reading and a source-to-knowledge return path. */
-.editable-document--preview { grid-template-rows: auto auto minmax(0, 1fr); }
-.editable-document--preview.has-outline > .editable-document-properties { grid-column: 1 / -1; }
-.editable-document--preview.has-outline > .editable-document-body, .editable-document--preview.has-outline > textarea { grid-column: 1; grid-row: 3; }
-.editable-document--preview.has-outline > .document-outline { grid-row: 3; }
-.knowledge-document { grid-template-rows: auto auto minmax(0, 1fr); }
-.knowledge-document > .editable-document-properties { grid-column: 1 / -1; grid-row: 2; }
-.knowledge-document > .editable-document-body, .knowledge-document.has-outline > .editable-document-body { grid-row: 3; }
-.knowledge-document > textarea, .knowledge-document.has-outline > textarea { grid-row: 3; }
-.knowledge-document > .document-outline, .knowledge-document.has-outline > .document-outline { grid-row: 3; }
-.knowledge-document:not(.has-outline) { grid-template-rows: auto auto minmax(0, 1fr); }
-.knowledge-document:not(.has-outline) > .editable-document-body { grid-row: 3; }
 
 /* One page owns the reading scroll; shared Markdown never creates a second viewport. */
-.editable-document--preview, .knowledge-document { overflow: visible; align-items: start; align-content: start; grid-template-rows: auto auto auto; }
-.editable-document--preview .editable-document-body, .knowledge-document > .editable-document-body { overflow: visible; }
-.editable-document--preview > textarea, .knowledge-document > textarea { height: auto; min-height: 64vh; overflow: hidden; resize: none; }
-.editable-document--preview > .document-outline, .knowledge-document > .document-outline { position: sticky; top: 124px; max-height: calc(100dvh - 148px); overflow: auto; align-self: start; }
-.editable-document--preview > .document-outline > div, .knowledge-document > .document-outline > div { position: static; }
 
 /* The source folders remain visible while the document grows with the page. */
 .source-vault { height: auto; min-height: 0; overflow: visible; align-items: start; }
@@ -209,9 +179,7 @@
 }
 
 /* Sticky children need a full-height containing block and no clipping ancestor. */
-.collapsible-index-pane, .collapsible-index-content { height: 100%; align-self: stretch; }
-.collection-detail, .person-detail{ overflow: visible; }
-.editable-document { overflow-anchor: none; }
+.person-detail{ overflow: visible; }
 
 .editable-document-properties { min-width: 0; max-height: 126px; overflow: auto; padding: 8px 18px; background: var(--canvas); border-bottom: 1px solid var(--line); scrollbar-color: var(--line-strong) transparent; scrollbar-width: thin; }
 .editable-document-properties .note-properties.compact { margin: 0; padding: 0; border: 0; }
@@ -220,10 +188,6 @@
 .note-properties.compact .note-property-icon { width: 16px; height: 16px; }
 .note-properties.compact .note-property dt, .note-properties.compact .note-property dd { font-size: 12px; }
 .note-properties.compact .note-property-token { padding: 1px 7px; background: var(--surface-tinted); }
-
-.editable-document-activate { cursor: text; }
-.editable-document-activate:hover { background: var(--paper); box-shadow: none; }
-.editable-document-body ::selection { color: var(--ink); background: var(--surface-tinted); }
 
 .source-knowledge-connections { max-width: 72ch; margin: 72px 0 18px; padding-top: 40px; border-top: 1px solid var(--line); }
 .source-knowledge-connections > header { display: flex; align-items: start; justify-content: space-between; gap: 24px; margin-bottom: 20px; }

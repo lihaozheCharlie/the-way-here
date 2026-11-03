@@ -39,10 +39,30 @@ try {
   await page.goto(origin + '/letters');
   const reading = page.locator('.source-preview');
   await expect(reading).toContainText('latest 版本的匿名回信正文');
+  const list = page.locator('.source-file-shell');
+  const workspace = page.locator('.file-browser-documents');
+  const toggle = list.locator('.pane-shelf-toggle');
+  const assertReadingGeometry = async () => {
+    const [rail, preview, container] = await Promise.all([list.boundingBox(), reading.boundingBox(), workspace.boundingBox()]);
+    expect(preview.width).toBeGreaterThan(280);
+    expect(Math.abs(preview.x - (rail.x + rail.width))).toBeLessThan(2);
+    expect(Math.abs(preview.x + preview.width - (container.x + container.width))).toBeLessThan(2);
+    await expect(reading.getByText('latest 版本的匿名回信正文。')).toBeInViewport();
+  };
+  if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+  await expect(list).toHaveCSS('width', '304px');
+  await assertReadingGeometry();
+  await toggle.click();
+  await expect(list).toHaveCSS('width', '40px');
+  await expect(list.locator('.pane-shelf-rail-label span')).toHaveCSS('writing-mode', 'vertical-rl');
+  await expect(list.locator('.pane-shelf-rail-label small')).toBeVisible();
+  await assertReadingGeometry();
+  await toggle.click();
+  await expect(list).toHaveCSS('width', '304px');
+  await assertReadingGeometry();
   await expect(reading.locator('.document-meta-row,.editable-document-properties')).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: '埃隆·马斯克视角回信', exact: true })).toHaveCount(1);
   const title = await page.locator('.editable-document-identity').boundingBox();
-  const bar = await page.locator('.letter-version-bar').boundingBox();
+  const bar = await page.locator('.letter-provenance').boundingBox();
   expect(title.y).toBeLessThan(bar.y);
   await expect(page.locator('.editable-document-identity .letter-version-actions')).toBeVisible();
   const actions = await page.locator('.letter-version-actions').boundingBox();
@@ -50,23 +70,25 @@ try {
   expect(actions.x + actions.width).toBeGreaterThan(title.x + title.width - 35);
   await expect(page.locator('.letter-history-banner')).toHaveCount(0);
   await page.screenshot({path:path.join(captures,'header-clean.png')});
-  await page.getByRole('tab', { name: '查理·芒格视角回信', exact: true }).click();
+  await page.getByRole('button', { name: '历史版本', exact: true }).click();
+  await page.getByRole('menuitemradio').filter({hasText:'查理·芒格'}).click();
   await expect(reading).toContainText('other 版本的匿名回信正文');
   await expect(page.locator('.letter-history-banner')).toContainText('你正在查看历史版本');
   await page.getByRole('button', { name: '历史版本', exact: true }).click();
   await expect(page.getByRole('menu')).toContainText('当前查看');
   await page.getByRole('menuitemradio').filter({hasText:'2026年9月18日'}).click();
   await expect(reading).toContainText('older 版本的匿名回信正文');
-  await expect(page.getByRole('tab', { name: '埃隆·马斯克视角回信', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: '历史版本', exact: true }).click();
+  await expect(page.getByRole('menuitemradio').filter({hasText:'2026年9月18日'})).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '回到最新版本' }).click();
   await expect(reading).toContainText('latest 版本的匿名回信正文');
-  await expect(page.getByRole('tab', { name: '原始回信', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '历史版本', exact: true }).click();
   await page.getByRole('menu').screenshot({path:path.join(captures,'history.png')});
   await page.getByRole('menuitemradio').filter({hasText:'原始回信'}).click();
   await expect(reading.locator('.editable-document-activate')).toBeVisible();
-  await reading.locator('.editable-document-activate').dblclick();
-  await expect(reading.locator('textarea')).toBeVisible();
+  await reading.locator('.editable-document-activate').click();
+  await expect(reading.locator('[data-document-editor]')).toBeFocused();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '回到最新版本' }).click();
   await page.getByRole('button', { name: '用新视角重读', exact: true }).click();
@@ -75,8 +97,11 @@ try {
   const choices = page.locator('.letter-lens-choice');
   await expect(choices).toHaveCount(9);
   for (let i = 0; i < 9; i++) {
-    await choices.nth(i).hover();
     const tooltip = page.locator('.letter-lens-tooltip');
+    await page.mouse.move(5, 40);
+    await expect(tooltip).toHaveCount(0);
+    await choices.nth(i).scrollIntoViewIfNeeded();
+    await choices.nth(i).hover();
     await expect(tooltip).toBeVisible();
     await expect(tooltip).toContainText('匿名交互测试说明');
     const box = await tooltip.boundingBox();
@@ -95,7 +120,7 @@ try {
   expect(request.outputTarget.kind).toBe('letter-version');
   expect(request.outputTarget.lensId).toBe('lens-0');
   expect(errors).toEqual([]);
-  console.log('Letter title hierarchy, perspective tabs, history, editing, nine tooltips and single-perspective reread checks passed.');
+  console.log('Letter title hierarchy, version menu, history, editing, nine tooltips and single-perspective reread checks passed.');
 } finally {
   if (app) {
     const forceExit = setTimeout(() => app.process().kill("SIGKILL"), 5000);

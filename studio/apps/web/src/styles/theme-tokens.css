@@ -6,6 +6,17 @@
   --record-canvas: #f4f8fd;
   --record-sidebar: #eaf1fa;
   --record-tint: #f1f6fd;
+  --record-panel: #f7f9fd;
+  --record-folder-panel: #eff2f8;
+  --record-divider: #e3e8f1;
+  --record-outline-accent: #1d6ff2;
+  --record-outline-soft: #e7f0fe;
+  --record-selection-line: #bcd3fb;
+  --record-prose: #1d2332;
+  --record-tick: #c9d0de;
+  --record-control-ink: #626c80;
+  --record-control-hover: #e9edf5;
+  --record-peek-shadow: #141e3247;
   --paper: #ffffff;
   --surface: var(--paper);
   --sidebar: var(--paper);

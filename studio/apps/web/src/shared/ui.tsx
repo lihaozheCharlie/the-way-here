@@ -1,5 +1,4 @@
 import { tr } from "./i18n";
-import { useQuietScroll } from "./QuietScroll";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -59,17 +58,6 @@ export function SectionTabs({ items }: { items: ReadonlyArray<readonly [string, 
 
 export function ParentBack({ to, label }: { to: string; label: string }) {
   return <NavLink className="context-back parent-back" to={to}><Icon name="back" size={16} />{label}</NavLink>;
-}
-
-function PaneCollapseButton({ open, onToggle, label }: { open: boolean; onToggle: () => void; label: string }) {
-  return <button type="button" className="pane-collapse-button" onClick={onToggle} aria-expanded={open} aria-label={tr(open ? "收起${name}" : "展开${name}", { name: tr(label) })} title={tr(open ? "收起${name}" : "展开${name}", { name: tr(label) })}>
-    <span>{label}</span><Icon name={open ? "back" : "arrow"} size={12} />
-  </button>;
-}
-
-export function CollapsibleIndexPane({ open, onToggle, label, children }: { open: boolean; onToggle: () => void; label: string; children: ReactNode }) {
-  const onScrollCapture = useQuietScroll();
-  return <div onScrollCapture={onScrollCapture} className={`collapsible-index-pane${open ? "" : " collapsed"}`}><div className="collapsible-index-content" data-overflow-tooltip="off">{children}</div><PaneCollapseButton open={open} onToggle={onToggle} label={label} /></div>;
 }
 
 export function SectionHeading({ title, action }: { title: string; action?: ReactNode }) {

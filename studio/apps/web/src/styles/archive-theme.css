@@ -144,20 +144,14 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .stage-focus-copy h2 { max-width: none; font-size: var(--type-primary-title); line-height: 1.42; letter-spacing: -.02em; text-wrap: pretty; }
 .stage-focus-copy p,
 .route-sign p,
-.collection-detail-head p,
 .model-definition,
-.model-detail p,
 .local-graph-section > p,
 .source-page-title p { max-width: var(--ui-copy-max); }
 .growth-note { max-width: var(--ui-copy-max); }
 .growth-route { min-height: 210px; }
 .route-sign h2,
 .person-detail h2,
-.model-detail > h2,
-.collection-detail-head h2,
-.embedded-page-body h1,
-.editable-document--preview .editable-document-body h1,
-.reader .editable-document-body h1 {
+.embedded-page-body h1 {
   max-width: none;
   font-size: var(--type-primary-title);
   line-height: 1.42;
@@ -165,16 +159,15 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
   text-wrap: pretty;
 }
 
-.people-toolbar label, .library-toolbar label, .collection-list > label,
-.source-file-tools label { background: var(--paper); border-color: var(--line); border-radius: var(--radius-control); }
+.people-toolbar label, .library-toolbar label, .source-file-tools label { background: var(--paper); border-color: var(--line); border-radius: var(--radius-control); }
 .people-groups button { border-color: var(--line); border-radius: var(--radius-pill); }
 .people-groups button.active { color: var(--paper); background:var(--accent); border-color: var(--accent); }
-.people-explorer, .model-explorer, .collection-explorer { gap: 20px; }
-.people-index, .model-index, .collection-list { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
-.people-index button.active, .model-index button.active, .collection-list > div button.active { color: var(--ink); background: var(--surface-tinted); box-shadow: inset 3px 0 0 var(--accent-primary); }
-.person-detail, .model-detail, .collection-detail { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
-.person-detail h2, .model-detail > h2, .collection-detail-head h2 { font-family: var(--font-display); font-weight: 500; }
-.collection-detail-head, .model-definition, .letter-origin, .person-relationship-context { background: var(--surface-tinted); }
+.people-explorer { gap: 20px; }
+.people-index { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
+.people-index button.active { color: var(--ink); background: var(--surface-tinted); box-shadow: inset 3px 0 0 var(--accent-primary); }
+.person-detail { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-control); }
+.person-detail h2 { font-family: var(--font-display); font-weight: 500; }
+.model-definition, .letter-origin, .person-relationship-context { background: var(--surface-tinted); }
 .view-switch, .segmented, .letter-filters { background: var(--surface-subtle); border-radius: var(--radius-control); }
 .view-switch button, .segmented button, .letter-filters button { border-radius: var(--radius-control); }
 .library-grid { border-color: var(--line-strong); }
@@ -209,20 +202,14 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
 .source-preview > header h2 { font-family: var(--font-display); font-size: 21px; font-weight: 500; }
 .source-preview > header a, .source-preview > header button { border-radius: var(--radius-control); }
 .source-preview > header button { background:var(--accent); border-color: var(--accent); }
-.source-preview-body, .editable-document-body { background: var(--paper); }
-.source-preview-body h1, .source-preview-body h2, .source-preview-body h3,
-.editable-document-body h1, .editable-document-body h2, .editable-document-body h3 { font-family: var(--font-display); font-weight: 500; }
+.source-preview-body { background: var(--paper); }
+.source-preview-body h1, .source-preview-body h2, .source-preview-body h3 { font-family: var(--font-display); font-weight: 500; }
 .source-letter-feature { background: var(--surface-tinted); border-radius: var(--radius-control); }
 .source-letter-feature > i { background: var(--accent-primary); }
 
 /* Reading, agent and compact controls */
-.editable-document, .knowledge-document { background: var(--paper); border-color: var(--line); border-radius: var(--radius-control); }
-.source-preview-body > *, .editable-document--preview .editable-document-body > * { max-width: none; }
-.editable-document.editing.has-outline > textarea { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
-.editable-document.editing.has-outline > .document-outline { display: none; }
+.source-preview-body > * { max-width: none; }
 .editable-document-properties { background: var(--canvas); border-bottom-color: var(--line); }
-.document-outline { background: var(--surface-subtle); border-color: var(--line); }
-.pane-collapse-button { color:var(--ink-soft); background: var(--paper); border-color: var(--line); border-radius: var(--radius-control); }
 
 /* Floating Agent dialog — compact conversation first, controls second. */
 .context-agent-layer { --muted: var(--ink-soft); --faint: var(--ink-soft); }
@@ -647,9 +634,7 @@ body { color: var(--ink); background: var(--canvas); font-family: var(--font-ui)
   .page-hero-copy > p,
   .stage-focus-copy p,
   .route-sign p,
-  .collection-detail-head p,
   .model-definition,
-  .model-detail p,
   .local-graph-section > p,
   .source-page-title p,
   .growth-note { max-width: 100%; }

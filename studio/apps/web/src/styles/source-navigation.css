@@ -11,13 +11,10 @@ body .import-modal .import-destination-step { display: flex; flex-direction: col
 body .import-modal .import-summary { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas); }
 body .import-modal .import-summary h3 { margin-block: 0 8px; }
 body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px 20px; }
-.desktop-shell .organized-sources-page .source-vault { --folders: 272px; --files: 276px; gap: 0; grid-template-columns: var(--folders) var(--files) minmax(300px, 1fr); }
-.desktop-shell .organized-sources-page .source-vault.folder-pane-collapsed { --folders: 48px; }
-.desktop-shell .organized-sources-page .source-vault.file-pane-collapsed { --files: 48px; }
-.desktop-shell .organized-sources-page .source-vault .source-pane-shell { border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; }
-.desktop-shell .organized-sources-page .source-vault .source-folder-shell { border-radius: 18px 0 0 18px; background: var(--paper); }
-.desktop-shell .organized-sources-page .source-vault .source-folder-pane { background: var(--paper); display: flex; flex-direction: column; overflow: hidden; }
-.desktop-shell .organized-sources-page .source-vault .source-folder-contents { flex: 1; min-height: 0; overflow: auto; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell { border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.desktop-shell .source-vault.file-browser-workspace .source-folder-shell { border-radius: 18px 0 0 18px; background: var(--paper); }
+.desktop-shell .source-vault.file-browser-workspace .source-folder-pane { background: var(--paper); display: flex; flex-direction: column; overflow: hidden; }
+.desktop-shell .source-vault.file-browser-workspace .source-folder-contents { flex: 1; min-height: 0; overflow: auto; }
 .source-pane-shell.collapsed .source-connections, .source-pane-shell.collapsed .source-folder-hint { visibility: hidden; pointer-events: none; }
 
 .organized-sources-page .document-relations .source-knowledge-connections { max-width: 100%; margin: 0; padding: 0; border: 0; }
@@ -47,28 +44,29 @@ body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px
 .source-import-menu [role=menuitem] { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; text-align: left; font: 400 13px/1.55 var(--font-ui); color: var(--ink); cursor: pointer; }
 .source-import-menu [role=menuitem]:is(:hover,:focus-visible) { background: var(--surface-tinted); }
 .source-import-menu [role=menuitem] small { font-size: 12px; color: var(--ink-soft); }
-.desktop-shell .organized-sources-page .source-vault { --folders: 216px; --files: 252px; grid-template-columns: var(--folders) var(--files) minmax(0, 1fr); gap: 0; align-items: stretch; height: calc(100dvh - 138px); min-height: 360px; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); overflow: hidden; }
-.desktop-shell .organized-sources-page .source-vault.folder-pane-collapsed { --folders: 40px; }
-.desktop-shell .organized-sources-page .source-vault.file-pane-collapsed { --files: 40px; }
-.desktop-shell .organized-sources-page .source-vault .source-pane-shell { position: relative; top: auto; height: 100%; min-height: 0; max-height: none; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: var(--paper); box-shadow: none; }
-.desktop-shell .organized-sources-page .source-vault .source-file-pane { background: var(--paper); }
-.desktop-shell .organized-sources-page .source-vault .source-folder-contents { flex: 1; min-height: 0; padding: 4px 8px 12px; }
-.desktop-shell .organized-sources-page .source-vault .source-file-contents { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.desktop-shell .organized-sources-page .source-vault .source-file-list { flex: 1; min-height: 0; overflow: auto; gap: 0; padding: 6px 8px 12px; }
-.desktop-shell .organized-sources-page .source-vault .source-file-row { border: 0; border-radius: 9px; background: transparent; box-shadow: none; }
-.desktop-shell .organized-sources-page .source-vault .source-file-row:hover { background: var(--surface-tinted); }
-.desktop-shell .organized-sources-page .source-vault .source-file-row.active { background: var(--accent-soft); box-shadow: none; }
-.desktop-shell .organized-sources-page .source-vault .source-file-select { padding: 9px 28px 9px 12px; }
-.desktop-shell .organized-sources-page .source-vault .source-record-copy { gap: 1px; }
-.desktop-shell .organized-sources-page .source-vault .file-browser-item .source-record-copy > .file-browser-name { font-size: 13.5px; line-height: 1.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.desktop-shell .organized-sources-page .source-vault .file-browser-item .source-record-copy > .file-browser-excerpt { display: block; margin: 0; font-size: 12px; line-height: 1.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.desktop-shell .organized-sources-page .source-vault .source-file-row.active .file-browser-name { color: var(--accent-ink); }
-.desktop-shell .organized-sources-page .source-vault .pane-shelf button:disabled { opacity: .35; cursor: not-allowed; }
-.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed > :is(.pane-shelf-create,.pane-shelf-toggle) { display: none; }
-.desktop-shell .organized-sources-page .source-vault .source-pane-shell header.pane-shelf--collapsed { height: 100%; justify-content: flex-start; padding-top: 12px; background: var(--surface-tinted); }
-.desktop-shell .organized-sources-page .source-vault .pane-shelf-rail-label { margin: 0; width: 100%; }
-.desktop-shell .organized-sources-page .source-vault .source-preview { min-height: 0; height: 100%; padding: 0; overflow: auto; border: 0; border-radius: 0; box-shadow: none; }
-.desktop-shell .organized-sources-page .source-vault .source-preview-empty { display: grid; place-items: center; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; color: var(--ink-soft); font-size: 13px; }
+.desktop-shell .source-vault.file-browser-workspace { --folders: 212px; --files: 304px; transition: grid-template-columns 320ms cubic-bezier(.2,.7,.2,1); gap: 0; align-items: stretch; height: calc(100dvh - 138px); min-height: 360px; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); overflow: hidden; }
+.desktop-shell .source-vault.file-browser-workspace.file-browser-documents { grid-template-columns: var(--files) minmax(0, 1fr); }
+.desktop-shell .source-vault.file-browser-workspace.file-browser-with-folders { grid-template-columns: var(--folders) var(--files) minmax(0, 1fr); }
+.desktop-shell .source-vault.file-browser-workspace.folder-pane-collapsed { --folders: 36px; }
+.desktop-shell .source-vault.file-browser-workspace.file-pane-collapsed { --files: 40px; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell { position: relative; top: auto; height: 100%; min-height: 0; max-height: none; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: var(--paper); box-shadow: none; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+.desktop-shell .source-vault.file-browser-workspace .source-folder-contents { flex: 1; min-height: 0; padding: 4px 8px 12px; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-contents { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-list { flex: 1; min-height: 0; overflow: auto; gap: 0; padding: 6px 8px 12px; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-row { border: 0; border-radius: 9px; background: transparent; box-shadow: none; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-row:hover { background: var(--surface-tinted); }
+.desktop-shell .source-vault.file-browser-workspace .source-file-row.active { background: var(--accent-soft); box-shadow: none; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-select { padding: 9px 28px 9px 12px; }
+.desktop-shell .source-vault.file-browser-workspace .source-record-copy { gap: 1px; }
+.desktop-shell .source-vault.file-browser-workspace .file-browser-item .source-record-copy > .file-browser-name { font-size: 13.5px; line-height: 1.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desktop-shell .source-vault.file-browser-workspace .file-browser-item .source-record-copy > .file-browser-excerpt { display: block; margin: 0; font-size: 12px; line-height: 1.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desktop-shell .source-vault.file-browser-workspace .source-file-row.active .file-browser-name { color: var(--accent-ink); }
+.desktop-shell .source-vault.file-browser-workspace .pane-shelf button:disabled { opacity: .35; cursor: not-allowed; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell header.pane-shelf--collapsed { height: 100%; justify-content: flex-start; padding: 8px 0; background: inherit; }
+.desktop-shell .source-vault.file-browser-workspace .pane-shelf-rail-label { margin: 0; width: 100%; }
+.desktop-shell .source-vault.file-browser-workspace .source-preview { grid-column: -2 / -1; grid-row: 1; min-height: 0; height: 100%; padding: 0; overflow: auto; border: 0; border-radius: 0; box-shadow: none; }
+.desktop-shell .source-vault.file-browser-workspace .source-preview-empty { display: grid; place-items: center; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; color: var(--ink-soft); font-size: 13px; }
 .desktop-shell .organized-sources-page .folder-tree-group { display: none; }
 .desktop-shell .organized-sources-page .folder-tree-row::before { display: none; }
 .desktop-shell .organized-sources-page .folder-tree-row.root { min-height: 30px; }
@@ -77,56 +75,16 @@ body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px
 .desktop-shell .organized-sources-page .source-connections { margin: 10px 10px 4px; padding: 0; border: 0; }
 .desktop-shell .organized-sources-page .source-connections > button { justify-content: flex-start; gap: 8px; height: 32px; min-height: 32px; padding: 0 10px; border-radius: 8px; }
 
-/* A single outline switches between an inline text column and its hoverable tick rail. */
-.desktop-shell .source-vault .life-record-document { --document-measure: 500px; --document-gutter: 0px; min-height: 100%; grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) minmax(0,1fr); padding: 0 20px 0 44px; }
-.desktop-shell .source-vault .life-record-document.has-outline { grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) 28px minmax(0,1fr); column-gap: 16px; }
-.desktop-shell .source-vault .life-record-document.outline-pinned { grid-template-columns: minmax(0,1fr) minmax(0,var(--document-measure)) 150px minmax(0,1fr); }
-.desktop-shell .source-vault .life-record-document > .document-content { position: static; grid-column: 2; max-width: var(--document-measure); margin: 0; padding: 44px 0 0; }
-.record-document-header { position: sticky; z-index: 6; top: 0; display: flex; align-items: center; gap: 12px; height: 44px; margin: 0; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--paper); font: 400 12px/1.55 var(--font-ui); }
-.record-document-path { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 13px; color: var(--ink-soft); }
-.record-document-path > b { font-weight: 600; color: var(--ink); }
-.record-document-header > span { margin-left: auto; flex: none; color: var(--ink-soft); }
-.record-document-header.editing > span { color: var(--accent-ink); }
-.record-document-header.editing > span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--accent); }
-.record-document-header > span.error { color: var(--danger); }
-.desktop-shell .source-vault .life-record-document .editable-document-identity { padding: 36px 0 0; margin: 0; min-height: 0; border: 0; }
-.desktop-shell .source-vault .life-record-document .document-file-name input { font: 600 24px/1.4 var(--font-ui); padding: 0; }
-.desktop-shell .source-vault .life-record-document .document-meta-row { display: none; }
-.desktop-shell .source-vault .life-record-document .document-content > .editable-document-properties { padding: 0; border: 0; }
-.desktop-shell .source-vault .life-record-document .document-content > .editable-document-properties:has(.source-property-summary:empty) { display: none; }
-.desktop-shell .source-vault .life-record-document .document-content > :is(.editable-document-body,.document-editor) { padding: 22px 0 160px; font: 400 16px/1.85 var(--font-display); min-height: 360px; }
-.desktop-shell .source-vault .life-record-document .document-content :is(.editable-document-body h2,.document-editor-heading-2) { font: 600 20px/1.4 var(--font-ui); margin: 30px 0 12px; }
-.desktop-shell .source-vault .life-record-document .document-content :is(.editable-document-body h3,.document-editor-heading-3) { font: 600 16.5px/1.45 var(--font-ui); margin: 22px 0 8px; }
-.desktop-shell .source-vault .life-record-document > .document-navigation-host { position: sticky; top: 64px; margin-top: 84px; width: 28px; height: auto; }
-.desktop-shell .source-vault .life-record-document.outline-pinned > .document-navigation-host { width: 150px; }
-.desktop-shell .source-vault .life-record-document .document-outline { width: 28px; }
-.desktop-shell .source-vault .life-record-document .document-outline.pinned { width: 150px; }
-.desktop-shell .source-vault .life-record-document .document-tick-rail { position: relative; top: 0; right: auto; width: 28px; gap: 0; padding: 0; align-items: flex-start; }
-.desktop-shell .source-vault .life-record-document .document-tick { justify-content: flex-start; width: 28px; height: 14px; padding-left: 6px; }
-.desktop-shell .source-vault .life-record-document .document-tick i { width: 8px; }
-.desktop-shell .source-vault .life-record-document .document-tick.major i { width: 14px; }
-.desktop-shell .source-vault .life-record-document .document-tick.active i { width: 20px; }
-.desktop-shell .source-vault .life-record-document .document-outline-card { top: -10px; left: -10px; right: auto; width: 184px; max-height: calc(100dvh - 210px); padding: 10px; border-radius: 12px; }
-.desktop-shell .source-vault .life-record-document .document-outline.pinned .document-outline-card { position: relative; top: 0; left: 0; right: auto; width: 150px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.desktop-shell .source-vault .life-record-document .document-outline:is(:hover,:focus-within) .document-outline-card { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
-.desktop-shell .source-vault .life-record-document .document-outline-card > header { height: 24px; padding: 0 0 4px 12px; }
-.desktop-shell .source-vault .life-record-document .document-outline-card > header b { color: var(--ink-soft); font-size: 12px; }
-.desktop-shell .source-vault .life-record-document .document-outline-card > header :is(small,.outline-mode) { display: none; }
-.desktop-shell .source-vault .life-record-document .document-outline-card > header button { width: 24px; height: 24px; opacity: 0; background: transparent; }
-.desktop-shell .source-vault .life-record-document .document-outline:is(:hover,:focus-within) header button { opacity: 1; }
-.desktop-shell .source-vault .life-record-document .document-outline-card ol { padding: 0; border-left: 1px solid var(--line-strong); }
-.desktop-shell .source-vault .life-record-document .outline-item { min-height: 0; padding: 5px 6px 5px calc(11px + var(--outline-depth,0)*12px); border-left: 2px solid transparent; border-radius: 0; font-weight: 400; background: transparent; }
-.desktop-shell .source-vault .life-record-document .outline-item span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.desktop-shell .source-vault .life-record-document .outline-item.active { border-left-color: var(--accent); color: var(--accent-ink); background: transparent; font-weight: 600; }
-.desktop-shell .source-vault .life-record-document .document-outline-card footer { display: none; }
-.record-outline-hint { position: absolute; top: 84px; right: 20px; color: var(--ink-soft); font: 400 12.5px/1.5 var(--font-ui); pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .desktop-shell .organized-sources-page .source-vault { transition: none; } }
-/* Keep the breadcrumb/status shelf visible while the document itself scrolls. */
-.desktop-shell .source-vault .life-record-document > .record-document-header { position: sticky; grid-column: 1 / -1; grid-row: 1; top: 0; margin: 0 -20px 0 -44px; }
-.desktop-shell .source-vault .life-record-document > .document-content { grid-row: 2; padding-top: 0; }
-.desktop-shell .source-vault .life-record-document > .document-navigation-host { grid-column: 3; grid-row: 2; margin-top: 40px; }
-.record-document-title { margin: 0; color: var(--ink); font: 600 24px/1.4 var(--font-ui); overflow-wrap: anywhere; }
-.desktop-shell .source-vault .life-record-document { grid-template-rows: 44px 1fr; }
+/* The outline and the reading scroller are independent columns in the record preview. */
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell > .source-folder-pane { background: var(--record-folder-panel); }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell > .source-file-pane { background: var(--record-panel); }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell header.pane-shelf:not(.pane-shelf--collapsed) { height: 46px; background: inherit; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell { display: block; overflow: hidden; }
+.desktop-shell .source-vault.file-browser-workspace .file-browser-item .source-record-copy > .file-browser-excerpt {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; font-size: 12.5px;
+}
+.desktop-shell .source-vault.file-browser-workspace .source-file-row.active { background: var(--paper); box-shadow: inset 0 0 0 1px var(--record-selection-line); }
+
 .desktop-shell .organized-sources-page .source-file-row > .file-menu-trigger { opacity: 0; width: 24px; height: 24px; min-height: 24px; right: 4px; top: 9px; }
 .desktop-shell .organized-sources-page .source-file-row:is(:hover,:focus-within) > .file-menu-trigger,
 .desktop-shell .organized-sources-page .source-file-row > .file-menu-trigger[aria-expanded=true] { opacity: 1; }
@@ -135,12 +93,9 @@ body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px
 .desktop-shell .organized-sources-page .source-toolbar-actions { margin-left: auto; }
 .source-import-menu > button { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 .source-import-menu > button:hover { background: var(--accent-hover); color: var(--paper); }
-.desktop-shell .organized-sources-page .source-vault .pane-shelf { background: var(--record-tint); }
-.desktop-shell .source-vault .life-record-document .editable-document-body > h2:first-child { margin-top: 8px; }
-/* The hover card owns hits above the rail, including its expand control. */
-.desktop-shell .source-vault .life-record-document .document-outline-card { z-index: 3; }
-.desktop-shell .organized-sources-page .source-vault { grid-template-rows: minmax(0,1fr); }
-.desktop-shell .organized-sources-page .source-vault > .source-preview-empty { grid-column: 3; grid-row: 1; height: 100%; min-width: 0; place-content: center; }
+.desktop-shell .source-vault.file-browser-workspace .pane-shelf { background: var(--record-tint); }
+.desktop-shell .source-vault.file-browser-workspace { grid-template-rows: minmax(0,1fr); }
+.desktop-shell .source-vault.file-browser-workspace > .source-preview-empty { grid-column: -2 / -1; grid-row: 1; height: 100%; min-width: 0; place-content: center; }
 .desktop-shell .organized-sources-page .source-preview-empty > span { color: var(--ink-soft); font: 400 13px/1.55 var(--font-ui); }
 .desktop-shell .organized-sources-page .source-pending-filter > b { background: var(--accent-soft); color: var(--accent-ink); font-size: 11px; }
 .desktop-shell .organized-sources-page .source-folder-pane:has(.folder-tree-empty) > .source-connections { display: none; }
@@ -149,13 +104,27 @@ body .import-modal .import-summary dl { display: flex; flex-wrap: wrap; gap: 8px
 .desktop-shell .organized-sources-page .folder-tree-empty { flex: 1; justify-content: center; padding: 24px 12px; gap: 8px; }
 .folder-tree-empty p { margin: 0; font: 400 13px/1.55 var(--font-ui); color: var(--ink-soft); }
 
-/* Reclaimed pane space widens the text; the heading navigation stays beside it. */
-.desktop-shell .organized-sources-page .source-vault .source-preview { container-type: inline-size; }
-@container (min-width: 1000px) {
-  .desktop-shell .source-vault .life-record-document { --document-measure: 680px; }
+/* Association cards follow the last reading paragraph, without editor end space. */
+.desktop-shell .source-vault .document-surface .document-content:has(> .document-context-content .source-knowledge-connections) > .editable-document-body { padding-bottom: 24px; min-height: 0; }
+.desktop-shell .source-vault .document-surface .document-context-content:has(> .source-knowledge-connections) { padding: 0 0 32px; }
+.desktop-shell .source-vault .document-surface .source-knowledge-connections { margin: 0; padding-top: 16px; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell header.pane-shelf .pane-shelf-label {
+  display: flex; align-items: center; gap: 7px;
+}
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell header.pane-shelf .pane-shelf-label > b { font-size: 11.5px; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell header.pane-shelf--collapsed .pane-shelf-toggle { background: transparent; }
+.desktop-shell .source-vault.file-browser-workspace .source-pane-shell .pane-shelf-rail-label { margin-top: 8px; }
+
+/* Preserve room to read and reach the pane controls at the minimum desktop width. */
+.file-browser-container { container-type: inline-size; }
+@container (width < 756px) {
+  .desktop-shell .source-vault.file-browser-workspace:not(.folder-pane-collapsed) { --folders: min(212px, 26cqw); }
+  .desktop-shell .source-vault.file-browser-workspace:not(.file-pane-collapsed) { --files: min(304px, 38cqw); }
+  .record-document-header > span { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
-/* Association cards follow the last reading paragraph, without editor end space. */
-.desktop-shell .source-vault .life-record-document .document-content:has(> .document-context-content .source-knowledge-connections) > .editable-document-body { padding-bottom: 24px; min-height: 0; }
-.desktop-shell .source-vault .life-record-document .document-context-content:has(> .source-knowledge-connections) { padding: 0 0 32px; }
-.desktop-shell .source-vault .life-record-document .source-knowledge-connections { margin: 0; padding-top: 16px; }
+.file-browser-workspace .source-file-contents > .search-field { margin: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-shell .source-vault.file-browser-workspace { transition: none; }
+}

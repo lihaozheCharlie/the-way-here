@@ -170,11 +170,11 @@ describe("letter reader", () => {
   it("uses the standard editor order instead of a letter-only compact layout", () => {
     const html = render();
     expect(html).not.toContain("editable-document-properties-disclosure");
-    expect(html).toMatch(/class="editable-document [^"]*editable-document--preview[^"]*has-outline/);
+    expect(html).toMatch(/class="editable-document [^"]*document-surface[^"]*has-outline/);
     expect(html.indexOf('class="editable-document-identity')).toBeLessThan(html.indexOf('class="editable-document-body'));
     expect(html).not.toContain('class="document-meta-row"');
     expect(html).not.toContain('class="editable-document-properties"');
-    expect(html).toContain("正文，双击后编辑");
+    expect(html).toContain("正文，单击后编辑");
     expect(html).not.toContain("展开全部属性");
     expect(html).not.toContain('aria-label="文档模式"');
     expect(html).not.toContain('class="document-mode-switch"');
@@ -195,11 +195,11 @@ describe("letter reader", () => {
   it("uses the shared document layout and outline for immutable generated versions", () => {
     runs = [{ ...version, result: { ...version.result!, finalAnswer: "# 新视角\n\n## 这段时间\n\n回信内容。\n\n## 往后\n\n后续想法。" } }];
     const html = render();
-    expect(html).toMatch(/class="editable-document [^"]*editable-document--preview[^"]*has-outline/);
+    expect(html).toMatch(/class="editable-document [^"]*document-surface[^"]*has-outline/);
     expect(html).toContain('class="document-outline');
     expect(html).not.toContain("editable-document-activate");
     expect(html).not.toContain("<textarea");
-    expect(html).not.toContain("双击正文开始修改");
+    expect(html).not.toContain("单击正文开始修改");
     expect(html).toContain("查看生成对话");
   });
 

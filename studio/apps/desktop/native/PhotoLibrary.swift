@@ -140,12 +140,16 @@ func beginSearch(_ id: String, input: [String: Any], center: CLLocation? = nil, 
             let end = (input["end"] as? String).flatMap { iso.date(from: $0) }
             var matched = [PHAsset]()
             assets.enumerateObjects { asset, _, _ in
-                if let start = start, asset.addedDate < start { return }
-                if let end = end, asset.addedDate >= end { return }
+                let added: Date? = asset.addedDate
+                if let start { guard let added, added >= start else { return } }
+                if let end { guard let added, added < end else { return } }
                 if let ids = allowedIDs, !ids.contains(asset.localIdentifier) { return }
                 matched.append(asset)
             }
-            matched.sort { $0.addedDate == $1.addedDate ? $0.localIdentifier < $1.localIdentifier : $0.addedDate > $1.addedDate }
+            matched.sort {
+                let left: Date? = $0.addedDate, right: Date? = $1.addedDate
+                return left == right ? $0.localIdentifier < $1.localIdentifier : (left ?? .distantPast) > (right ?? .distantPast)
+            }
             orderedAssets = matched
         }
         let summary = (input["summary"] as? String ?? "全部日期") + (albumTitle.map { " · 相册：" + $0 } ?? "")

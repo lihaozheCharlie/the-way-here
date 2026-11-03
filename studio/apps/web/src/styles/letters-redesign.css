@@ -112,8 +112,6 @@
 .letter-history-popover > button:hover { background:var(--surface-tinted); }
 .letter-history-popover > button:focus-visible { outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
-/* Reuse the records browser with two columns when there is no folder tree. */
-.desktop-shell .organized-sources-page .source-vault.file-browser-documents { grid-template-columns:var(--files) minmax(360px,1fr); }
 .letter-provenance { padding:0 22px 12px; margin-top:0; }
 
 /* Keep letter actions beside the title, wrapping only when the reader is narrow. */

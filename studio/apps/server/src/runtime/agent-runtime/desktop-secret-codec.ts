@@ -33,3 +33,28 @@ export function desktopSecretCodec(): SecretCodec | undefined {
   });
   return { encrypt: text => request("encrypt", text), decrypt: text => request("decrypt", text) };
 }
+
+export interface SharedKeychain {
+  status(): Promise<{ available: boolean; reason?: string }>;
+  read(provider: string): Promise<string | undefined>;
+  write(provider: string, token: string): Promise<void>;
+  remove(provider: string): Promise<void>;
+}
+/** All token-bearing traffic stays on Electron's private parent port. */
+export function desktopSharedKeychain(): SharedKeychain | undefined {
+  if (process.env.TWH_DESKTOP_SECURE_SETTINGS !== '1') return undefined;
+  const port = (process as typeof process & { parentPort?: ParentPort }).parentPort;
+  if (!port) return undefined;
+  const request = (operation: string, provider?: string, text?: string) => new Promise<{ available: boolean; reason?: string; token?: string }>((resolve,reject) => {
+    const id=randomUUID();
+    const finish=(error?:Error,value?:{available:boolean;reason?:string;token?:string})=>{clearTimeout(timer);port.off('message',listener);error?reject(error):resolve(value!);};
+    const listener=({data}:{data:any})=>{if(data?.type!=='desktop-secret-result'||data.id!==id)return;if(data.shared&&typeof data.shared.available==='boolean')finish(undefined,data.shared);else finish(new Error('共享钥匙串私有通道不可用'));};
+    const timer=setTimeout(()=>finish(new Error('共享钥匙串响应超时')),15000);port.on('message',listener);port.postMessage({type:'desktop-secret',id,operation:'shared-'+operation,provider,text});
+  });
+  return {
+    status:()=>request('status'),
+    read:async provider=>{const result=await request('read',provider);if(!result.available)throw new Error(result.reason||'共享钥匙串不可用');return result.token;},
+    write:async(provider,token)=>{const result=await request('write',provider,token);if(!result.available)throw new Error(result.reason||'共享钥匙串不可用');},
+    remove:async provider=>{const result=await request('remove',provider);if(!result.available)throw new Error(result.reason||'共享钥匙串不可用');},
+  };
+}

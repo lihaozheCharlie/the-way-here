@@ -78,3 +78,12 @@ describe("MAS Codex request binding", () => {
     } finally {adapter.close();}
   });
 });
+
+describe("bundled standalone Node retrieval compatibility",()=>{
+ it("uses bundled Node directly without the Electron run-as-node environment",async()=>{
+  const before=process.env.TWH_BUNDLED_NODE;process.env.TWH_BUNDLED_NODE="/anonymous runtime/node";
+  const start=vi.spyOn(CodexAppServer.prototype,"startTurn").mockResolvedValue("turn");const adapter=new CodexRuntimeAdapter("unused");
+  try {await adapter.start({cwd:"/demo",prompt:"anonymous search",model:"demo",effort:"low",config,mode:"read",sessionId:"ordinary-session"});const prompt=start.mock.calls[0]![1];expect(prompt).toContain("'/anonymous runtime/node'");expect(prompt).not.toContain("ELECTRON_RUN_AS_NODE");}
+  finally {adapter.close();if(before===undefined)delete process.env.TWH_BUNDLED_NODE;else process.env.TWH_BUNDLED_NODE=before;}
+ });
+});

@@ -4,6 +4,7 @@ import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promi
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { JOURNEY_REPORT_DRAFT_END, JOURNEY_REPORT_DRAFT_START, type PaymentJourneyClueState, type PaymentJourneyClueStatus, type SourceBuildStatus, type SourceBuiltRef, type SourceImportBatch, type SourceImportChannel, type SourceImportFile, type WikiPage, type WikiRun } from "@the-way-here/shared";
+import type { ImportSelection } from "./import-options.js";
 import { prepareImportBatch } from "./prepare-import.js";
 import { prepareAlipayStatement } from "./payment-statement.js";
 import { isPathInside, normalizeSourceFolder } from "../../path-policy.js";
@@ -11,7 +12,7 @@ import type { ContentWorkspace } from "../content/content-workspace.js";
 
 const importChannels = new Set<SourceImportChannel>(["files", "chatgpt", "claude", "gemini", "deepseek", "doubao", "other-ai", "alipay"]);
 
-export type ImportRequest = { files?: SourceImportFile[]; channel?: SourceImportChannel; targetFolder?: string };
+export type ImportRequest = { files?: SourceImportFile[]; channel?: SourceImportChannel; targetFolder?: string; importOptions?: ImportSelection };
 export type JourneyClueUpdate = { storedPath: string; revision: number; status: PaymentJourneyClueStatus; note?: string };
 
 export class ImportRequestError extends Error {
@@ -193,7 +194,7 @@ export class ImportStore {
     if (targetRoot !== sourceRoot && !isPathInside(sourceRoot, targetRoot)) throw new ImportRequestError(403, "目标文件夹超出原始知识目录");
     let prepared;
     try {
-      prepared = prepareImportBatch(files, channel, createdAt);
+      prepared = prepareImportBatch(files, channel, createdAt, request.importOptions);
     } catch (error: any) {
       throw new ImportRequestError(400, error.message);
     }

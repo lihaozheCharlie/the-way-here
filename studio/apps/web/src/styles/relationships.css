@@ -102,8 +102,6 @@
 .relationships-detail-links a { padding: 5px 10px; color:var(--ink-soft); background: var(--relationship-role-soft); border-radius: var(--radius-pill); font-size: 12px; }
 .relationships-detail-links a:hover { color: var(--relationship-role); text-decoration: underline; text-underline-offset: 3px; }
 .relationships-person-detail .embedded-page { border-top: 1px solid var(--line); }
-.relationships-person-detail .editable-document--preview { border: 0; border-radius: 0 0 14px 14px; }
-.relationships-person-detail .editable-document--preview .editable-document-body { padding-bottom: 38px; }
 
 .relationships-person-card:focus-visible,
 .relationships-role-filters button:focus-visible,

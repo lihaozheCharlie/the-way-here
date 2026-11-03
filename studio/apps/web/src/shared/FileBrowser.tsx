@@ -5,6 +5,14 @@ import { QuietScroll } from "./QuietScroll";
 import "./file-browser.css";
 import { shownDemoRecord, useDemoLabels, tr } from "./i18n";
 
+export function FileBrowserWorkspace({ label, filesOpen, foldersOpen, children }: {
+  label: string; filesOpen: boolean; foldersOpen?: boolean; children: ReactNode;
+}) {
+  return <div className="file-browser-container">
+    <div className={`source-vault file-browser-workspace${foldersOpen === undefined ? " file-browser-documents" : " file-browser-with-folders"}${foldersOpen === false ? " folder-pane-collapsed" : ""}${filesOpen ? "" : " file-pane-collapsed"}`} aria-label={label}>{children}</div>
+  </div>;
+}
+
 /** Both records and letters use the same collapsible file column and row markup. */
 export function FileBrowserPane({ label, count, open, onToggle, toolbar, headerAction, onCreate, createLabel, createDisabled, inlineCreate, children, toggleLabel = tr("文件列表") }: {
   label: string; count: string; open: boolean; onToggle: () => void;

@@ -8,6 +8,7 @@ export interface MarkdownEditorHandle {
   readonly value: string;
   readonly selectionStart: number;
   focus: (options?: FocusOptions) => void;
+  revealSelection: () => void;
   setSelectionRange: (start: number, end: number) => void;
   offsetTop: (offset: number) => number;
   getBoundingClientRect: () => DOMRect;
@@ -55,8 +56,14 @@ export function MarkdownEditor({ value, label, editorRef, onChange, onSelect, on
     viewRef.current = view;
     const handle: MarkdownEditorHandle = {
       element, get value() { return view.state.doc.toString(); }, get selectionStart() { return view.state.selection.main.head; },
-      focus: () => view.focus(), setSelectionRange: (start, end) => view.dispatch({ selection: { anchor: Math.min(start, view.state.doc.length), head: Math.min(end, view.state.doc.length) } }),
-      offsetTop: offset => view.lineBlockAt(Math.min(offset, view.state.doc.length)).top + view.contentDOM.getBoundingClientRect().top - element.getBoundingClientRect().top,
+      focus: () => view.focus(),
+      revealSelection: () => view.dispatch({ scrollIntoView: true }),
+      setSelectionRange: (start, end) => view.dispatch({ selection: { anchor: Math.min(start, view.state.doc.length), head: Math.min(end, view.state.doc.length) } }),
+      offsetTop: offset => {
+        const position = Math.min(offset, view.state.doc.length);
+        const top = view.coordsAtPos(position)?.top ?? view.lineBlockAt(position).top + view.contentDOM.getBoundingClientRect().top;
+        return top - element.getBoundingClientRect().top;
+      },
       getBoundingClientRect: () => element.getBoundingClientRect(),
     };
     if (typeof editorRef === "function") editorRef(handle); else if (editorRef) editorRef.current = handle;

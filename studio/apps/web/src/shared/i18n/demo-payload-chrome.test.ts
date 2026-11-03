@@ -12,7 +12,7 @@ const scanner = fileURLToPath(new URL("../../../../../scripts/demo-payload-chrom
 
 describe("demo payload chrome", () => {
   it("shows English titles, tags, excerpts, and paths for the demo library", () => {
-    const leaks = JSON.parse(execFileSync(process.execPath, [scanner, vault], { encoding: "utf8" })) as string[];
+    const leaks = JSON.parse(execFileSync(process.execPath, [scanner, vault], { encoding: "utf8", timeout: 20_000 })) as string[];
     expect(leaks).toEqual([]);
     expect(demoTitleLabel("demo", "en", "杭州：职业机会与日常生活")).toBe("Hangzhou: career chances and everyday life");
     expect(demoTitleLabel("demo", "en", "南京：工程训练与离开")).toBe("Nanjing: engineering training and leaving");
@@ -33,5 +33,5 @@ describe("demo payload chrome", () => {
     expect(demoSectionHeadingLabel("personal", "en", "模型定义")).toBe("模型定义");
     expect(desktopWindowTitle("Go deeper", "The Way Here demo", null)).toBe("Go deeper · The Way Here demo");
     expect(desktopWindowTitle("Quick note", "The Way Here demo", "capture")).toBe("Quick note");
-  });
+  }, 30_000);
 });

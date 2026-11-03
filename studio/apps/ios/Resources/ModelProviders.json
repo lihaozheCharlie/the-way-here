@@ -1,0 +1,42 @@
+[
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "baseURL": "https://api.deepseek.com",
+    "protocolName": "openai-completions",
+    "model": "deepseek-v4-pro",
+    "supportsImages": false
+  },
+  {
+    "id": "zhipu",
+    "name": "智谱 GLM",
+    "baseURL": "https://open.bigmodel.cn/api/paas/v4",
+    "protocolName": "openai-completions",
+    "model": "glm-5.2",
+    "supportsImages": false
+  },
+  {
+    "id": "qwen",
+    "name": "阿里云千问",
+    "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "protocolName": "openai-completions",
+    "model": "qwen3.8-max",
+    "supportsImages": true
+  },
+  {
+    "id": "kimi",
+    "name": "Kimi",
+    "baseURL": "https://api.moonshot.cn/v1",
+    "protocolName": "openai-completions",
+    "model": "kimi-k3",
+    "supportsImages": false
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "baseURL": "https://api.openai.com/v1",
+    "protocolName": "openai-responses",
+    "model": "gpt-5.5",
+    "supportsImages": true
+  }
+]

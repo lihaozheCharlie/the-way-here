@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { MOBILE_KEYCHAIN_SIGN_IGNORE } from './mobile-keychain-bundle.mjs';
 import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -80,7 +81,7 @@ config.mac.minimumSystemVersion = '15.0.0';
 config.mas = { type:release ? 'distribution' : 'development', identity:env.TWH_APPLE_IDENTITY, provisioningProfile:profilePath, entitlements:path.join(dir,'app.plist'), entitlementsInherit:path.join(dir,'inherit.plist'), hardenedRuntime:false };
 // Electron's signer classifies images and locale packs as binaries. They remain
 // covered by the app resource seal; only executable code needs its own signature.
-config.mas.signIgnore = ['\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$'];
+config.mas.signIgnore = [MOBILE_KEYCHAIN_SIGN_IGNORE, '\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$'];
 config.extraResources.push({from:path.join(dir,'release-metadata.json'),to:'release-metadata.json'});
 await writeFile(path.join(dir,'builder.yml'),YAML.stringify(config));
 console.log(`证书与配置预检通过：${target}/${process.arch}。尚未证明沙盒运行或审核通过。`);

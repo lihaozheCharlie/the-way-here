@@ -97,3 +97,4 @@ export type { LifeDimension, LifeEvidence, LifeScenario, LifePredictionReport, P
 
 export { predictionPathwayLabels, type PredictionPathway } from "./predictions.js";
 export type { CaptureEntry, CaptureHistory } from "./capture.js";
+export * from "./mobile-sync.js";

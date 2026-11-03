@@ -8,3 +8,10 @@ node_modules/
 
 # Generated ONNX runtime copies (prepared from installed dependency)
 apps/web/public/onnx/
+
+# Native iOS local build and signing state
+apps/ios/.build/
+apps/ios/.swiftpm/
+apps/ios/TheWayHere.xcodeproj/
+**/xcuserdata/
+**/*.xcuserstate

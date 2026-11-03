@@ -1,7 +1,8 @@
+import { usePanelPreference } from "../../shared/use-panel-preference";
 import { FolderTree } from "../../shared/FolderTree";
 import { SourceConnectionsPanel } from "./SourceConnectionsPanel";
 import { sourcePagePath } from "./source-model";
-import { FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
+import { FileBrowserWorkspace, FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
 import { InlineNameForm } from "../../shared/InlineNameForm";
 import { SourceListOptions } from "./SourceListOptions";
 import { DocumentPreview } from "../../shared/DocumentPreview";
@@ -14,7 +15,7 @@ import { SearchField } from "../../shared/form-controls";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
-import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
+import type { VaultInfo, PaymentJourneyClueState, PaymentJourneyCluster, PaymentJourneySummary, SourceFolderSummary, SourceImportBatch, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { api } from "../../api";
 import { graphCategoryNames } from "../../shared/categories";
 import { tr, useDemoLabels, useI18n } from "../../shared/i18n";
@@ -32,6 +33,7 @@ import { BillMemoryPanel } from "./BillMemoryPanel";
 import { SourceMemoryCards, SourceMemoryDialog } from "./SourceMemories";
 import { clearPendingPhotoMemory, readPendingPhotoMemory } from "../overview/photo-library-handoff";
 import { excludeDeletedSources, importedMemoryRecord, mergeSourceBatches, pendingMemoryRecords } from "./source-memory-model";
+import { readPreference, writePreference } from "../../shared/preference-storage";
 import { sourceFolderOptions, useSourceFolders } from "./source-folders";
 import { buildableSourceRecordForPage, cleanSourcePath, importedFolderForBatch, pendingSourceBuildRecords, sourceBuildActionPresentation, sourceBuildPresentation, sourceBuildRecordForPage, sourceBuildRecords, sourceMonthOptions, sourcePageMatchesRequest, sourceRecordDate, sourceRecordMonth, sourceRecordType, sourceRecordTypes, type SourceBuildRecord, type SourceRecordType } from "./source-model";
 
@@ -201,7 +203,7 @@ function SourcePreview({ page, revision, startEditing = false, fileNameFocusToke
 export function OrganizedSources({ revision }: { revision: number }) {
   const { t } = useI18n();
   const demo = useDemoLabels();
-  const { data: moveVault } = useApi<VaultInfo>("/api/vault", revision);
+  const { data: moveVault, loading: loadingVault } = useApi<VaultInfo>("/api/vault", revision);
   const moveScope = useRef(moveVault?.knowledgeBaseId); moveScope.current = moveVault?.knowledgeBaseId;
   const draggedSource = useRef<{ page: WikiPageSummary; knowledgeBaseId: string } | undefined>(undefined);
   const movingRef = useRef(false);
@@ -223,18 +225,8 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const [params, setParams] = useSearchParams();
   const [creatingSource, setCreatingSource] = useState(false);
   const [createdPageId, setCreatedPageId] = useState<string>();
-  const [folderOverride, setFolderOverride] = useState<boolean>();
-  const [workspaceWidth, setWorkspaceWidth] = useState(typeof window === "undefined" ? 1060 : window.innerWidth - 320);
-  const workspaceRef = useRef<HTMLDivElement>(null);
-  const folderPaneOpen = folderOverride ?? workspaceWidth >= 820;
-  useLayoutEffect(() => {
-    const element = workspaceRef.current;
-    if (!element) return;
-    const observer = new ResizeObserver(() => setWorkspaceWidth(element.clientWidth));
-    observer.observe(element); setWorkspaceWidth(element.clientWidth);
-    return () => observer.disconnect();
-  }, [loading]);
-  const [filePaneOpen, setFilePaneOpen] = useState(true);
+  const [folderPaneOpen, setFolderPaneOpen] = usePanelPreference("the-way-here.record-folders-open", true);
+  const [filePaneOpen, setFilePaneOpen] = usePanelPreference("the-way-here.record-files-open", true);
   const [importOpen, setImportOpen] = useState(params.get("import") === "true");
   useEffect(() => { if (params.get("import") === "true") { setImportOpen(true); const next = new URLSearchParams(params); next.delete("import"); setParams(next, { replace: true }); } }, [params, setParams]);
   const [recentJourney, setRecentJourney] = useState<PaymentJourneySummary>();
@@ -287,7 +279,19 @@ export function OrganizedSources({ revision }: { revision: number }) {
   const query = params.get("q") || "";
   const { data: searchResults, loading: searching, error: searchError } = useApi<WikiPageSummary[]>(query.trim() ? `/api/search?sources=true&q=${encodeURIComponent(query.trim())}` : "", revision + folderRevision);
   const matchingIds = new Set((searchResults || []).map(page => page.id));
-  const folder = params.get("folder") || "";
+  const folderPreference = moveVault?.knowledgeBaseId ? `the-way-here.source-folder.${moveVault.knowledgeBaseId}` : undefined;
+  let rememberedFolder = "";
+  if (folderPreference && !params.has("folder") && !["file", "q", "batch", "memory", "import"].some(key => params.has(key))) {
+    try { rememberedFolder = readPreference(folderPreference) || ""; } catch { /* Optional preference. */ }
+  }
+  const rememberedParent = rememberedFolder.split("/").slice(0, -1).join("/");
+  const { data: rememberedSiblings } = useApi<SourceFolderSummary[]>(
+    rememberedParent ? `/api/sources/folders?parent=${encodeURIComponent(rememberedParent)}` : "",
+    revision + folderRevision,
+  );
+  const availableFolders = rememberedParent ? rememberedSiblings : sourceFolders;
+  const restoredFolder = rememberedFolder && (!availableFolders || availableFolders.some(entry => entry.path === rememberedFolder)) ? rememberedFolder : "";
+  const folder = params.get("folder") ?? restoredFolder;
   const requestedType = params.get("type") || "all";
   const type = (requestedType === "pending" || sourceRecordTypes.some((item) => item.id === requestedType) ? requestedType : "all") as "all" | SourceRecordType | "pending";
   const month = params.get("month") || "";
@@ -375,14 +379,22 @@ export function OrganizedSources({ revision }: { revision: number }) {
     defaultMode: "read" as const,
     suggestions: [tr("这份记录里有哪些还没有真正说清楚、值得我继续补充的地方？"), tr("请概括这份记录，并区分事实、感受和后来的解释。")],
   }, [pages.length, recentBatch, recentJourney, recentJourneyRecord, selected?.excerpt, selected?.id, selected?.title, selectedBuildRecord]);
-  if (loading) return <Loading label={t("正在打开生活记录")} />;
+  if (loading || loadingVault) return <Loading label={t("正在打开生活记录")} />;
   if (!data) return <Empty>{t("生活记录暂时无法读取，请刷新重试。")}</Empty>;
   function update(next: Record<string, string | undefined>) {
     setParams((current) => {
       const value = new URLSearchParams(current);
-      for (const [key, entry] of Object.entries(next)) entry ? value.set(key, entry) : value.delete(key);
+      for (const [key, entry] of Object.entries(next)) {
+        if (key === "folder" || entry) value.set(key, entry ?? "");
+        else value.delete(key);
+      }
+      if (!Object.hasOwn(next, "folder") && folder && !value.has("folder")) value.set("folder", folder);
       return value;
     }, { replace: true });
+  }
+  function rememberFolder(path: string) {
+    if (!folderPreference) return;
+    try { writePreference(folderPreference, path); } catch { /* Navigation still works without preference storage. */ }
   }
   function forgetDeletedSources(paths: string[]) {
     const removed = new Set(paths);
@@ -515,7 +527,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
       setBuildError(reason.message || tr("暂时无法记住这个选择"));
     }
   }
-  return <div className="organized-sources-page" ref={workspaceRef}>
+  return <div className="organized-sources-page">
     {importOpen ? <ImportMaterialsModal folders={folderPaths.filter(name => !name.startsWith("外部来源/"))} currentFolder={folder.startsWith("外部来源/") ? "" : folder} onClose={() => setImportOpen(false)} onImported={(batch) => { setImportOpen(false); setRecentBatch(batch); setRecentBatchAcknowledged(false); const record = importedMemoryRecord(batch); if (record) memoryWindow.open(memoryRecordKey(record)); setDeletedSourcePaths((current) => new Set([...current].filter((path) => !batch.files.some((file) => file.storedPath === path)))); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: importedFolderForBatch(batch) || undefined, file: undefined, limit: undefined, batch: batch.id }); }} onConnected={() => { setImportOpen(false); setFolderRevision((value) => value + 1); setCreatedPageId(undefined); update({ q: undefined, type: undefined, month: undefined, folder: undefined, file: undefined, limit: undefined, batch: undefined }); }} onJourney={setRecentJourney} /> : null}
     {deleteTarget ? <ConfirmDeleteDialog
       title={deleteTarget.kind === "folder" ? t("删除这个文件夹？") : t("删除这份生活记录？")}
@@ -549,15 +561,15 @@ export function OrganizedSources({ revision }: { revision: number }) {
       <div className="source-toolbar-actions"><div className="source-import-menu"><button type="button" aria-haspopup="dialog" onClick={() => setImportOpen(true)}><Icon name="plus" size={16} />{t("导入资料")}</button></div></div>
     </section>
 
-    <div className={`source-vault${folderPaneOpen ? "" : " folder-pane-collapsed"}${filePaneOpen ? "" : " file-pane-collapsed"}`} aria-label={t("生活记录工作区")}>
+    <FileBrowserWorkspace label={t("生活记录工作区")} filesOpen={filePaneOpen} foldersOpen={folderPaneOpen}>
       <div className={`source-pane-shell source-folder-shell${folderPaneOpen ? "" : " collapsed"}`}>
-        <aside className="source-folder-pane"><PaneShelf label={t("文件夹")} open={folderPaneOpen} onToggle={() => setFolderOverride(!folderPaneOpen)} toggleLabel={t("文件夹栏")} onCreate={() => { setFolderOverride(true); setFolderCreateToken(value => value + 1); }} createLabel={t("新建文件夹")} createDisabled={!folder} />
-          <SourceConnectionsPanel onOpened={path => { setFolderRevision(value => value + 1); if (path) { setFolderOverride(true); setCreatedPageId(undefined); update({ folder: path, file: undefined, month: undefined, q: undefined, type: undefined }); } }} />
+        <aside className="source-folder-pane"><PaneShelf label={t("文件夹")} count={sourceFolders?.length ?? 0} open={folderPaneOpen} onToggle={() => setFolderPaneOpen(!folderPaneOpen)} toggleLabel={t("文件夹栏")} onCreate={() => { setFolderPaneOpen(true); setFolderCreateToken(value => value + 1); }} createLabel={t("新建文件夹")} createDisabled={!folder} />
+          <SourceConnectionsPanel onOpened={path => { setFolderRevision(value => value + 1); if (path) { rememberFolder(path); setFolderPaneOpen(true); setCreatedPageId(undefined); update({ folder: path, file: undefined, month: undefined, q: undefined, type: undefined }); } }} />
           <QuietScroll className="source-folder-contents">
-            <FolderTree fileDrop={{ accepts: (data, target) => Boolean(data.types.includes("application/x-the-way-here-source") && !movingRef.current && draggedSource.current && draggedSource.current.knowledgeBaseId === moveScope.current && sourcePagePath(draggedSource.current.page).split("/").slice(0, -1).join("/") !== target), drop: (_data, target) => { void moveFile(target); } }} selected={folder} onSelect={path => { setCreatedPageId(undefined); setCreatingSource(false); setRenameRequest(undefined); update({ folder: path || undefined, month: undefined, file: undefined, limit: undefined }); }} counts={folderCounts} total={pages.length} revision={revision + folderRevision} createToken={folderCreateToken} onChanged={() => setFolderRevision(value => value + 1)} />
+            <FolderTree fileDrop={{ accepts: (data, target) => Boolean(data.types.includes("application/x-the-way-here-source") && !movingRef.current && draggedSource.current && draggedSource.current.knowledgeBaseId === moveScope.current && sourcePagePath(draggedSource.current.page).split("/").slice(0, -1).join("/") !== target), drop: (_data, target) => { void moveFile(target); } }} selected={folder} onSelect={path => { rememberFolder(path); setCreatedPageId(undefined); setCreatingSource(false); setRenameRequest(undefined); update({ folder: path || undefined, month: undefined, file: undefined, limit: undefined }); }} counts={folderCounts} total={pages.length} revision={revision + folderRevision} createToken={folderCreateToken} onChanged={() => setFolderRevision(value => value + 1)} />
           </QuietScroll></aside>
       </div>
-      <FileBrowserPane label={folder ? demo.folder(sourceFolders?.find(item => item.path === folder)?.label || folder.split("/").at(-1)!) : t("全部记录")} count={String(filtered.length)} open={filePaneOpen} onToggle={() => setFilePaneOpen(value => !value)}
+      <FileBrowserPane label={folder ? demo.folder(sourceFolders?.find(item => item.path === folder)?.label || folder.split("/").at(-1)!) : t("全部记录")} count={String(filtered.length)} open={filePaneOpen} onToggle={() => setFilePaneOpen(!filePaneOpen)}
         onCreate={() => { setFilePaneOpen(true); setCreatingSource(true); }} createLabel={t("新建记录")} createDisabled={!folder}
         inlineCreate={creatingSource && <InlineNameForm key={folder} label={t("新建记录")} placeholder={t("记录标题（可稍后修改）")} onCancel={() => setCreatingSource(false)} onCreate={async title => {
           const page = await api<WikiPage>("/api/sources", { method: "POST", body: JSON.stringify({ title, folder }) });
@@ -597,7 +609,7 @@ export function OrganizedSources({ revision }: { revision: number }) {
             {query.trim() && searching ? <Loading label={t("正在搜索正文")} /> : searchError ? <p role="alert">{searchError}</p> : visiblePages.length === 0 ? <div className="source-list-empty"><b>{t("没有匹配的记录")}</b><p>{!sourceFolders?.length ? t("打开文件夹后，里面的文件会显示在这里") : type === "pending" ? t("新带进来的记录都已经构建完成。") : !query && !month && type === "all" && folder ? t("这个文件夹里还没有文件") : t("换一个来源、月份或搜索词试试。")}</p></div> : null}
       </FileBrowserPane>
       {selected ? <SourcePreview page={selected} revision={revision} startEditing={selected.id === createdPageId} fileNameFocusToken={0} buildRecord={selectedBuildRecord} buildBusy={busyBuildPath === selectedBuildRecord?.file.storedPath} onStartBuild={beginBuild} onRenamed={(renamed) => { setCreatedPageId(undefined); setFolderRevision(value => value + 1); update({ file: renamed.id }); }} /> : <div className="source-preview-empty"><span>{t("选择一个文件")}</span></div>}
-    </div>
+    </FileBrowserWorkspace>
     <PageAgentContext context={photoBatch ? { scope: tr("照片记忆"), title: photoBatch.files[0]?.originalName || tr("照片记忆"), pageId: selectedBuildRecord?.batch.id === photoBatch.id ? selected?.id : undefined, defaultMode: "read", defaultOutputTarget: { kind: "photo-memory", importId: photoBatch.id, storedPath: photoBatch.files[0]!.storedPath, label: tr("记忆报告"), phase: "enrich" }, suggestions: [tr("我想讲讲这批照片里的故事，一次问我一个具体问题。")], } : agentContext} />
   </div>;
 }

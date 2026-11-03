@@ -8,3 +8,4 @@ export { bodyLines, datesIn, evidenceTime, type EvidencePage } from "./evidence-
 export { buildEvidenceProfiles, searchEvidenceGroups, parseRetrievalPolicy, type RetrievalPolicy } from "./evidence-retrieval.js";
 export { createEvidenceSnapshot } from "./evidence-snapshot.js";
 export { diaryEntityLinks, linkDiaryEntities } from "./diary-entities.js";
+export { validateFrozenSourceReferences, type FrozenSourceReference } from "./frozen-references.js";

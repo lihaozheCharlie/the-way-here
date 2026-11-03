@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentExecutionRef, AgentRecoveryState, AgentRuntime, StartAgentExecution } from "./types.js";
 import { RuntimeEventSource } from "./types.js";
+import { prepareCodexFrozenScope, verifyCodexRestrictedReads } from "./codex-frozen-scope.js";
 import { MasCodexTools } from "./codex-mas-tools.js";
 
 // A fixed bundled CLI and private CODEX_HOME keep user/plugin settings from
@@ -30,6 +31,11 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
 
   private readonly masTools = new Map<string, MasCodexTools>();
   private readonly mas: boolean;
+  private readonly frozenServers = new Set<CodexAppServer>();
+  private readonly frozenSessionServers = new Map<string,CodexAppServer>();
+  private readonly frozenBindings = new Map<string, {knowledgeBaseId:string;hash:string}>();
+  private readonly frozenStarting = new Map<string, Promise<void>>();
+  private readonly frozenCleanup = new Map<string, ()=>Promise<void>>();
 
   constructor(private readonly command: string, private readonly options: { mas?: boolean; allowTools?: () => boolean; masCwd?: string } = {}) {
     super();
@@ -62,9 +68,11 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
   }
 
   async start(input: StartAgentExecution): Promise<AgentExecutionRef> {
+    if (input.knowledgeEvidence) return this.startFrozen(input);
+    if (input.sessionId && this.frozenBindings.has(input.sessionId)) throw new Error("冻结资料会话不能降级为普通权限，请重新发起普通会话");
     if (this.mas) return this.startMas(input);
     const sessionId = input.sessionId || await this.codex.startThread(input.cwd, input.model);
-    const searchCommand = `ELECTRON_RUN_AS_NODE=1 ${shellQuote(process.execPath)} ${shellQuote(path.join(path.dirname(fileURLToPath(import.meta.url)), "search-wiki.js"))} --root ${shellQuote(input.cwd)} --knowledge-base ${shellQuote(input.config.knowledgeBaseId)} --query '检索短语'`;
+    const searchCommand = `${process.env.TWH_BUNDLED_NODE ? shellQuote(process.env.TWH_BUNDLED_NODE) : `ELECTRON_RUN_AS_NODE=1 ${shellQuote(process.execPath)}`} ${shellQuote(path.join(path.dirname(fileURLToPath(import.meta.url)), "search-wiki.js"))} --root ${shellQuote(input.cwd)} --knowledge-base ${shellQuote(input.config.knowledgeBaseId)} --query '检索短语'`;
     const directoryPermission = (input.config.sourceConnections || []).filter(item => item.aiWritable).map(item => item.path);
     const authorizedPrompt = directoryPermission.length ? `${input.prompt}\n\n用户已授权 AI 修改以下本地目录（含子目录），用户要求修改原文时可以直接操作真实文件；此授权仅在允许写入的任务中生效。来源引用文件为系统元数据，不能修改。目录：${JSON.stringify(directoryPermission)}` : input.prompt;
     const prompt = input.knowledgeEvidence ? input.prompt : `${authorizedPrompt}\n\n需要检索当前 Wiki 时，先自行把用户问题改写为 1–3 个具体实体、别名或短语，再运行本地检索命令：${searchCommand}。多个检索短语可重复 --query。不要直接用整句用户原话搜索；闲聊不运行检索。检索结果是候选片段，重要结论仍需回读对应页面或来源。`;
@@ -80,6 +88,48 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
     this.activeBySession.set(sessionId, ref);
     return ref;
   }
+
+  private async startFrozen(input: StartAgentExecution): Promise<AgentExecutionRef> {
+    const evidence = input.knowledgeEvidence!;
+    if (input.sessionId) {
+      const old = this.frozenBindings.get(input.sessionId);
+      if (!old || old.knowledgeBaseId !== evidence.knowledgeBaseId || old.hash !== evidence.inputHash) throw new Error("不能把既有会话带入不同或未确认的冻结资料范围，请重新发起；问题已保留");
+      if (this.activeBySession.has(input.sessionId)) throw new Error("此冻结资料会话仍有活动任务");
+    }
+    const scope = await prepareCodexFrozenScope(input);
+    const server=new CodexAppServer(this.command,{experimentalApi:true,args:[...masCodexConfigArgs,...scope.profile.args]});
+    this.frozenServers.add(server);
+    server.on("notification",({method,params})=>this.onNotification(method,params));
+    server.on("request",(request:CodexServerRequest)=>this.onRequest(request,server));
+    let sessionId: string | undefined;
+    let verified = false;
+    try {
+      // The dedicated server has no ordinary-session feature or permission overrides.
+      const response = await server.request<any>("config/read", {includeLayers:false});
+      const config = response?.config;
+      if (!config || !config.mcp_servers || Object.keys(config.mcp_servers).length || !config.features || masDisabledFeatures.some(feature => config.features[feature] !== false)) throw new Error("此 Codex 配置无法确认原生工具、插件与外部 MCP 已禁用，请更新 Codex；问题已保留");
+      await verifyCodexRestrictedReads(server, scope.root, scope.profile.id);
+      verified = true;
+      const settings = {permissions:scope.profile.id,approvalPolicy:"never" as const};
+      sessionId = input.sessionId || await server.startThread(scope.root,input.model,{...settings,dynamicTools:MasCodexTools.specifications(scope.input)});
+      if (input.sessionId) await server.resumeThread(sessionId,scope.root,settings);
+      const id = sessionId;
+      const previousServer=this.frozenSessionServers.get(id);if(previousServer&&previousServer!==server)previousServer.stop();this.frozenSessionServers.set(id,server);
+      let tools: MasCodexTools;
+      tools = new MasCodexTools(scope.input,()=>this.masTools.get(id)===tools && (!this.mas || Boolean(this.options.allowTools?.())));
+      this.masTools.set(id,tools);
+      this.frozenBindings.set(id,{knowledgeBaseId:evidence.knowledgeBaseId,hash:evidence.inputHash});
+      await this.frozenCleanup.get(id)?.(); this.frozenCleanup.set(id,scope.close);
+      let release!: ()=>void;
+      this.frozenStarting.set(id,new Promise<void>(resolve=>{release=resolve;}));
+      const prompt=input.prompt.replaceAll(evidence.file,scope.input.knowledgeEvidence!.file).replaceAll(evidence.reader,scope.input.knowledgeEvidence!.reader);
+      let turnId: string;
+      try { turnId = await server.startTurn(id,prompt+"\n\n只能通过 read_knowledge_evidence 读取本轮冻结资料。不能使用 shell、MCP、插件或实时知识库。",scope.root,{model:input.model,effort:input.effort,readOnly:true,permissionProfile:scope.profile.id});
+      const ref={runtimeId:this.id,sessionId:id,turnId} satisfies AgentExecutionRef;this.activeBySession.set(id,ref);return ref;
+      } finally {this.frozenStarting.delete(id);release();}
+    } catch(error) {if(sessionId){this.masTools.delete(sessionId);this.frozenCleanup.delete(sessionId);}server.stop();this.frozenServers.delete(server);await scope.close();if(!verified)throw new Error("此 Codex 版本或配置无法确认冻结资料的受限权限，请更新 Codex 或核对配置；问题已保留。");throw error;}
+  }
+  private server(sessionId: string): CodexAppServer { return this.frozenSessionServers.get(sessionId) || this.codex; }
 
   private async startMas(input: StartAgentExecution): Promise<AgentExecutionRef> {
     const cwd = this.options.masCwd || process.env.TWH_CODEX_WORKDIR;
@@ -104,12 +154,12 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
   }
 
   async steer(ref: AgentExecutionRef, prompt: string): Promise<void> {
-    await this.codex.steer(ref.sessionId, ref.turnId, prompt);
+    await this.server(ref.sessionId).steer(ref.sessionId, ref.turnId, prompt);
   }
 
   async interrupt(ref: AgentExecutionRef): Promise<void> {
     this.masTools.delete(ref.sessionId);
-    await this.codex.interrupt(ref.sessionId, ref.turnId);
+    await this.server(ref.sessionId).interrupt(ref.sessionId, ref.turnId);
   }
 
   async decide(_ref: AgentExecutionRef, approvalId: string | number, decision: AgentApprovalDecision): Promise<void> {
@@ -117,12 +167,13 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
       : decision === "allow-for-session" ? "acceptForSession"
         : decision === "deny" ? "decline"
           : "cancel";
+    if (this.frozenBindings.has(_ref.sessionId)) throw new Error("冻结资料任务不允许扩大权限");
     this.codex.respondToServerRequest(approvalId, { decision: mapped });
   }
 
   async recover(ref: AgentExecutionRef): Promise<AgentRecoveryState> {
     try {
-      const response = await this.codex.readThread(ref.sessionId);
+      const response = await this.server(ref.sessionId).readThread(ref.sessionId);
       const thread = response?.thread || response;
       const turns: any[] = Array.isArray(thread?.turns) ? thread.turns : [];
       const turn = turns.find((entry) => entry.id === ref.turnId) || turns.at(-1);
@@ -130,54 +181,58 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
       if (turn.status === "completed") return { status: "completed", finalAnswer: finalAnswerOf(turn) };
       if (turn.status === "failed") return { status: "failed", error: turn.error?.message || turn.error };
       if (turn.status === "interrupted") return { status: "interrupted", error: turn.error?.message || turn.error };
-      if (this.mas && !this.masTools.has(ref.sessionId)) {
-        await this.codex.interrupt(ref.sessionId, ref.turnId);
+      if ((this.mas || this.frozenBindings.has(ref.sessionId)) && !this.masTools.has(ref.sessionId)) {
+        await this.server(ref.sessionId).interrupt(ref.sessionId, ref.turnId);
         return { status: "interrupted", error: "应用重启后已停止未完成任务，请重新发起以确认本次权限" };
       }
       this.activeBySession.set(ref.sessionId, ref);
       return { status: "running" };
     } catch (error: any) {
       return { status: "missing", error: error.message };
-    }
+    } finally { if(this.frozenBindings.has(ref.sessionId)&&!this.masTools.has(ref.sessionId))this.server(ref.sessionId).stop(); }
   }
 
   close(): void {
     this.masTools.clear();
     this.activeBySession.clear();
-    this.codex.stop();
+    this.codex.stop(); for(const server of new Set([...this.frozenServers,...this.frozenSessionServers.values()]))server.stop();this.frozenServers.clear();this.frozenSessionServers.clear();
+    for (const cleanup of this.frozenCleanup.values()) void cleanup().catch(()=>undefined);this.frozenCleanup.clear();this.frozenBindings.clear();
   }
 
   private onNotification(method: string, params: any): void {
     const sessionId = String(params?.threadId || params?.thread?.id || params?.turn?.threadId || "");
+    const pending=this.frozenStarting.get(sessionId);if(pending){void pending.then(()=>this.onNotification(method,params));return;}
     const ref = this.activeBySession.get(sessionId);
-    if (!ref || (params?.turnId && params.turnId !== ref.turnId)) return;
+    const eventTurnId=params?.turnId || params?.turn?.id;
+    if (!ref || (eventTurnId && eventTurnId !== ref.turnId)) return;
     if (method === "item/agentMessage/delta") {
       if (typeof params?.delta === "string" && params.delta) this.emit({ ref, event: { type: "assistant.delta", messageId: String(params.itemId), text: params.delta } });
       return;
     }
     if (method.endsWith("/delta")) return;
     for (const event of codexEvents(method, params)) this.emit({ ref, event });
-    if (method === "turn/completed") { this.activeBySession.delete(sessionId); this.masTools.delete(sessionId); }
+    if (method === "turn/completed") { this.activeBySession.delete(sessionId); this.masTools.delete(sessionId); const cleanup=this.frozenCleanup.get(sessionId); this.frozenCleanup.delete(sessionId); if(cleanup) void cleanup().catch(()=>undefined); const server=this.frozenSessionServers.get(sessionId);if(server){server.stop();this.frozenServers.delete(server);} }
   }
 
-  private onRequest(request: CodexServerRequest): void {
+  private onRequest(request: CodexServerRequest, server = this.codex): void {
     const sessionId = String(request.params?.threadId || (request.params as any)?.thread?.id || (request.params as any)?.turn?.threadId || "");
+    const pending=this.frozenStarting.get(sessionId);if(pending && this.frozenServers.has(server)){void pending.then(()=>this.onRequest(request,server));return;}
     const ref = this.activeBySession.get(sessionId);
-    if (this.mas && request.method === "item/tool/call") {
+    if ((this.mas || this.frozenServers.has(server)) && request.method === "item/tool/call") {
       const tools = this.masTools.get(sessionId);
       const params = request.params;
       const failed = (error: unknown) => ({ success: false, contentItems: [{ type: "inputText", text: error instanceof Error ? error.message : "工具执行失败" }] });
-      if (!ref || !tools || params.turnId !== ref.turnId || typeof params.tool !== "string" || typeof params.callId !== "string" || params.namespace) {
-        this.codex.respondToServerRequest(request.id, failed(new Error("工具调用不属于当前活动任务"))); return;
+      if (!ref || !tools || this.frozenServers.has(server) && this.frozenSessionServers.get(sessionId)!==server || params.turnId !== ref.turnId || typeof params.tool !== "string" || typeof params.callId !== "string" || params.namespace) {
+        server.respondToServerRequest(request.id, failed(new Error("工具调用不属于当前活动任务"))); return;
       }
       void tools.execute(params.tool, params.arguments, params.callId).then(
-        result => this.codex.respondToServerRequest(request.id, result),
-        error => this.codex.respondToServerRequest(request.id, failed(error)),
+        result => server.respondToServerRequest(request.id, result),
+        error => server.respondToServerRequest(request.id, failed(error)),
       );
       return;
     }
-    if (!ref || this.mas) {
-      this.codex.respondToServerRequest(request.id, { decision: "decline" });
+    if (!ref || this.mas || this.frozenServers.has(server) || this.frozenBindings.has(sessionId)) {
+      server.respondToServerRequest(request.id, { decision: "decline" });
       return;
     }
     const params = request.params || {};

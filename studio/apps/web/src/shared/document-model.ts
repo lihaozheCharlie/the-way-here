@@ -1,7 +1,7 @@
 export type MarkdownOutlineItem = { id: string; label: string; level: number; line: number };
 
 export function shouldEnterDocumentEditMode({ clickCount, insideControl }: { clickCount: number; insideControl: boolean }): boolean {
-  return clickCount === 2 && !insideControl;
+  return clickCount === 1 && !insideControl;
 }
 
 export function documentHeadingPrefix(pageId: string): string {

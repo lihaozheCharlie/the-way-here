@@ -31,4 +31,6 @@ module.exports = async function afterSign(context) {
   // signer, rather than replacing them with our pre-signing input plist.
   run('/usr/bin/codesign',['--force','--sign',identity,'--entitlements',preserved,app]);
   run('/usr/bin/codesign',['--verify','--deep','--strict',app]);
+  const {verifyPackagedMobileKeychain}=await import('./mobile-keychain-bundle.mjs');
+  await verifyPackagedMobileKeychain(context);
 };

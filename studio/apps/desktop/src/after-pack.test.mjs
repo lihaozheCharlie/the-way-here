@@ -15,11 +15,14 @@ test('packaged server dependencies keep relative links when copied into the app'
     await writeFile(path.join(packageDir, 'index.js'), 'export default true;');
     await symlink('.runtime-deps/package', path.join(source, 'sample'));
     const appOutDir = path.join(root, 'output');
+    let nodeContext;
     await afterPack({
       electronPlatformName: 'darwin',
       appOutDir,
       packager: { projectDir, appInfo: { productFilename: 'The Way Here' } },
-    });
+    }, {mobileKeychain:{env:{}},nodeRuntime:async context=>{nodeContext=context;}});
+    assert.equal(nodeContext.packager.projectDir,projectDir);
+    assert.equal(nodeContext.appOutDir,appOutDir);
     const destination = path.join(appOutDir, 'The Way Here.app/Contents/Resources/server/node_modules/sample');
     assert.equal(await readlink(destination), '.runtime-deps/package');
     assert.equal(await realpath(destination), await realpath(path.join(appOutDir, 'The Way Here.app/Contents/Resources/server/node_modules/.runtime-deps/package')));

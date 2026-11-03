@@ -1,3 +1,4 @@
+import { withinImportPeriod, type ImportSelection } from "../import-options.js";
 import path from "node:path";
 import { chatImportAdapter } from "./registry.js";
 import type { ChatArchiveEntry, ChatImportChannel, NormalizedChatConversation, NormalizedChatMessage, PreparedChatImportFile } from "./types.js";
@@ -83,7 +84,7 @@ function renderConversation(conversation: NormalizedChatConversation, source: st
   };
 }
 
-function jsonToMarkdown(content: string, source: string, channel: ChatImportChannel, createdAt: string): Array<{ relativePath: string; content: string }> {
+function jsonToMarkdown(content: string, source: string, channel: ChatImportChannel, createdAt: string, selection: ImportSelection): Array<{ relativePath: string; content: string }> {
   const adapter = chatImportAdapter(channel);
   let parsed: unknown;
   try {
@@ -92,7 +93,13 @@ function jsonToMarkdown(content: string, source: string, channel: ChatImportChan
     return [{ relativePath: markdownPath(source, 0), content: plainTextMarkdown(content, source, channel, adapter.label, createdAt) }];
   }
   const fallbackTitle = path.posix.basename(source, path.posix.extname(source)) || `${adapter.label} 对话`;
-  const conversations = adapter.normalizeJson(parsed, fallbackTitle);
+  const originals = adapter.normalizeJson(parsed, fallbackTitle);
+  const conversations = originals.filter(conversation => !selection.excludeGroups || !(conversation.metadata?.isGroup === "true" || /群聊|group/i.test(conversation.metadata?.type || ""))).map(conversation => ({
+    ...conversation,
+    metadata: { ...conversation.metadata, ...(selection.owner ? { owner: selection.owner } : {}) },
+    messages: conversation.messages.filter(message => withinImportPeriod(message.createdAt, selection)).map(message => ({ ...message, speaker: selection.owner && message.speaker === selection.owner ? "我" : message.speaker })),
+  })).filter(conversation => conversation.messages.length || (!selection.startDate && !selection.endDate && !selection.excludeGroups));
+  if (originals.length && !conversations.length) return [];
   if (!conversations.length) {
     return [{
       relativePath: markdownPath(source, 0),
@@ -102,7 +109,7 @@ function jsonToMarkdown(content: string, source: string, channel: ChatImportChan
   return conversations.map((conversation, index) => renderConversation(conversation, source, channel, createdAt, index));
 }
 
-export function prepareChatImport(entries: ChatArchiveEntry[], channel: ChatImportChannel, createdAt: string): PreparedChatImportFile[] {
+export function prepareChatImport(entries: ChatArchiveEntry[], channel: ChatImportChannel, createdAt: string, selection: ImportSelection = {}): PreparedChatImportFile[] {
   const adapter = chatImportAdapter(channel);
   const selected = adapter.selectEntries(entries).filter((entry) => supportedChatExtensions.has(path.posix.extname(entry.name).toLocaleLowerCase()));
   if (!selected.length) throw new Error("没有找到可识别的聊天记录文件");
@@ -120,12 +127,14 @@ export function prepareChatImport(entries: ChatArchiveEntry[], channel: ChatImpo
     const extension = path.posix.extname(entry.name).toLocaleLowerCase();
     const text = entry.content.toString("utf8");
     if (extension === ".json") {
-      jsonToMarkdown(text, entry.name, channel, createdAt).forEach((output) => add(entry.name, output.relativePath, output.content));
+      jsonToMarkdown(text, entry.name, channel, createdAt, selection).forEach((output) => add(entry.name, output.relativePath, output.content));
       return;
     }
+    if (selection.startDate || selection.endDate || selection.excludeGroups || selection.owner) throw new Error("此聊天格式没有可核对的参与者、日期或群聊字段；请导出 JSON 后使用筛选，或选择全部范围。");
     const normalizedText = [".html", ".htm"].includes(extension) ? htmlToText(text) : text;
     add(entry.name, markdownPath(entry.name, index), extension === ".md" ? text : plainTextMarkdown(normalizedText, entry.name, channel, adapter.label, createdAt));
   });
+  if (!prepared.length) throw new Error("所选范围内没有可导入的消息");
   const totalBytes = prepared.reduce((total, file) => total + file.bytes, 0);
   if (totalBytes > MAX_UNCOMPRESSED_BYTES) throw new Error("导入后的内容超过 100 MB，请拆分后重试");
   return prepared;

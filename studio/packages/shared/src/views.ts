@@ -13,6 +13,8 @@ export interface StateSignal {
 }
 
 export interface ConversationPrompt {
+  /** Explicit author-provided direction tags; never inferred from question wording. */
+  directions?: string[];
   id: string;
   title: string;
   question: string;

@@ -176,3 +176,16 @@ describe("quote index parsing", () => {
     expect(groups[1]!.entries[0]!.confirmed).toBe(false);
   });
 });
+
+describe("explicit conversation direction tags",()=>{
+ const page=(extra:string)=>({id:"anonymous-topic",sections:[{level:2,heading:"匿名话题",body:"- 问题：健康这个词只是原话，不是分类\n- 当前理解：只使用明确标签\n- 为什么现在：匿名材料\n- 仍然未知：仍需核对\n"+extra}],outgoingLinks:[]} as any);
+ test("reads and deduplicates direction tags without classifying question text",()=>{
+  expect(parseConversationPrompts(page("- 方向：工作、学习与成长，工作"))[0]?.directions).toEqual(["工作","学习与成长"]);
+ });
+ test("supports explicit direction-label field and preserves custom labels",()=>{
+  expect(parseConversationPrompts(page("- 方向标签：[家庭; 写作]"))[0]?.directions).toEqual(["家庭","写作"]);
+ });
+ test("leaves legacy prompts unclassified even when their prose names a direction",()=>{
+  expect(parseConversationPrompts(page(""))[0]?.directions).toEqual([]);
+ });
+});

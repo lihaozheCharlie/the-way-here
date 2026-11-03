@@ -53,6 +53,7 @@ export function normalizeGenericJson(value: unknown, fallbackTitle: string): Nor
     if (!rawMessages.length) return [];
     return [{
       title: String(record.title || record.name || `${fallbackTitle} ${index + 1}`),
+      metadata: { isGroup: String(record.isGroup === true || record.is_group === true || record.type === "group" || record.chat_type === "group") },
       messages: rawMessages.map(normalizeGenericMessage).filter((message): message is NormalizedChatMessage => Boolean(message)),
     }];
   });

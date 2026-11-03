@@ -1,3 +1,4 @@
+import { usePanelPreference } from "../shared/use-panel-preference";
 import { useDismissLayer } from "../shared/use-dismiss-layer";
 import { useRememberedWindow } from "../shared/use-remembered-preview";
 import { FloatingAgentPanel } from "../features/desktop/FloatingAgentPanel";
@@ -125,6 +126,7 @@ export function AppShell({ revision }: { revision: number }) {
   const isSourceReader = isSourceDocument(location.pathname, loadedReader, readerReturnContext?.returnTo, location.search);
   const searchWindow = useRememberedWindow("command-palette");
   const [inspectorByMenu, setInspectorByMenu] = useState<Record<string, boolean>>({});
+  const [recordInspectorOpen, setRecordInspectorOpen] = usePanelPreference("the-way-here.record-inspector-open", false);
   const [suspendedInspectorMenu, setSuspendedInspectorMenu] = useState<string>();
   const agentToggleRef = useRef<HTMLButtonElement>(null);
   const libraryNameRef = useRef(readRememberedLibraryLabel() || "The Way Here");
@@ -156,15 +158,21 @@ export function AppShell({ revision }: { revision: number }) {
 
   const activeSection = navigation.find((item) => mainItemActive(item));
   const activeMenu = activeSection?.children.find(childItemActive)?.to || activeSection?.to || location.pathname;
-  const inspectorOpen = Boolean(inspectorByMenu[activeMenu]) && suspendedInspectorMenu !== activeMenu;
+  const recordMenu = activeMenu === "/sources";
+  const menuInspectorOpen = recordMenu ? recordInspectorOpen : Boolean(inspectorByMenu[activeMenu]);
+  const inspectorOpen = menuInspectorOpen && suspendedInspectorMenu !== activeMenu;
+  const updateInspector = (open: boolean) => {
+    if (recordMenu) setRecordInspectorOpen(open);
+    else setInspectorByMenu(previous => ({ ...previous, [activeMenu]: open }));
+  };
   const toggleInspector = () => {
     if (suspendedInspectorMenu === activeMenu) { setSuspendedInspectorMenu(undefined); return; }
-    setInspectorByMenu(previous => ({ ...previous, [activeMenu]: !previous[activeMenu] }));
+    updateInspector(!menuInspectorOpen);
   };
   useEffect(() => setSuspendedInspectorMenu(undefined), [activeMenu]);
   useEffect(() => {
-    const show = () => { setSuspendedInspectorMenu(undefined); setInspectorByMenu(previous => ({ ...previous, [activeMenu]: true })); };
-    const hide = () => setInspectorByMenu(previous => ({ ...previous, [activeMenu]: false }));
+    const show = () => { setSuspendedInspectorMenu(undefined); updateInspector(true); };
+    const hide = () => updateInspector(false);
     window.addEventListener("show-inspector", show); window.addEventListener("hide-inspector", hide);
     return () => { window.removeEventListener("show-inspector", show); window.removeEventListener("hide-inspector", hide); };
   }, [activeMenu]);

@@ -8,8 +8,10 @@
 | --- | --- | --- |
 | 文字随手记默认目录 | 服务端受保护状态 `user-preferences/<库哈希>.json`，每工作区/知识库隔离 | 旧历史值按需迁移；独立于草稿、历史、缓存；不改动用户当前选择 |
 | 照片默认目录、目录树展开 | 桌面 `user-preferences.json`，工作区/知识库隔离 | 当前浏览器已有选择只导入一次；不会覆盖新配置 |
+| 生活记录上次选择的文件夹 | 桌面 `user-preferences.json`，工作区/知识库隔离 | 返回页面或重启时恢复；显式文件夹链接优先；“全部材料”也可保存 |
 | 语言、通知开关 | 桌面 `user-preferences.json`；语言菜单保留既有 `locale.json` | 已保存的 false 和空值也作为真实选择保留；多窗口同步 |
 | 面板宽度、正文导航固定/展开 | 桌面 `user-preferences.json`，应用级 | 重启和更换页面地址后读取同一份配置 |
+| 生活记录文件夹栏、记录栏、Agent 对话栏开合 | 桌面 `user-preferences.json`，应用级 | 重新进入页面或重启后恢复上次状态；正文目录沿用已保存的展开选择，自动让位不写回 |
 | 导入类型与来源提供方 | 同上 | 用户操作时保存；默认展示不覆盖旧值 |
 | 模型引导确认/忽略状态 | 同上 | 重启与升级后保留，避免反复引导 |
 | 窗口位置与尺寸 | 同上，按主窗/阅读/设置/随手记/专注角色区分 | 用户移动和缩放后保存；显示器改变时限制到可见区域 |
@@ -26,3 +28,24 @@
 - 真实桌面验收修改保存目录、通知、语言等，清空测试浏览器存储并重启后逐项核对；userData 与 sessionData 必须指向同一个隔离测试资料目录。
 - 真实 Squirrel.Mac 验收验证应用替换和自动重启后的实际偏好文件，不能只检查占位文本文件。此次仅使用匿名测试配置，未恢复或改动用户当前选择。
 - 此次没有证明用户截图中旧选择被哪一步覆盖；没有既有审计记录，不能断言具体原因。修复针对已发现的分散存储、页面地址依赖、默认目录依赖历史文件、窗口尺寸不保存及配置保留验收缺口。不得把测试通过称为所有历史版本与系统环境均已覆盖。
+
+
+## iPhone 宿主偏好（开发中）
+
+手机偏好保存在 App 的 UserDefaults，升级只读取已有选择或在缺少字段时使用显示默认值；清理 URLCache 不清理偏好、草稿、录音或待上传资料。同步目录关联按空间隔离，解除后同时保留本机与云端原文件。桌面显式复制到 iCloud 工作区时，新副本拥有独立 portable UUID。仅迁移当前库的目录偏好：桌面 `capture.default-folder.*`、`photo-capture.folder.*`、`the-way-here.folder-tree.*`、`the-way-here.source-folder.*` 按旧/新库映射重建键，值不改写；文字默认目录通过 `CapturePreferencesStore` 在新工作区与新库的本机保护状态中以 `legacy-import` 写入。目标已有选择优先（包括空值与 false），不迁移其他库、草稿或历史，不将偏好放入 iCloud，原工作区偏好不动。
+
+| 手机配置 | 键/范围 | 保留行为 |
+|---|---|---|
+| 活动空间、设备 ID、引导完成 | `active.space`、`device.id`、`onboarding.complete` | 重启/升级保持；UI 测试使用独立资料夹 |
+| 默认采集目录、称呼 | `folder.<space>`、`nickname.<space>` | 每空间独立，历史清理不重置目录 |
+| Wi-Fi 附件、低电量暂停、设备同步关联 | `sync.wifiPhotos`、`sync.lowPowerPause`、`sync.cloudBindings`（空间ID→副本目录）、`sync.detachedSpaces` | 新建/重连先保存明确目标，再尝试上传；首轮失败或远端 manifest 尚未出现不丢失连接意图。本机创建和解绑显式排除，旧排除状态继续优先；UI/iCloud 匿名验收分别使用 `acceptance.ui-<fixture>.` / `acceptance.icloud-<run>.` 前缀，不读取或改写真实同步关联。 |
+| 模型厂商、直连、禁止照片 | `model.provider`、`model.direct`、`model.neverPhotos` | Key 仅进入共享系统钥匙串，不进入 UserDefaults；禁止照片在执行层重查 |
+| 识别语言、标点、7 天原音频、撤销、词汇 | `speech.language/punctuation/keepAudio/undo/vocabulary` | 保留用户选择；音频是本机资料而非通用偏好 |
+| 界面语言、回复语言 | `language.interface`、`language.reply` | 原始正文语言不改变 |
+| App 锁、重锁时间、后台隐藏 | `privacy.lock/lockMinutes/hidePreview` | Face ID/设备密码；缺字段默认隐藏预览；场景级遮罩覆盖弹层且不抢编辑焦点 |
+| 本机每日提醒与旧通知偏好 | `notifications.daily`；保留旧 `notifications.tasks/quiet` | 每日提醒由手机调度；旧选择保留，不再用于 Mac 任务或重试 |
+| 阅读位置、回信未读/收藏/归档、自定义人生线 | `reading.<document>`、`document.<space>.<document>.<flag>`、`timeline.lines.<space>` | 本机显示状态；切空间不复用其他空间的筛选资料 |
+| 写信问题、附带会话与最近记录 | `letter.request.<space>` 及 `.conversation/.records/.recordPaths` | 按空间保留；附带记录默认关闭，开启后可逐项选择；提交冻结所选原话、路径和摘要，超限保留表单而不截断 |
+| 话题方向、已看与屏蔽 | `topics.state.<space>` 作用域 | 切空间独立；详情屏蔽后列表即时刷新，方向消费共享投影的明确标签 |
+
+手机正文草稿、照片草稿、对话归档和分享收件箱不是偏好，分别位于空间目录或本机 App Group 中；不能通过“清缓存”删除。旧任务数据保留但不再同步或执行。关闭手机直连时隐藏模型执行入口，不转交 Mac。Mac 原有加密设置保留原存储，当前没有自动转换或上传。

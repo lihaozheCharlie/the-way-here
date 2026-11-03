@@ -1,0 +1,20 @@
+{
+  "文件超过 50 MB，请选择较小的文件。": "This file exceeds 50 MB. Choose a smaller file.",
+  "手机支持导入 Markdown、文本和有文字的 PDF 文件。": "On this phone, you can import Markdown, text, and PDFs with extractable text.",
+  "PDF 中没有可提取文字，当前无法导入。": "This PDF has no extractable text and cannot be imported.",
+  "无法读取文件中的文字，请选择 UTF-8 文本或有文字的 PDF。": "The text could not be read. Choose UTF-8 text or a PDF with extractable text.",
+  "在手机上保存 Markdown、文本和有文字的 PDF。原文件保留，文字会加入生活记录。": "Save Markdown, text, and PDFs with extractable text on this phone. The original file is kept, and its text is added to your records.",
+  "保存到生活记录": "Save to records",
+  "请填写有效的保存位置。": "Enter a valid save folder.",
+  "文字已加入生活记录，原文件保留在所选文件夹。": "The text is now in your records. The original file is kept in the selected folder.",
+  "查看记录": "View record",
+  "分享原文件": "Share original file",
+  "导入完成": "Import complete",
+  "这份记录有更新，点此刷新": "This record has changed. Tap to refresh.",
+  "这份记录在不同设备上都被修改过。": "This record was edited on more than one device.",
+  "另一台设备的版本": "Version from the other device",
+  "保留另一版本": "Keep the other version",
+  "移到最近删除？保留 30 天。": "Move to Recently Deleted? Kept for 30 days.",
+  "删除整个文件夹？所有文件保留 30 天。": "Delete this folder? All files are kept for 30 days.",
+  "已保存在这台 iPhone": "Saved on this iPhone"
+}

@@ -56,6 +56,7 @@ validation:
   await mkdir(path.dirname(samplePath), { recursive: true });
   await writeFile(path.join(linkedRoot, '连接原文.md'), '# 连接原文\n\n匿名外部文件夹，仅用于浏览器验收。');
   await writeFile(samplePath, '# 浏览器样例\n\n## 原始片段\n\n仅用于匿名 Web 功能验收。\n\n## 后续记录\n\n测试资料不进入私人知识库。');
+  await writeFile(path.join(root, 'vault/demo/wiki/01 个人主线/匿名浏览验收.md'), '# 匿名浏览验收\n\n## 核心判断\n\n用于验证共享目录的匿名文档。\n\n## 证据\n\n用于验证标题跳转。');
   const env = { ...process.env, THE_WAY_HERE_VAULT: root, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo', THE_WAY_HERE_PORT: '0', THE_WAY_HERE_WEB_ROOT: path.join(studio, 'apps/web/dist'), TWH_APP_CACHE_ROOT: path.join(root, 'cache') };
   delete env.THE_WAY_HERE_DEV;
   delete env.THE_WAY_HERE_DESKTOP_TOKEN;
@@ -109,12 +110,56 @@ validation:
   record('all nine main routes load at desktop and narrow browser widths');
   await page.setViewportSize({ width: 1440, height: 1000 });
 
+  for (const route of ['/cards/personal-lines', '/cards/cycles', '/cards/systems', '/mental-models']) {
+    await go(route);
+    const workspace = page.locator('.file-browser-workspace');
+    const list = workspace.locator('.source-file-shell');
+    const preview = workspace.locator('.source-preview');
+    const toggle = list.locator('.pane-shelf-toggle');
+    const prose = preview.locator('.record-document-scroll .editable-document-body');
+    await expect(prose).toBeVisible();
+    await expect(list).toHaveCSS('width', '304px');
+    if (await list.locator('.source-file-select').count() > 1) {
+      await list.locator('.source-file-select').nth(1).click();
+      await expect(list.locator('.source-file-select').nth(1)).toHaveAttribute('aria-current', 'true');
+      await expect(prose).toBeVisible();
+    }
+    await toggle.click();
+    await expect(list).toHaveCSS('width', '40px');
+    await expect(list.locator('.pane-shelf-rail-label span')).toHaveCSS('writing-mode', 'vertical-rl');
+    await expect(prose).toBeInViewport();
+    await toggle.click();
+    await expect(list).toHaveCSS('width', '304px');
+    if (route === '/cards/personal-lines') {
+      await list.getByRole('button', { name: /匿名浏览验收/ }).first().click();
+      await expect(preview.locator('.document-navigation-host')).toHaveCSS('width', '36px');
+      await preview.locator('.record-document-toolbar .record-outline-control').click();
+      await expect(preview.locator('.document-outline-card')).toBeVisible();
+      await expect(preview.locator('.outline-item').first()).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.screenshot({path: path.join(captures, 'personal-lines-shared-browser.png'), animations: 'disabled'});
+    }
+    if (route !== '/mental-models') {
+      await prose.press('Enter');
+      await expect(preview.locator('[data-document-editor]')).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(prose).toBeVisible();
+      const filter = workspace.getByRole('textbox', { name: '在当前分类中查找' });
+      await filter.fill('没有匹配的匿名验收搜索词 83729');
+      await expect(workspace.locator('.source-preview-empty')).toBeInViewport();
+      await filter.fill('');
+      await expect(prose).toBeVisible();
+    }
+  }
+  record('personal lines, cycles, systems and mental models share document browser geometry and navigation');
+
   await go('/');
   await page.getByRole('button', { name: '搜索与命令', exact: true }).click();
   const palette = page.locator('.command-palette');
   await palette.locator('input').fill('浏览器样例');
   await palette.getByRole('option').filter({ hasText: '浏览器样例' }).click();
-  await expect(page.getByRole('textbox', { name: '浏览器样例 文件名', exact: true })).toHaveValue('浏览器样例');
+  await page.getByRole('link', { name: /生活记录.*浏览器样例/ }).click();
+  await expect(page.locator('.document-file-name input')).toHaveValue('浏览器样例');
   await expect(page.locator('.editable-document-body')).toContainText('仅用于匿名 Web 功能验收');
   record('global search finds and opens indexed source content');
 
@@ -130,7 +175,7 @@ validation:
   await expect(page.locator('.editable-document-body')).toContainText('浏览器自动保存验证。');
   record('document keyboard editing, autosave and reload persist to the original file');
 
-  const nameInput = page.getByRole('textbox', { name: '浏览器样例 文件名', exact: true });
+  const nameInput = page.locator('.document-file-name input');
   await nameInput.fill('浏览器样例改名');
   await nameInput.press('Enter');
   await expect.poll(() => readFile(samplePath.replace('浏览器样例.md', '浏览器样例改名.md'), 'utf8').catch(() => '')).toContain('浏览器自动保存验证。');
@@ -140,7 +185,7 @@ validation:
   await expect.poll(() => readFile(samplePath, 'utf8').catch(() => '')).toContain('浏览器自动保存验证。');
   await go(`/page/${sampleId.split('/').map(encodeURIComponent).join('/')}?detached=true`);
   await expect(page.locator('.document-readonly-title')).toContainText('浏览器样例');
-  await page.locator('.editable-document-body').dblclick();
+  await page.locator('.editable-document-body').click();
   await expect(page.locator('[data-document-editor]')).toHaveCount(0);
   record('file rename preserves content; detached reading stays read-only');
 

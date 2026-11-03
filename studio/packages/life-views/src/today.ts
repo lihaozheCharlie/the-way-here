@@ -67,6 +67,7 @@ export function parseConversationPrompts(page?: WikiPage): ConversationPrompt[] 
       reason,
       unknown,
       observation: stripMarkdown(labeledValue(section.body, "观察信号")) || undefined,
+      directions: [...new Set((labeledValue(section.body, "方向") || labeledValue(section.body, "方向标签")).replace(/^\[|\]$/g, "").split(/[、，,；;|/]/).map(value => stripMarkdown(value).trim()).filter(Boolean))],
       links,
       status,
       weight,

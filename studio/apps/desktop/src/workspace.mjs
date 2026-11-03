@@ -29,6 +29,7 @@ validation:
     - [python3, knowledge-engine/tools/validate_wiki_links.py]
     - [python3, knowledge-engine/tools/validate_skill_system.py]
 `;
+export function desktopValidationCommands() { return YAML.parse(initialConfig).validation.commands; }
 
 
 async function ensureWebDemo(root, resources) {

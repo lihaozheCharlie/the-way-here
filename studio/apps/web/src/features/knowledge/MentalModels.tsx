@@ -8,9 +8,10 @@ import type { SectionedPageView, StructuredCard } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { growthTabs } from "../../features/knowledge/navigation";
 import { PageAgentContext } from "../desktop/InspectorContext";
-import { MarkdownBody } from "../../shared/markdown";
+import { ReadOnlyDocument } from "../../shared/markdown";
+import { FileBrowserWorkspace, FileBrowserPane, FileBrowserItem } from "../../shared/FileBrowser";
 import { pageHref } from "../../shared/routing";
-import { CollapsibleIndexPane, Empty, Icon, Loading, PageHeader, SectionHeading, SectionTabs } from "../../shared/ui";
+import { Empty, Icon, Loading, PageHeader, SectionHeading, SectionTabs } from "../../shared/ui";
 import { resolveThinkingModels } from "./thinking-models";
 
 export function MentalModels({ revision }: { revision: number }) {
@@ -38,19 +39,17 @@ export function MentalModels({ revision }: { revision: number }) {
       <SectionTabs items={growthTabs} />
       <PageHeader title={tr("思维模型")} description={tr("不是名人观点和概念收藏，而是一组能说明证据、竞争解释、适用边界与误用风险的个人判断工具。")} />
       {definition && <section className="model-definition"><ReactMarkdown remarkPlugins={[remarkGfm]}>{definition.body}</ReactMarkdown></section>}
-      <div className={`model-explorer${indexOpen ? "" : " index-collapsed"}`}>
-        <CollapsibleIndexPane open={indexOpen} onToggle={() => setIndexOpen((value) => !value)} label={tr("模型列表")}>
-          <aside className="model-index" role="listbox" aria-label={tr("模型领域")}>
-            {models.map((model) => <button role="option" aria-selected={selected.key === model.key} className={selected.key === model.key ? "active" : ""} key={model.key} onClick={() => selectModel(model.key)}>{label(model)}<Icon name="arrow" size={15} /></button>)}
-          </aside>
-        </CollapsibleIndexPane>
-        <article className="model-detail" aria-live="polite">
-          <h2>{label(selected)}</h2>
-          {shownSections.length === 1 && shownSections[0]?.heading === "模型说明"
-            ? <MarkdownBody>{shownSections[0].body}</MarkdownBody>
-            : shownSections.map((section) => <section key={section.heading}><h3>{demo.sectionHeading(section.heading)}</h3><MarkdownBody>{section.body}</MarkdownBody></section>)}
+      <FileBrowserWorkspace label={tr("思维模型")} filesOpen={indexOpen}>
+        <FileBrowserPane label={tr("模型列表")} count={String(models.length)} open={indexOpen} onToggle={() => setIndexOpen(value => !value)}>
+          {models.map(model => <FileBrowserItem key={model.key} page={{ relativePath: model.key, title: model.title, excerpt: model.excerpt ?? "" }} active={selected.key === model.key} onSelect={() => selectModel(model.key)} />)}
+        </FileBrowserPane>
+        <article className="source-preview" aria-live="polite">
+          <ReadOnlyDocument key={selected.key} id={selected.key} markdown={shownSections.length === 1 && shownSections[0]?.heading === "模型说明"
+            ? shownSections[0].body
+            : shownSections.map(section => `## ${demo.sectionHeading(section.heading)}\n\n${section.body}`).join("\n\n")}
+            headerContent={<h1 className="document-readonly-title">{label(selected)}</h1>} />
         </article>
-      </div>
+      </FileBrowserWorkspace>
       <div className="model-lower">
         {calibrations && <section><SectionHeading title={tr("近期校准")} /><ReactMarkdown remarkPlugins={[remarkGfm]}>{calibrations.body}</ReactMarkdown></section>}
         {priorities && <section><SectionHeading title={tr("当前优先观察")} /><ReactMarkdown remarkPlugins={[remarkGfm]}>{priorities.body}</ReactMarkdown></section>}

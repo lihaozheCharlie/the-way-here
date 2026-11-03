@@ -2,10 +2,10 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, copyFileSync } from
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
-const globalKeys = new Set(['desktop.locale', 'desktop.notifications', 'the-way-here.agent-panel-width', 'the-way-here.record-outline-open', 'the-way-here.outline-pinned', 'the-way-here.import-route', 'the-way-here.import-provider', 'the-way-here.model-onboarding.dismissed', 'the-way-here.model-onboarding.confirmed']);
+const globalKeys = new Set(['desktop.locale', 'desktop.notifications', 'the-way-here.agent-panel-width', 'the-way-here.record-outline-open', 'the-way-here.record-folders-open', 'the-way-here.record-files-open', 'the-way-here.record-inspector-open', 'the-way-here.outline-pinned', 'the-way-here.import-route', 'the-way-here.import-provider', 'the-way-here.model-onboarding.dismissed', 'the-way-here.model-onboarding.confirmed']);
 export function preferenceScope(key) {
   if (globalKeys.has(key) || /^desktop\.window\.(main|reader|focus|settings|capture)$/.test(key)) return 'global';
-  if (typeof key === 'string' && /^(?:photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.)[a-zA-Z0-9_-]{1,100}$/.test(key)) return 'workspace';
+  if (typeof key === 'string' && /^(?:photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.)[a-zA-Z0-9_-]{1,100}$/.test(key)) return 'workspace';
   throw new Error('Unknown user preference');
 }
 // Only explicit user choices and one-time legacy imports enter this file.
@@ -27,6 +27,22 @@ export class UserPreferences {
     return `${preferenceScope(key) === 'global' ? 'global' : createHash('sha256').update(path.resolve(workspace)).digest('hex')}:${key}`;
   }
   get(workspace, key) { return this.state.values[this.address(workspace, key)]?.value ?? null; }
+  copyWorkspacePreferences(source, destination, { knowledgeBaseIdMap } = {}) {
+    if (knowledgeBaseIdMap !== undefined && (!knowledgeBaseIdMap || typeof knowledgeBaseIdMap !== 'object' || Array.isArray(knowledgeBaseIdMap) || !Object.entries(knowledgeBaseIdMap).length || Object.entries(knowledgeBaseIdMap).some(([from, to]) => !/^[a-zA-Z0-9_-]{1,100}$/.test(from) || typeof to !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(to)))) throw new Error('Invalid knowledge-base preference mapping');
+    const prefix = createHash('sha256').update(path.resolve(source)).digest('hex') + ':';
+    const entries = Object.entries(this.read().values).filter(([address]) => address.startsWith(prefix));
+    for (const [address, entry] of entries) {
+      const key = address.slice(prefix.length);
+      if (preferenceScope(key) !== 'workspace') continue;
+      let targetKey = key;
+      if (knowledgeBaseIdMap !== undefined) {
+        const match = key.match(/^(photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.)([a-zA-Z0-9_-]{1,100})$/);
+        if (!match || !Object.hasOwn(knowledgeBaseIdMap, match[2])) continue;
+        targetKey = match[1] + knowledgeBaseIdMap[match[2]];
+      }
+      this.set(destination, targetKey, entry.value, 'legacy-import');
+    }
+  }
   set(workspace, key, value, source = 'user') {
     if (typeof value !== 'string' || value.length > 32768 || !['user', 'legacy-import'].includes(source)) throw new Error('Invalid user preference');
     const address = this.address(workspace, key), state = this.read();

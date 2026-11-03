@@ -27,10 +27,18 @@ export interface CodexServerRequest {
 export interface CodexDynamicTool {
   type: "function"; name: string; description: string; inputSchema: unknown;
 }
+export interface CodexRestrictedReadAccess { type: "restricted"; includePlatformDefaults: true; readableRoots: string[] }
+export interface StartTurnOptions { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean; readOnlyAccess?: CodexRestrictedReadAccess; permissionProfile?: string; workspaceWrite?: boolean; writableRoots?: string[] }
+export function codexSandboxPolicy(options: StartTurnOptions): Record<string, unknown> | undefined {
+  if (options.permissionProfile) { if (options.readOnlyAccess || options.workspaceWrite || !options.readOnly || !/^twh-frozen-[a-f0-9]+$/.test(options.permissionProfile)) throw new Error("冻结权限profile不能混用或降级sandbox策略"); return undefined; }
+  if (options.readOnlyAccess && (options.readOnlyAccess.type !== "restricted" || options.readOnlyAccess.includePlatformDefaults !== true || !options.readOnly || options.workspaceWrite || !options.readOnlyAccess.readableRoots.length || options.readOnlyAccess.readableRoots.some(root => !root.startsWith("/") || root === "/"))) throw new Error("冻结资料需要显式受限只读目录，不能降级权限");
+  return options.readOnly ? { type: "readOnly", ...(options.readOnlyAccess ? {access: options.readOnlyAccess} : {}) } : options.workspaceWrite ? { type: "workspaceWrite", writableRoots: options.writableRoots || [], excludeTmpdirEnvVar: true, excludeSlashTmp: true } : undefined;
+}
 export interface CodexThreadOptions {
   dynamicTools?: CodexDynamicTool[];
   config?: Record<string, unknown>;
   sandbox?: "read-only";
+  permissions?: string;
   approvalPolicy?: "never";
 }
 
@@ -166,13 +174,14 @@ export class CodexAppServer extends EventEmitter {
     await this.request("thread/resume", { threadId, cwd, ...options });
   }
 
-  async startTurn(threadId: string, prompt: string, cwd: string, options: { model?: string; effort?: AgentReasoningEffort; imagePaths?: string[]; readOnly?: boolean; workspaceWrite?: boolean; writableRoots?: string[] } = {}): Promise<string> {
+  async startTurn(threadId: string, prompt: string, cwd: string, options: StartTurnOptions = {}): Promise<string> {
+    const sandboxPolicy = codexSandboxPolicy(options);
     const response = await this.request<{ turn: { id: string } }>("turn/start", {
       threadId,
       cwd,
       ...(options.model ? { model: options.model } : {}),
       ...(options.effort ? { effort: options.effort } : {}),
-      ...(options.readOnly ? { sandboxPolicy: { type: "readOnly" }, approvalPolicy: "never" } : options.workspaceWrite ? { sandboxPolicy: { type: "workspaceWrite", writableRoots: options.writableRoots || [], excludeTmpdirEnvVar: true, excludeSlashTmp: true }, approvalPolicy: "never" } : {}),
+      ...(options.permissionProfile ? { permissions: options.permissionProfile, approvalPolicy: "never" } : sandboxPolicy ? { sandboxPolicy, approvalPolicy: "never" } : {}),
       input: [{ type: "text", text: prompt }, ...(options.imagePaths || []).map((imagePath) => ({ type: "localImage", path: imagePath }))],
     });
     return response.turn.id;

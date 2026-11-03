@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
+  prepareMobileWorkspace: () => ipcRenderer.invoke('desktop:mobile-prepare'),
+  openMobileWorkspace: () => ipcRenderer.invoke('desktop:mobile-open'),
   onPreferenceChange: (callback) => { const listener = (_event, key) => callback(key); ipcRenderer.on('desktop:preference-changed', listener); return () => ipcRenderer.removeListener('desktop:preference-changed', listener); },
   readPreference: (key) => { const result = ipcRenderer.sendSync('desktop:preference', 'get', key); if (result.error) throw new Error(result.error); return result.value; },
   writePreference: (key, value, source = 'user') => { const result = ipcRenderer.sendSync('desktop:preference', 'set', key, value, source); if (result.error) throw new Error(result.error); return result.value; },

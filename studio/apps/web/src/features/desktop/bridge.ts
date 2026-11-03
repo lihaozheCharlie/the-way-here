@@ -23,6 +23,8 @@ export interface DesktopBridge {
   onResumeAfterUpdate?: (callback: () => void) => () => void;
   onUpdateState?: (callback: (state: DesktopUpdateState) => void) => () => void;
   connectCodexCLI?: () => Promise<boolean>;
+  prepareMobileWorkspace?: () => Promise<boolean>;
+  openMobileWorkspace?: () => Promise<void>;
   openPrivacy?: () => Promise<void>;
   photoLibraryStatus?: () => Promise<PhotoLibraryAuthorization>;
   photoLibraryFilters?: () => Promise<PhotoLibraryFilters>;

@@ -48,6 +48,16 @@ async function fixture() {
   return { root, knowledge, provider, app, service, start, finish, runtime };
 }
 describe("prediction lifecycle", () => {
+  it("cancels the bound native execution and ignores a late completion", async () => {
+    const { service, runtime, finish } = await fixture();
+    await service.request("demo", "匿名预测问题");
+    await service.cancel("demo");
+    expect(runtime.interrupt).toHaveBeenCalledWith({ runtimeId: "codex", sessionId: "session1", turnId: "turn" });
+    finish(1);
+    await vi.waitFor(async () => expect((await service.view("demo")).status).toBe("failed"));
+    expect((await service.view("demo")).error).toContain("用户已取消");
+    expect(await service.hasActive("demo")).toBe(false);
+  });
   it("opens the shipped demo with five distinct future paths", async () => {
     const {root,service,start}=await fixture();
     await cp(fileURLToPath(new URL("../../../../../vault/demo/predictions/state.json", import.meta.url)),path.join(root,"demo/predictions/state.json"));
