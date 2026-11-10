@@ -29,9 +29,6 @@
 .context-agent-panel .context-technical-list{max-height:180px;overflow:auto;background:var(--agent-soft);border-radius:var(--radius-control);padding:10px 12px;font:11.5px/1.9 var(--agent-mono)}
 .context-agent-panel .context-run-answer{margin:0;padding:2px 2px 0;font-size:15px;line-height:1.85;color:var(--agent-ink);overflow-wrap:anywhere}
 .context-agent-panel .context-streaming-answer{white-space:pre-wrap}
-.streaming-cursor{display:inline-block;width:2px;height:1em;margin-left:2px;background:var(--agent-accent);vertical-align:-.12em;animation:streaming-cursor-blink 1s steps(1,end) infinite}
-@keyframes streaming-cursor-blink{50%{opacity:0}}
-@media (prefers-reduced-motion:reduce){.streaming-cursor{animation:none}}
 .context-agent-panel .context-run-answer p{margin:0 0 14px;font-size:inherit;line-height:inherit}
 .context-agent-panel .context-run-answer strong{font-weight:600}
 .context-agent-panel .context-run-answer blockquote{margin:4px 0 16px;padding:14px 16px;border:0;border-radius:var(--radius-card-small);color:var(--accent-ink);background:var(--agent-accent-soft);font-size:13.5px}

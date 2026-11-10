@@ -43,7 +43,7 @@ export function AgentAnswer({ answer, run, revision = 0, inlineEvidence = false,
   const pending = ["preparing", "running", "waiting-approval", "validating"].includes(run.status);
   const status = changes.length ? failed ? tr("检查未通过") : pending ? tr("待检查") : tr("已写入") : pending ? tr("处理中") : tr("未写入");
   return <>
-    {prose && <article className={`context-run-answer${streaming ? " context-streaming-answer" : ""}`}><AgentMarkdown text={prose} onCitation={citation.open} citationIds={citationIds} />{streaming && <span className="streaming-cursor" aria-hidden="true" />}</article>}
+    {prose && <article className={`context-run-answer${streaming ? " context-streaming-answer" : ""}`}><AgentMarkdown text={prose} onCitation={citation.open} citationIds={citationIds} /></article>}
     {run.status === "completed" && savedChanges.length > 0 && <p className="agent-understanding-receipt" role="status"><Icon name="library" size={15} /><span>{tr("理解有更新。")}</span>{savedChanges.map((change) => {
       const pageId = wikiPageIdFromChange(change.path, wikiRoot);
       const label = change.path.split("/").at(-1)?.replace(/\.md$/i, "") || tr("查看");

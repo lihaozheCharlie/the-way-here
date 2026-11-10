@@ -20,7 +20,7 @@ describe("agent answer citations", () => {
     const html = renderToStaticMarkup(<MemoryRouter><AgentAnswer answer="你提到“停一下” （[[sources/日记/示例]]）。" run={run} inlineEvidence streaming /></MemoryRouter>);
     expect(html).toContain('<mark class="agent-citation-quote" title="示例">“停一下” </mark>');
     expect(html).toContain('<span>1</span>');
-    expect(html).toContain('streaming-cursor');
+    expect(html).not.toContain('streaming-cursor');
   });
 
   it("keeps code examples and ordinary links intact", () => {
