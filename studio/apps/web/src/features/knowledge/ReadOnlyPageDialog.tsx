@@ -9,7 +9,7 @@ import { Empty, Icon, Loading } from "../../shared/ui";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import "./read-only-page-dialog.css";
 
-export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: string; revision: number; onClose: () => void }) {
+export function ReadOnlyPageDialog({ pageId, revision, onClose, inline = false, relatedPageIds }: { pageId: string; revision: number; onClose: () => void; inline?: boolean; relatedPageIds?: string[] }) {
   const [currentId, setCurrentId] = useState(pageId);
   const dialog = useRef<HTMLDialogElement>(null);
   useDismissLayer(true, onClose, { priority: 2, element: dialog, outside: true });
@@ -17,9 +17,10 @@ export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: stri
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.show();
   }, []);
-  return createPortal(<dialog ref={dialog} className="stage-document-dialog" aria-label={tr("文件预览")} onCancel={event => { event.preventDefault(); onClose(); }}>
-    <header><span>{tr("文件预览")}</span><button type="button" aria-label={tr("关闭文件预览")} onClick={onClose}><Icon name="close" size={18} /></button></header>
-    <div className="stage-document-scroll" onClickCapture={event => {
+  const preview = <dialog ref={dialog} className={inline ? "stage-document-dialog agent-evidence-sheet" : "stage-document-dialog"} aria-label={tr("文件预览")} onCancel={event => { event.preventDefault(); onClose(); }}>
+    <header><span>{tr(inline ? "依据" : "文件预览")}</span><button type="button" aria-label={tr("关闭文件预览")} onClick={onClose}><Icon name="close" size={18} /></button></header>
+    {relatedPageIds && relatedPageIds.length > 1 && <nav className="agent-evidence-sources" aria-label={tr("依据")}>{relatedPageIds.map((id, index) => <button key={id} type="button" aria-pressed={currentId === id} onClick={() => setCurrentId(id)}>{index + 1}. {id.split("/").at(-1)}</button>)}</nav>}
+    <div key={currentId} className="stage-document-scroll" onClickCapture={event => {
       const anchor = (event.target as Element).closest('a');
       if (!anchor) return;
       const url = new URL(anchor.href, window.location.href);
@@ -29,5 +30,6 @@ export function ReadOnlyPageDialog({ pageId, revision, onClose }: { pageId: stri
     }}>
       {loading ? <Loading label={tr("正在读取文件")} /> : error || !data ? <Empty>{error ? tr(error) : tr("文件暂时无法读取")}</Empty> : <ReadOnlyDocument key={data.id} id={data.id} page={data} markdown={data.renderedMarkdown} />}
     </div>
-  </dialog>, document.body);
+  </dialog>;
+  return inline ? <><div className="agent-evidence-scrim" aria-hidden="true" />{preview}</> : createPortal(preview, document.body);
 }

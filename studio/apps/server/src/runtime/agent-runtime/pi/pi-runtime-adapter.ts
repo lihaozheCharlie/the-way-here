@@ -174,7 +174,7 @@ function normalizePiEvent(event: AgentEvent): AgentRuntimeEvent | undefined {
     const text = assistantText(event.message);
     return text ? { type: "assistant.message", text, final: false } : undefined;
   }
-  if (event.type === "tool_execution_start") return { type: "tool.started", callId: event.toolCallId, toolName: event.toolName, summary:event.toolName === "read_knowledge_evidence" ? JSON.stringify(event.args).slice(0,8000) : undefined };
+  if (event.type === "tool_execution_start") return { type: "tool.started", callId: event.toolCallId, toolName: event.toolName, summary: ["read_knowledge_evidence", "read_file"].includes(event.toolName) ? JSON.stringify(event.args).slice(0, 8000) : undefined };
   if (event.type === "tool_execution_end") return { type: "tool.completed", callId: event.toolCallId, toolName: event.toolName, success: !event.isError };
   return undefined;
 }

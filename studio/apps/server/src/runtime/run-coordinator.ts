@@ -85,7 +85,7 @@ export class RunCoordinator {
     return deleted;
   }
 
-  async start(input: StartRunInput, suggestionForRunId?: string): Promise<WikiRun> {
+  async start(input: StartRunInput, suggestionForRunId?: string, conversationBuildRunIds?: string[]): Promise<WikiRun> {
     for (const [field, value] of [["prompt", input.prompt], ["displayPrompt", input.displayPrompt], ["title", input.title], ["knowledgeBaseId", input.knowledgeBaseId], ["contextPageId", input.contextPageId], ["contextTopicId", input.contextTopicId], ["sourceModule", input.sourceModule]] as const) {
       if (value !== undefined && typeof value !== "string") throw new RunRequestError(400, `${field} 必须是字符串`);
     }
@@ -170,7 +170,7 @@ export class RunCoordinator {
       provider: selection.model.provider,
       model: selection.model.id,
       effort: selection.effort,
-    }, suggestionForRunId);
+    }, suggestionForRunId, conversationBuildRunIds);
     if (suggestionForRunId) this.suggestionRunIds.add(run.id);
     if (!suggestionForRunId) this.knowledge.events.broadcast("run", run);
 
@@ -215,10 +215,12 @@ export class RunCoordinator {
   }
 
   async buildConversation(id: string): Promise<WikiRun> {
-    const source = (await this.list()).find((run) => run.id === id);
+    const runs = await this.list();
+    const source = runs.find((run) => run.id === id);
     if (!source) throw new RunRequestError(404, "对话不存在或不属于当前知识库");
     if (source.mode === "validate" || source.outputTarget) throw new RunRequestError(400, "这段任务不能整理成日记");
-    const thread = (await this.list()).filter((run) => source.runtimeSessionId ? run.runtimeSessionId === source.runtimeSessionId : run.id === id)
+    const thread = runs.filter((run) => run.id === id || Boolean(source.runtimeSessionId
+      && run.runtimeSessionId === source.runtimeSessionId && run.runtimeId === source.runtimeId))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const transcript = thread.flatMap((run) => [
       `用户：${run.displayPrompt || run.prompt}`,
@@ -236,7 +238,7 @@ export class RunCoordinator {
       runtimeId: source.runtimeId,
       model: source.model,
       effort: source.effort,
-    });
+    }, undefined, thread.map((run) => run.id));
   }
 
   async steer(id: string, prompt: string | undefined): Promise<WikiRun | undefined> {
@@ -252,7 +254,8 @@ export class RunCoordinator {
     const run = await this.runs.get(id);
     const ref = refOf(run);
     await this.runtimes.require(ref.runtimeId).interrupt(ref);
-    return this.runs.setStatus(id, "interrupted");
+    const partial = this.liveDrafts.get(id);
+    return this.runs.markInterrupted(id, partial?.text.trim() ? partial : undefined);
   }
 
   async approve(id: string, requestId: string | number, decision: AgentApprovalDecision): Promise<WikiRun> {
@@ -302,6 +305,7 @@ export class RunCoordinator {
     config: WikiRun["configSnapshot"],
     agent: Partial<Pick<WikiRun, "runtimeId" | "provider" | "model" | "effort">> = {},
     suggestionForRunId?: string,
+    conversationBuildRunIds?: string[],
   ): Promise<WikiRun> {
     try {
       return await this.runs.create(
@@ -310,7 +314,7 @@ export class RunCoordinator {
         mode,
         config.knowledgeBaseId,
         config,
-        { displayPrompt: input.displayPrompt?.trim() || prompt, sourceModule: input.sourceModule, outputTarget: input.outputTarget, sourceContext: input.sourceContext, contextPageId: input.contextPageId, frozenEvidence: input.frozenEvidence, contextTopicId: input.contextTopicId, suggestionForRunId, chatOnly: input.chatOnly, ...agent },
+        { displayPrompt: input.displayPrompt?.trim() || prompt, sourceModule: input.sourceModule, outputTarget: input.outputTarget, sourceContext: input.sourceContext, contextPageId: input.contextPageId, frozenEvidence: input.frozenEvidence, contextTopicId: input.contextTopicId, suggestionForRunId, conversationBuildRunIds, chatOnly: input.chatOnly, ...agent },
       );
     } catch (error: any) {
       throw new RunRequestError(409, error.message || "无法创建任务");
@@ -329,7 +333,8 @@ export class RunCoordinator {
       return;
     }
     if (!internalSuggestion) this.knowledge.events.broadcast("agent", { runId, runtimeId: envelope.ref.runtimeId, event });
-    if (event.type === "assistant.message" || event.type === "turn.completed") this.liveDrafts.delete(runId);
+    const partial = event.type === "turn.completed" ? this.liveDrafts.get(runId) : undefined;
+    if ((event.type === "assistant.message" && event.final) || event.type === "turn.completed") this.liveDrafts.delete(runId);
     if (event.type === "approval.requested") {
       const run = await this.runs.addApproval(runId, event.approval);
       if (!internalSuggestion) {
@@ -347,7 +352,8 @@ export class RunCoordinator {
       this.runByExecution.delete(executionKey(envelope.ref));
       if (event.finalAnswer) await this.runs.update(runId, { result: { finalAnswer: event.finalAnswer } });
       if (event.outcome === "completed") await this.finish(runId);
-      else await this.runs.setStatus(runId, event.outcome === "interrupted" ? "interrupted" : "failed", event.error);
+      else if (event.outcome === "interrupted") await this.runs.markInterrupted(runId, partial?.text.trim() ? partial : undefined, event.error);
+      else await this.runs.setStatus(runId, "failed", event.error);
     }
     if (!internalSuggestion) this.knowledge.events.broadcast("run", await this.runs.get(runId));
   }

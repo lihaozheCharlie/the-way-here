@@ -225,10 +225,14 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
       if (!ref || !tools || this.frozenServers.has(server) && this.frozenSessionServers.get(sessionId)!==server || params.turnId !== ref.turnId || typeof params.tool !== "string" || typeof params.callId !== "string" || params.namespace) {
         server.respondToServerRequest(request.id, failed(new Error("工具调用不属于当前活动任务"))); return;
       }
-      void tools.execute(params.tool, params.arguments, params.callId).then(
-        result => server.respondToServerRequest(request.id, result),
-        error => server.respondToServerRequest(request.id, failed(error)),
-      );
+      const { tool, callId } = params;
+      const trackedRead = tool === "read_file" || tool === "read_knowledge_evidence";
+      if (trackedRead) this.emit({ ref, event: { type: "tool.started", callId, toolName: tool, summary: JSON.stringify(params.arguments ?? {}).slice(0, 8000) } });
+      const respond = (result: Parameters<typeof server.respondToServerRequest>[1]) => {
+        if (trackedRead) this.emit({ ref, event: { type: "tool.completed", callId, toolName: tool, success: !!(result as { success?: boolean })?.success } });
+        server.respondToServerRequest(request.id, result);
+      };
+      void tools.execute(tool, params.arguments, callId).then(respond, error => respond(failed(error)));
       return;
     }
     if (!ref || this.mas || this.frozenServers.has(server) || this.frozenBindings.has(sessionId)) {

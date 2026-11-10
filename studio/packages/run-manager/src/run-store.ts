@@ -29,7 +29,7 @@ export class RunStore {
     mode: WikiRun["mode"],
     knowledgeBaseId: string,
     configSnapshot: VaultConfig,
-    options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "frozenEvidence" | "contextTopicId" | "suggestionForRunId" | "chatOnly">> = {},
+    options: Partial<Pick<WikiRun, "displayPrompt" | "runtimeId" | "runtimeSessionId" | "runtimeTurnId" | "provider" | "model" | "effort" | "sourceModule" | "outputTarget" | "sourceContext" | "contextPageId" | "frozenEvidence" | "contextTopicId" | "suggestionForRunId" | "conversationBuildRunIds" | "chatOnly">> = {},
   ): Promise<WikiRun> {
     const mayWrite = canWriteRun({ mode, outputTarget: options.outputTarget });
     if (mayWrite && !this.activeWriteRuns.has(knowledgeBaseId)) {
@@ -145,6 +145,18 @@ export class RunStore {
 
   async setStatus(id: string, status: RunStatus, error?: string): Promise<WikiRun> {
     return this.update(id, { status, error });
+  }
+
+  async markInterrupted(id: string, partial?: WikiRun["liveDraft"], error?: string): Promise<WikiRun> {
+    return this.mutate(id, (run) => {
+      if (run.status !== "interrupted" && isTerminalRunStatus(run.status)) return run;
+      return {
+        ...run,
+        status: "interrupted",
+        error: error ?? run.error,
+        liveDraft: run.result?.finalAnswer ? undefined : partial ?? run.liveDraft,
+      };
+    });
   }
 
   async isLegacyWorkspaceRun(id: string): Promise<boolean> {

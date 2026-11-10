@@ -124,14 +124,19 @@ createRoot(document.getElementById('root')).render(<MemoryRouter initialEntries=
   await expect(page.locator('.outline-item')).toHaveCount(3);
   await page.screenshot({path:path.join(captures,'desktop.png'),animations:'disabled'});
 
+  const readingBox=await body.boundingBox();
   await body.click();
   const editor=page.locator('[data-document-editor]');
   await expect(editor).toBeFocused();
+  const editingBox=await editor.boundingBox();
+  expect(editingBox.x).toBeCloseTo(readingBox.x);
+  expect(editingBox.width).toBeCloseTo(readingBox.width);
   await expect(page.locator('.outline-item').filter({hasText:'相关日记'})).toHaveCount(1);
   await page.locator('.outline-item').filter({hasText:'三个核心做法'}).click();
   await expect(editor).toBeFocused();
   await page.keyboard.insertText('补充');
   await expect.poll(()=>requests.filter(r=>r.url.startsWith('/api/pages/')&&r.method==='PUT').length).toBeGreaterThan(0);
+  await expect(page.locator('.record-document-header [role="status"]')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(body).toBeVisible();
   await page.mouse.move(20, 40);
@@ -155,7 +160,7 @@ createRoot(document.getElementById('root')).render(<MemoryRouter initialEntries=
   await rows.filter({hasText:'随手记'}).getByRole('button',{name:'随手记.md',exact:true}).click();
   await expect(nav).toHaveCSS('width','0px');
   await expect(outlineToggle).toBeDisabled();
-  await expect(page.getByText('输入 ## 添加小标题')).toBeVisible();
+  await expect(page.getByText('输入 ## 添加小标题')).toHaveCount(0);
   await page.screenshot({path:path.join(captures,'no-headings.png'),animations:'disabled'});
   await folderToggle.click();
   await expect(nav).toHaveCSS('width','0px');
@@ -189,7 +194,8 @@ createRoot(document.getElementById('root')).render(<MemoryRouter initialEntries=
     expect(Math.abs(reading.x+reading.width/2-main.x-main.width/2)).toBeLessThan(6);
     expect(Math.abs(outline.x+outline.width-preview.x-preview.width)).toBeLessThan(2);
     expect(Math.abs(outline.height-preview.height)).toBeLessThan(2);
-    expect(Math.round(reading.width)).toBeLessThanOrEqual(700);
+    const gutter = Math.min(Math.max(64, Math.min(main.width * .09, 112)), main.width * .16);
+    expect(Math.abs(reading.width - Math.min(760, main.width - 2 * gutter))).toBeLessThan(12);
   };
   const relatedCards=page.locator('.source-knowledge-connections');await expect(relatedCards).toBeVisible();const lastParagraph=await body.locator(':scope > :last-child').boundingBox(),summaryBox=await relatedCards.locator('summary').boundingBox();expect(summaryBox.y-lastParagraph.y-lastParagraph.height).toBeLessThanOrEqual(64);await expect(body).toHaveCSS('min-height','0px');await relatedCards.locator('summary').click();await expect(relatedCards.getByRole('link',{name:/匿名关联理解/})).toHaveAttribute('href','/page/understanding');await expect(relatedCards.getByRole('link',{name:/另一篇匿名日记/})).toHaveAttribute('href','/page/related-diary');await relatedCards.locator('summary').click();await expect(relatedCards.locator('nav')).toBeHidden();
   await checkReadingGeometry();await page.setViewportSize({width:1920,height:1080});await expect(nav).toHaveCSS('width','232px');await checkReadingGeometry();await page.screenshot({path:path.join(captures,'wide-expanded.png'),animations:'disabled'});

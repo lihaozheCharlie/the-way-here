@@ -115,6 +115,7 @@ export interface WikiRun {
   mode: "auto" | "read" | "write" | "validate";
   /** Internal read-only pass made after an automatic conversation reply. */
   suggestionForRunId?: string;
+  conversationBuildRunIds?: string[];
   wikiSuggestion?: { summary: string; page?: string };
   chatOnly?: boolean;
   status: RunStatus;

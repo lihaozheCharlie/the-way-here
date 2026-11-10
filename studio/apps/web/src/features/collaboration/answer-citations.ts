@@ -1,7 +1,7 @@
 import { tr } from "../../shared/i18n";
 import { pageHref } from "../../shared/routing";
 
-type MarkdownNode = { type: string; value?: string; url?: string; children?: MarkdownNode[] };
+type MarkdownNode = { data?: { hName: string; hProperties: Record<string, string>; hChildren: Array<{ type: "text"; value: string }> }; type: string; value?: string; url?: string; children?: MarkdownNode[] };
 
 const wikiCitation = /\(\s*\[\[([^\[\]\n]+)\]\]\s*\)|（\s*\[\[([^\[\]\n]+)\]\]\s*）|\[\[([^\[\]\n]+)\]\]/g;
 
@@ -12,6 +12,11 @@ export function citationPageId(raw: string): string | undefined {
   const pageId = (vaultRelative || target).replace(/\.md(?::\d+(?::\d+)?)?$/i, "").replace(/^\/+/, "");
   if (!pageId || pageId.split("/").some((part) => part === ".." || part === ".") || /[?#\0]/.test(pageId)) return undefined;
   return pageId;
+}
+
+export function answerCitationIds(text: string): string[] {
+  const ids = [...text.matchAll(wikiCitation)].map(match => citationPageId(match[1] || match[2] || match[3] || ""));
+  return [...new Set(ids.filter((id): id is string => !!id))];
 }
 
 export function citationFromHref(href: string | undefined): { pageId: string; fileName: string } | undefined {
@@ -31,7 +36,15 @@ function citationNodes(value: string): MarkdownNode[] {
     const raw = match[1] || match[2] || match[3] || "";
     const pageId = citationPageId(raw);
     if (!pageId) continue;
-    if (match.index > cursor) nodes.push({ type: "text", value: value.slice(cursor, match.index) });
+    const preceding = value.slice(cursor, match.index);
+    const quote = /(?:“[^”\n]+”|「[^」\n]+」)\s*$/.exec(preceding);
+    if (quote) {
+      if (quote.index) nodes.push({ type: "text", value: preceding.slice(0, quote.index) });
+      nodes.push({ type: "citationQuote", data: {
+        hName: "mark", hProperties: { className: "agent-citation-quote", title: pageId.split("/").at(-1) || pageId },
+        hChildren: [{ type: "text", value: quote[0] }],
+      } });
+    } else if (preceding) nodes.push({ type: "text", value: preceding });
     const fileName = pageId.split("/").at(-1) || pageId;
     nodes.push({ type: "link", url: `${pageHref(pageId)}?${new URLSearchParams({ agentCitation: fileName })}`, children: [{ type: "text", value: tr("引用") }] });
     cursor = match.index + match[0].length;

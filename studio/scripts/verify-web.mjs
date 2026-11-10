@@ -239,6 +239,8 @@ validation:
   await page.getByRole('button', { name: '聊聊这个', exact: false }).first().click();
   await expect(page.locator('.context-agent-panel')).toBeVisible();
   expect(await page.evaluate(() => window.webVerificationTopic?.attachedContext?.topicId)).toBeTruthy();
+  expect(await page.evaluate(() => window.webVerificationTopic?.mode)).toBe("auto");
+  await expect(page.locator(".agent-mode-picker summary")).toContainText("自动模式");
   await expect(page.locator('.context-agent-composer textarea')).toHaveAttribute('placeholder', /已经带上了这页的上下文/);
   record('timeline selection, stage preview and evidence-bound topic conversation work');
 

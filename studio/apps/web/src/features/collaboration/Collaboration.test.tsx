@@ -79,6 +79,38 @@ describe("shared conversation model settings", () => {
     expect(html.slice(html.indexOf('class="agent-mode-picker"'), html.indexOf('class="agent-composer-toolbar-right"'))).not.toContain("<select");
     expect(html).toContain("开始后台构建");
   });
+  it.each([
+    ["running", "demo-run", "is-building"],
+    ["completed", "demo-run", "is-done"],
+    ["failed", "demo-run", "is-ready"],
+    ["completed", "another-chat", "is-ready"],
+  ] as const)("restores a %s build for %s when reopening a conversation", (status, sourceId, buttonState) => {
+    const chat: WikiRun = {
+      ...fixture("completed"),
+      result: { finalAnswer: "可以整理成日记。" } as WikiRun["result"],
+      wikiSuggestion: { summary: "已确定的行程" },
+    };
+    const build = { ...fixture(status), id: "demo-build", mode: "write" as const, conversationBuildRunIds: [sourceId] };
+    mocks.useApi.mockReturnValue({ data: chat, loading: false });
+    const html = renderToStaticMarkup(<MemoryRouter><ContextualRunPanel agent={agent} runId={chat.id} revision={0} runList={[chat, build]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></MemoryRouter>);
+    expect(html).toContain(`class="agent-wiki-build-button ${buttonState}"`);
+    expect(html).not.toContain("这段对话可以留到 Wiki");
+  });
+  it("keeps a persisted partial answer and offers recovery after a stop", () => {
+    mocks.useApi.mockReturnValue({ data: { ...fixture("interrupted"), liveDraft: { messageId: "partial", text: "已收到的半句" } }, loading: false });
+    const html = renderToStaticMarkup(<MemoryRouter><ContextualRunPanel agent={agent} runId="demo-run" revision={0} runList={[]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></MemoryRouter>);
+    expect(html).toContain("已收到的半句");
+    expect(html).toContain("继续生成");
+    expect(html).toContain("重新回答");
+  });
+
+  it("does not render a stale run while switching conversations", () => {
+    mocks.useApi.mockReturnValue({ data: fixture("completed"), loading: false });
+    const html = renderToStaticMarkup(<MemoryRouter><ContextualRunPanel agent={agent} runId="other-run" revision={0} runList={[]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></MemoryRouter>);
+    expect(html).toContain("正在接入知识上下文");
+    expect(html).not.toContain("context-user-message");
+  });
+
   it("places voice between model selection and send", () => {
     mocks.useApi.mockReturnValue({ data: fixture("completed"), loading: false });
     const html = renderToStaticMarkup(<MemoryRouter><VoiceInputContext.Provider value={() => <button className="voice-input-button" aria-label="语音说一段" />}><ContextualRunPanel agent={agent} runId="demo-run" revision={0} runList={[]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></VoiceInputContext.Provider></MemoryRouter>);

@@ -20,3 +20,16 @@
 
 .agent-panel-resize:focus-visible { outline:none; }
 .agent-panel-resize:focus-visible::after { outline:2px solid var(--accent-primary); outline-offset:3px; }
+
+.desktop-shell .desktop-inspector.floating-agent-panel { inset-block-start:46px; border-radius:18px; }
+.agent-panel-resize::after { opacity:0; }
+.agent-panel-resize:is(:hover,:focus-visible)::after,.is-resizing .agent-panel-resize::after { opacity:1; }
+.desktop-shell .agent-relaunch {
+  position:fixed; right:12px; bottom:12px; z-index:99; display:none;
+  min-height:38px; padding:0 16px; border:1px solid var(--line); border-radius:999px;
+  color:var(--accent-ink); background:var(--paper); box-shadow:var(--shadow-float);
+}
+.floating-agent-panel:has(.context-run) + .agent-relaunch { display:block; }
+.agent-relaunch span + span,.floating-agent-panel:has([data-active="true"]) + .agent-relaunch span:first-child { display:none; }
+.floating-agent-panel:has([data-active="true"]) + .agent-relaunch span + span { display:inline; }
+.agent-panel-width-tip { position:absolute; top:60px; left:20px; z-index:10; pointer-events:none; padding:3px 10px; border-radius:8px; background:var(--ink); color:var(--paper); font-size:12px; }

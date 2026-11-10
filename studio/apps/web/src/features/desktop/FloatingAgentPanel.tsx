@@ -5,9 +5,9 @@ import "./floating-agent-panel.css";
 import { useI18n } from "../../shared/i18n";
 
 const WIDTH_KEY = "the-way-here.agent-panel-width";
-const DEFAULT_WIDTH = 440;
-const MIN_WIDTH = 320;
-const MAX_WIDTH = 960;
+const DEFAULT_WIDTH = 430;
+const MIN_WIDTH = 340;
+const MAX_WIDTH = 760;
 
 export function FloatingAgentPanel({ open, triggerRef, children }: { open: boolean; triggerRef: RefObject<HTMLButtonElement | null>; children: ReactNode }) {
   const { t } = useI18n();
@@ -17,13 +17,19 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
   const [preferredWidth, setPreferredWidth] = useState(() => {
     try {
       const saved = Number(readPreference(WIDTH_KEY));
-      return Number.isFinite(saved) && saved >= MIN_WIDTH ? Math.min(saved, MAX_WIDTH) : DEFAULT_WIDTH;
+      return Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_WIDTH;
     } catch { return DEFAULT_WIDTH; }
   });
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const drag = useRef<{ pointerId: number; x: number; width: number } | null>(null);
   const [resizing, setResizing] = useState(false);
-  const maxWidth = Math.max(0, Math.min(MAX_WIDTH, viewportWidth - 24));
+  const [showSavedWidth, setShowSavedWidth] = useState(false);
+  useEffect(() => {
+    if (!showSavedWidth) return;
+    const timer = window.setTimeout(() => setShowSavedWidth(false), 1400);
+    return () => window.clearTimeout(timer);
+  }, [showSavedWidth]);
+  const maxWidth = Math.max(0, Math.min(Math.max(MAX_WIDTH, preferredWidth), viewportWidth - 24));
   const minWidth = Math.min(MIN_WIDTH, maxWidth);
   const width = Math.min(preferredWidth, maxWidth);
   function updateWidth(value: number) {
@@ -40,7 +46,7 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
     if (!open) { drag.current = null; setResizing(false); }
   }, [open]);
 
-  return <aside ref={panelRef} className={`desktop-inspector floating-agent-panel${open ? " is-open" : " is-collapsed"}${resizing ? " is-resizing" : ""}`} style={{ width }} aria-label={t("AI 协作面板")} inert={!open} aria-hidden={!open}>
+  return <><aside ref={panelRef} className={`desktop-inspector floating-agent-panel${open ? " is-open" : " is-collapsed"}${resizing ? " is-resizing" : ""}`} style={{ width }} aria-label={t("AI 协作面板")} inert={!open} aria-hidden={!open}>
     <div className="agent-panel-resize" role="separator" tabIndex={open ? 0 : -1} aria-label={t("调整 Agent 对话宽度")} aria-orientation="vertical" aria-controls={id} aria-valuemin={minWidth} aria-valuemax={maxWidth} aria-valuenow={width} aria-valuetext={t("${width} 像素", { width })} title={t("拖动调整宽度，或使用左右方向键")}
       onPointerDown={event => {
         if (event.button !== 0 || !event.isPrimary) return;
@@ -48,6 +54,7 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
         event.currentTarget.focus();
         event.currentTarget.setPointerCapture(event.pointerId);
         drag.current = { pointerId: event.pointerId, x: event.clientX, width };
+        setShowSavedWidth(false);
         setResizing(true);
       }}
       onPointerMove={event => {
@@ -59,14 +66,17 @@ export function FloatingAgentPanel({ open, triggerRef, children }: { open: boole
         drag.current = null;
         setResizing(false);
         event.currentTarget.releasePointerCapture(event.pointerId);
+        setShowSavedWidth(true);
       }}
       onLostPointerCapture={() => { drag.current = null; setResizing(false); }}
       onPointerCancel={() => { drag.current = null; setResizing(false); }}
+      onDoubleClick={() => updateWidth(DEFAULT_WIDTH)}
       onKeyDown={event => {
         const step = event.shiftKey ? 64 : 16;
         const next = event.key === "ArrowLeft" ? width + step : event.key === "ArrowRight" ? width - step : event.key === "Home" ? minWidth : event.key === "End" ? maxWidth : undefined;
         if (next !== undefined) { event.preventDefault(); updateWidth(next); }
       }} />
+    {(resizing || showSavedWidth) && <div className="agent-panel-width-tip" aria-hidden="true">{showSavedWidth ? t("宽度已记住 · ${width}px", { width }) : `${width}px`}</div>}
     <div id={id} className="floating-agent-content">{children}</div>
-  </aside>;
+  </aside>{!open && <button type="button" className="agent-relaunch" onClick={() => window.dispatchEvent(new Event("show-inspector"))}><span>{t("回到对话")}</span><span>{t("对话进行中")}</span></button>}</>;
 }

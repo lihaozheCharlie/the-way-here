@@ -15,7 +15,7 @@ function wikiConversationPrompt(prompt: ConversationPrompt): string {
 
 export function openLifeConversation(question: TalkingQuestion): void {
   openContextAgent({
-    mode: "read",
+    mode: "auto",
     attachedContext: {
       topicId: question.id,
       title: question.question,

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { NavLink } from "react-router-dom";
@@ -9,7 +10,7 @@ import { ReadOnlyPageDialog } from "../knowledge/ReadOnlyPageDialog";
 import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { localWikiHref } from "./local-page-link";
 import { splitWikiUpdate, wikiUpdateFields } from "./answer-model";
-import { citationFromHref, remarkAnswerCitations } from "./answer-citations";
+import { answerCitationIds, citationFromHref, remarkAnswerCitations } from "./answer-citations";
 import "./answer-citations.css";
 import { currentLocale, translate } from "../../shared/i18n";
 
@@ -17,20 +18,21 @@ function tr(message: string, params?: Record<string, string | number | null | un
   return translate(currentLocale(), message, params);
 }
 
-export function AgentMarkdown({ text, onCitation }: { text: string; onCitation?: (pageId: string) => void }) {
+export function AgentMarkdown({ text, onCitation, citationIds }: { text: string; citationIds?: string[]; onCitation?: (pageId: string) => void }) {
   const returnContext = useReturnContext();
   return <ReactMarkdown remarkPlugins={[remarkGfm, remarkAnswerCitations]} components={{ a: ({ href, children }) => {
     const citation = citationFromHref(href);
-    if (citation && onCitation) return <button type="button" className="agent-citation-button" aria-label={tr("查看引用：${citation.fileName}", { "citation.fileName": citation.fileName })} onClick={() => onCitation(citation.pageId)}><Icon name="source" size={13} /><span>{tr("引用")}</span><span className="agent-citation-tooltip" role="tooltip">{citation.fileName}</span></button>;
+    if (citation && onCitation) return <button type="button" className="agent-citation-button" aria-label={tr("查看引用：${citation.fileName}", { "citation.fileName": citation.fileName })} onClick={() => onCitation(citation.pageId)}><Icon name="source" size={13} /><span>{citationIds?.includes(citation.pageId) ? citationIds.indexOf(citation.pageId) + 1 : tr("引用")}</span><span className="agent-citation-tooltip" role="tooltip">{citation.fileName}</span></button>;
     const local = localWikiHref(href);
     return local ? <NavLink to={local} state={returnContext}>{children}</NavLink> : <a href={href} target="_blank" rel="noreferrer">{children}</a>;
   } }}>{text}</ReactMarkdown>;
 }
 
-export function AgentAnswer({ answer, run, revision = 0 }: { answer: string; run: WikiRun; revision?: number }) {
+export function AgentAnswer({ answer, run, revision = 0, inlineEvidence = false, streaming = false, actions }: { actions?: ReactNode; streaming?: boolean; answer: string; run: WikiRun; revision?: number; inlineEvidence?: boolean }) {
   const citation = useRememberedPreview(`agent-citation:${run.id}`);
   const returnContext = useReturnContext();
   const { prose, wiki } = splitWikiUpdate(answer);
+  const citationIds = inlineEvidence ? answerCitationIds(prose) : undefined;
   const wikiRoot = run.configSnapshot?.paths.wiki.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/$/, "");
   const changes = (run.changes || []).filter((change) => {
     const changedPath = change.path.replace(/\\/g, "/").replace(/^\.\//, "");
@@ -41,13 +43,13 @@ export function AgentAnswer({ answer, run, revision = 0 }: { answer: string; run
   const pending = ["preparing", "running", "waiting-approval", "validating"].includes(run.status);
   const status = changes.length ? failed ? tr("检查未通过") : pending ? tr("待检查") : tr("已写入") : pending ? tr("处理中") : tr("未写入");
   return <>
-    {prose && <article className="context-run-answer"><AgentMarkdown text={prose} onCitation={citation.open} /></article>}
+    {prose && <article className={`context-run-answer${streaming ? " context-streaming-answer" : ""}`}><AgentMarkdown text={prose} onCitation={citation.open} citationIds={citationIds} />{streaming && <span className="streaming-cursor" aria-hidden="true" />}</article>}
     {run.status === "completed" && savedChanges.length > 0 && <p className="agent-understanding-receipt" role="status"><Icon name="library" size={15} /><span>{tr("理解有更新。")}</span>{savedChanges.map((change) => {
       const pageId = wikiPageIdFromChange(change.path, wikiRoot);
       const label = change.path.split("/").at(-1)?.replace(/\.md$/i, "") || tr("查看");
       return pageId ? <NavLink key={change.path} to={pageHref(pageId)} state={returnContext}>{label}</NavLink> : <span key={change.path}>{label}</span>;
     })}</p>}
-    {(wiki || changes.length > 0) && <details className="agent-wiki-update">
+    {!streaming && (wiki || changes.length > 0) && <details className="agent-wiki-update">
       <summary><span className="agent-artifact-icon"><Icon name="library" size={17} /></span><span className="agent-artifact-heading"><b>{tr("Wiki 更新")}</b><small>{changes.length ? tr("${changes.length} 个文件变化", { "changes.length": changes.length }) : tr("本轮提出的更新内容")}</small></span><span className={`agent-artifact-badge ${!changes.length || failed ? "warning" : ""}`}>{status}</span><Icon name="down" size={16} /></summary>
       <div className="agent-artifact-fields">
         {wiki && wikiUpdateFields(wiki).map((field, index) => <div className="agent-artifact-field" key={index}><AgentMarkdown text={field} onCitation={citation.open} /></div>)}
@@ -55,6 +57,10 @@ export function AgentAnswer({ answer, run, revision = 0 }: { answer: string; run
       </div>
       {(!changes.length && !pending || failed || run.error) && <p className="agent-artifact-note"><Icon name="info" size={14} /><span>{run.error || (failed ? tr("内容已写入，但质量检查未通过。请在任务详情中查看检查结果。") : tr("本轮没有检测到 Wiki 文件变化，以上内容尚未写入。"))}</span></p>}
     </details>}
-    {citation.pageId && <ReadOnlyPageDialog key={citation.pageId} pageId={citation.pageId} revision={revision} onClose={citation.close} />}
+    {!streaming && (actions || !!citationIds?.length) && <div className="context-message-meta agent-answer-actions">
+      {!!citationIds?.length && <button type="button" className="agent-evidence-index" onClick={() => citation.open(citationIds[0]!)}>{tr("参考了 ${count} 条记录", { count: citationIds.length })}</button>}
+      {actions}
+    </div>}
+    {citation.pageId && <ReadOnlyPageDialog key={citation.pageId} pageId={citation.pageId} revision={revision} onClose={citation.close} inline={inlineEvidence} relatedPageIds={citationIds} />}
   </>;
 }

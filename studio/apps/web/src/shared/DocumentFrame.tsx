@@ -9,7 +9,7 @@ import { NoteProperties, pageNoteProperties } from "./DocumentProperties";
 import { MarkdownBody } from "./MarkdownBody";
 import { useDemoLabels, useI18n } from "./i18n";
 
-export function DocumentFrame({ showOutline, markdown, headingPrefix, children, relations, onNavigate, activeLine, recordStyle = false, recordHeader, editable = false }: { showOutline: boolean; markdown: string; headingPrefix: string; children: ReactNode; relations?: ReactNode; onNavigate?: (line: number) => void; activeLine?: number; recordStyle?: boolean; recordHeader?: ReactNode; editable?: boolean }) {
+export function DocumentFrame({ showOutline, markdown, headingPrefix, children, relations, onNavigate, activeLine, recordStyle = false, recordHeader }: { showOutline: boolean; markdown: string; headingPrefix: string; children: ReactNode; relations?: ReactNode; onNavigate?: (line: number) => void; activeLine?: number; recordStyle?: boolean; recordHeader?: ReactNode }) {
   const preferenceKey = recordStyle ? "the-way-here.record-outline-open" : "the-way-here.outline-pinned";
   const [pinned, setPinned] = useState(() => { try { return recordStyle ? readPreference(preferenceKey) !== "false" : readPreference(preferenceKey) === "true"; } catch { return recordStyle; } });
   const hasOutline = markdownOutline(markdown, headingPrefix).some(item => item.level >= 2);
@@ -42,7 +42,6 @@ export function DocumentFrame({ showOutline, markdown, headingPrefix, children, 
     if (frameRef.current?.querySelector(".document-navigation-host")?.contains(document.activeElement)) outlineControlRef.current?.focus({ preventScroll: true });
     setOutlinePreference(!docked);
   }
-  const [hintBefore, hintAfter] = t("输入 ## 添加小标题").split("##");
   const label = t(docked ? "收起目录" : "展开目录");
   return <section ref={frameRef} className={`editable-document document-surface${recordStyle ? " source-document" : ""}${outlineEnabled ? " has-outline" : ""}${outlineEnabled && docked ? " outline-pinned" : ""}`} onKeyDown={event => {
     if (event.key === "Escape" && peek) {
@@ -57,12 +56,11 @@ export function DocumentFrame({ showOutline, markdown, headingPrefix, children, 
     <div className="record-document-main">
       <div className="record-document-toolbar">
         {recordHeader}
-        <button ref={outlineControlRef} type="button" className="record-outline-control document-outline-panel" aria-label={label} aria-pressed={outlineEnabled && docked} disabled={!outlineEnabled} title={outlineEnabled ? `${label}  ⌘⇧\\` : t("输入 ## 添加小标题")} onMouseDown={event => { if (onNavigate) event.preventDefault(); }} onClick={toggleOutline}><OutlineGlyph /></button>
+        <button ref={outlineControlRef} type="button" className="record-outline-control document-outline-panel" aria-label={label} aria-pressed={outlineEnabled && docked} disabled={!outlineEnabled} title={outlineEnabled ? `${label}  ⌘⇧\\` : label} onMouseDown={event => { if (onNavigate) event.preventDefault(); }} onClick={toggleOutline}><OutlineGlyph /></button>
       </div>
       <div className="record-document-scroll">
         <div className="document-content">
           {children}
-          {editable && showOutline && !hasOutline && <p className="record-outline-hint">{hintBefore}<code>##</code>{hintAfter}</p>}
         </div>
       </div>
     </div>

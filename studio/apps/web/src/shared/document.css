@@ -23,13 +23,12 @@
 .record-document-path { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 13.5px; color: var(--ink-soft); }
 .record-document-path > b { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--ink); }
 .record-document-header > span { margin-left: auto; flex: none; color: var(--ink-soft); }
-.record-document-header.editing > span { padding: 3px 11px; border-radius: 99px; background: var(--record-outline-soft); color: var(--record-outline-accent); }
-.record-document-header.editing > span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: currentColor; }
 .record-document-header > span.error { color: var(--danger); }
 .record-document-scroll { flex: 1; min-height: 0; overflow: auto; }
 .document-surface .document-content {
-  --document-measure: 700px;
-  --document-gutter: clamp(36px, 7cqw, 84px);
+  --document-measure: 760px;
+  /* Ease below the design minimum when multiple panes leave a narrow document column. */
+  --document-gutter: min(clamp(64px, 9cqw, 112px), 16cqw);
   padding-block: 44px 160px;
 }
 .document-surface .document-content > .editable-document-identity { padding: 0; margin: 0 0 30px; min-height: 0; border: 0; }
@@ -42,8 +41,6 @@
 .document-surface .document-content :is(.editable-document-body h2,.document-editor-heading-2) { font: 700 21px/1.5 var(--font-ui); margin: 1.9em 0 .55em; }
 .document-surface .document-content :is(.editable-document-body h3,.document-editor-heading-3) { font: 650 17.5px/1.5 var(--font-ui); margin: 1.5em 0 .35em; }
 .document-surface .document-content .editable-document-body > p { margin: 0 0 .85em; text-wrap: pretty; }
-.record-outline-hint { margin: 28px 0 0; color: var(--ink-soft); font: 400 13px/1.5 var(--font-ui); }
-.record-outline-hint code { background: var(--record-folder-panel, var(--surface-tinted)); border-radius: 5px; padding: 1px 7px; color: var(--ink); }
 
 .document-surface > .document-navigation-host {
   position: relative; top: auto; width: auto; height: 100%; min-height: 0; min-width: 0;

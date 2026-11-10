@@ -16,6 +16,13 @@ describe("agent answer citations", () => {
     expect(html).not.toContain("（<button");
   });
 
+  it("renders a cited quote and its numbered control while the answer is streaming", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><AgentAnswer answer="你提到“停一下” （[[sources/日记/示例]]）。" run={run} inlineEvidence streaming /></MemoryRouter>);
+    expect(html).toContain('<mark class="agent-citation-quote" title="示例">“停一下” </mark>');
+    expect(html).toContain('<span>1</span>');
+    expect(html).toContain('streaming-cursor');
+  });
+
   it("keeps code examples and ordinary links intact", () => {
     const html = renderToStaticMarkup(<MemoryRouter><AgentAnswer answer={'`[[sources/example]]` 和 [普通链接](/page/wiki/example)'} run={run} /></MemoryRouter>);
     expect(html).toContain("[[sources/example]]");

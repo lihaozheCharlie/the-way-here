@@ -1,9 +1,9 @@
-import { tr, useDemoLabels } from "../../shared/i18n";
-import { useState } from "react";
+import { tr, uiDateLocale, useActiveLibraryId, useDemoLabels } from "../../shared/i18n";
+import { useRef, useState } from "react";
 import { useRememberedPreview } from "../../shared/use-remembered-preview";
 import { NavLink } from "react-router-dom";
-import type { SourceImportBatch, TodayView } from "@the-way-here/shared";
-import { TextArea } from "../../shared/form-controls";
+import type { SourceImportBatch, TodayView, WikiRun } from "@the-way-here/shared";
+import { readPreference, writePreference } from "../../shared/preference-storage";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { openContextAgent } from "../collaboration/model";
@@ -33,16 +33,54 @@ export function QuestionsHub({ revision }: { revision: number }) {
   const [generatedDirection, setGeneratedDirection] = useState("");
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
   const evidencePreview = useRememberedPreview("questions-evidence");
-  const [chatDraft, setChatDraft] = useState("");
+  const libraryId = useActiveLibraryId();
+  const storageKey = `the-way-here.closed-topics.${libraryId ?? "default"}`;
+  const [closedTopics, setClosedTopics] = useState<Record<string, string[]>>({});
+  const [undoTopic, setUndoTopic] = useState<{ id: string; storageKey: string }>();
+  const [historyFilter, setHistoryFilter] = useState("all");
+  const historyDialog = useRef<HTMLDialogElement>(null);
+  const { data: runs } = useApi<WikiRun[]>("/api/runs", revision);
+  let closed = closedTopics[storageKey];
+  if (!closed) {
+    try { closed = JSON.parse(readPreference(storageKey) || "[]"); } catch { closed = []; }
+  }
+  const closedIds = Array.isArray(closed) ? closed : [];
+  const saveClosed = (ids: string[]) => {
+    setClosedTopics(current => ({ ...current, [storageKey]: ids }));
+    writePreference(storageKey, JSON.stringify(ids));
+  };
   const { data, loading, error } = useApi<TodayView>("/api/views/today", revision);
   const { data: importBatches } = useApi<SourceImportBatch[]>("/api/imports", revision);
   if (loading) return <Loading label={tr("正在找出还想听你说的地方")} />;
   if (error || !data) return <Empty>{error ? tr(error) : tr("暂时没有可以继续聊的内容")}</Empty>;
   const recentJourney = importBatches?.find((batch) => batch.journey)?.journey;
   const questions = talkingQuestions(data, recentJourney);
+  const topicRuns = new Map<string, WikiRun[]>();
+  const libraryRuns = (runs ?? []).filter(run => !libraryId || run.knowledgeBaseId === libraryId);
+  const builtRuns = new Set(libraryRuns.filter(run => run.status === "completed").flatMap(run => run.conversationBuildRunIds ?? []));
+  for (const run of libraryRuns) {
+    if (!run.contextTopicId || run.suggestionForRunId || run.conversationBuildRunIds) continue;
+    const turns = topicRuns.get(run.contextTopicId) ?? [];
+    turns.push(run);
+    topicRuns.set(run.contextTopicId, turns);
+  }
+  const topicStatus = (id: string) => {
+    const turns = topicRuns.get(id);
+    return turns?.length ? turns.every(turn => builtRuns.has(turn.id)) ? "built" : "paused" : closedIds.includes(id) ? "closed" : undefined;
+  };
+  const knownTopics = new Map(questions.map(question => [question.id, question]));
+  const historyIds = new Set([...topicRuns.keys(), ...closedIds]);
+  const history = [...historyIds].map(id => {
+    const turns = topicRuns.get(id);
+    const latest = turns?.[0];
+    const original = turns?.at(-1);
+    const question = knownTopics.get(id);
+    return { id, question, latest, title: question?.question ?? original?.title.replace(/^处理：/, "") ?? id };
+  }).filter(item => item.question || item.latest);
+  const historyTabs = [["all", "全部"], ["built", "已构建 Wiki"], ["paused", "聊到一半"], ["closed", "已关闭"]];
   const availableKinds = (Object.keys(conversationTopicKinds) as ConversationTopicKind[]).filter((kind) => questions.some((question) => question.kind === kind));
-  const filteredQuestions = topicKind === "all" || topicKind === "generated" ? questions : questions.filter((question) => question.kind === topicKind);
-  const topicCards = topicKind === "generated" ? [] : topicBatch(filteredQuestions, topicBatchIndex);
+  const filteredQuestions = (topicKind === "all" || topicKind === "generated" ? questions : questions.filter((question) => question.kind === topicKind)).filter(question => !closedIds.includes(question.id));
+  const topicCards = topicKind === "generated" ? [] : topicBatch(filteredQuestions, topicBatchIndex % Math.max(1, Math.ceil(filteredQuestions.length / 4)));
   const visibleGenerated = topicKind === "generated" ? generatedQuestions : topicKind === "all" ? generatedQuestions : [];
   const changeKind = (kind: ConversationTopicKind | "all" | "generated") => {
     setTopicKind(kind);
@@ -76,11 +114,13 @@ export function QuestionsHub({ revision }: { revision: number }) {
           {availableKinds.map((kind) => <button type="button" key={kind} className={topicKind === kind ? "active" : ""} aria-pressed={topicKind === kind} title={tr(conversationTopicKinds[kind].description)} onClick={() => changeKind(kind)}>{tr(conversationTopicKinds[kind].label)}</button>)}
           {generatedQuestions.length > 0 && <button type="button" className={topicKind === "generated" ? "active generated" : "generated"} aria-pressed={topicKind === "generated"} onClick={() => changeKind("generated")}>{tr("新生成")}</button>}
         </div>
+        <div className="questions-wall-actions">
+        <button type="button" className="questions-shuffle-button" onClick={() => { setHistoryFilter("all"); historyDialog.current?.showModal(); }}><Icon name="history" size={16} />{tr("往期话题")}<span>{history.length}</span></button>
         <button type="button" className="questions-shuffle-button" disabled={topicKind === "generated" || filteredQuestions.length === 0} onClick={() => {
           setTopicBatchIndex((current) => (current + 1) % Math.max(1, Math.ceil(filteredQuestions.length / 4)));
           setShuffleStreak(shuffleStreak + 1);
           if (shuffleStreak + 1 >= 3) setShowDirectionCard(true);
-        }}><Icon name="refresh" size={16} />{tr("换一批")}</button>
+        }}><Icon name="refresh" size={16} />{tr("换一批")}</button></div>
       </div>
       {showDirectionCard && <aside className="questions-direction-card" aria-label={tr("按你的方向找话题")}>
         <div className="questions-direction-icon" aria-hidden="true"><Icon name="spark" size={18} /></div>
@@ -101,7 +141,8 @@ export function QuestionsHub({ revision }: { revision: number }) {
           const evidenceStrength = Math.min(question.evidenceCount, 3);
           const headingId = `question-topic-${index}`;
           return <article className={`questions-topic-card is-${question.kind}${selectedQuestionId === question.id ? " active" : ""}`} key={question.id} aria-labelledby={headingId}>
-            <span className="questions-topic-kind">{tr(kind.label)}</span>
+            {!topicStatus(question.id) && <button type="button" className="questions-topic-dismiss" title={tr("不感兴趣，关闭这个话题")} aria-label={tr("关闭这个话题")} onClick={() => { saveClosed([...closedIds, question.id]); setUndoTopic({ id: question.id, storageKey }); }}><Icon name="close" size={14} /></button>}
+            <span className={`questions-topic-kind ${topicStatus(question.id) ?? ""}`}>{tr(topicStatus(question.id) === "built" ? "已整理" : topicStatus(question.id) === "paused" ? "聊到一半" : kind.label)}</span>
             <h3 id={headingId}>{demo.title(question.question)}</h3>
             <p>{question.reason}</p>
             <div className="questions-topic-evidence">
@@ -109,7 +150,7 @@ export function QuestionsHub({ revision }: { revision: number }) {
               <small>{question.evidenceCount ? tr("${question.evidenceCount} 条相关记录", { "question.evidenceCount": question.evidenceCount }) : tr("等你补充第一条记录")}</small>
             </div>
             <footer>
-              <button type="button" onClick={() => { setSelectedQuestionId(question.id); openLifeConversation(question); }}>{tr("聊聊这个") + " "}<Icon name="arrow" size={15} /></button>
+              <button type="button" onClick={() => { setSelectedQuestionId(question.id); openLifeConversation(question); }}>{tr(topicStatus(question.id) === "built" ? "回看对话" : topicStatus(question.id) === "paused" ? "继续聊" : "聊聊这个") + " "}<Icon name="arrow" size={15} /></button>
               {question.kind === "understanding" && question.pageId
                 ? <button type="button" className="questions-evidence-button" onClick={() => { if (question.pageId) evidencePreview.open(question.pageId); }}>{question.sourceLabel || tr("查看依据")}</button>
                 : question.sourceHref ? <NavLink to={question.sourceHref} state={{ returnTo: "/questions", returnLabel: tr("返回值得聊聊") }}>{question.sourceLabel || tr("查看依据")}</NavLink> : null}
@@ -134,19 +175,27 @@ export function QuestionsHub({ revision }: { revision: number }) {
       </div> : <div className="questions-wall-empty"><b>{tr("这一类还没有话题")}</b><p>{tr("换个分类看看，或者带进一份新的生活记录。")}</p></div>}
     </section>
 
-    <section className="questions-open-chat" aria-labelledby="questions-open-chat-title">
-      <div><h2 id="questions-open-chat-title">{tr("还有别的想聊的？直接跟我说")}</h2><p>{tr("不用挑话题，写下来我们就直接开始聊。")}</p></div>
-      <form onSubmit={(event) => {
-        event.preventDefault();
-        const prompt = chatDraft.trim();
-        if (!prompt) return;
-        openContextAgent({ prompt, mode: "read", lockMode: true, autoSubmit: true });
-        setChatDraft("");
-      }}>
-        <TextArea voice={false} rows={2} aria-label={tr("想聊的话")} placeholder={tr("在这里说说…")} value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} />
-        <button type="submit" disabled={!chatDraft.trim()}>{tr("开始聊") + " "}<Icon name="arrow" size={15} /></button>
-      </form>
-    </section>
+    <button type="button" className="questions-open-chat" onClick={() => openContextAgent({ mode: "auto", view: "compose" })}>
+      <b>{tr("还有别的想聊的？直接跟我说")}</b><span>{tr("不用挑话题，写下来我们就直接开始聊…")}</span>
+    </button>
+    {undoTopic?.storageKey === storageKey && closedIds.includes(undoTopic.id) && <div className="questions-close-toast" role="status">{tr("已关闭话题")} <span>{tr("可以在往期话题里找回")}</span><button type="button" onClick={() => { saveClosed(closedIds.filter(id => id !== undoTopic.id)); setUndoTopic(undefined); }}>{tr("撤销")}</button></div>}
+    <dialog ref={historyDialog} className="questions-history-dialog" aria-labelledby="questions-history-title" onClick={event => { if (event.target === event.currentTarget) historyDialog.current?.close(); }}>
+      <header><div><h2 id="questions-history-title">{tr("往期话题")}</h2><p>{tr("聊完的、聊到一半的、被你关闭的，都在这里")}</p></div><button type="button" aria-label={tr("关闭弹窗")} onClick={() => historyDialog.current?.close()}><Icon name="close" size={17} /></button></header>
+      <nav aria-label={tr("筛选话题")}>{historyTabs.map(([key, label]) => <button type="button" key={key} aria-pressed={historyFilter === key} onClick={() => setHistoryFilter(key!)}>{tr(label!)} <small>{history.filter(question => key === "all" || topicStatus(question.id) === key).length}</small></button>)}</nav>
+      <div className="questions-history-list">{history.filter(question => historyFilter === "all" || topicStatus(question.id) === historyFilter).map(question => {
+        const status = topicStatus(question.id);
+        return <article key={question.id} className={status}><div><b>{demo.title(question.title)}</b><p>{tr(status === "closed" ? "已关闭" : status === "built" ? "已构建 Wiki" : "聊到一半")}{question.latest && <> · <time dateTime={question.latest.createdAt}>{new Date(question.latest.createdAt).toLocaleDateString(uiDateLocale())}</time></>}</p></div><button type="button" onClick={() => {
+          if (status === "closed") saveClosed(closedIds.filter(id => id !== question.id));
+          else {
+            historyDialog.current?.close();
+            setSelectedQuestionId(question.id);
+            if (question.question) openLifeConversation(question.question);
+            else if (question.latest) openContextAgent({ runId: question.latest.id });
+          }
+        }}>{tr(status === "closed" ? "恢复话题" : status === "built" ? "回看对话" : "继续聊")}</button></article>;
+      })}{!history.some(question => historyFilter === "all" || topicStatus(question.id) === historyFilter) && <p>{tr("这里暂时没有话题")}</p>}</div>
+      <footer>{tr("这里只显示当前个人空间里的话题。")}</footer>
+    </dialog>
     <PageAgentContext context={{ scope: tr("值得聊聊"), title: tr("最近值得聊的话题"), summary: tr("从具体线索里挑一个想说的，我会沿着它继续问。"), defaultMode: "read", suggestions: [questions[0]?.agentPrompt || tr("我想从最近一件还没有说清楚的事开始。"), tr("我觉得这里有一条理解不符合我。请先让我说明哪里不准确，再帮我找可能的反例。")] }} />
   </div>;
 }

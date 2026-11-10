@@ -49,7 +49,8 @@ describe("deleting Agent conversations", () => {
     emit(suggestion, { type: "turn.completed", outcome: "completed", finalAnswer: '{"suggest":true,"summary":"已确定的贵州行程","page":"旅行计划"}' });
     await vi.waitFor(async () => expect((await coordinator.get(chat.id))?.wikiSuggestion?.summary).toBe("已确定的贵州行程"));
     const build = await coordinator.buildConversation(chat.id);
-    expect(build).toMatchObject({ mode: "write", knowledgeBaseId: "demo" });
+    expect(build).toMatchObject({ mode: "write", knowledgeBaseId: "demo", conversationBuildRunIds: [chat.id] });
+    expect((await new RunStore(root).get(build.id))?.conversationBuildRunIds).toEqual([chat.id]);
     expect(runtime.start.mock.calls[2]![0]).toMatchObject({ mode: "write", sessionId: undefined });
     expect((await coordinator.get(chat.id))?.status).toBe("completed");
   });
@@ -123,6 +124,15 @@ describe("deleting Agent conversations", () => {
     await vi.waitFor(async () => expect((await coordinator.get(run.id))?.result?.finalAnswer).toBe("你好"));
     expect((await coordinator.get(run.id))?.liveDraft).toBeUndefined();
   });
+  it("persists a partial reply when the runtime reports interruption", async () => {
+    const { coordinator, emit } = await fixture();
+    const run = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "聊聊" });
+    emit(run, { type: "assistant.delta", messageId: "partial", text: "已生成的一半" });
+    emit(run, { type: "turn.completed", outcome: "interrupted" });
+    await vi.waitFor(async () => expect((await coordinator.get(run.id))?.status).toBe("interrupted"));
+    expect((await coordinator.list()).find(item => item.id === run.id)?.liveDraft).toEqual({ messageId: "partial", text: "已生成的一半" });
+  });
+
   it("removes every completed turn in the session and its local runtime session", async () => {
     const { coordinator, deleteSession, emit } = await fixture();
     const first = await coordinator.start({ mode: "read", knowledgeBaseId: "demo", prompt: "第一轮", sourceModule: "近况回信" });

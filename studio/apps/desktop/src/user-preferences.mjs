@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 const globalKeys = new Set(['desktop.locale', 'desktop.notifications', 'the-way-here.agent-panel-width', 'the-way-here.record-outline-open', 'the-way-here.record-folders-open', 'the-way-here.record-files-open', 'the-way-here.record-inspector-open', 'the-way-here.outline-pinned', 'the-way-here.import-route', 'the-way-here.import-provider', 'the-way-here.model-onboarding.dismissed', 'the-way-here.model-onboarding.confirmed']);
 export function preferenceScope(key) {
   if (globalKeys.has(key) || /^desktop\.window\.(main|reader|focus|settings|capture)$/.test(key)) return 'global';
-  if (typeof key === 'string' && /^(?:photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.)[a-zA-Z0-9_-]{1,100}$/.test(key)) return 'workspace';
+  if (typeof key === 'string' && /^(?:photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.|the-way-here\.closed-topics\.)[a-zA-Z0-9_-]{1,100}$/.test(key)) return 'workspace';
   throw new Error('Unknown user preference');
 }
 // Only explicit user choices and one-time legacy imports enter this file.
@@ -36,7 +36,7 @@ export class UserPreferences {
       if (preferenceScope(key) !== 'workspace') continue;
       let targetKey = key;
       if (knowledgeBaseIdMap !== undefined) {
-        const match = key.match(/^(photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.)([a-zA-Z0-9_-]{1,100})$/);
+        const match = key.match(/^(photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.|the-way-here\.closed-topics\.)([a-zA-Z0-9_-]{1,100})$/);
         if (!match || !Object.hasOwn(knowledgeBaseIdMap, match[2])) continue;
         targetKey = match[1] + knowledgeBaseIdMap[match[2]];
       }
