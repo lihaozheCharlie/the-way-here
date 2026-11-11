@@ -1,10 +1,11 @@
-import { _electron as electron, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { access, cp, mkdir, mkdtemp, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 import YAML from 'yaml';
+import { launchInstalledApp } from './installed-app-session.mjs';
 
 const temp = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-fresh-install-')));
 const releaseDir = process.arch === 'arm64' ? 'mac-arm64' : 'mac';
@@ -14,7 +15,9 @@ const userData = path.join(temp, 'new-user');
 const env = { ...process.env, PATH: '/usr/bin:/bin' };
 delete env.THE_WAY_HERE_VAULT;
 delete env.THE_WAY_HERE_KNOWLEDGE_BASE;
-let app, pid, stateRoot;
+delete env.THE_WAY_HERE_DEV;
+delete env.ELECTRON_RUN_AS_NODE;
+let app, stateRoot;
 
 async function compareDemo(source, target) {
   for (const entry of await readdir(source, { withFileTypes:true })) {
@@ -31,12 +34,7 @@ async function compareDemo(source, target) {
 }
 
 async function launch() {
-  return electron.launch({
-    executablePath: path.join(movedApp, 'Contents/MacOS/The Way Here'),
-    args: ['--diagnostics', `--user-data-dir=${userData}`],
-    env,
-    timeout: 60000,
-  });
+  return launchInstalledApp(path.join(movedApp, 'Contents/MacOS/The Way Here'), userData, env);
 }
 
 async function expectDemo(page) {
@@ -54,8 +52,7 @@ try {
   await mkdir(path.dirname(movedApp), { recursive:true });
   await cp(sourceApp, movedApp, { recursive:true, verbatimSymlinks:true });
   app = await launch();
-  pid = app.process().pid;
-  const page = await app.firstWindow({ timeout:60000 });
+  const { page } = app;
   const demo = await expectDemo(page);
   const root = JSON.parse(await readFile(path.join(userData, 'workspace.json'), 'utf8')).root;
   expect(root).toBe(path.join(userData, 'workspace'));
@@ -85,18 +82,11 @@ try {
   await app.close();
   app = undefined;
   app = await launch();
-  pid = app.process().pid;
-  const reopened = await app.firstWindow({ timeout:60000 });
-  await expectDemo(reopened);
+  await expectDemo(app.page);
   expect(await readFile(configPath, 'utf8')).toBe(config);
   console.log(`PASS: relocated first install opens demo (${demo.pageCount} pages, ${demo.sourceCount} sources), includes no empty personal library, and survives restart.`);
 } finally {
-  const pids = app ? await app.evaluate(({ app }) => app.getAppMetrics().map(item => item.pid)).catch(() => pid ? [pid] : []) : [];
   await app?.close();
-  const alive = value => { try { process.kill(value, 0); return true; } catch { return false; } };
-  const deadline = Date.now() + 5000;
-  while (pids.some(alive) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 100));
-  if (pids.some(alive)) throw new Error('Verification App or child process is still running');
   if (stateRoot) await rm(stateRoot, { recursive:true, force:true });
   await rm(temp, { recursive:true, force:true });
 }

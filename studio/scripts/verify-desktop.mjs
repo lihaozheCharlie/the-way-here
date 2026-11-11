@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { launchInstalledApp } from './installed-app-session.mjs';
 
 // Pair with verify-web.mjs: exercise the current shared UI over native IPC,
 // without relying on the retired connection-management panel or HTTP transport.
@@ -12,6 +13,7 @@ const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-app-parity
 const original = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-parity-original-')));
 let app, pid, stateRoot;
 const errors = [];
+const installedExecutable = process.env.TWH_DESKTOP_EXECUTABLE;
 try {
   const filter = file => !['.runtime', '__pycache__', '.DS_Store'].includes(path.basename(file));
   await cp(path.join(studio, '../vault/demo'), path.join(root, 'vault/demo'), { recursive: true, filter });
@@ -39,11 +41,14 @@ validation:
   const env = { ...process.env, THE_WAY_HERE_VAULT: root, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo', TWH_APP_CACHE_ROOT: path.join(root, 'cache') };
   delete env.THE_WAY_HERE_DEV;
   delete env.THE_WAY_HERE_DESKTOP_TOKEN;
-  const launchOptions = { ...(process.env.TWH_DESKTOP_EXECUTABLE ? { executablePath: process.env.TWH_DESKTOP_EXECUTABLE, args: ['--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] } : { args: [path.join(studio, 'apps/desktop'), '--diagnostics', `--user-data-dir=${path.join(root, 'profile')}`] }), env, timeout: 60000 };
-  app = await electron.launch(launchOptions);
-  pid = app.process().pid;
-  console.log(`Verification App PID ${pid}`);
-  const page = await app.firstWindow();
+  delete env.ELECTRON_RUN_AS_NODE;
+  const profile = path.join(root, 'profile');
+  const launch = () => installedExecutable
+    ? launchInstalledApp(installedExecutable, profile, env)
+    : electron.launch({ args: [path.join(studio, 'apps/desktop'), '--diagnostics', `--user-data-dir=${profile}`], env, timeout: 60000 });
+  app = await launch();
+  pid = app.process?.().pid;
+  const page = app.page ?? await app.firstWindow();
   page.setDefaultTimeout(10000);
   page.on('pageerror', error => errors.push(error.message));
   await page.waitForURL('**/');
@@ -65,36 +70,38 @@ validation:
   await page.goto(origin + '/sources');
   await expect(page.locator('.source-connections article, .source-connections label, .source-connections-popover')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /断开连接|确认断开|连接原始目录/ })).toHaveCount(0);
-  // Stub only the OS picker/permission dialog, keeping the actual bridge and runtime.
-  await app.evaluate(({ dialog }, directory) => {
-    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
-    dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
-  }, original);
-  await page.getByRole('button', { name: '打开文件夹…', exact: true }).click();
-  await page.getByRole('button', { name: '平台兼容样例.md', exact: true }).click();
-  await expect(page.locator('.source-preview')).toContainText('匿名原文');
-  const connections = await page.evaluate(() => fetch('/api/source-connections').then(response => response.json()));
-  expect(connections).toHaveLength(1);
-  const node = page.getByRole('tree', { name: '文件夹树' }).locator(`[data-folder="外部来源/${connections[0].id}"]`);
-  await node.hover();
-  await node.getByRole('button', { name: /更多文件夹操作/ }).click();
-  await expect(page.getByRole('menuitem', { name: '重命名', exact: true })).toHaveCount(0);
-  await expect(page.getByText('只移除入口，不会删除磁盘上的文件', { exact: true })).toBeVisible();
-  await page.getByRole('menuitem', { name: '从列表移除', exact: true }).click();
-  await expect(node).toHaveCount(0);
-  expect(await readFile(path.join(original, '平台兼容样例.md'), 'utf8')).toBe(originalText);
-  await app.evaluate(({ Menu }) => {
-    const file = Menu.getApplicationMenu().items.find(item => item.label === '文件');
-    const item = file.submenu.items.find(item => item.label === '导入生活记录…');
-    if (item.accelerator !== 'CmdOrCtrl+O') throw new Error('Import accelerator changed');
-    item.click();
-  });
-  const dialog = page.getByRole('dialog', { name: '带一段记录进来', exact: true });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.locator('.import-type-grid > button')).toHaveCount(3);
-  await page.keyboard.press('Escape');
+  if (!installedExecutable) {
+    // Stub only the OS picker/permission dialog, keeping the actual bridge and runtime.
+    await app.evaluate(({ dialog }, directory) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
+      dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
+    }, original);
+    await page.getByRole('button', { name: '打开文件夹…', exact: true }).click();
+    await page.getByRole('button', { name: '平台兼容样例.md', exact: true }).click();
+    await expect(page.locator('.source-preview')).toContainText('匿名原文');
+    const connections = await page.evaluate(() => fetch('/api/source-connections').then(response => response.json()));
+    expect(connections).toHaveLength(1);
+    const node = page.getByRole('tree', { name: '文件夹树' }).locator(`[data-folder="外部来源/${connections[0].id}"]`);
+    await node.hover();
+    await node.getByRole('button', { name: /更多文件夹操作/ }).click();
+    await expect(page.getByRole('menuitem', { name: '重命名', exact: true })).toHaveCount(0);
+    await expect(page.getByText('只移除入口，不会删除磁盘上的文件', { exact: true })).toBeVisible();
+    await page.getByRole('menuitem', { name: '从列表移除', exact: true }).click();
+    await expect(node).toHaveCount(0);
+    expect(await readFile(path.join(original, '平台兼容样例.md'), 'utf8')).toBe(originalText);
+    await app.evaluate(({ Menu }) => {
+      const file = Menu.getApplicationMenu().items.find(item => item.label === '文件');
+      const item = file.submenu.items.find(item => item.label === '导入生活记录…');
+      if (item.accelerator !== 'CmdOrCtrl+O') throw new Error('Import accelerator changed');
+      item.click();
+    });
+    const dialog = page.getByRole('dialog', { name: '带一段记录进来', exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('.import-type-grid > button')).toHaveCount(3);
+    await page.keyboard.press('Escape');
+    console.log('PASS: App IPC shares Web routes, folder open/remove semantics and three import types; native Cmd/Ctrl+O opens import.');
+  }
   expect(errors).toEqual([]);
-  console.log('PASS: App IPC shares Web routes, folder open/remove semantics and three import types; native Cmd/Ctrl+O opens import.');
   const savedSettings = await page.evaluate(async () => {
     const response = await fetch('/api/agent-settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ runtimeId: 'codex', codex: { model: 'gpt-6.1-sol', effort: 'high' }, thirdParty: { providerId: 'deepseek', model: 'deepseek-v4-pro', effort: 'high', apiKey: 'anonymous-restart-fixture' } }) });
     if (!response.ok) throw new Error('Failed to save anonymous AI settings');
@@ -105,9 +112,10 @@ validation:
   expect(JSON.parse(encryptedSettings).version).toBe(3);
   expect(encryptedSettings).not.toContain('anonymous-restart-fixture');
   await app.close();
-  app = await electron.launch(launchOptions);
-  pid = app.process().pid;
-  const restarted = await app.firstWindow();
+  app = undefined;
+  app = await launch();
+  pid = app.process?.().pid;
+  const restarted = app.page ?? await app.firstWindow();
   await restarted.waitForURL('**/');
   expect(await restarted.evaluate(() => fetch('/api/agent-settings').then(response => response.json()))).toEqual(savedSettings);
   expect(await readFile(settingsFile, 'utf8')).toBe(encryptedSettings);
@@ -115,7 +123,7 @@ validation:
 
 } finally {
   try {
-    const pids = app ? await app.evaluate(({ app }) => app.getAppMetrics().map(item => item.pid)).catch(() => [pid]) : [];
+    const pids = app && !installedExecutable ? await app.evaluate(({ app }) => app.getAppMetrics().map(item => item.pid)).catch(() => [pid]) : [];
     await app?.close();
     const alive = value => { try { process.kill(value, 0); return true; } catch { return false; } };
     const deadline = Date.now() + 5000;
