@@ -55,6 +55,9 @@ const zipSha256 = createHash('sha256'); for await (const chunk of createReadStre
 const remoteZip = hosted.assets.find(asset => asset.name === release.installer.filename);
 const remoteNativeFeed = hosted.assets.find(asset => asset.name === 'latest-mac.yml');
 const nativeDigest = createHash('sha256').update(await readFile(nativeFeed)).digest('hex');
-if (!hosted.isDraft || dmg?.size !== release.size || dmg?.digest !== `sha256:${release.sha256}` || remoteFeed?.digest !== `sha256:${expectedFeed}` || remoteZip?.size !== release.installer.size || remoteZip?.digest !== `sha256:${zipSha256.digest('hex')}` || remoteNativeFeed?.digest !== `sha256:${nativeDigest}`) throw new Error('Uploaded artifact/feed verification failed; draft remains unpublished');
+const checksums = await readFile(path.join(output, 'SHA256SUMS.txt'));
+const checksumsDigest = createHash('sha256').update(checksums).digest('hex');
+const remoteChecksums = hosted.assets.find(asset => asset.name === 'SHA256SUMS.txt');
+if (!hosted.isDraft || dmg?.size !== release.size || dmg?.digest !== `sha256:${release.sha256}` || remoteFeed?.digest !== `sha256:${expectedFeed}` || remoteZip?.size !== release.installer.size || remoteZip?.digest !== `sha256:${zipSha256.digest('hex')}` || remoteNativeFeed?.digest !== `sha256:${nativeDigest}` || remoteChecksums?.size !== checksums.length || remoteChecksums?.digest !== `sha256:${checksumsDigest}`) throw new Error('Uploaded artifact/feed verification failed; draft remains unpublished');
 run('gh', ['release','edit',tag,'--repo',repo,'--draft=false','--latest','--notes-file',notePath]);
 console.log(`Published ${feed.version}. Installed clients check the fixed latest-release update.json address.`);
