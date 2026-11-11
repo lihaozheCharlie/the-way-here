@@ -179,3 +179,15 @@ pnpm desktop:ship
 `icloud-container-config.test.mjs` 校验实际打包配置、手机 plist 的容器一致性及桌面权限边界。
 配置检查通过仅证明声明完整，不证明一次具体的跨设备上传故障已解决；本地验收包安装注册后，
 仍须仅在独立 UUID 匿名验收目录观察真实文档到达与往返。
+
+## 0.1.11 发布验收（2026-11-11）
+
+本版改进话题与聊天历史导航、消息阅读位置、参考记录和 Wiki 构建状态。生活记录、近况回信与个人主线统一了阅读、编辑和目录布局，生活记录会保留面板开合状态。发布说明以 0.1.9 为上一公开版本。
+
+GitHub 登录和写权限、Developer ID 与 `twh-direct` 均通过预检。类型检查、817 项测试与构建通过。正式验收改为从隔离的渲染界面连接签名应用，沿用关闭 Node 调试接口的生产配置。正式 DMG 与 ZIP 均通过启动、本地 API、中英文界面和更新桥接检查。首次启动、重启后的加密 AI 设置与实际偏好保留，以及真实自动更新替换、自动重启和草稿保留均通过。原生菜单操作在开发版验收中通过。
+
+应用公证 `2fdcff71-27e8-49b6-905e-616aeaa76d12` 与 DMG 公证 `d0485944-bc31-4d50-836a-e4f58746b85b` 均为 Accepted，已附票据并通过 Gatekeeper。DMG 面向 Apple Silicon，要求 macOS 13.0 或更新版本，大小为 266991654 字节，SHA-256 为 `7e2d8ded142b872fe7740f8c066da684d0f51a98e4313152f4a80e4242e094f1`。ZIP 大小为 273576662 字节。
+
+GitHub 草稿的五个资产摘要全部匹配后公开并切换 latest。公开 DMG 和 ZIP 已完整下载，大小与摘要均匹配。当前客户端检查为 current，模拟旧版检查为 available，并指向同一版本的固定下载。公开下载的 DMG 再次通过安装启动验收。[GitHub 正式发布](https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.11)
+
+官网通过 Sites 第 15 版部署成功，源码提交 `b5b597eb1fb6bc54836fa4c6392d8e33b2667fbe`，部署 ID `appgdep_6af40f80c1ec8191981533968ed05d59`。新版下载页显示 0.1.11、267 MB、系统要求、更新说明和已核验的固定链接。旧域名跳转到当前域名，下载、帮助及隐私页均已从公开地址验证。隔离测试应用、进程、服务和挂载已清理。[官网下载](https://the-way-here-support.charlielii.chatgpt.site/download/)
