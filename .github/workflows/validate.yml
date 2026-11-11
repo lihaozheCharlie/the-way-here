@@ -8,12 +8,72 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  studio:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: studio/package.json
+          cache: true
+          cache_dependency_path: studio/pnpm-lock.yaml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Python dependencies
+        run: python3 -m pip install -r ../knowledge-engine/requirements.txt
+      - name: Install Studio dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  knowledge-engine:
+    runs-on: ubuntu-latest
+    env:
+      THE_WAY_HERE_KNOWLEDGE_BASE: demo
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate repository
-        run: python3 tools/check.py
+      - name: Install Python dependencies
+        run: python3 -m pip install -r knowledge-engine/requirements.txt
+      - name: Validate demo tags and links
+        run: |
+          python3 - <<'PY'
+          import re
+          import subprocess
+          import sys
+
+          def run_tool(name):
+              result = subprocess.run(
+                  [sys.executable, f"knowledge-engine/tools/{name}.py"],
+                  check=True, text=True, stdout=subprocess.PIPE,
+              )
+              print(result.stdout, end="", flush=True)
+              return result.stdout
+
+          run_tool("update_obsidian_tags")
+          tags = run_tool("update_obsidian_tags")
+          if not re.search(r"^updated=0 scanned=\d+$", tags, re.MULTILINE):
+              raise SystemExit("The second tag update must be idempotent")
+
+          # The link validator reports counts without a nonzero exit status.
+          links = run_tool("validate_wiki_links")
+          if not re.search(r"^files=\d+ missing=0 ambiguous=0$", links, re.MULTILINE):
+              raise SystemExit("Demo Wiki links must resolve without ambiguity")
+          PY
+      - name: Validate Skill system
+        run: python3 knowledge-engine/tools/validate_skill_system.py
+      - name: Check demo remains unchanged
+        run: git diff --exit-code -- vault/demo
