@@ -191,3 +191,15 @@ GitHub 登录和写权限、Developer ID 与 `twh-direct` 均通过预检。类�
 GitHub 草稿的五个资产摘要全部匹配后公开并切换 latest。公开 DMG 和 ZIP 已完整下载，大小与摘要均匹配。当前客户端检查为 current，模拟旧版检查为 available，并指向同一版本的固定下载。公开下载的 DMG 再次通过安装启动验收。[GitHub 正式发布](https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.11)
 
 官网通过 Sites 第 15 版部署成功，源码提交 `b5b597eb1fb6bc54836fa4c6392d8e33b2667fbe`，部署 ID `appgdep_6af40f80c1ec8191981533968ed05d59`。新版下载页显示 0.1.11、267 MB、系统要求、更新说明和已核验的固定链接。旧域名跳转到当前域名，下载、帮助及隐私页均已从公开地址验证。隔离测试应用、进程、服务和挂载已清理。[官网下载](https://the-way-here-support.charlielii.chatgpt.site/download/)
+
+## 0.1.12 发布验收（2026-11-21）
+
+本版新增做梦功能：从人生阶段选择入梦点和反事实问题，仅用决策当时的冻结资料范围推演两至三条备选时间线，事后核对标注支持、反驳与未知并保留引文；梦境档案支持收藏、启示收入「已有理解」与再梦，任务可停止续跑并在完成或失败时通知。协作页实时展示任务活动，通知、模型引导页与知识库首页完善。源码提交 `c425296` 已推送 main；发布前补齐架构边界，把 `DreamStore` 移入 `modules/dreams/`，领域模块不再依赖 runtime。
+
+发布当日 Apple 开发者账号因法律协议未签，公证预检返回 403；账号持有人在 developer.apple.com 接受最新《Apple Developer Program License Agreement》后约三分钟生效，公证通道恢复。类型检查、765 项测试与构建通过，Developer ID 与 `twh-direct` 预检通过。
+
+应用与 DMG 公证 Accepted（DMG 公证 ID `9ded3df6-937e-4a22-836d-447c97b44a6a`），票据与 Gatekeeper 通过。DMG 为 267142469 字节，SHA-256 `3d73c10b072ebb0e3a2e701dcd7d852c62f31d2ec2a69adff24cf8cc511034ff`；ZIP 为 273725996 字节。正式 `release.json` 的 ready、startupVerified、autoUpdateVerified、preferencesVerified 均为 true；安装启动、中英文界面、偏好保留与真实自动更新替换均通过。
+
+GitHub 发布 mac-v0.1.12 公开五个资产，托管 DMG 与 ZIP 已完整下载，大小与摘要均与本地一致；固定 update.json 与 latest-mac.yml 已切换 0.1.12 并核对摘要。[GitHub 正式发布](https://github.com/lihaozheCharlie/the-way-here/releases/tag/mac-v0.1.12)
+
+官网通过 Sites 第 16 版部署成功，站点源码提交 `bfd97a48d1f1d82dd3b446a32c3e7882bdde72b5`，版本 ID `appgprj_6acc91bdf8c88191b284de4be166ba5e~appgver_bb332c29e32c81918079939ac4045c18`，部署 ID `appgdep_6b0163c30e4c8191adcf1d54251359b1`，状态 succeeded。公开地址实测：下载页 200 并显示 0.1.12、268 MB、系统要求、更新说明与已核验的固定链接；旧域名跳转、帮助及隐私页均返回 200。`prepare-direct-site.mjs` 先核对本地哈希、票据与 Gatekeeper，再完整下载线上 DMG 核验并真实安装启动后才启用下载按钮。Sites 部署经站点源码 Git 仓库完成：推送同一提交后以 `sites_save_site_version` 保存版本、`sites_deploy_site_version` 部署；写凭据仅存内存，临时目录已删除，隔离测试应用、进程与挂载均已清理。[官网下载](https://the-way-here-support.charlielii.chatgpt.site/download/)
