@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import type { WikiRun } from "@the-way-here/shared";
+import type { AgentRuntimeEvent, WikiRun } from "@the-way-here/shared";
 import { AgentComposerSettings, AiConfiguration, type AgentSettingsController } from "./AgentSettings";
 import { ContextualRunPanel } from "./Collaboration";
 import { VoiceInputContext } from "../../shared/voice-input";
@@ -22,6 +22,10 @@ function fixture(status: WikiRun["status"], outputTarget?: WikiRun["outputTarget
   } as unknown as WikiRun;
 }
 
+function activityEvents(...payloads: AgentRuntimeEvent[]): WikiRun["events"] {
+  return payloads.map((payload, index) => ({ id: String(index), kind: "agent", at: "2026-09-21T00:00:00Z", payload }));
+}
+
 describe("shared conversation model settings", () => {
   it.each(["completed", "running", "failed", "interrupted", "validating"] as const)("keeps model settings in the reply composer when %s", (status) => {
     mocks.useApi.mockReturnValue({ data: fixture(status), loading: false });
@@ -39,10 +43,44 @@ describe("shared conversation model settings", () => {
   it("shows a compact working state without task details", () => {
     mocks.useApi.mockReturnValue({ data: fixture("running"), loading: false });
     const html = renderToStaticMarkup(<MemoryRouter><ContextualRunPanel agent={agent} runId="demo-run" revision={0} runList={[]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></MemoryRouter>);
-    expect(html).toContain("正在准备");
+    expect(html).toContain("正在思考");
     expect(html).not.toContain("你可以继续补充，我会接着处理。");
     expect(html).not.toContain("任务详情");
     expect(html).not.toContain("正在沿着你的来路慢慢梳理");
+  });
+  it("shows commentary and the unfinished command when reopening a running conversation", () => {
+    const running = {
+      ...fixture("running"),
+      events: activityEvents(
+        { type: "assistant.message", text: "我先确认来源。", final: false },
+        { type: "tool.started", callId: "command", toolName: "command", summary: "unlisted command text" },
+        { type: "tool.started", callId: "other", toolName: "read_file" },
+        { type: "tool.completed", callId: "other", toolName: "read_file", success: true },
+      ),
+    };
+    mocks.useApi.mockReturnValue({ data: running, loading: false });
+    const html = renderToStaticMarkup(<MemoryRouter><ContextualRunPanel agent={agent} runId={running.id} revision={0} runList={[]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></MemoryRouter>);
+    expect(html).toContain('class="context-run-commentary"');
+    expect(html.indexOf("我先确认来源。")).toBeLessThan(html.indexOf("正在运行命令"));
+    expect(html).not.toContain("unlisted command text");
+    expect(html).not.toContain('class="context-run-answer');
+  });
+  it("folds process notes away from the answer when the run completes, including Pi's final echo", () => {
+    const completed = {
+      ...fixture("completed"),
+      runtimeId: "pi" as const,
+      events: activityEvents(
+        { type: "assistant.message", text: "我先确认来源。", final: false },
+        { type: "assistant.message", text: "这是最终答复。", final: false },
+        { type: "assistant.message", text: "这是最终答复。", final: true },
+      ),
+    };
+    mocks.useApi.mockReturnValue({ data: completed, loading: false });
+    const html = renderToStaticMarkup(<MemoryRouter><ContextualRunPanel agent={agent} runId={completed.id} revision={0} runList={[]} onRunId={() => {}} onNew={() => {}} onClose={() => {}} /></MemoryRouter>);
+    expect(html).toContain('<details class="context-run-process">');
+    expect(html).toContain('<article class="context-run-answer"><p>这是最终答复。</p>');
+    expect(html.match(/这是最终答复。/g)).toHaveLength(1);
+    expect(html).not.toContain('class="context-run-progress"');
   });
   it("uses the same settings control for new chats without a runtime restriction", () => {
     const html = renderToStaticMarkup(<MemoryRouter><AgentComposerSettings id="new-chat" agent={agent} /></MemoryRouter>);

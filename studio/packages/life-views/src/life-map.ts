@@ -86,7 +86,9 @@ export function buildLifeMap(index: WikiIndex): LifeMapView {
   }
 
   if (!stages.length) {
-    index.list({ category: "life-stages" }).filter((page) => !page.title.includes("总览")).forEach((page, order) => {
+    const pages = index.list({ category: "life-stages" }).filter((page) => !page.title.includes("总览"))
+      .sort((a, b) => (a.start || "9999").localeCompare(b.start || "9999"));
+    pages.forEach((page, order) => {
       stages.push({ page, range: [page.start, page.end].filter(Boolean).join(" — ") || "待补充", focus: page.excerpt, lane: 0, order, current: false, relatedEvents: [], relatedPeople: [], relatedPlaces: [], relatedSystems: [], relatedLetters: [] });
     });
   }

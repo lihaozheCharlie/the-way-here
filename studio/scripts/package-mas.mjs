@@ -79,13 +79,24 @@ config.mac.bundleVersion = env.TWH_BUILD_NUMBER;
 // Keep its upstream resources intact and advertise a compatible MAS minimum.
 config.mac.minimumSystemVersion = '15.0.0';
 config.mas = { type:release ? 'distribution' : 'development', identity:env.TWH_APPLE_IDENTITY, provisioningProfile:profilePath, entitlements:path.join(dir,'app.plist'), entitlementsInherit:path.join(dir,'inherit.plist'), hardenedRuntime:false };
-// Electron's signer classifies images and locale packs as binaries. They remain
-// covered by the app resource seal; only executable code needs its own signature.
-config.mas.signIgnore = [MOBILE_KEYCHAIN_SIGN_IGNORE, '\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$'];
+// Local development signing does not require a network timestamp. Distribution
+// keeps the signer's trusted timestamp behavior.
+if (!release) config.mas.timestamp = 'none';
+// The signer treats binary resources as native code. Keep these files covered
+// by the enclosing resource seal without signing each one as a native binary.
+config.mas.signIgnore = [
+  MOBILE_KEYCHAIN_SIGN_IGNORE,
+  '\\.(?:png|jpe?g|gif|webp|ico|icns|pak|ttf|otf|woff2?)$',
+  '/Contents/Resources/python/.*\\.pyc$',
+  '/Contents/Resources/web/.*\\.(?:wasm|onnx|tflite)$',
+];
 config.extraResources.push({from:path.join(dir,'release-metadata.json'),to:'release-metadata.json'});
 await writeFile(path.join(dir,'builder.yml'),YAML.stringify(config));
 console.log(`证书与配置预检通过：${target}/${process.arch}。尚未证明沙盒运行或审核通过。`);
 if (!build) process.exit(0);
+// Security regressions from earlier reviews must also run for callers that
+// invoke the store builder directly instead of the full workspace test suite.
+run(process.execPath,['--test','apps/desktop/src/mas-compliance.test.mjs']);
 run('pnpm',['build']);
 run(process.execPath,['scripts/build-desktop-native.mjs']);
 await packageServer(studio,path.join(studio,'.runtime/package/server'));
@@ -100,7 +111,8 @@ run(process.execPath,['node_modules/electron-builder/out/cli/cli.js','--config',
 const app = path.join(dir,`${target}${process.arch === 'arm64' ? '-arm64' : ''}`,'The Way Here.app');
 run(process.execPath,['scripts/verify-package-links.mjs',app]);
 run('/usr/bin/codesign',['--verify','--deep','--strict','--verbose=2',app]);
-run(process.execPath,['scripts/verify-mas-apis.mjs',app]);
+const appVersion=JSON.parse(await readFile(path.join(studio,'apps/desktop/package.json'),'utf8')).version;
+run(process.execPath,['scripts/verify-mas-apis.mjs',app,'--version',appVersion,'--build-number',env.TWH_BUILD_NUMBER]);
 const signed = run('/usr/bin/codesign',['-d','--entitlements',':-',app],true);
 if (!signed.includes('com.apple.security.app-sandbox')) throw new Error('最终应用缺少沙盒 entitlement');
 console.log(release ? '已构建商店签名产物。须先完成同版本 MAS 开发签名实机验收，再用 Transporter 上传 pkg。' : '已构建开发签名 MAS 应用。请完成 docs/app-store/mas-validation.md 的实机验收。');

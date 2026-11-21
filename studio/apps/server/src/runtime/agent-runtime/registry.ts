@@ -22,7 +22,7 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
   private readonly enabled: Record<AgentRuntimeId, boolean>;
   private readonly pi: PiRuntimeAdapter;
   private updateQueue: Promise<unknown> = Promise.resolve();
-  private catalogPromise?: Promise<AgentRuntimeDescriptor[]>;
+  private readonly descriptions = new Map<AgentRuntimeId, Promise<AgentRuntimeDescriptor>>();
   private sharedKeyRefresh?: NodeJS.Timeout;
   private readonly protectedRuntimes: Array<ReturnType<typeof protectRuntime>> = [];
 
@@ -48,22 +48,21 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
     return new AgentRuntimeRegistry(config, settingsStore, settings, vaultRoot);
   }
 
-  async catalog(): Promise<AgentRuntimeDescriptor[]> {
-    this.catalogPromise ||= Promise.all([...this.runtimes.values()].map(async (runtime): Promise<AgentRuntimeDescriptor> => {
-      if (!this.enabled[runtime.id]) return { id: runtime.id, displayName: runtime.id === "codex" ? "Codex" : "自定义模型", available: false, reason: "运行时未启用", models: [] };
-      try {
-        return await runtime.inspect();
-      } catch (error: any) {
-        return {
-          id: runtime.id,
-          displayName: runtime.id === "codex" ? "Codex" : "自定义模型",
-          available: false,
-          reason: error.message || "运行时初始化失败",
-          models: [],
-        };
-      }
-    }));
-    return this.catalogPromise;
+  async catalog(refresh = false): Promise<AgentRuntimeDescriptor[]> {
+    if (refresh) this.descriptions.clear();
+    return Promise.all([...this.runtimes.keys()].map(id => this.describe(id)));
+  }
+
+  private describe(id: AgentRuntimeId): Promise<AgentRuntimeDescriptor> {
+    const cached = this.descriptions.get(id);
+    if (cached) return cached;
+    const unavailable = (reason: string): AgentRuntimeDescriptor =>
+      ({ id, displayName: runtimeName(id), available: false, reason, models: [] });
+    const runtime = this.runtimes.get(id);
+    if (!this.enabled[id] || !runtime) return Promise.resolve(unavailable("运行时未启用"));
+    const descriptor = runtime.inspect().catch(error => unavailable(error instanceof Error ? error.message : "运行时初始化失败"));
+    this.descriptions.set(id, descriptor);
+    return descriptor;
   }
 
   settings(): AgentGlobalSettings {
@@ -87,24 +86,25 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
     this.globalSettings = next;
     await Promise.all(this.protectedRuntimes.filter(runtime => !hasDataConsent(runtime.id, next.public) || runtime.id === "pi" && previousKey !== next.provider?.apiKey).map(runtime => runtime.revoke()));
     this.pi.configure(this.enabled.pi, next.provider ? [next.provider] : []);
-    this.catalogPromise = undefined;
+    this.descriptions.delete("pi");
     return next.public;
   }
 
   async resolve(preference: AgentRuntimePreference | undefined, requestedModel: string | undefined, requestedEffort: AgentReasoningEffort | undefined): Promise<ResolvedAgentSelection> {
     await this.refreshSharedKeys();
-    const catalog = await this.catalog();
-    const available = catalog.filter((runtime) => runtime.available && runtime.models.length);
     const preferredRuntime = preference && preference !== "auto" ? preference : this.globalSettings.public.runtimeId;
-    let descriptor = available.find((entry) => entry.id === preferredRuntime);
-    let model: AgentModelOption | undefined;
+    const preferred = await this.describe(preferredRuntime);
+    let descriptor = preferred.available && preferred.models.length ? preferred : undefined;
     if (!descriptor && requestedModel) {
-      descriptor = available.find((entry) => entry.models.some((candidate) => candidate.id === requestedModel));
+      const fallback = await this.describe(preferredRuntime === "codex" ? "pi" : "codex");
+      if (fallback.available && fallback.models.some(candidate => candidate.id === requestedModel)) descriptor = fallback;
     }
-    if (!descriptor) throw new Error(`${preferredRuntime === "codex" ? "Codex" : "第三方模型"}当前不可用，请先完成全局 AI 设置`);
-    const configuredModel = descriptor.id === "codex"
-      ? this.globalSettings.public.codex.model
-      : this.globalSettings.public.thirdParty.model;
+    if (!descriptor) {
+      throw new Error(`${runtimeName(preferredRuntime)}当前不可用，请先完成全局 AI 设置`);
+    }
+    let model: AgentModelOption | undefined;
+    const configured = descriptor.id === "pi" ? this.globalSettings.public.thirdParty : this.globalSettings.public[descriptor.id];
+    const configuredModel = configured?.model;
     if (requestedModel) {
       model = descriptor.models.find((entry) => entry.id === requestedModel);
       if (!model) throw new Error(`${descriptor.displayName} 中不存在模型：${requestedModel}`);
@@ -114,9 +114,10 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
     model ||= descriptor.models[0];
     if (!model) throw new Error(`${descriptor.displayName} 没有可用模型`);
     const supported = model.supportedReasoningEfforts.length ? model.supportedReasoningEfforts : ["off" as const];
-    const configuredEffort = descriptor.id === "codex" ? this.globalSettings.public.codex.effort : this.globalSettings.public.thirdParty.effort;
-    const effort = (requestedEffort || configuredEffort) && supported.includes(requestedEffort || configuredEffort)
-      ? requestedEffort || configuredEffort
+    const configuredEffort = configured?.effort;
+    const preferredEffort = requestedEffort || configuredEffort;
+    const effort = preferredEffort && supported.includes(preferredEffort)
+      ? preferredEffort
       : model.defaultReasoningEffort && supported.includes(model.defaultReasoningEffort)
         ? model.defaultReasoningEffort
         : supported.includes("high") ? "high" : supported[0]!;
@@ -152,7 +153,7 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
       if (next.provider?.apiKey !== this.globalSettings.provider?.apiKey || next.provider?.id !== this.globalSettings.provider?.id) {
         await Promise.all(this.protectedRuntimes.filter(runtime => runtime.id === "pi").map(runtime => runtime.revoke()));
         this.pi.configure(this.enabled.pi, next.provider ? [next.provider] : []);
-        this.catalogPromise = undefined;
+        this.descriptions.delete("pi");
       }
       this.globalSettings = next;
     });
@@ -167,4 +168,8 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
       for (const listener of this.listeners) listener(envelope);
     });
   }
+}
+
+function runtimeName(id: AgentRuntimeId): string {
+  return id === "pi" ? "第三方模型" : "Codex";
 }

@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { verifyDreams } from './verify-dreams.mjs';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-web-check-')));
@@ -26,7 +27,7 @@ async function stopServer() {
   try { await exited; } finally { clearTimeout(timer); }
 }
 
-try {
+verification: try {
   await mkdir(captures, { recursive: true });
   const filter = file => !['.runtime', '__pycache__', '.DS_Store'].includes(path.basename(file));
   await cp(path.join(studio, '../vault/demo'), path.join(root, 'vault/demo'), { recursive: true, filter });
@@ -95,7 +96,7 @@ validation:
   await expect(page.locator('.model-onboarding-dialog')).toHaveCount(0);
   record('AI onboarding can be postponed without blocking local browsing');
 
-  const routes = ['/', '/questions', '/sources', '/knowledge', '/insights', '/timeline', '/letters', '/relationships', '/predict-self'];
+  const routes = ['/', '/questions', '/sources', '/knowledge', '/insights', '/timeline', '/letters', '/relationships', '/predict-self', '/dreams'];
   for (const width of [1440, 1024]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of routes) {
@@ -107,8 +108,15 @@ validation:
     }
   }
   expect(apiFailures).toEqual([]);
-  record('all nine main routes load at desktop and narrow browser widths');
+  record('all ten main routes load at desktop and narrow browser widths');
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await verifyDreams({ page, origin, stateRoot, captures, sampleId });
+  record('dream points, preparation, wake, paths, versions, favorites and insights work in the browser');
+  if (process.argv.includes('--dreams')) {
+    expect(errors).toEqual([]);
+    expect(apiFailures).toEqual([]);
+    break verification;
+  }
 
   for (const route of ['/cards/personal-lines', '/cards/cycles', '/cards/systems', '/mental-models']) {
     await go(route);

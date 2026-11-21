@@ -149,7 +149,7 @@
 .context-suggestions button:hover { color: var(--accent-primary); background: transparent; border-color: var(--line); }
 .context-agent-boundary { margin: 13px 0 0; color:var(--ink-soft); font-size: 12px; }
 .context-agent-submit { margin-top: 15px; }
-.context-run-working, .context-run-answer { border: 1px solid color-mix(in srgb, var(--accent) 8%, transparent); border-radius: var(--radius-panel); }
+.context-run-answer { border: 1px solid color-mix(in srgb, var(--accent) 8%, transparent); border-radius: var(--radius-panel); }
 .working-mark { color: var(--paper); background: var(--accent-primary); box-shadow: var(--shadow-panel); }
 .working-mark i { background: var(--paper); }
 

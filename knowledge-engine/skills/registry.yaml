@@ -76,3 +76,8 @@ skills:
     modes: [read]
     responsibility: "只读评估 Wiki 对用户的了解程度与证据缺口；由 Studio 计算评分和预测门槛"
     triggers: ["扫描 Wiki 了解度", "重新扫描了解度", "评估了解程度"]
+  - id: consume-dreaming
+    path: knowledge-engine/skills/consume/dreaming/SKILL.md
+    modes: [read]
+    responsibility: "用户确认入梦点后的历史反事实分支规划、分析与复核；Studio 保存梦境档案"
+    triggers: ["生成梦境", "确认入梦点", "推演历史选择"]

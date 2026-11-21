@@ -86,7 +86,7 @@ export interface AgentRuntimeProvider {
 }
 
 export interface AgentRuntimeSettings {
-  catalog(): Promise<AgentRuntimeDescriptor[]>;
+  catalog(refresh?: boolean): Promise<AgentRuntimeDescriptor[]>;
   providerPresets(): AgentProviderPreset[];
   settings(): AgentGlobalSettings;
   updateSettings(input: UpdateAgentGlobalSettings): Promise<AgentGlobalSettings>;

@@ -9,3 +9,4 @@ export { buildEvidenceProfiles, searchEvidenceGroups, parseRetrievalPolicy, type
 export { createEvidenceSnapshot } from "./evidence-snapshot.js";
 export { diaryEntityLinks, linkDiaryEntities } from "./diary-entities.js";
 export { validateFrozenSourceReferences, type FrozenSourceReference } from "./frozen-references.js";
+export { buildDreamEvidence, dreamGroundPageId, dreamRecordDate, dreamStoryBiblePageId, withDreamGroundFacts, withDreamStoryBible } from "./dream-evidence.js";

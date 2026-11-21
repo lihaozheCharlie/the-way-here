@@ -2,6 +2,7 @@
 
 export type AgentRuntimeId = "codex" | "pi";
 export type AgentRuntimePreference = AgentRuntimeId | "auto";
+
 export type AgentReasoningEffort = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
 export type AgentProviderProtocol = "openai-completions" | "openai-responses" | "anthropic-messages";
 

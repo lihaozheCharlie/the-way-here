@@ -20,6 +20,11 @@ export class MasCodexTools {
       type: "function", name: tool.name, description: tool.description, inputSchema: tool.parameters,
     }));
   }
+  definitions() {
+    return this.tools.map(tool => ({
+      name: tool.name, description: tool.description, inputSchema: tool.parameters,
+    }));
+  }
   execute(name: string, args: unknown, callId: string) {
     const task = this.queue.catch(() => undefined).then(async () => {
       if (!this.allowed()) throw new Error("任务已停止或 AI 共享许可已撤回");

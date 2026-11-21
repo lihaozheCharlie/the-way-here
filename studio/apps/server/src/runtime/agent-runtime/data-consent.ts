@@ -2,8 +2,8 @@ import type { AgentGlobalSettings } from "@the-way-here/shared";
 import type { AgentExecutionRef, AgentRuntime } from "./types.js";
 
 export const dataConsentVersion = 1;
-export function recipientFor(runtimeId: "codex" | "pi", settings: AgentGlobalSettings): string {
-  return runtimeId === "codex" ? "codex" : `pi:${settings.thirdParty.providerId}`;
+export function recipientFor(runtimeId: "codex" | "pi", settings: { thirdParty: { providerId: string } }): string {
+  return runtimeId === "pi" ? `pi:${settings.thirdParty.providerId}` : runtimeId;
 }
 export function hasDataConsent(runtimeId: "codex" | "pi", settings: AgentGlobalSettings): boolean {
   return settings.dataConsent?.version === dataConsentVersion

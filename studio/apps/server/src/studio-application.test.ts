@@ -29,6 +29,8 @@ it.each([
     }
     expect((await runtime.app.inject('/')).statusCode).toBe(404);
     const active = (await runtime.app.inject("/api/vault")).json().knowledgeBaseId as string;
+    expect((await runtime.app.inject("/api/dreams/points?knowledgeBaseId=" + encodeURIComponent(active))).json())
+      .toEqual({ knowledgeBaseId: active, points: [] });
     const stale = await runtime.app.inject({ method: "POST", url: "/api/runs", headers: { "x-twh-knowledge-base": "stale-tab" }, payload: { mode: "read", prompt: "不要写入", knowledgeBaseId: active } });
     expect(stale.statusCode).toBe(409);
     const cross = await runtime.app.inject({ method: "POST", url: "/api/runs", payload: { mode: "read", prompt: "不要写入", knowledgeBaseId: "other-library" } });

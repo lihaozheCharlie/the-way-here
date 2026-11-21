@@ -24,7 +24,10 @@ export async function assetResponse(request, webRoot, fetchFile) {
   const headers=new Headers(loaded.headers);
   // Notes and AI output can contain Markdown images. Do not let rendering
   // silently contact arbitrary third parties or load remote executable code.
-  headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'");
+  // Only the bundled photo worker compiles the bundled WebAssembly models.
+  const photoWorker = /^assets\/photo-face\.worker-[\w-]+\.js$/.test(path.relative(root, file));
+  const wasmSource = photoWorker ? " 'wasm-unsafe-eval'" : '';
+  headers.set('Content-Security-Policy',`default-src 'self'; script-src 'self'${wasmSource}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'`);
   const response=new Response(loaded.body,{status:loaded.status,statusText:loaded.statusText,headers});
   if (request.method==='HEAD') { await response.body?.cancel(); return new Response(null,{status:response.status,headers:response.headers}); }
   return response;

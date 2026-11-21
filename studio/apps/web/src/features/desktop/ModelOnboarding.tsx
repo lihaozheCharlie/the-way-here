@@ -1,5 +1,5 @@
 import { readPreference, writePreference } from "../../shared/preference-storage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AgentGlobalSettings, AgentProviderPreset, AgentRuntimeDescriptor, UpdateAgentGlobalSettings } from "@the-way-here/shared";
 import { api } from "../../api";
 import { useApi } from "../../shared/use-api";
@@ -20,6 +20,14 @@ const providerLinks: Record<string, string> = {
   anthropic: "https://platform.claude.com/settings/keys",
 };
 
+// Keep existing-credential setup available while the store payment model is
+// being clarified. Removing acquisition links alone does not resolve 3.1.1.
+export function ProviderKeyLink({ providerId, className, children }: { providerId: string; className?: string; children: ReactNode }) {
+  if (typeof window !== "undefined" && window.desktop?.isMacAppStore) return null;
+  const href = providerLinks[providerId];
+  return href ? <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}</a> : null;
+}
+
 export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { revision: number; initialOpen: boolean; onOpenPreferences: () => void }) {
   const { t } = useI18n();
   const { data: settings } = useApi<AgentGlobalSettings>("/api/agent-settings", revision);
@@ -39,23 +47,24 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
   const previousFocus = useRef<HTMLElement | null>(null);
   const ready = Boolean(settings && runtimes && providers);
   const configured = Boolean(settings?.thirdParty.apiKeyConfiguredProviders.length);
+  const suggestedMode = codex?.available ? "codex" : "api";
 
   useEffect(() => {
     if (!initialOpen || !ready || configured || readPreference(confirmedKey) === "true" || dismissed) return;
-    setMode(codex?.available ? "codex" : "api");
+    setMode(suggestedMode);
     const timer = window.setTimeout(() => setOpen(true), 600);
     return () => window.clearTimeout(timer);
-  }, [initialOpen, ready, configured, dismissed, codex?.available]);
+  }, [initialOpen, ready, configured, dismissed, suggestedMode]);
 
   useEffect(() => {
     const show = () => {
       if (configured || dismissed || readPreference(confirmedKey) === "true") return;
-      setMode(codex?.available ? "codex" : "api");
+      setMode(suggestedMode);
       setOpen(true);
     };
     window.addEventListener("model-configuration-required", show);
     return () => window.removeEventListener("model-configuration-required", show);
-  }, [configured, dismissed, codex?.available]);
+  }, [configured, dismissed, suggestedMode]);
 
   useEffect(() => {
     if (providers?.length && !providers.some(provider => provider.id === providerId)) setProviderId(providers[0]!.id);
@@ -88,7 +97,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
   useDismissLayer(open, requestClose, { dismissible: !saving, priority: 3, element: dialogRef });
 
   const selectedProvider = providers?.find(provider => provider.id === providerId);
-  const canSave = mode === "codex" ? Boolean(codex?.available) : Boolean(key.trim() && selectedProvider);
+  const canSave = mode === "api" ? Boolean(key.trim() && selectedProvider) : Boolean(codex?.available);
 
   async function confirm() {
     if (!settings || !canSave || saving) return;
@@ -97,7 +106,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
     try {
       const model = selectedProvider?.models[0];
       const payload: UpdateAgentGlobalSettings = {
-        runtimeId: mode === "codex" ? "codex" : "pi",
+        runtimeId: mode === "api" ? "pi" : mode,
         codex: settings.codex,
         thirdParty: mode === "api" && selectedProvider && model ? {
           providerId: selectedProvider.id,
@@ -124,6 +133,7 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
   }
 
   if (!ready || configured || readPreference(confirmedKey) === "true") return null;
+  const switchTo = (next: typeof mode) => { setMode(next); setError(""); };
   return <>
     {dismissed ? <div className="model-onboarding-strip" role="status"><Icon name="info" size={15} />{t("尚未配置 AI 模型，部分功能不可用")}<button type="button" onClick={onOpenPreferences}>{t("去配置")}</button></div> : null}
     {open ? <div className="model-onboarding-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) requestClose(); }}>
@@ -147,20 +157,20 @@ export function ModelOnboarding({ revision, initialOpen, onOpenPreferences }: { 
         <div className="model-onboarding-icon"><Icon name="spark" size={24} /></div>
         <h2 id="model-onboarding-title">{t("让 The Way Here 先认识你的思考方式")}</h2>
         <p id="model-onboarding-description">{t("配置一次即可，之后可随时在「偏好设置 → AI 助手」更换。")}</p>
-        {mode === "codex" ? <>
+        {mode !== "api" ? <>
           <p className="model-onboarding-detection is-found"><Icon name="check" size={16} />{t("检测到本机可用的 Codex")}</p>
           <div className="model-onboarding-choice"><span className="model-onboarding-radio" /><div><strong>{t("使用本机 Codex")} <em>{t("推荐 · 无需 API Key")}</em></strong><p>{t("直接复用本机已登录的 Codex CLI，无需申请或粘贴密钥。")}</p></div></div>
-          <button className="model-onboarding-switch" type="button" onClick={() => { setMode("api"); setError(""); }}>{t("改用第三方模型 API Key →")}</button>
+          <button className="model-onboarding-switch" type="button" onClick={() => switchTo("api")}>{t("改用第三方模型 API Key →")}</button>
         </> : <>
-          <div className="model-onboarding-choice"><span className="model-onboarding-radio" /><div><strong>{t("使用第三方模型 API Key")} <em>{t("推荐")}</em></strong><p>{t("推荐 DeepSeek、智谱 GLM，也支持通义千问、Kimi、OpenAI 等厂商。")}</p><div className="model-onboarding-links">{["deepseek", "zhipu"].map(id => <a key={id} href={providerLinks[id]} target="_blank" rel="noopener noreferrer">{t(id === "deepseek" ? "申请 DeepSeek Key" : "申请智谱 GLM Key")} ↗</a>)}</div></div></div>
+          <div className="model-onboarding-choice"><span className="model-onboarding-radio" /><div><strong>{t("使用第三方模型 API Key")} <em>{t("推荐")}</em></strong><p>{t("推荐 DeepSeek、智谱 GLM，也支持通义千问、Kimi、OpenAI 等厂商。")}</p><div className="model-onboarding-links">{["deepseek", "zhipu"].map(id => <ProviderKeyLink key={id} providerId={id}>{t(id === "deepseek" ? "申请 DeepSeek Key" : "申请智谱 GLM Key")} ↗</ProviderKeyLink>)}</div></div></div>
           <label className="model-onboarding-field">{t("模型厂商")}<select value={selectedProvider?.id || providerId} onChange={event => { setProviderId(event.target.value); setKey(""); }}>{providers?.map(provider => <option key={provider.id} value={provider.id}>{provider.displayName}</option>)}</select></label>
-          {selectedProvider && providerLinks[selectedProvider.id] && !["deepseek", "zhipu"].includes(selectedProvider.id) ? <a className="model-onboarding-provider-link" href={providerLinks[selectedProvider.id]} target="_blank" rel="noopener noreferrer">{t("前往 ${name} 申请 API Key", { name: selectedProvider.displayName })} ↗</a> : null}
+          {selectedProvider && !["deepseek", "zhipu"].includes(selectedProvider.id) ? <ProviderKeyLink className="model-onboarding-provider-link" providerId={selectedProvider.id}>{t("前往 ${name} 申请 API Key", { name: selectedProvider.displayName })} ↗</ProviderKeyLink> : null}
           <label className="model-onboarding-field">{t("粘贴 API Key")}<input type="password" autoComplete="new-password" value={key} onChange={event => setKey(event.target.value)} placeholder={t("粘贴从厂商官网获取的 API Key")} /></label>
           <p className="model-onboarding-hint">{t("密钥保存在本机服务的配置文件中，提交后才会生效。")}</p>
-          {codex?.available ? <button className="model-onboarding-switch" type="button" onClick={() => { setMode("codex"); setError(""); }}>{t("改用本机 Codex →")}</button> : null}
         </>}
+        {mode !== "codex" && codex?.available && <button className="model-onboarding-switch" type="button" onClick={() => switchTo("codex")}>{t("改用本机 Codex →")}</button>}
         {error ? <p className="model-onboarding-error" role="alert">{t(error)}</p> : null}
-        <footer><div><button type="button" disabled={saving} onClick={requestClose}>{t("稍后配置")}</button><button className="model-onboarding-primary" type="button" disabled={!canSave || saving} onClick={() => void confirm()}>{saving ? t("正在保存…") : mode === "codex" ? t("确认使用 Codex") : t("确认并开始使用")}</button></div></footer>
+        <footer><div><button type="button" disabled={saving} onClick={requestClose}>{t("稍后配置")}</button><button className="model-onboarding-primary" type="button" disabled={!canSave || saving} onClick={() => void confirm()}>{saving ? t("正在保存…") : mode === "api" ? t("确认并开始使用") : t("确认使用 Codex")}</button></div></footer>
         </>}
       </section>
     </div> : null}

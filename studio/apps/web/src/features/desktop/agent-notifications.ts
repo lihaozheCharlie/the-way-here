@@ -1,9 +1,12 @@
-import type { WikiRun } from "@the-way-here/shared";
+import type { DreamRun, WikiRun } from "@the-way-here/shared";
 import { currentLocale, translate, translateInterpolated } from "../../shared/i18n";
 
 const tr = (message: string, params?: Record<string, string | number | null | undefined>) => translate(currentLocale(), message, params);
 
 export interface AgentNotification { title: string; body: string; route: string }
+export function dreamNotificationRoute(run: Pick<DreamRun, "id" | "knowledgeBaseId">) {
+  return `/dreams/${encodeURIComponent(run.id)}?knowledgeBaseId=${encodeURIComponent(run.knowledgeBaseId)}`;
+}
 export interface PredictionNotificationEvent {
   knowledgeBaseId: string;
   status: "idle" | "running" | "ready" | "failed";
@@ -33,6 +36,7 @@ function terminal(status: WikiRun["status"]): boolean {
 export class AgentNotificationTracker {
   private readonly runs = new Map<string, WikiRun["status"]>();
   private readonly predictions = new Map<string, PredictionNotificationEvent["status"]>();
+  private readonly dreams = new Map<string, string>();
   private readonly startedAt = Date.now();
   constructor(private readonly notify: (message: AgentNotification) => void) {}
 
@@ -54,6 +58,19 @@ export class AgentNotificationTracker {
 
   reconcileRuns(runs: WikiRun[]): void {
     for (const run of runs) this.observeRun(run);
+  }
+
+  observeDream(run: Pick<DreamRun, "id" | "knowledgeBaseId" | "status" | "finishedAt">): void {
+    if (!run?.id || !run.knowledgeBaseId || !run.finishedAt || Date.parse(run.finishedAt) < this.startedAt) return;
+    if (!["ready", "partial", "insufficient", "failed"].includes(run.status)) return;
+    const key = run.knowledgeBaseId + ":" + run.id;
+    if (this.dreams.get(key) === run.finishedAt) return;
+    this.dreams.set(key, run.finishedAt);
+    this.notify({
+      title: tr(run.status === "failed" ? "梦境未完成" : "梦境已醒来"),
+      body: tr(run.status === "failed" ? "点击查看原因并重试。" : "点击查看结果。"),
+      route: dreamNotificationRoute(run),
+    });
   }
 
   observePrediction(event: PredictionNotificationEvent): void {

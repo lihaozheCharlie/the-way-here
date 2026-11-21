@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { launchInstalledApp } from './installed-app-session.mjs';
+import { verifyDreamNavigation, verifyDreamStageGroups } from './verify-dreams.mjs';
 
 // Pair with verify-web.mjs: exercise the current shared UI over native IPC,
 // without relying on the retired connection-management panel or HTTP transport.
@@ -67,6 +68,8 @@ validation:
     await expect(page.locator('main .loading')).toHaveCount(0);
     await expect(page.locator('.desktop-navigation a.active')).not.toHaveCount(0);
   }
+  await verifyDreamNavigation(page);
+  await verifyDreamStageGroups(page);
   await page.goto(origin + '/sources');
   await expect(page.locator('.source-connections article, .source-connections label, .source-connections-popover')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /断开连接|确认断开|连接原始目录/ })).toHaveCount(0);

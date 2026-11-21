@@ -2,6 +2,7 @@ import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path";
 import YAML from "yaml";
 import { isPathInside } from "../../path-policy.js";
+import { DreamStore } from "../dreams/dream-store.js";
 
 export class KnowledgeBaseRequestError extends Error {
   constructor(readonly statusCode: number, message: string) {
@@ -147,6 +148,9 @@ export async function deletePersonalKnowledgeBase(vaultRoot: string, requestedId
   }
 
   await Promise.all(staged.map((entry) => rm(entry.temporary, { recursive: true, force: true })));
+  // Dream archives live in the state root, outside the vault. The knowledge base
+  // is gone from the config now, so its dream library has no owner left.
+  await new DreamStore(vaultRoot).removeLibrary(id).catch(() => undefined);
   return { id, name: typeof target.name === "string" && target.name.trim() ? target.name : id, fallbackId };
 }
 

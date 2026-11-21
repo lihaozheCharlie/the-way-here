@@ -10,4 +10,5 @@ export const navigation = [
     { to: "/relationships", label: "人与世界", active: ["/relationships"] },
   ] },
   { to: "/predict-self", label: "看见未来", icon: "compass", active: ["/predict-self"], children: [] },
+  { to: "/dreams", label: "梦境", icon: "dream", active: ["/dreams"], children: [] },
 ] as const;

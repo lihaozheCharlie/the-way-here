@@ -102,9 +102,6 @@
 .context-run-answer h1, .context-run-answer h2 { margin: 27px 0 10px; font-size: 18px; line-height: 1.35; }
 .context-run-answer h3 { margin: 22px 0 8px; font-size: 14px; }
 .context-run-answer a { color: var(--accent-primary); text-decoration: underline; }
-.context-run-working { min-height: 230px; display: flex; align-items: center; gap: 17px; margin-top: 17px; padding: 24px; background: var(--paper); border-radius: var(--radius-control); }
-.context-run-working .working-mark { width: 45px; height: 45px; }
-.context-run-working b { font-size: 13px; }
 .context-approval-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 13px; color: var(--watch-ink); background: var(--signal-soft); font-size: 12px; font-weight: 750; }
 .context-change-summary { display: grid; grid-template-columns: auto 1fr; gap: 12px; margin-top: 12px; padding: 12px; color: var(--good); background: var(--good-soft); font-size: 12px; }
 .context-change-summary span { text-align: right; }

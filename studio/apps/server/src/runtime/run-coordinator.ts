@@ -37,8 +37,7 @@ export class RunCoordinator {
     });
   }
 
-  async list(): Promise<WikiRun[]> {
-    const knowledgeBaseId = this.knowledge.index.config.knowledgeBaseId;
+  async list(knowledgeBaseId = this.knowledge.index.config.knowledgeBaseId): Promise<WikiRun[]> {
     return (await this.runs.list()).filter((run) => !run.suggestionForRunId && (!run.knowledgeBaseId || run.knowledgeBaseId === knowledgeBaseId));
   }
 
@@ -334,7 +333,7 @@ export class RunCoordinator {
     }
     if (!internalSuggestion) this.knowledge.events.broadcast("agent", { runId, runtimeId: envelope.ref.runtimeId, event });
     const partial = event.type === "turn.completed" ? this.liveDrafts.get(runId) : undefined;
-    if ((event.type === "assistant.message" && event.final) || event.type === "turn.completed") this.liveDrafts.delete(runId);
+    if (event.type === "assistant.message" || event.type === "turn.completed") this.liveDrafts.delete(runId);
     if (event.type === "approval.requested") {
       const run = await this.runs.addApproval(runId, event.approval);
       if (!internalSuggestion) {
@@ -482,7 +481,7 @@ function executionKey(ref: AgentExecutionRef): string {
 }
 
 function runtimeName(id: AgentRuntimeId): string {
-  return id === "codex" ? "Codex" : "自定义模型 Agent";
+  return id === "pi" ? "自定义模型 Agent" : "Codex";
 }
 
 function eventKind(type: string): string {

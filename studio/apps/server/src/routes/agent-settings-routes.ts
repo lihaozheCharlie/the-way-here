@@ -6,7 +6,7 @@ import { AgentSettingsValidationError } from "../runtime/agent-runtime/agent-set
 
 export function registerAgentSettingsRoutes(app: FastifyInstance, settings: AgentRuntimeSettings, events: StudioEvents): void {
   app.get("/api/distribution", async () => ({ operator: process.env.TWH_OPERATOR || undefined, privacyPolicyUrl: process.env.TWH_PRIVACY_URL || undefined, supportUrl: process.env.TWH_SUPPORT_URL || undefined }));
-  app.get("/api/agent-runtimes", async () => settings.catalog());
+  app.get<{ Querystring: { refresh?: string } }>("/api/agent-runtimes", async request => settings.catalog(request.query.refresh === "1"));
   app.get("/api/agent-models", async () => (await settings.catalog()).flatMap((runtime) => runtime.models));
   app.get("/api/agent-provider-presets", async () => settings.providerPresets());
   app.get("/api/agent-settings", async () => settings.settings());

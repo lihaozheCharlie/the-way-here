@@ -7,11 +7,12 @@ import type {
   AgentProviderProtocol,
   AgentReasoningEffort,
   AgentRuntimeConfig,
+  AgentRuntimeId,
   UpdateAgentGlobalSettings,
 } from "@the-way-here/shared";
 import type { PiProviderConfig } from "./pi/pi-model-catalog.js";
 import { desktopSecretCodec, desktopSharedKeychain, type SharedKeychain, type SecretCodec } from "./desktop-secret-codec.js";
-import { dataConsentVersion } from "./data-consent.js";
+import { dataConsentVersion, recipientFor } from "./data-consent.js";
 import {
   defaultThirdPartySelection,
   findThirdPartySelection,
@@ -26,7 +27,7 @@ const efforts = new Set<AgentReasoningEffort>(["off", "minimal", "low", "medium"
 type StoredAgentSettings = {
   dataConsent?: AgentGlobalSettings["dataConsent"];
   version: 2;
-  runtimeId: "codex" | "pi";
+  runtimeId: AgentRuntimeId;
   codex: {
     model: string;
     effort: AgentReasoningEffort;
@@ -178,7 +179,7 @@ function defaultsFrom(config: AgentRuntimeConfig): StoredAgentSettings {
   const configuredKey = configured?.apiKeyEnv ? process.env[configured.apiKeyEnv] : undefined;
   return {
     version: settingsVersion,
-    runtimeId: config.defaultRuntime === "pi" ? "pi" : "codex",
+    runtimeId: config.defaultRuntime === "auto" ? "codex" : config.defaultRuntime,
     codex: { model: "", effort: "high" },
     thirdParty: {
       ...selection,
@@ -191,7 +192,7 @@ function normalizeStored(value: unknown): StoredAgentSettings {
   if (!isRecord(value)) throw new AgentSettingsValidationError("全局 Agent 设置无效");
   if (value.version === 1) return migrateLegacy(value as LegacyAgentSettings);
   if (value.version !== settingsVersion) throw new AgentSettingsValidationError("全局 Agent 设置版本无效");
-  const runtimeId = runtime(value.runtimeId);
+  const runtimeId = value.runtimeId === "pi" ? "pi" as const : "codex" as const;
   const codex = isRecord(value.codex) ? value.codex : {};
   const thirdParty = isRecord(value.thirdParty) ? value.thirdParty : {};
   const selection = validateSelection(thirdParty.providerId, thirdParty.model, thirdParty.effort);
@@ -240,15 +241,15 @@ function normalizeUpdate(input: UpdateAgentGlobalSettings, current: StoredAgentS
   const selection = validateSelection(thirdParty.providerId, thirdParty.model, thirdParty.effort);
   const nextKeys = { ...current.thirdParty.apiKeys };
   if (thirdParty.clearApiKey) delete nextKeys[selection.providerId];
+  const recipientId = recipientFor(runtimeId, { thirdParty: selection });
   const nextKey = secret(thirdParty.apiKey);
   if (nextKey) nextKeys[selection.providerId] = nextKey;
   return {
     version: settingsVersion,
     runtimeId,
     dataConsent: raw.dataSharingConsent === true
-      ? { version: dataConsentVersion, recipientId: runtimeId === "codex" ? "codex" : `pi:${selection.providerId}`, acceptedAt: new Date().toISOString() }
-      : raw.dataSharingConsent === false || runtimeId !== current.runtimeId || selection.providerId !== current.thirdParty.providerId
-        ? undefined : current.dataConsent,
+      ? { version: dataConsentVersion, recipientId, acceptedAt: new Date().toISOString() }
+      : raw.dataSharingConsent === false || recipientId !== current.dataConsent?.recipientId ? undefined : current.dataConsent,
     codex: {
       model: text(codex.model, "Codex 模型", runtimeId === "codex"),
       effort: effort(codex.effort, "Codex 思考深度"),
@@ -290,7 +291,7 @@ function validateSelection(providerValue: unknown, modelValue: unknown, effortVa
   return { providerId, model: modelId, effort: selectedEffort };
 }
 
-function runtime(value: unknown): "codex" | "pi" {
+function runtime(value: unknown): AgentRuntimeId {
   if (value === "codex" || value === "pi") return value;
   throw new AgentSettingsValidationError("运行方式必须是 Codex 或第三方模型");
 }

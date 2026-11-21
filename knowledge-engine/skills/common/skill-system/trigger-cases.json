@@ -124,5 +124,11 @@
     "expected": ["build-life-review", "common-retrieval"],
     "must_not": ["consume-predict-self"],
     "mode": "write"
+  },
+  {
+    "prompt": "确认入梦点，生成梦境，看看当时换个选择会怎样",
+    "expected": ["consume-dreaming"],
+    "must_not": ["consume-predict-self", "build-wiki"],
+    "mode": "read-only"
   }
 ]

@@ -1,11 +1,29 @@
 import { describe, expect, test } from "vitest";
-import { buildFocusWorkspace, buildGraph, buildLetters, buildLifeMap, buildRelationships, buildToday, parseConversationPrompts, parseQuoteGroups, parseStateSignals, semanticDate, splitMarkdownTableRow } from "./index";
+import { buildFocusWorkspace, buildGraph, buildLetters, buildLifeMap, buildRelationships, buildToday, discoverDreamPoints, getDreamSuggestions, listDreamPoints, parseConversationPrompts, parseQuoteGroups, parseStateSignals, semanticDate, splitMarkdownTableRow } from "./index";
 
 const summary = (id: string, title: string, category: string, relativePath = `${id}.md`) => ({
   id, title, category, relativePath, aliases: [], tags: [], locations: [], sources: [], excerpt: `${title}摘要`, modifiedAt: "2026-01-01", isSource: false,
 });
 
 describe("personal growth views", () => {
+  test("uses the recorded decision in dream preparation instead of the template question", () => {
+    const page = {
+      excerpt: "我最终选择了什么？",
+      sections: [{
+        heading: "最终决策",
+        body: "我最终选择了什么？\n\n- **最终选择：**继续参加原定评审。",
+      }],
+    };
+    const index = { get: () => page } as unknown as Parameters<typeof getDreamSuggestions>[0];
+    expect(getDreamSuggestions(index, "decision").actualChoice).toBe("继续参加原定评审。");
+    page.sections[0]!.body = "我最终选择了什么？\n最后我决定先把原项目做完。";
+    expect(getDreamSuggestions(index, "decision").actualChoice).toBe("先把原项目做完");
+    page.sections = [];
+    expect(getDreamSuggestions(index, "decision").actualChoice).toBeUndefined();
+    page.excerpt += "\n最后我决定留在原组。";
+    expect(getDreamSuggestions(index, "decision").actualChoice).toBe("留在原组");
+  });
+
   test("reads the current state table", () => {
     const signals = parseStateSignals({
       sections: [{
@@ -96,6 +114,33 @@ describe("personal growth views", () => {
     expect(new Set(assigned).size).toBe(view.events.length);
     expect(view.stages.find((stage) => stage.page.id === family.id)?.relatedEvents.map((event) => event.id)).toEqual([familyEvent.id]);
     expect(view.stages.find((stage) => stage.page.id === work.id)?.relatedEvents.map((event) => event.id)).toEqual([workEvent.id, recentEvent.id]);
+  });
+
+  test("dream points follow life map order and event ownership when early stages have later recap dates", () => {
+    const overview = summary("wiki/stages/总览", "人生阶段总览", "life-stages");
+    const early = { ...summary("wiki/stages/初中", "初中阶段", "life-stages"), start: "2026-05-12", end: "2026-05-12" };
+    const later = { ...summary("wiki/stages/高中", "高中阶段", "life-stages"), start: "2026-05-12", end: "2026-05-29" };
+    const work = { ...summary("wiki/stages/工作", "工作阶段", "life-stages"), start: "2017-07-01" };
+    const boarding = { ...summary("wiki/events/00", "00 开始住校", "events"), start: "2026-05-12" };
+    const exam = { ...summary("wiki/events/01", "01 参加考试", "events"), start: "2014-06-01" };
+    const markdown = [
+      "## 阶段地图", "", "| 阶段 | 时间 | 核心问题 | 入口 |", "|---|---|---|---|",
+      `| [[${early.id}]] | 初中时期 | 适应住校 | [[${boarding.id}]] |`,
+      `| [[${later.id}]] | 高中时期 | 准备考试 | [[${exam.id}]] |`,
+      `| [[${work.id}]] | 2017 至今 | 职业 | |`,
+    ].join("\n");
+    const pages = [{ ...overview, markdown }, work, later, early, exam, boarding]
+      .map(page => ({ ...page, properties: {}, outgoingLinks: [] }));
+    const index = {
+      list: ({ category }: { category?: string } = {}) => pages.filter(page => !category || page.category === category),
+      getSummary: (id: string) => pages.find(page => page.id === id),
+      get: (id: string) => pages.find(page => page.id === id),
+    } as Parameters<typeof buildLifeMap>[0];
+
+    expect(listDreamPoints(index).map(point => point.title)).toEqual(["初中阶段", "高中阶段", "工作阶段"]);
+    expect(discoverDreamPoints(index).map(point => [point.title, point.stageId])).toEqual([
+      [boarding.title, early.id], [exam.title, later.id],
+    ]);
   });
 
   test("groups every person by its closest directory", () => {

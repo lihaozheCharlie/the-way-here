@@ -11,8 +11,9 @@ import { Icon, Loading } from "../../shared/ui";
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { useRememberedWindow } from "../../shared/use-remembered-preview";
 import { AgentComposerSettings, reasoningLabel, useAgentSelection, type AgentSettingsController } from "./AgentSettings";
-import { AgentAnswer } from "./AgentAnswer";
-import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
+import { AgentAnswer, AgentMarkdown } from "./AgentAnswer";
+import { JOURNEY_WRAP_UP_DISPLAY_PROMPT, JOURNEY_WRAP_UP_PROMPT, agentContextIdentity, attachedContextPrompt, boundAgentThreadForPage, boundAgentThreadForTopic, collaborationModes, contextPrompt, groupAgentThreads, isJourneyWrapUpRun, plainPreview, resolveAgentAutoSubmission, resolveComposerMode, resolveRunContext, continuationModelSelection, runCommentary, runDisplayPrompt, runFinalAnswer, shouldSubmitAgentInput, visibleAgentAnswer, type AgentAttachedContext, type AgentAutoSubmission, type AgentContext, type AgentThread, type OpenContextAgentRequest } from "./model";
+import { runActivity } from "./run-activity";
 import { useAgentStream } from "./use-agent-stream";
 import { useI18n, currentLocale, demoLibraryLabel, translate, uiDateLocale } from "../../shared/i18n";
 
@@ -404,7 +405,6 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
   const journeyWrappedUp = isJourneyWrapUpRun(activeRun);
   const draft = stream.draft;
   const visibleDraft = draft ? visibleAgentAnswer(draft.text, activeRun.outputTarget) : "";
-  const phase = activeRun.status === "waiting-approval" ? tr("需要你确认后继续") : activeRun.status === "validating" ? tr("正在检查更新") : tr(stream.phase);
   const storedThreadRuns = activeRun.runtimeSessionId ? runList.filter((candidate) => candidate.runtimeSessionId === activeRun.runtimeSessionId && candidate.runtimeId === activeRun.runtimeId) : [];
   const threadRuns = [...storedThreadRuns.filter((candidate) => candidate.id !== activeRun.id), activeRun]
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -512,11 +512,6 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
     }
   }
 
-  const workingMessage = <section className="context-run-working" role="status" aria-live="polite">
-    <span className="working-mark" aria-hidden="true"><i /></span><b>{phase}</b>
-    {!!stream.records?.length && <div className="agent-reading-records">{stream.records.map(record => <span key={record}>{record}</span>)}</div>}
-  </section>;
-
   return <div className="context-run" data-active={active}>
     {activeRun.mode !== "validate" && !isJourneyConversation && <div className="agent-topic-strip"><span title={topicTitle || activeRun.title}>{topicTitle || tr("自由聊聊")}</span>{!isJourneyConversation && <button type="button" className={`agent-wiki-build-button${buildInProgress ? " is-building" : showBuildDone ? " is-done" : " is-ready"}`} aria-disabled={buildInProgress || (active && !showBuildDone)} aria-label={tr("整理成日记并构建 Wiki")} onClick={() => { if (showBuildDone) { const completed = builds.find(item => item.status === "completed"); if (completed) onRunId(completed.id); } else if (!buildInProgress && !active) buildWindow.show(); }}><svg className="agent-wiki-build-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg><span className="agent-build-label">{buildInProgress ? tr("构建中…") : showBuildDone ? tr("已整理") : tr("构建 Wiki")}</span><span className="agent-wiki-build-spinner" aria-hidden="true" /><Icon name="check" size={16} /><span className={`agent-wiki-build-dot${threadRuns.length === 3 && !active ? " is-highlighted" : ""}`} aria-hidden="true" /><span className="agent-wiki-build-tooltip" role="tooltip">{buildTooltip}</span></button>}</div>}
     <div ref={statusRef} tabIndex={-1} className="context-run-body" onScroll={(event) => { const body = event.currentTarget; followStreamRef.current = body.scrollHeight - body.scrollTop - body.clientHeight < 80; setShowLatest(!followStreamRef.current); }}>
@@ -524,19 +519,33 @@ export function ContextualRunPanel({ agent, runId, revision, runList, onRunId, o
       {isPhotoConversation && <div className="context-run-artifact pending"><Icon name="image" size={15} /><div><b>{tr("讲述只保存为照片记忆草稿")}</b><span>{tr("关闭抽屉回到“讲故事”，核对后点击“收进理解”。")}</span></div></div>}
       {legacyJourneyConversation && <div className="context-run-artifact journey pending"><Icon name="receipt" size={15} /><div><b>{tr("继续聊聊会先丰富消费旅程报告")}</b><span>{tr("这是一段旧对话。下一段讲述开始只查阅 Wiki、更新报告；需要构建时再由你明确选择。")}</span></div></div>}
       <div className="context-thread" aria-label={tr("对话内容")}>{threadRuns.map((threadRun) => {
-      const answer = runFinalAnswer(threadRun) || (threadRun.status === "interrupted" ? visibleAgentAnswer(threadRun.liveDraft?.text || (threadRun.id === activeRun.id ? draft?.text : "") || "", threadRun.outputTarget) : undefined);
+      const finalAnswer = runFinalAnswer(threadRun);
+      const answer = finalAnswer || (threadRun.status === "interrupted" ? visibleAgentAnswer(threadRun.liveDraft?.text || (threadRun.id === activeRun.id ? draft?.text : "") || "", threadRun.outputTarget) : undefined);
       const isCurrent = threadRun.id === activeRun.id;
+      const inProgress = isCurrent && active;
+      const commentary = runCommentary(threadRun, finalAnswer);
+      const progress = inProgress ? runActivity(threadRun, { replying: !!visibleDraft, final: !!answer || stream.final, stopping }) : undefined;
+      const notes = commentary.length > 0 && <div className="context-run-commentary">{commentary.map(({ id, text }) => <div key={id}><AgentMarkdown text={text} /></div>)}</div>;
       return <section className="context-thread-turn" key={threadRun.id}>
         <div className={`context-user-message${threadRun.status === "failed" ? " is-failed" : ""}`}><p>{runDisplayPrompt(threadRun)}</p></div>
 
-        {answer ? <><AgentAnswer answer={answer} run={threadRun} revision={revision} inlineEvidence actions={<>
+        {notes && (inProgress ? notes : <details className="context-run-process">
+          <summary><Icon name="down" size={14} />{tr("运行过程")}</summary>
+          {notes}
+        </details>)}
+        {answer ? <AgentAnswer answer={answer} run={threadRun} revision={revision} inlineEvidence actions={<>
           <button type="button" onClick={() => { void navigator.clipboard.writeText(answer).catch(() => setActionError(tr("无法复制回答"))); }}>{tr("复制")}</button>
           {isCurrent && !active && !isJourneyConversation && <button type="button" disabled={sending} onClick={() => void sendFollowUp(threadRun.prompt, runDisplayPrompt(threadRun), false)}>{tr("重新生成")}</button>}
           <time>{new Date(threadRun.createdAt).toLocaleString(uiDateLocale(), { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
-        </>} />{isCurrent && active && workingMessage}</> : isCurrent && active ? <>
-          {visibleDraft && <AgentAnswer answer={visibleDraft} run={threadRun} revision={revision} inlineEvidence streaming />}
-          {!visibleDraft && workingMessage}
-        </> : threadRun.status === "interrupted" ? null : <div className="context-run-missing"><b>{threadRun.error ? tr("这次没有顺利完成") : tr("这轮没有留下可读回答")}</b><p>{threadRun.error ? tr(threadRun.error) : tr("可以在下方继续聊，或者把范围说得更具体一些。")}</p></div>}
+        </>} /> : inProgress ? visibleDraft && <AgentAnswer answer={visibleDraft} run={threadRun} revision={revision} inlineEvidence streaming />
+          : threadRun.status === "interrupted" ? null : <div className="context-run-missing"><b>{threadRun.error ? tr("这次没有顺利完成") : tr("这轮没有留下可读回答")}</b><p>{threadRun.error ? tr(threadRun.error) : tr("可以在下方继续聊，或者把范围说得更具体一些。")}</p></div>}
+        {progress && <>
+          <div className="context-run-progress" role="status">
+            <span className={threadRun.status === "waiting-approval" ? "" : "context-run-progress-icon"}><Icon name={progress.icon} size={16} /></span>
+            <span>{tr(progress.label)}</span>
+          </div>
+          {!!progress.records?.length && <div className="agent-reading-records">{progress.records.map(record => <span key={record}>{record}</span>)}</div>}
+        </>}
         {isCurrent && hasFailed && !isJourneyConversation && <div className="agent-turn-recovery">
           {activeRun.status === "interrupted" && <span>{tr("已停止")}</span>}
           <button type="button" disabled={sending} onClick={() => void (activeRun.status === "interrupted"

@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 // Backport CPython's Mac/Resources/app-store-compliance.patch to our pinned
 // 3.12 distribution. Remove unused protocol support, never obfuscate it.
 // https://github.com/python/cpython/blob/v3.13.0/Mac/Resources/app-store-compliance.patch
-export async function applyPythonAppStoreCompliance(pythonRoot) {
+export async function applyPythonAppStoreCompliance(pythonRoot, { run = spawnSync } = {}) {
   const urllib = path.join(pythonRoot, 'lib/python3.12/urllib');
   const file = path.join(urllib, 'parse.py');
   const source = await readFile(file, 'utf8');
@@ -37,7 +37,7 @@ export async function applyPythonAppStoreCompliance(pythonRoot) {
   // uv relocates this dylib's ID to its build-machine installation. Keep the
   // shipped identity portable; dependent libraries continue using @rpath.
   if (process.platform === 'darwin') {
-    const result=spawnSync('/usr/bin/install_name_tool',['-id','@rpath/libpython3.12.dylib',path.join(pythonRoot,'lib/libpython3.12.dylib')],{encoding:'utf8'});
+    const result=run('/usr/bin/install_name_tool',['-id','@rpath/libpython3.12.dylib',path.join(pythonRoot,'lib/libpython3.12.dylib')],{encoding:'utf8'});
     if (result.status !== 0) throw new Error(`Could not normalize bundled Python identity: ${result.stderr}`);
   }
 }

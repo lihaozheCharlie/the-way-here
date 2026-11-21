@@ -10,6 +10,48 @@ def retrieve(data, action, page_id=None, terms=(), start=1, limit=20, offset=0):
     search = data.get('lifeSearch') or {}
     profiles = {p['pageId']: p for p in (data.get('retrieval') or search).get('profiles', [])}
     catalogue = {p['pageId']: p for p in data.get('catalogue', [])}
+
+    def record_date(profile):
+        time = profile.get('time') or {}
+        return time.get('recordedDate') or (time.get('filenameDates') or [None])[0] or time.get('coverageEnd')
+
+    def matching_lines(page, wanted):
+        return [{'line': n, 'text': line[:400], 'truncated': len(line) > 400}
+                for n, line in enumerate(page['markdown'].splitlines(), 1)
+                if any(t.lower() in line.lower() for t in wanted)]
+
+    if action == 'chronology':
+        records = []
+        for p in profiles.values():
+            date = record_date(p)
+            if not date:
+                continue
+            entry = {'pageId': p['pageId'], 'title': p.get('title', p['pageId']), 'role': p.get('role'),
+                     'isSource': p.get('isSource', False), 'date': date}
+            if terms:
+                hits = matching_lines(pages[p['pageId']], terms)
+                if not hits:
+                    continue
+                entry['matches'] = hits[:3]
+                entry['matchedLines'] = len(hits)
+            records.append(entry)
+        records.sort(key=lambda r: (r['date'], r['pageId']))
+        return {'total': len(records), 'records': records[offset:offset + limit]}
+
+    if action == 'person':
+        if not terms:
+            raise ValueError('person requires --terms')
+        wanted = {t.lower() for t in terms}
+        mentions = []
+        for pid, page in pages.items():
+            profile = profiles.get(pid, {})
+            names = [profile.get('title', pid)] + list(profile.get('aliases', []))
+            alias_hit = [a for a in names if a and a.lower() in wanted]
+            for hit in matching_lines(page, terms):
+                mentions.append({'pageId': pid, 'date': record_date(profile), **hit, 'ownPage': bool(alias_hit)})
+        mentions.sort(key=lambda m: (m['date'] or '9999-12-31', m['pageId'], m['line']))
+        return {'total': len(mentions), 'mentions': mentions[offset:offset + limit]}
+
     def brief(pid):
         p = profiles.get(pid, catalogue.get(pid, {'pageId': pid}))
         result = {k: p[k] for k in ('pageId', 'title', 'role') if k in p}
@@ -65,7 +107,7 @@ def main():
     parser.add_argument('--file', required=True)
     parser.add_argument('--knowledge-base', required=True)
     parser.add_argument('--hash', required=True)
-    parser.add_argument('--action', choices=['overview', 'search', 'read', 'neighbors'], required=True)
+    parser.add_argument('--action', choices=['overview', 'search', 'read', 'neighbors', 'chronology', 'person'], required=True)
     parser.add_argument('--page')
     parser.add_argument('--terms', nargs='+', default=[])
     parser.add_argument('--start', type=int, default=1)

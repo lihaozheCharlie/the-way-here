@@ -260,14 +260,19 @@ export function visibleAgentAnswer(answer: string, target?: AgentOutputTarget): 
   return visible.trim();
 }
 
-export function runConversation(run: WikiRun) {
-  return run.events.filter((event) => {
+export function runCommentary(run: WikiRun, finalAnswer?: string): { id: string; text: string }[] {
+  const notes = run.events.flatMap((event) => {
     const runtimeEvent = event.payload as AgentRuntimeEvent | undefined;
     const item = eventItem(event);
-    return event.kind === "user"
-      || (runtimeEvent?.type === "assistant.message" && !runtimeEvent.final)
-      || (item?.type === "agentMessage" && item.phase !== "final_answer");
+    const text = runtimeEvent?.type === "assistant.message" && !runtimeEvent.final
+      ? runtimeEvent.text
+      : item?.type === "agentMessage" && item.phase !== "final_answer" ? item.text : undefined;
+    const visible = text && visibleAgentAnswer(text, run.outputTarget);
+    return visible ? [{ id: event.id, text: visible }] : [];
   });
+  // Pi confirms the last message as final after first emitting it as commentary.
+  if (run.runtimeId === "pi" && finalAnswer && notes.at(-1)?.text === finalAnswer) notes.pop();
+  return notes;
 }
 
 export function runTechnicalEvents(run: WikiRun) {

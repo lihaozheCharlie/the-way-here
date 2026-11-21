@@ -12,6 +12,7 @@
 # Package dependencies and caches
 .pnpm-store/
 **/.pnpm-store/
+node_modules/
 studio/node_modules/
 studio/**/node_modules/
 

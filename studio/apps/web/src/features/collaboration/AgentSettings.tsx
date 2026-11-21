@@ -291,6 +291,11 @@ export function AiConfiguration({ id, agent, runtimeId, heading }: { id: string;
   useI18n();
   const { draft } = agent;
   const codexSelected = draft.runtimeId === "codex";
+  const recipientId = draft.runtimeId === "pi" ? `pi:${agent.selectedProvider.id}` : "codex";
+  const isStore = typeof window !== "undefined" && window.desktop?.isMacAppStore;
+  const recipient = codexSelected ? isStore ? tr("OpenAI（内置 Codex，使用你导入的 ChatGPT 登录）")
+    : tr("你选择的 Codex CLI 及其配置的模型服务（默认 OpenAI）")
+    : agent.selectedProvider.displayName;
   const [editingKey, setEditingKey] = useState(false);
   useEffect(() => { setEditingKey(false); }, [draft.thirdParty.providerId]);
 
@@ -298,13 +303,13 @@ export function AiConfiguration({ id, agent, runtimeId, heading }: { id: string;
     <legend className="sr-only">{tr("全局 AI 设置")}</legend>
     <div className="agent-settings-body">
     {heading}
-    {runtimeId && <p className="agent-settings-notice"><Icon name="info" size={14} /><span>{tr(runtimeId === "codex" ? "模型和思考深度调整从下一轮生效，当前回复不受影响。继续本对话需使用 Codex；切换运行方式请开始新对话。" : "模型和思考深度调整从下一轮生效，当前回复不受影响。继续本对话需使用第三方模型；切换运行方式请开始新对话。")}</span></p>}
+    {runtimeId && <p className="agent-settings-notice"><Icon name="info" size={14} /><span>{tr("模型和思考深度调整从下一轮生效，当前回复不受影响。继续本对话需使用 ${runtime}；切换运行方式请开始新对话。", { runtime: runtimeId === "pi" ? tr("第三方模型") : "Codex" })}</span></p>}
     <h3 className="agent-config-section-title">{tr("运行方式")}</h3>
     <div className="ai-runtime-choices" role="radiogroup" aria-label={tr("选择 Agent 运行方式")}>
-      <button type="button" role="radio" disabled={runtimeId === "pi"} aria-checked={codexSelected} className={codexSelected ? "active" : ""} onClick={() => agent.selectRuntime("codex")}>
+      <button type="button" role="radio" disabled={Boolean(runtimeId && runtimeId !== "codex")} aria-checked={codexSelected} className={codexSelected ? "active" : ""} onClick={() => agent.selectRuntime("codex")}>
         <span className="ai-runtime-mark"><Icon name="spark" size={16} /></span><span><b>Codex</b><small>{tr("使用本机 Codex 登录与模型能力")}</small></span><i data-state={agent.codexRuntime.available ? "good" : "watch"}>{agent.loading ? tr("读取中") : agent.codexRuntime.available ? tr("已就绪") : tr("不可用")}</i>
       </button>
-      <button type="button" role="radio" disabled={runtimeId === "codex"} aria-checked={!codexSelected} className={!codexSelected ? "active" : ""} onClick={() => agent.selectRuntime("pi")}>
+      <button type="button" role="radio" disabled={Boolean(runtimeId && runtimeId !== "pi")} aria-checked={draft.runtimeId === "pi"} className={draft.runtimeId === "pi" ? "active" : ""} onClick={() => agent.selectRuntime("pi")}>
         <span className="ai-runtime-mark"><Icon name="controls" size={16} /></span><span><b>{tr("第三方模型")}</b><small>{tr("使用你选择的模型服务和密钥")}</small></span><i data-state={agent.configuredApiKey ? "good" : "watch"}>{agent.loading ? tr("读取中") : agent.apiKey ? tr("待应用") : agent.configuredApiKey ? tr("已配置") : tr("待配置")}</i>
       </button>
     </div>
@@ -332,9 +337,9 @@ export function AiConfiguration({ id, agent, runtimeId, heading }: { id: string;
     <p className="ai-config-save-state" role="status">{agent.loading ? tr("正在读取设置…") : agent.saving ? tr("正在保存…") : agent.error ? <><span>{tr("保存失败")}</span><button type="button" onClick={() => void agent.save().catch(() => undefined)}>{tr("重试")}</button></> : agent.apiKey ? tr("密钥输入完成后点击保存密钥") : agent.dirty ? tr("更改将自动保存") : agent.saved ? tr("已保存，所有对话生效") : ""}</p>
     <section className="ai-data-sharing" aria-labelledby={`${id}-data-heading`}>
       <h3 id={`${id}-data-heading`}>{tr("允许 AI 使用哪些资料")}</h3>
-      <p>{tr("接收方：${recipient}。对话、整理和自动更新可能发送输入、相关日记、知识页面、照片预览、账单内容及历史对话；AI 可继续读取当前知识库及你授权目录中的任务相关资料。用途是回答、整理和更新知识。", { recipient: codexSelected ? (typeof window !== "undefined" && window.desktop?.isMacAppStore ? tr("OpenAI（内置 Codex，使用你导入的 ChatGPT 登录）") : tr("你选择的 Codex CLI 及其配置的模型服务（默认 OpenAI）")) : agent.selectedProvider.displayName })}</p>
-      <p>{tr("资料会离开设备。服务商的保留、训练使用及处理地区以其政策和账户设置为准。撤回许可会阻止新请求并停止活动任务，已发送的资料需向服务商申请删除。更换服务后需重新同意。")}{!(typeof window !== "undefined" && window.desktop?.isMacAppStore) && tr("修改 Codex 内部服务配置前请先撤回许可。")}</p>
-      <label><input type="checkbox" disabled={agent.loading || agent.saving} checked={agent.draft.dataConsent?.version === 1 && agent.draft.dataConsent.recipientId === (codexSelected ? "codex" : `pi:${agent.selectedProvider.id}`)} onChange={event => void agent.changeDataConsent(event.target.checked).catch(() => undefined)} /><span>{tr("我已了解并允许向上述服务发送任务所需资料，包括我启用的自动更新")}</span></label>
+      <p>{tr("接收方：${recipient}。对话、整理和自动更新可能发送输入、相关日记、知识页面、照片预览、账单内容及历史对话；AI 可继续读取当前知识库及你授权目录中的任务相关资料。用途是回答、整理和更新知识。", { recipient })}</p>
+      <p>{tr("资料会离开设备。服务商的保留、训练使用及处理地区以其政策和账户设置为准。撤回许可会阻止新请求并停止活动任务，已发送的资料需向服务商申请删除。更换服务后需重新同意。")}{!isStore && draft.runtimeId !== "pi" && tr("修改本机 CLI 的模型服务配置前请先撤回许可。")}</p>
+      <label><input type="checkbox" disabled={agent.loading || agent.saving} checked={agent.draft.dataConsent?.version === 1 && agent.draft.dataConsent.recipientId === recipientId} onChange={event => void agent.changeDataConsent(event.target.checked).catch(() => undefined)} /><span>{tr("我已了解并允许向上述服务发送任务所需资料，包括我启用的自动更新")}</span></label>
       <a href="/privacy" target="_blank" rel="noreferrer">{tr("隐私与数据使用说明")}</a>
       {typeof window !== "undefined" && window.desktop?.isMacAppStore && codexSelected && <button type="button" disabled={agent.saving} onClick={() => void window.desktop?.connectCodexCLI?.().then(connected => { if (connected) window.location.reload(); }).catch(reason => window.alert(reason instanceof Error ? tr(reason.message) : tr("未能连接 Codex，请重试。")))}>{tr("连接已登录的 Codex…")}</button>}
     </section>

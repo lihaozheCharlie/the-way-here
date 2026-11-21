@@ -2,7 +2,7 @@ import { tr } from "./i18n";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
-export type IconName = "folder" | "pin" | "heart" | "link" | "info" | "image" | "now" | "compass" | "route" | "people" | "library" | "source" | "controls" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "cloud-download" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
+export type IconName = "folder" | "pin" | "heart" | "link" | "info" | "image" | "now" | "compass" | "dream" | "route" | "people" | "library" | "source" | "controls" | "terminal" | "search" | "menu" | "more" | "edit" | "build" | "spark" | "arrow" | "up" | "stop" | "refresh" | "cloud-download" | "journal" | "message" | "receipt" | "history" | "plus" | "back" | "close" | "down" | "check" | "trash";
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, ReactNode> = {
@@ -14,11 +14,16 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     image: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 5-5 4 4 4-6 5 7" /></>,
     now: <><circle cx="12" cy="12" r="7" /><path d="M12 7v5l3 2" /></>,
     compass: <><circle cx="12" cy="12" r="8" /><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z" /></>,
+    dream: <>
+      <path d="M11.5 4a8 8 0 1 0 8.5 10 7 7 0 0 1-8.5-10Z" />
+      <path d="M18 3.5A3.5 3.5 0 0 0 21.5 7 3.5 3.5 0 0 0 18 10.5 3.5 3.5 0 0 0 14.5 7 3.5 3.5 0 0 0 18 3.5Z" fill="currentColor" stroke="none" />
+    </>,
     route: <><path d="M5 19V8a3 3 0 0 1 3-3h8" /><path d="m13 2 3 3-3 3" /><circle cx="5" cy="19" r="2" /></>,
     people: <><circle cx="9" cy="8" r="3" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M15 6.5a3 3 0 0 1 0 5.8M16.5 14.5A5 5 0 0 1 20 19" /></>,
     library: <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5Z" /><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5Z" /></>,
     source: <><path d="M5 4h14v5H5zM5 15h14v5H5z" /><path d="M8 9v6M16 9v6" /><circle cx="8" cy="6.5" r=".8" fill="currentColor" stroke="none" /><circle cx="8" cy="17.5" r=".8" fill="currentColor" stroke="none" /></>,
     controls: <><path d="M4 7h8M18 7h2M4 17h2M12 17h8M14 4v6M8 14v6" /><circle cx="14" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></>,
+    terminal: <><rect x="3.5" y="3.5" width="17" height="17" rx="3" /><path d="m7.5 9 3 3-3 3m6 0h3" /></>,
     search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
     menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
     more: <><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" /></>,

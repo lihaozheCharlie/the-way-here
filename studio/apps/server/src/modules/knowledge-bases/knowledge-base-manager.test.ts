@@ -4,6 +4,7 @@ import path from "node:path";
 import YAML from "yaml";
 import { afterEach, describe, expect, it } from "vitest";
 import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase, renamePersonalKnowledgeBase } from "./knowledge-base-manager.js";
+import { DreamStore } from "../dreams/dream-store.js";
 
 const temporaryRoots: string[] = [];
 
@@ -87,6 +88,10 @@ knowledgeBases:
       mkdir(path.join(root, "vault/personal/sources"), { recursive: true }),
     ]);
     await writeFile(path.join(root, "vault/personal/sources/日记.md"), "# 日记\n", "utf8");
+    const dreams = new DreamStore(root);
+    const runId = "0f0e0d0c-0b0a-0908-0706-050403020100";
+    await dreams.writeJson("personal", runId, "state.json", { version: 1 });
+    await dreams.writeJson("demo", runId, "state.json", { version: 1, config: { knowledgeBaseId: "demo" }, run: { id: runId, knowledgeBaseId: "demo" } });
 
     await expect(deletePersonalKnowledgeBase(root, "personal")).resolves.toEqual({ id: "personal", name: "我的生活", fallbackId: "demo" });
     const config = YAML.parse(await readFile(path.join(root, "the-way-here.config.yaml"), "utf8"));
@@ -94,6 +99,8 @@ knowledgeBases:
     expect(config.knowledgeBases.personal).toBeUndefined();
     await expect(access(path.join(root, "vault/personal/wiki"))).rejects.toMatchObject({ code: "ENOENT" });
     await expect(access(path.join(root, "vault/personal/sources"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(dreams.load("personal", "0f0e0d0c-0b0a-0908-0706-050403020100")).resolves.toBeUndefined();
+    await expect(dreams.load("demo", "0f0e0d0c-0b0a-0908-0706-050403020100")).resolves.toBeDefined();
   });
 
   it("protects the anonymous demo knowledge base", async () => {

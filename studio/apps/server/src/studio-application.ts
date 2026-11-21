@@ -3,6 +3,8 @@ import { MobileFiles } from "./modules/mobile-sync/files.js";
 import { MobileSpaceLifecycle } from "./modules/mobile-sync/space-lifecycle.js";
 import { SourceConnections } from "./runtime/source-connections.js";
 import { registerSourceConnectionRoutes } from "./routes/source-connection-routes.js";
+import { DreamService } from "./runtime/dreams/dream-service.js";
+import { registerDreamRoutes } from "./routes/dream-routes.js";
 import { PredictionService } from "./runtime/prediction-service.js";
 import { registerPredictionRoutes } from "./routes/prediction-routes.js";
 import { registerAgentSettingsRoutes } from "./routes/agent-settings-routes.js";
@@ -30,6 +32,7 @@ export class StudioApplication {
     private readonly runs: RunCoordinator,
     private readonly sourceConnections: SourceConnections,
     private readonly predictions: PredictionService,
+    private readonly dreams: DreamService,
     private readonly mobile: MobileSyncWorker,
   ) {}
 
@@ -52,10 +55,12 @@ export class StudioApplication {
     const runs = new RunCoordinator(knowledge, runtimes, app.log);
     const predictions = new PredictionService(knowledge, runtimes, app.log);
     registerPredictionRoutes(app, knowledge, predictions);
+    const dreams = new DreamService(knowledge, runtimes, app.log, undefined, id => runs.list(id));
+    registerDreamRoutes(app, knowledge, dreams);
     const imports = new ImportStore(knowledge);
     registerContentRoutes(app, knowledge, {
       runtimeCatalog: () => runtimes.catalog(),
-      hasActiveKnowledgeBaseRun: async (id) => await runs.hasActiveKnowledgeBaseRun(id) || await predictions.hasActive(id),
+      hasActiveKnowledgeBaseRun: async (id) => await runs.hasActiveKnowledgeBaseRun(id) || await predictions.hasActive(id) || await dreams.hasActive(id),
     });
     registerImportRoutes(app, imports, runs);
     registerRunRoutes(app, runs);
@@ -66,12 +71,13 @@ export class StudioApplication {
     registerPhotoMemoryRoutes(app, knowledge, runs);
 
     await predictions.reconcile();
+    await dreams.reconcile();
     await runs.reconcile();
     await sourceConnections.start();
     const mobile = new MobileSyncWorker(knowledge, runs, predictions, app.log);
     registerMobileSyncRoutes(app, knowledge, runs, mobile, predictions);
     await mobile.start().catch(error => app.log.error(error, "Mobile sync disabled; desktop remains available"));
-    return new StudioApplication(app, knowledge, runs, sourceConnections, predictions, mobile);
+    return new StudioApplication(app, knowledge, runs, sourceConnections, predictions, dreams, mobile);
   }
 
   connectEvents(request: import("fastify").FastifyRequest, reply: import("fastify").FastifyReply): void {
@@ -85,6 +91,7 @@ export class StudioApplication {
   async close(): Promise<void> {
     await this.mobile.close();
     await this.sourceConnections.close();
+    await this.dreams.close();
     this.predictions.close();
     this.runs.close();
     await this.knowledge.close();

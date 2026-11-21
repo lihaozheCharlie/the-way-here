@@ -1,3 +1,4 @@
+import type { DreamCollection } from "@the-way-here/shared";
 import { UnderstandingDigest } from "../knowledge/UnderstandingDigest";
 import { NavLink } from "react-router-dom";
 import type { VaultInfo, WikiPageSummary } from "@the-way-here/shared";
@@ -13,6 +14,7 @@ export function KnowledgeHome({ revision }: { revision: number }) {
   const demo = useDemoLabels();
   const { data: vault, loading, error } = useApi<VaultInfo>("/api/vault", revision);
   const { data: pages, loading: pagesLoading, error: pagesError } = useApi<WikiPageSummary[]>("/api/pages?sources=false", revision);
+  const { data: dreams } = useApi<{ knowledgeBaseId: string; collection: DreamCollection }>(vault ? "/api/dreams/workspace?knowledgeBaseId=" + encodeURIComponent(vault.knowledgeBaseId) : "", revision);
   if (loading) return <Loading label={t("正在整理已有理解")} />;
   if (error || !vault) return <Empty>{error ? t(error) : t("暂时无法读取知识库，请刷新重试。")}</Empty>;
   const selfCount = (vault.categories["personal-lines"] || 0) + (vault.categories.cycles || 0) + (vault.categories.systems || 0) + (vault.categories["mental-models"] || 0);
@@ -43,6 +45,10 @@ export function KnowledgeHome({ revision }: { revision: number }) {
         </NavLink>;
       })}
     </section>
+    {dreams && dreams.knowledgeBaseId === vault.knowledgeBaseId && dreams.collection.insights.length > 0 && <section className="understanding-overview-foot">
+      <div><h2>{t("从梦境带回的洞察")}</h2><p>{dreams.collection.insights.at(-1)?.text}</p></div>
+      <NavLink to="/dreams/insights">{t("查看已收藏的洞察")}</NavLink>
+    </section>}
     <section className="understanding-overview-foot">
       <div><h2>{t("这些理解会继续变化")}</h2><p>{t("新的生活记录可能补充证据，也可能让旧判断失效。你随时可以打开一条理解，说明哪里不像你。")}</p></div>
       <button type="button" onClick={() => openContextAgent({ mode: "read" })}><Icon name="spark" size={16} />{t("一起核对")}</button>

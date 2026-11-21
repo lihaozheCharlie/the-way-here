@@ -1,7 +1,7 @@
 /** Re-read server state after missed events; SSE does not replay past updates. */
 export function subscribeLiveRevision(refresh: () => void): () => void {
   const events = new EventSource("/api/events");
-  for (const event of ["open", "index", "run", "approval", "file", "import", "agent-settings", "prediction"]) {
+  for (const event of ["open", "index", "run", "approval", "file", "import", "agent-settings", "prediction", "dream"]) {
     events.addEventListener(event, refresh);
   }
   const onVisible = () => { if (document.visibilityState === "visible") refresh(); };

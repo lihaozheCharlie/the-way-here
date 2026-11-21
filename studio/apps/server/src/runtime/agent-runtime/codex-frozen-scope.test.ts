@@ -17,13 +17,15 @@ async function fixture(){
  const input={cwd:root,prompt:"Anonymous frozen question",config:{knowledgeBaseId:"demo",paths:{wiki:"demo/wiki",sources:"demo/sources"}},knowledgeEvidence:{file,reader,knowledgeBaseId:"demo",inputHash},model:"anonymous-model",effort:"low",mode:"read",strictReadOnly:true} as StartAgentExecution;
  return {root,input};
 }
-function protocol(options:{ignoreAccess?:boolean;missingFeatures?:boolean;mcp?:boolean}={}){
- const calls:Array<{method:string;params:any}>=[];
+function protocol(options:{ignoreAccess?:boolean;missingFeatures?:boolean;mcp?:boolean;honorMcpOverrides?:boolean}={}){
+ const calls:Array<{method:string;params:any;server:CodexAppServer}>=[];
  vi.spyOn(CodexAppServer.prototype,"request").mockImplementation(async function(this:CodexAppServer,method:string,params:any){
-  calls.push({method,params});
+  calls.push({method,params,server:this});
   if(method==="config/read"){
    const args=(this as any).options.args as string[];const features=Object.fromEntries(args.filter(value=>value.startsWith("features.")).map(value=>{const [key,value2]=value.split("=");return[key!.slice(9),value2==="true"];}));
-   return {config:{features:options.missingFeatures?{}:features,mcp_servers:options.mcp?{foreign:{enabled:true}}:{}}};
+   const override = [...args].reverse().find(arg => arg.startsWith("mcp_servers="));
+   const disabled = options.honorMcpOverrides && override === 'mcp_servers={"foreign.tool"={enabled=false}}';
+   return {config:{features:options.missingFeatures?{}:features,mcp_servers:options.mcp?{"foreign.tool":{enabled:!disabled}}:{}}};
   }
   if(method==="permissionProfile/list"){
    const args=(this as any).options.args as string[];const setting=args.find(value=>value.startsWith("default_permissions="))!;
@@ -57,9 +59,28 @@ describe("frozen Codex boundary",()=>{
   await expect(adapter.decide(ref,1,"allow-once")).rejects.toThrow("扩大权限");
   await expect(adapter.start({...f.input,knowledgeEvidence:undefined,sessionId:ref.sessionId})).rejects.toThrow("不能降级");
  });
+ it("turns off inherited MCP servers only for the frozen process, then verifies that process before the turn", async () => {
+  const f = await fixture();
+  const calls = protocol({mcp:true, honorMcpOverrides:true});
+  const stop = vi.spyOn(CodexAppServer.prototype, "stop");
+  const adapter = new CodexRuntimeAdapter("unused");
+  adapters.push(adapter);
+
+  await adapter.start(f.input);
+
+  const [initial, restricted] = calls.filter(call => call.method === "config/read");
+  expect(initial?.server).not.toBe(restricted?.server);
+  expect(initial?.params.cwd).toBe(restricted?.params.cwd);
+  expect(stop.mock.contexts).toContain(initial?.server);
+  expect(calls.filter(call => call.server === initial?.server).map(call => call.method)).toEqual(["config/read"]);
+  expect(calls.filter(call => call.server === restricted?.server).map(call => call.method)).toEqual([
+    "config/read", "permissionProfile/list", "command/exec", "command/exec", "thread/start", "turn/start",
+  ]);
+ });
  it.each([{ignoreAccess:true},{missingFeatures:true},{mcp:true}])("fails closed before a model turn when policy/config cannot be confirmed: %j",async option=>{
   const f=await fixture(),calls=protocol(option);const adapter=new CodexRuntimeAdapter("unused");adapters.push(adapter);
-  await expect(adapter.start(f.input)).rejects.toThrow();expect(calls.some(call=>call.method==="turn/start")).toBe(false);
+  await expect(adapter.start(f.input)).rejects.toThrow();expect(calls.some(call=>call.method==="thread/start" || call.method==="turn/start")).toBe(false);
+  if ("mcp" in option) expect(calls.map(call=>call.method)).toEqual(["config/read", "config/read"]);
   expect((await readdir(f.root)).filter(name=>name.startsWith(".codex-scope-")||name.startsWith(".outside-access"))).toEqual([]);
  });
  it("rejects foreign identity and unknown resumed context without starting a server",async()=>{

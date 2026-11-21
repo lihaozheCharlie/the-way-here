@@ -28,6 +28,7 @@
 .context-agent-panel .context-run-detail-body section>p{font-size:13px;color:var(--ink-soft)}
 .context-agent-panel .context-technical-list{max-height:180px;overflow:auto;background:var(--agent-soft);border-radius:var(--radius-control);padding:10px 12px;font:11.5px/1.9 var(--agent-mono)}
 .context-agent-panel .context-run-answer{margin:0;padding:2px 2px 0;font-size:15px;line-height:1.85;color:var(--agent-ink);overflow-wrap:anywhere}
+.context-agent-panel .context-thread .context-run-answer{padding-inline:2px}
 .context-agent-panel .context-streaming-answer{white-space:pre-wrap}
 .context-agent-panel .context-run-answer p{margin:0 0 14px;font-size:inherit;line-height:inherit}
 .context-agent-panel .context-run-answer strong{font-weight:600}
@@ -123,9 +124,24 @@
 .agent-citation-quote { background:linear-gradient(transparent 58%,var(--accent-soft) 58%); color:inherit; }
 .agent-citation-quote:hover { background:var(--accent-soft); }
 .context-agent-panel .context-thread-turn:last-child .agent-answer-actions { opacity:1; }
-.agent-reading-records { display:flex; flex:1 0 100%; flex-wrap:wrap; gap:6px; padding-left:16px; }
+.context-run-commentary { display:grid; gap:8px; padding:0 2px; color:var(--ink-soft); font-size:14px; line-height:1.7; overflow-wrap:anywhere; }
+.context-run-commentary :is(p,ul,ol) { margin:0; }
+.context-run-commentary :is(p,ul,ol) + :is(p,ul,ol) { margin-top:6px; }
+.context-run-progress, .context-run-process > summary {
+  display:flex; align-items:center; gap:8px; min-height:28px; padding:2px;
+  color:color-mix(in srgb,var(--ink-soft) 85%,var(--paper)); font-size:13px; line-height:1.45;
+}
+.context-run-progress > :first-child { display:grid; place-items:center; width:16px; flex:none; }
+.context-run-progress-icon { animation:agent-progress-pulse 1.8s ease-in-out infinite; }
+@keyframes agent-progress-pulse { 50% { opacity:.45; } }
+.context-run-process > summary { width:fit-content; cursor:pointer; list-style:none; }
+.context-run-process > summary::-webkit-details-marker { display:none; }
+.context-run-process > summary:hover { color:var(--ink); }
+.context-run-process[open] > summary .icon { transform:rotate(180deg); }
+.context-run-process .context-run-commentary { margin:5px 0 4px; padding-left:24px; }
+@media (prefers-reduced-motion:reduce) { .context-run-progress-icon { animation:none; } }
+.agent-reading-records { display:flex; flex-wrap:wrap; gap:6px; padding-left:24px; }
 .agent-reading-records span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid var(--line); border-radius:999px; padding:1px 10px; font-size:12px; }
-.context-agent-panel .context-run-working:has(.agent-reading-records) { flex-wrap:wrap; }
 
 .agent-answer-actions .agent-evidence-index { color:var(--accent-ink); font-weight:600; }
 .agent-answer-actions time { margin-left:auto; }

@@ -15,6 +15,20 @@ const masCodexConfigArgs = [
   "-c", "features.skip_host_skill_discovery=true", "-c", 'web_search="disabled"', "-c", "mcp_servers={}",
 ];
 
+async function activeFrozenMcpServers(server: CodexAppServer, cwd: string): Promise<string[]> {
+  const response = await server.request<{
+    config?: { features?: Record<string, unknown>; mcp_servers?: Record<string, { enabled?: boolean } | null> };
+  }>("config/read", { cwd, includeLayers: false }).catch(() => {
+    throw new Error("无法读取 Codex 的冻结任务配置。问题和资料已保留。");
+  });
+  const { features, mcp_servers: mcpServers } = response?.config ?? {};
+  if (!mcpServers || typeof mcpServers !== "object" || Array.isArray(mcpServers) ||
+      !features || masDisabledFeatures.some(feature => features[feature] !== false)) {
+    throw new Error("无法确认 Codex 已关闭冻结任务的额外工具。问题和资料已保留。");
+  }
+  return Object.entries(mcpServers).filter(([, settings]) => settings?.enabled !== false).map(([name]) => name);
+}
+
 const fallbackModel: AgentModelOption = {
   inputModalities: ["text", "image"],
   runtimeId: "codex",
@@ -89,6 +103,14 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
     return ref;
   }
 
+  private createFrozenServer(args: string[]): CodexAppServer {
+    const server = new CodexAppServer(this.command, { experimentalApi: true, args });
+    this.frozenServers.add(server);
+    server.on("notification", ({ method, params }) => this.onNotification(method, params));
+    server.on("request", (request: CodexServerRequest) => this.onRequest(request, server));
+    return server;
+  }
+
   private async startFrozen(input: StartAgentExecution): Promise<AgentExecutionRef> {
     const evidence = input.knowledgeEvidence!;
     if (input.sessionId) {
@@ -97,19 +119,22 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
       if (this.activeBySession.has(input.sessionId)) throw new Error("此冻结资料会话仍有活动任务");
     }
     const scope = await prepareCodexFrozenScope(input);
-    const server=new CodexAppServer(this.command,{experimentalApi:true,args:[...masCodexConfigArgs,...scope.profile.args]});
-    this.frozenServers.add(server);
-    server.on("notification",({method,params})=>this.onNotification(method,params));
-    server.on("request",(request:CodexServerRequest)=>this.onRequest(request,server));
+    const args = [...masCodexConfigArgs, ...scope.profile.args];
+    let server = this.createFrozenServer(args);
     let sessionId: string | undefined;
-    let verified = false;
     try {
-      // The dedicated server has no ordinary-session feature or permission overrides.
-      const response = await server.request<any>("config/read", {includeLayers:false});
-      const config = response?.config;
-      if (!config || !config.mcp_servers || Object.keys(config.mcp_servers).length || !config.features || masDisabledFeatures.some(feature => config.features[feature] !== false)) throw new Error("此 Codex 配置无法确认原生工具、插件与外部 MCP 已禁用，请更新 Codex；问题已保留");
+      const inherited = await activeFrozenMcpServers(server, scope.root);
+      if (inherited.length) {
+        // An empty TOML table merges with the user layer. Disable inherited entries before creating a thread.
+        const disabled = inherited.map(name => `${JSON.stringify(name)}={enabled=false}`).join(",");
+        server.stop();
+        this.frozenServers.delete(server);
+        server = this.createFrozenServer([...args, "-c", `mcp_servers={${disabled}}`]);
+        if ((await activeFrozenMcpServers(server, scope.root)).length) {
+          throw new Error("Codex 仍启用了额外的 MCP 工具，无法启动冻结任务。问题和资料已保留。");
+        }
+      }
       await verifyCodexRestrictedReads(server, scope.root, scope.profile.id);
-      verified = true;
       const settings = {permissions:scope.profile.id,approvalPolicy:"never" as const};
       sessionId = input.sessionId || await server.startThread(scope.root,input.model,{...settings,dynamicTools:MasCodexTools.specifications(scope.input)});
       if (input.sessionId) await server.resumeThread(sessionId,scope.root,settings);
@@ -127,7 +152,16 @@ export class CodexRuntimeAdapter extends RuntimeEventSource implements AgentRunt
       try { turnId = await server.startTurn(id,prompt+"\n\n只能通过 read_knowledge_evidence 读取本轮冻结资料。不能使用 shell、MCP、插件或实时知识库。",scope.root,{model:input.model,effort:input.effort,readOnly:true,permissionProfile:scope.profile.id});
       const ref={runtimeId:this.id,sessionId:id,turnId} satisfies AgentExecutionRef;this.activeBySession.set(id,ref);return ref;
       } finally {this.frozenStarting.delete(id);release();}
-    } catch(error) {if(sessionId){this.masTools.delete(sessionId);this.frozenCleanup.delete(sessionId);}server.stop();this.frozenServers.delete(server);await scope.close();if(!verified)throw new Error("此 Codex 版本或配置无法确认冻结资料的受限权限，请更新 Codex 或核对配置；问题已保留。");throw error;}
+    } catch (error) {
+      if (sessionId) {
+        this.masTools.delete(sessionId);
+        this.frozenCleanup.delete(sessionId);
+      }
+      server.stop();
+      this.frozenServers.delete(server);
+      await scope.close();
+      throw error;
+    }
   }
   private server(sessionId: string): CodexAppServer { return this.frozenSessionServers.get(sessionId) || this.codex; }
 

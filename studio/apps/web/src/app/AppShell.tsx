@@ -14,9 +14,10 @@ import { QuickCapture } from "../features/desktop/QuickCapture";
 import { useInspector } from "../features/desktop/InspectorContext";
 import { AgentDock } from "../features/collaboration/Collaboration";
 import { openDesktopWindow, type DesktopCommand } from "../features/desktop/bridge";
+import { Dreams } from "../features/dreams/Dreams";
 import { Predictions } from "../features/predictions/Predictions";
 import React, { useEffect, useRef, useState } from "react";
-import { Navigate, NavLink, Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import type { VaultInfo } from "@the-way-here/shared";
 import { api } from "../api";
 import { useApi } from "../shared/use-api";
@@ -119,7 +120,7 @@ export function AppShell({ revision }: { revision: number }) {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
-  useDesktopNotifications(location.pathname);
+  const { notice: dreamNotice, dismiss: dismissDreamNotice } = useDesktopNotifications(location.pathname, vault?.knowledgeBaseId);
   const readerReturnContext = location.state as ReturnContext | null;
   const [readerLocation, setReaderLocation] = useState<LoadedReader>();
   const loadedReader = readerLocation?.pageId === pageIdFromPathname(location.pathname) ? readerLocation : undefined;
@@ -181,7 +182,7 @@ export function AppShell({ revision }: { revision: number }) {
     document.getElementById("main-content")?.focus({ preventScroll: true });
   }, [location.pathname, navigationType]);
 
-  async function switchKnowledgeBase(knowledgeBaseId: string) {
+  async function switchKnowledgeBase(knowledgeBaseId: string, destinationAfterSwitch?: string) {
     if (!vault || knowledgeBaseId === vault.knowledgeBaseId || knowledgeBaseSwitching) return;
     const nextKnowledgeBase = vault.knowledgeBases.find((item) => item.id === knowledgeBaseId);
     setKnowledgeBaseSwitching(true);
@@ -196,7 +197,8 @@ export function AppShell({ revision }: { revision: number }) {
       let destination = location.pathname;
       if (destination.startsWith("/page/")) destination = isSourceReader ? "/sources" : "/knowledge";
       else if (destination.startsWith("/focus/")) destination = "/questions";
-      window.location.assign(destination);
+      else if (destination.startsWith("/dreams/")) destination = "/dreams";
+      window.location.assign(destinationAfterSwitch ?? destination);
     } catch (reason: any) {
       explicitKnowledgeBaseNavigation.current = false;
       setKnowledgeBaseSwitching(false);
@@ -290,6 +292,8 @@ export function AppShell({ revision }: { revision: number }) {
   }, [location.pathname, location.search, vault, inspector.context, inspectorOpen]);
 
   const personalKnowledgeBase = vault?.knowledgeBases.find((item) => item.id.toLowerCase() !== "demo");
+  const dreamLibraryId = new URLSearchParams(location.search).get("knowledgeBaseId");
+  const dreamLibrary = vault?.knowledgeBases.find(item => item.id === dreamLibraryId);
 
   const sectionLabel = activeSection?.children.find(childItemActive)?.label || activeSection?.label || "阅读";
   const nextLibraryName = vault ? demoLibraryLabel(vault.knowledgeBaseId, locale, vault.name) : "";
@@ -319,8 +323,8 @@ export function AppShell({ revision }: { revision: number }) {
         {vault ? <GlobalKnowledgeBaseSwitcher vault={vault} disabled={knowledgeBaseSwitching} onChange={(id) => void switchKnowledgeBase(id)} onCreate={() => setCreateKnowledgeBaseOpen(true)} onDelete={setDeleteKnowledgeBaseTarget} /> : null}
         <nav id="main-navigation" className="desktop-navigation" aria-label={t("主要导航")} onClickCapture={event => { if ((event.target as Element).closest("a")) { setSuspendedInspectorMenu(activeMenu); window.dispatchEvent(new Event("suspend-floating-windows")); } }}>
           {navigation.map((item) => <React.Fragment key={item.to}>
-            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{t(item.label)}</span></NavLink>{item.children.length ? <button aria-label={knowledgeExpanded ? t("收起已有理解") : t("展开已有理解")} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
-            {item.children.length && knowledgeExpanded ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{t(child.label)}</NavLink>)}</div> : null}
+            <div className="desktop-nav-row"><NavLink to={item.to} end={item.to === "/"} className={mainItemActive(item) ? "active" : ""}><Icon name={item.icon} size={16} /><span>{t(item.label)}</span></NavLink>{item.to === "/knowledge" ? <button aria-label={knowledgeExpanded ? t("收起已有理解") : t("展开已有理解")} aria-expanded={knowledgeExpanded} onClick={() => setKnowledgeExpanded((value) => !value)}><Icon name="down" size={12} /></button> : null}</div>
+            {item.children.length && (item.to !== "/knowledge" || knowledgeExpanded) ? <div className="desktop-subnav">{item.children.map((child) => <NavLink key={child.to} to={child.to} className={childItemActive(child) ? "active" : ""}>{t(child.label)}</NavLink>)}</div> : null}
           </React.Fragment>)}
         </nav>
         <div className="desktop-sidebar-bottom"><div className="desktop-settings-row"><button onClick={openPreferences}><Icon name="controls" size={16} /><span>{t("偏好设置")}</span></button><AppUpdateSidebar /></div></div>
@@ -341,6 +345,13 @@ export function AppShell({ revision }: { revision: number }) {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/capture" element={vault ? <QuickCapture key={vault.knowledgeBaseId} vault={vault} /> : <p role="status">{t("正在打开知识库…")}</p>} />
             <Route path="/" element={<Today revision={revision} />} />
+            <Route path="/dreams/*" element={!vault ? <p role="status">{t("正在打开知识库…")}</p>
+              : dreamLibraryId && dreamLibraryId !== vault.knowledgeBaseId ? <section className="dream-page">
+                <h1>{dreamLibrary ? "梦境在另一个知识库" : "找不到这个梦境的知识库"}</h1>
+                {dreamLibrary ? <button disabled={knowledgeBaseSwitching} onClick={() => void switchKnowledgeBase(dreamLibrary.id, location.pathname)}>
+                  打开「{demoLibraryLabel(dreamLibrary.id, locale, dreamLibrary.name)}」中的梦境
+                </button> : <Link to="/dreams">返回梦境</Link>}
+              </section> : <Dreams key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} />} />
             <Route path="/predict-self" element={vault ? <Predictions key={vault.knowledgeBaseId} knowledgeBaseId={vault.knowledgeBaseId} /> : <p role="status">{t("正在打开知识库…")}</p>} />
             <Route path="/questions" element={<QuestionsHub revision={revision} />} />
             <Route path="/sources" element={<OrganizedSources revision={revision} />} />
@@ -371,6 +382,11 @@ export function AppShell({ revision }: { revision: number }) {
           </Routes>
         </div>
       </main>
+      {dreamNotice && !dreamNotice.route.startsWith(location.pathname + "?") && <aside className="dream-notice" aria-label={dreamNotice.title}>
+        <strong role="status">{dreamNotice.title}</strong>
+        <Link to={dreamNotice.route} onClick={dismissDreamNotice}>{dreamNotice.body}</Link>
+        <button type="button" aria-label={t("关闭通知")} onClick={dismissDreamNotice}>×</button>
+      </aside>}
       {!utilityWindow && !detached && !localConversation ? <FloatingAgentPanel open={inspectorOpen} triggerRef={agentToggleRef}><AgentDock revision={revision} context={inspector.context} /></FloatingAgentPanel> : null}
       {searchWindow.open ? <CommandPalette routes={navigation.flatMap(item => [{ title: item.label, to: item.to }, ...item.children.map(child => ({ title: child.label, to: child.to }))])} onClose={searchWindow.hide} onCapture={openCapture} onSettings={openPreferences} /> : null}
       {createKnowledgeBaseOpen ? <CreateKnowledgeBaseDialog onClose={() => setCreateKnowledgeBaseOpen(false)} onSubmit={createKnowledgeBase} /> : null}

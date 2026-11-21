@@ -34,9 +34,9 @@ export function createPiTools(options: {
     // Host supplies paths and identity. Model parameters cannot change the snapshot or executable.
     return [{
       name: "read_knowledge_evidence", label: "读取冻结知识资料",
-      description: "仅检索本次冻结资料：overview 入口，search 关键词，read 带行号段落，neighbors 双链。填写简短目的并按总数分页。",
+      description: "仅检索本次冻结资料：overview 入口，search 关键词，read 带行号段落，neighbors 双链，chronology 按日期的记录时间线，person 某人物/实体按时间排列的提及。填写简短目的并按总数分页。",
       parameters: Type.Object({
-        action: Type.Union([Type.Literal("overview"),Type.Literal("search"),Type.Literal("read"),Type.Literal("neighbors")]),
+        action: Type.Union([Type.Literal("overview"),Type.Literal("search"),Type.Literal("read"),Type.Literal("neighbors"),Type.Literal("chronology"),Type.Literal("person")]),
         purpose: Type.String({minLength:1,maxLength:300}),
         page: Type.Optional(Type.String()), terms: Type.Optional(Type.Array(Type.String())),
         start: Type.Optional(Type.Integer({minimum:1})), offset: Type.Optional(Type.Integer({minimum:0})),

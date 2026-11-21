@@ -45,6 +45,8 @@ source:
 
 | `knowledge-engine/skills/consume/scan-understanding/SKILL.md` | 冻结 Wiki 下的了解程度评估，Studio 保存评分与解锁结果 | 四维评估流程、评分配置与 assessment v2 JSON 契约 |
 
+| `knowledge-engine/skills/consume/dreaming/SKILL.md` | 确认入梦点后的动态分支分析和事后复核，Studio 保存梦境档案 | Lead、Verify、Enrich、Organize、Refine 和 Organizer 阶段协议，chronology/person 梦境算子 |
+
 ## 设计说明
 
 - 根 `AGENTS.md` 先区分产品与 Wiki；Wiki 请求再按注册表区分读写模式并选择规范 Skill。
