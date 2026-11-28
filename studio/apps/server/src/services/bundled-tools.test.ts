@@ -24,11 +24,19 @@ describe("signed knowledge tools",()=>{
       const result=spawnSync(command[0]!,command.slice(1),{encoding:"utf8",cwd:workspace,env:{...process.env,PYTHONPATH:workspace}});
       expect(result.stderr).toBe("");expect(result.status).toBe(0);expect(result.stdout).toContain(`signed-child ${workspace} ['--help']`);expect(result.stdout).toContain("['--workspace', '/forged']");
       await expect(access(marker)).rejects.toThrow();
-      for(const program of ['import subprocess,sys; subprocess.run([sys.executable,"-c","print(123)"])','import os; os.system("echo forbidden")','import subprocess; subprocess.run(["/bin/sh","-c","echo forbidden"])']){
+      for(const program of ['import subprocess,sys; subprocess.run([sys.executable,"-c","print(123)"])','import os; os.system("echo forbidden")','import subprocess; subprocess.run(["/bin/sh","-c","echo forbidden"])','import os,sys; os.posix_spawn(sys.executable,[sys.executable,"-c","print(123)"],{})']){
         await writeFile(path.join(engine,"tools/check.py"),program);
         const blocked=spawnSync(command[0]!,command.slice(1),{encoding:"utf8",cwd:workspace});
         expect(blocked.status).not.toBe(0);expect(blocked.stdout).not.toContain("forbidden");
       }
+      // A runner-mediated posix_spawn must stay allowed: Python 3.14 executes Popen
+      // through posix_spawn on Linux, so the sandbox would otherwise reject the very
+      // child it rewrote above. The forged executable case above keeps this closed.
+      const runner=path.resolve(import.meta.dirname,"../../../../apps/desktop/native/run-knowledge-tool.py");
+      const posixSpawn=`from pathlib import Path\nimport os,sys\npython=str(Path(sys.executable).resolve())\nargv=[python,"-I","-B",${JSON.stringify(runner)},"--engine",${JSON.stringify(engine)},"--workspace",${JSON.stringify(workspace)},"--script",${JSON.stringify(path.join(engine,"tools/child.py"))},"--","--help"]\npid=os.posix_spawn(python,argv,dict(os.environ))\nos.waitpid(pid,0)\nprint("posix-spawn-ok")\n`;
+      await writeFile(path.join(engine,"tools/check.py"),posixSpawn);
+      const allowed=spawnSync(command[0]!,command.slice(1),{encoding:"utf8",cwd:workspace});
+      expect(allowed.stderr).toBe("");expect(allowed.status).toBe(0);expect(allowed.stdout).toContain("posix-spawn-ok");expect(allowed.stdout).toContain("signed-child");
     }finally{vi.unstubAllEnvs();await rm(root,{recursive:true,force:true});}
   });
   it("runs bundled code with the frozen workspace as data root, ignoring mutable Python",async()=>{

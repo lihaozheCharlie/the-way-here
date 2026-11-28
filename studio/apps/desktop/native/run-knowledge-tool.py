@@ -59,17 +59,36 @@ class SignedToolProcess(original_popen):
 subprocess.Popen = SignedToolProcess
 
 
+def runner_prefix(executable, command):
+    """The prefix shared by every child this runner itself spawns, or None.
+
+    SignedToolProcess rewrites subprocess.Popen calls to this exact shape, so
+    only this shape may actually execute, whatever API performs the exec.
+    """
+    prefix = [str(python), '-I', '-B', str(runner), '--engine', str(engine),
+              '--workspace', str(workspace), '--script']
+    if (Path(executable).resolve() == python and isinstance(command, (list, tuple))
+            and list(command[:len(prefix)]) == prefix and len(command) > len(prefix)):
+        return prefix
+    return None
+
+
 def check_process(event, values):
-    if event in ('os.system', 'os.exec', 'os.posix_spawn', 'os.fork', 'pty.spawn'):
-        raise RuntimeError('External process execution is unavailable')
     if event == 'subprocess.Popen':
-        executable, command = values[:2]
-        prefix = [str(python), '-I', '-B', str(runner), '--engine', str(engine),
-                  '--workspace', str(workspace), '--script']
-        if (Path(executable).resolve() != python or not isinstance(command, (list, tuple))
-                or list(command[:len(prefix)]) != prefix or len(command) <= len(prefix)):
+        prefix = runner_prefix(*values[:2])
+        if prefix is None:
             raise RuntimeError('Child process must use the signed tool runner')
-        signed_script(command[len(prefix)])
+        signed_script(values[1][len(prefix)])
+    elif event == 'os.posix_spawn':
+        # Python 3.14 executes Popen through posix_spawn on Linux, which raises
+        # this audit event for the runner-mediated child rewritten above. Only
+        # that child may pass; anything else stays unavailable.
+        prefix = runner_prefix(*values[:2])
+        if prefix is None:
+            raise RuntimeError('External process execution is unavailable')
+        signed_script(values[1][len(prefix)])
+    elif event in ('os.system', 'os.exec', 'os.fork', 'pty.spawn'):
+        raise RuntimeError('External process execution is unavailable')
 
 
 sys.addaudithook(check_process)
