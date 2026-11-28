@@ -1,10 +1,8 @@
 // 提交说明：type(scope): subject，说清改了什么。动产品代码的还要带 Why 和 Verification。
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { hookRoot } from './hook-env.mjs';
 
-const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const messageFile = process.argv[2];
 const text = readFileSync(messageFile, 'utf8');
 const subject = text.split('\n')[0].trim();
@@ -26,13 +24,19 @@ if (hit || summary.replace(/\s/g, '').length < 6) {
   process.exit(1);
 }
 
-const staged = spawnSync('git', ['diff', '--cached', '--name-only', '--no-renames'], { cwd: studio, encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
-const touchesProduct = staged.some(file => /^studio\/(?:apps|packages)\/.*\/src\/.*\.(?:ts|tsx|mjs|cjs)$/.test(file) && !/\.test\.[^.]+$/.test(file));
+// git 的路径规格和 GIT_DIR 都是相对仓库根的，这条命令必须在仓库根下跑。在 studio/ 下跑会读不到暂存区，检查就形同虚设。
+const staged = spawnSync('git', ['diff', '--cached', '--name-only', '--no-renames'], { cwd: hookRoot(), encoding: 'utf8' });
+if (staged.status !== 0) {
+  console.error(`读不到暂存区，没法判断这个提交动没动产品代码：${staged.stderr.trim()}`);
+  process.exit(1);
+}
+const stagedFiles = staged.stdout.split('\n').filter(Boolean);
+const touchesProduct = stagedFiles.some(file => /^studio\/(?:apps|packages)\/.*\/src\/.*\.(?:ts|tsx|mjs|cjs)$/.test(file) && !/\.test\.[^.]+$/.test(file));
 // 只要暂存里有产品源码，不管类型写的是什么都要带 Why 和 Verification。只按类型判断的话，把 fix 写成 chore 就绕过去了。
 if (touchesProduct) {
   const heading = name => new RegExp(`^(?:## ${name}|${name}:)\\s*$`, 'm').test(text);
   if (!heading('Why') || !heading('Verification')) {
-    console.error(`这个提交动了产品代码（${staged.filter(file => /^studio\/(?:apps|packages)\/.*\/src\//.test(file)).slice(0, 3).join('、')}），说明正文需要两节：\n\n## Why\n\n<为什么改，引用出问题的行为>\n\n## Verification\n\n<跑了什么，看到了什么；没跑的明说>\n\n只改文档、测试、配置，或 wip 提交不需要。类型写 chore、docs、test 也一样要。`);
+    console.error(`这个提交动了产品代码（${stagedFiles.filter(file => /^studio\/(?:apps|packages)\/.*\/src\//.test(file)).slice(0, 3).join('、')}），说明正文需要两节：\n\n## Why\n\n<为什么改，引用出问题的行为>\n\n## Verification\n\n<跑了什么，看到了什么；没跑的明说>\n\n只改文档、测试、配置，或 wip 提交不需要。类型写 chore、docs、test 也一样要。`);
     process.exit(1);
   }
 }

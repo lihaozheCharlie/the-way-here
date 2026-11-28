@@ -3,12 +3,14 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hookEnv, hookRoot } from './hook-env.mjs';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 if (process.env.TWH_SKIP_HOOKS === '1') process.exit(0);
 
-const git = (...parts) => spawnSync('git', parts, { cwd: path.resolve(studio, '..'), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout;
-const root = git('rev-parse', '--show-toplevel').trim();
+// git 命令一律在仓库根下跑：git 给 hook 的 GIT_DIR 是相对路径，换目录就找不着了。
+const root = hookRoot();
+const git = (...parts) => spawnSync('git', parts, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout;
 
 const entries = git('diff', '--cached', '--name-status', '--no-renames').split('\n').filter(Boolean).map(line => {
   const [status, file] = line.split('\t');
@@ -48,7 +50,7 @@ if (problems.length) {
 
 const lintable = files.filter(file => /\.(?:ts|tsx|mjs|cjs)$/.test(file) && file.startsWith('studio/'));
 if (lintable.length) {
-  const lint = spawnSync('pnpm', ['exec', 'eslint', ...lintable.map(file => path.relative(studio, path.join(root, file)))], { cwd: studio, encoding: 'utf8' });
+  const lint = spawnSync('pnpm', ['exec', 'eslint', ...lintable.map(file => path.relative(studio, path.join(root, file)))], { cwd: studio, encoding: 'utf8', env: hookEnv() });
     process.stderr.write(lint.stderr || '');
   if (lint.status !== 0) {
     console.error('暂存文件有 lint 问题。用 `pnpm lint <文件>` 看详情。');
@@ -58,7 +60,7 @@ if (lintable.length) {
 
 const typechecks = files.some(file => /^(?:studio\/(?:apps|packages)\/.*\.(?:ts|tsx|json)|studio\/tsconfig[^/]*\.json)$/.test(file));
 if (typechecks) {
-  const check = spawnSync('pnpm', ['typecheck'], { cwd: studio, encoding: 'utf8' });
+  const check = spawnSync('pnpm', ['typecheck'], { cwd: studio, encoding: 'utf8', env: hookEnv() });
   if (check.status !== 0) {
     process.stdout.write(check.stdout || '');
     process.stderr.write(check.stderr || '');
