@@ -31,16 +31,24 @@ const rows = text.split('\n').map(raw => raw.trim().match(ROW)).filter(Boolean);
 for (const [, id, , by] of rows) {
   const how = by.trim();
   if (!tagged.has(id)) problems.push(`规则表里的 ${id} 在正文里找不到对应的〔${id}〕，要么补标记，要么删掉这一行。`);
-  if (how.startsWith('结构') || how.startsWith('文字')) continue;
-  const commands = [...how.matchAll(/`([^`]+)`/g)].map(match => match[1]);
-  if (!commands.length) { problems.push(`${id} 的强制方式要写"结构：…"、"文字"，或一条放在反引号里的命令。`); continue; }
+  // "结构：…"、"文字" 可以不带命令；带了命令，命令就必须真的存在。反引号里的标识符（类型名、函数名）不算命令。
+  const tokens = [...how.matchAll(/`([^`]+)`/g)].map(match => match[1]);
+  const isCommand = token => /^(?:pnpm|node|python3?|bash|sh|git|codex|uvx|\.githooks\/\S+)$/.test(token.split(/\s+/)[0]);
+  const commands = tokens.filter(isCommand);
+  if (!commands.length && !how.startsWith('结构') && !how.startsWith('文字')) { problems.push(`${id} 的强制方式要写"结构：…"、"文字"，或一条放在反引号里的命令。`); continue; }
   for (const command of commands) {
     const [program, ...args] = command.split(/\s+/).filter(part => !part.startsWith('-'));
-    const workspace = args[0]?.startsWith('@the-way-here/') ? args.shift().slice('@the-way-here/'.length) : null;
-    const candidates = program === 'pnpm' ? [] : program === '.githooks' ? [path.join(root, '.githooks', args[0])] : [program, args[0]].filter(Boolean).flatMap(target => [path.join(root, target), path.join(studio, target)]);
-    const ok = program === 'pnpm'
-      ? workspace ? ['apps', 'packages'].some(dir => existsSync(path.join(studio, dir, workspace, 'package.json'))) && (args[0] !== 'test' || Boolean(JSON.parse(readFileSync(path.join(studio, 'apps', workspace, 'package.json'), 'utf8').catch(() => readFileSync(path.join(studio, 'packages', workspace, 'package.json'), 'utf8'))).scripts?.test)) : Boolean(pkg.scripts?.[args[0]])
-      : candidates.some(existsSync);
+    let ok;
+    if (program === 'pnpm' && args[0]?.startsWith('@the-way-here/')) {
+      // pnpm --filter <包> <脚本>，或 pnpm --filter <包> exec <程序> … <文件>：包要在，脚本或文件也要在。
+      const name = args.shift().slice('@the-way-here/'.length);
+      const dir = ['apps', 'packages'].map(base => path.join(studio, base, name)).find(file => existsSync(path.join(file, 'package.json')));
+      const scripts = dir ? JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')).scripts ?? {} : {};
+      const file = dir ? args.find(arg => /\.[cm]?[jt]sx?$/.test(arg)) : null;
+      ok = Boolean(dir) && (args[0] === 'exec' ? args.length >= 2 : Boolean(scripts[args[0]])) && (!file || existsSync(path.join(dir, file)));
+    } else if (program === 'pnpm') ok = Boolean(pkg.scripts?.[args[0]]);
+    else if (program.startsWith('.githooks/')) ok = existsSync(path.join(root, program));
+    else ok = [program, args[0]].filter(Boolean).some(target => existsSync(path.join(root, target)) || existsSync(path.join(studio, target)));
     if (!ok) problems.push(`${id} 登记的检查不存在：${command}`);
   }
 }
