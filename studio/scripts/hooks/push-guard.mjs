@@ -31,7 +31,7 @@ function guard(input) {
 
   const tokens = segment.split(/\s+/).slice(1);
   const args = tokens.filter(token => !token.startsWith('-'));
-  const namesMain = args.some(arg => /(?:^|[:/])main$/.test(arg));
+  const namesMain = args.some(arg => /^main$/.test(arg));
   const target = namesMain ? 'main' : args.length === 0 ? undefined : 'other';
   if (target === 'other') return;
 
