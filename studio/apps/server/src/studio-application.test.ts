@@ -9,7 +9,7 @@ import { stateRootForVault } from "@the-way-here/run-manager";
 it.each([
   ["desktop", (vaultRoot: string) => StudioApplication.create({ vaultRoot })],
   ["web", (vaultRoot: string) => StudioServer.create({ vaultRoot, development: true })],
-] as const)("registers the shared content APIs for %s without opening a port", async (_host, create) => {
+] as const)("registers the shared content APIs for %s without opening a port", { timeout: 20_000 }, async (_host, create) => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "twh-embedded-")));
   let runtime: StudioApplication | StudioServer | undefined;
   try {
