@@ -69,10 +69,10 @@ const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
 console.log(`棘轮通过：${total} 个存量警告，没有上升。`);
 if (decreases.length) {
   console.log(`有 ${decreases.length} 条规则的警告数降了，可以下调基线：pnpm lint:ratchet --update-baseline`);
-  list(decreases, baseline);
+  for (const [rule] of decreases.sort((a, b) => b[1] - a[1])) console.log(`  ${rule}: ${baseline.rules[rule]} -> ${counts[rule]}`);
 }
 process.exit(0);
 
 function list(pairs, base) {
-  for (const [rule, count] of pairs.sort((a, b) => b[1] - a[1])) console.error(`  ${rule}: ${base.rules[rule] ?? 0} -> ${count}`);
+  for (const [rule] of pairs.sort((a, b) => (counts[b[0]] ?? 0) - (counts[a[0]] ?? 0))) console.error(`  ${rule}: ${base.rules[rule] ?? 0} -> ${counts[rule] ?? 0}`);
 }
