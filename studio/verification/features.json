@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "note": "功能到源码范围、旅程的映射。sources 相对 studio/，以 ../ 开头的相对仓库根。改到这些路径就该重跑对应旅程。journeys 是 studio/scripts 下不带 .mjs 的脚本名；启动 Electron 的脚本自动算桌面层，默认不跑，加 --desktop 才跑。",
+  "baseline": { "web": "verify-web" },
+  "sharedSources": ["apps/web/src/shared/**", "apps/web/src/app/**", "apps/server/src/**", "packages/**", "apps/web/src/main.tsx", "apps/web/src/api.ts", "apps/web/index.html"],
+  "manual": [
+    "verify-app-updates",
+    "verify-codex-frozen-protocol",
+    "verify-color-redesign",
+    "verify-first-install",
+    "verify-installed-desktop",
+    "verify-ios",
+    "verify-ios-localization",
+    "verify-mas-apis",
+    "verify-mobile-keychain-authorization",
+    "verify-native-update",
+    "verify-package-links",
+    "verify-published-update",
+    "verify-speech-replay"
+  ],
+  "helpers": ["verify-dreams"],
+  "features": [
+    {
+      "id": "capture",
+      "file": "capture.md",
+      "routes": ["/", "/capture"],
+      "sources": ["apps/web/src/features/overview/{LifeRecordCapture,CaptureDialogs,Today,PhotoLibraryCard,PhotoLibraryResults,PhotoCaptureDialog,PhotoCaptureHistory}.*", "apps/web/src/features/overview/{useCaptureDraft,photo-library-handoff,photo-library-images}.ts", "apps/web/src/features/desktop/{QuickCapture,CaptureVoice,ModelOnboarding}.tsx", "apps/web/src/app/AppShell.tsx", "apps/server/src/routes/capture-routes.ts", "apps/desktop/src/{speech,photo-library,main}.mjs"],
+      "journeys": ["verify-web", "verify-capture-ux", "verify-capture-sources", "verify-today"],
+      "desktopOnly": false
+    },
+    {
+      "id": "questions",
+      "file": "questions.md",
+      "routes": ["/questions"],
+      "sources": ["apps/web/src/features/overview/{QuestionsHub,talking-questions,conversation-prompts}.*", "apps/web/src/features/collaboration/{Collaboration.tsx,model.ts}", "apps/web/src/features/desktop/{FloatingAgentPanel,InspectorContext}.tsx", "apps/web/src/features/knowledge/ReadOnlyPageDialog.tsx", "packages/life-views/src/today.ts", "apps/server/src/routes/view-routes.ts"],
+      "journeys": ["verify-web", "verify-agent-routes", "verify-redesign", "verify-dismiss-layers"],
+      "desktopOnly": false
+    },
+    {
+      "id": "sources",
+      "file": "sources.md",
+      "routes": ["/sources", "/page/*"],
+      "sources": ["apps/web/src/features/sources/{Sources,SourceConnectionsPanel,SourceListOptions,SourceMemories,source-model,source-folders}.*", "apps/web/src/shared/{FileBrowser,FolderTree,FileMenu,PaneShelf,QuietScroll,InlineNameForm,ConfirmDeleteDialog,DocumentFrame,DocumentOutline,DocumentPreview,EditableDocument}.*", "apps/web/src/features/knowledge/Reader.tsx", "apps/server/src/routes/{page-routes,source-connection-routes}.ts", "apps/server/src/runtime/source-connections.ts"],
+      "journeys": ["verify-web", "verify-life-record-ux", "verify-source-tree-and-outline", "verify-source-directories", "verify-document-mode", "verify-folder-refresh", "verify-title-editing", "verify-pane-shelf", "verify-file-menus", "verify-shared-file-browser", "verify-desktop"],
+      "desktopOnly": false
+    },
+    {
+      "id": "imports",
+      "file": "imports.md",
+      "routes": ["/sources?import=true"],
+      "sources": ["apps/web/src/features/sources/{ImportMaterialsModal,photo-compression,photo-compression.worker,photo-model}.*", "apps/web/src/features/sources/Sources.tsx", "apps/web/src/features/overview/PhotoLibraryCard.tsx", "apps/web/src/shared/FolderTree.tsx", "apps/web/src/app/AppShell.tsx", "apps/server/src/routes/{import-routes,photo-memory-routes}.ts", "apps/desktop/src/main.mjs"],
+      "journeys": ["verify-web", "verify-source-tree-and-outline", "verify-life-record-ux", "verify-capture-sources", "verify-desktop"],
+      "desktopOnly": false
+    },
+    {
+      "id": "search",
+      "file": "search.md",
+      "routes": ["/search"],
+      "sources": ["apps/web/src/features/knowledge/SearchResults.tsx", "apps/web/src/features/desktop/CommandPalette.tsx", "apps/web/src/app/AppShell.tsx", "apps/web/src/features/sources/Sources.tsx", "apps/web/src/shared/FileMenu.tsx", "packages/wiki-core/src/wiki-index.ts", "apps/server/src/routes/page-routes.ts", "apps/desktop/src/main.mjs"],
+      "journeys": ["verify-web", "verify-file-menus", "verify-today", "verify-dismiss-layers"],
+      "desktopOnly": false
+    },
+    {
+      "id": "knowledge",
+      "file": "knowledge.md",
+      "routes": ["/knowledge", "/cards/personal-lines", "/cards/cycles", "/cards/systems", "/mental-models", "/wiki", "/understanding", "/understanding/overview"],
+      "sources": ["apps/web/src/features/overview/KnowledgeHome.tsx", "apps/web/src/features/knowledge/Cards.tsx", "apps/web/src/features/knowledge/MentalModels.tsx", "apps/web/src/features/knowledge/UnderstandingDigest.tsx", "apps/web/src/features/knowledge/thinking-models.ts", "apps/web/src/features/knowledge/navigation.ts", "apps/web/src/features/overview/insights-model.ts", "apps/web/src/shared/FileBrowser.tsx", "apps/web/src/shared/PaneShelf.tsx", "apps/web/src/shared/DocumentPreview.tsx", "apps/web/src/shared/EditableDocument.tsx", "apps/web/src/shared/DocumentFrame.tsx", "apps/web/src/app/config.ts", "apps/server/src/routes/view-routes.ts", "packages/life-views/src/collections.ts", "../vault/demo/wiki/**"],
+      "journeys": ["verify-web", "verify-desktop", "verify-index-scroll"],
+      "desktopOnly": false
+    },
+    {
+      "id": "insights",
+      "file": "insights.md",
+      "routes": ["/insights", "/understanding/self"],
+      "sources": ["apps/web/src/features/overview/GrowthHub.tsx", "apps/web/src/features/overview/insights-model.ts", "apps/web/src/features/knowledge/thinking-models.ts", "apps/web/src/features/knowledge/navigation.ts", "apps/web/src/shared/FileMenu.tsx", "apps/web/src/shared/SegmentedTabs.tsx", "apps/server/src/routes/view-routes.ts", "packages/life-views/src/collections.ts", "../vault/demo/wiki/**"],
+      "journeys": ["verify-web", "verify-desktop"],
+      "desktopOnly": false
+    },
+    {
+      "id": "timeline",
+      "file": "timeline.md",
+      "routes": ["/timeline", "/understanding/life"],
+      "sources": ["apps/web/src/features/knowledge/Timeline.tsx", "apps/web/src/features/knowledge/StageFocus.tsx", "apps/web/src/features/knowledge/ReadOnlyPageDialog.tsx", "apps/web/src/features/knowledge/life-atlas.ts", "apps/web/src/shared/GraphViewport.tsx", "apps/web/src/shared/use-remembered-preview.ts", "apps/web/src/shared/FileMenu.tsx", "apps/server/src/routes/view-routes.ts", "packages/life-views/src/life-map.ts", "../vault/demo/wiki/**"],
+      "journeys": ["verify-web", "verify-desktop", "verify-stage-focus"],
+      "desktopOnly": false
+    },
+    {
+      "id": "letters",
+      "file": "letters.md",
+      "routes": ["/letters"],
+      "sources": ["apps/web/src/features/knowledge/Letters.tsx", "apps/web/src/features/knowledge/LetterHistory.tsx", "apps/web/src/features/knowledge/LetterLensPicker.tsx", "apps/web/src/features/knowledge/LetterComposer.tsx", "apps/web/src/shared/TimelineFilter.tsx", "apps/web/src/shared/FileBrowser.tsx", "apps/web/src/shared/PaneShelf.tsx", "apps/web/src/shared/DocumentPreview.tsx", "apps/web/src/shared/EditableDocument.tsx", "apps/web/src/shared/FileMenu.tsx", "apps/web/src/features/collaboration/model.ts", "apps/server/src/routes/view-routes.ts", "apps/server/src/routes/run-routes.ts", "apps/server/src/routes/skill-routes.ts", "apps/server/src/modules/skills/lens-catalog.ts", "packages/life-views/src/collections.ts", "../knowledge-engine/skills/common/reasoning-lenses/**", "../vault/demo/wiki/**"],
+      "journeys": ["verify-web", "verify-letter-reading", "verify-letter-history", "verify-shared-file-browser", "verify-file-menus", "verify-index-scroll"],
+      "desktopOnly": false
+    },
+    {
+      "id": "relationships",
+      "file": "relationships.md",
+      "routes": ["/relationships", "/understanding/people"],
+      "sources": ["apps/web/src/features/knowledge/Relationships.tsx", "apps/web/src/features/knowledge/relationships-model.ts", "apps/web/src/features/knowledge/PagePreview.tsx", "apps/web/src/shared/TruncatedTextTooltip.tsx", "apps/web/src/shared/GraphViewport.tsx", "apps/web/src/shared/FileMenu.tsx", "apps/server/src/routes/view-routes.ts", "packages/life-views/src/relationships.ts", "../vault/demo/wiki/**"],
+      "journeys": ["verify-web", "verify-desktop", "verify-tooltips", "verify-stage-focus"],
+      "desktopOnly": false
+    },
+    {
+      "id": "predict-self",
+      "file": "predict-self.md",
+      "routes": ["/predict-self", "/understanding/ahead"],
+      "sources": ["apps/web/src/features/predictions/**", "apps/server/src/routes/prediction-routes.ts", "apps/server/src/runtime/prediction-service.ts", "apps/server/src/runtime/prediction-store.ts", "packages/life-views/src/predictions.ts", "packages/life-views/src/life-predictions.ts", "packages/shared/src/predictions.ts", "../vault/demo/predictions/**"],
+      "journeys": ["verify-web", "verify-desktop"],
+      "desktopOnly": false
+    },
+    {
+      "id": "dreams",
+      "file": "dreams.md",
+      "routes": ["/dreams", "/dreams/points", "/dreams/describe", "/dreams/prepare", "/dreams/insights", "/dreams/:id", "/dreams/:id/progress"],
+      "sources": ["apps/web/src/features/dreams/**", "apps/web/src/features/desktop/use-desktop-notifications.ts", "apps/web/src/features/desktop/agent-notifications.ts", "apps/web/src/app/AppShell.tsx", "apps/server/src/routes/dream-routes.ts", "apps/server/src/runtime/dreams/**", "apps/server/src/modules/dreams/**", "packages/life-views/src/dream-points.ts", "packages/life-views/src/dream-workflow.ts", "packages/shared/src/dreams.ts"],
+      "journeys": ["verify-web", "verify-desktop"],
+      "desktopOnly": false
+    },
+    {
+      "id": "preferences",
+      "file": "preferences.md",
+      "routes": ["/preferences", "/preferences?tab=ai", "/settings", "/models"],
+      "sources": ["apps/web/src/features/desktop/Preferences.tsx", "apps/web/src/features/desktop/PreferenceHeading.tsx", "apps/web/src/features/desktop/StoragePreferences.tsx", "apps/web/src/features/desktop/AppUpdates.tsx", "apps/web/src/features/desktop/ModelOnboarding.tsx", "apps/web/src/features/desktop/preferences-store.ts", "apps/web/src/features/collaboration/AgentSettings.tsx", "apps/web/src/shared/preference-storage.ts", "apps/web/src/shared/i18n/locale.tsx", "apps/web/src/shared/SegmentedTabs.tsx", "apps/web/src/app/AppShell.tsx", "apps/server/src/routes/agent-settings-routes.ts", "apps/server/src/routes/storage-routes.ts", "apps/server/src/modules/storage/**", "apps/desktop/src/main.mjs", "apps/desktop/src/locale.mjs", "apps/desktop/src/user-preferences.mjs"],
+      "journeys": ["verify-web", "verify-preferences"],
+      "desktopOnly": false
+    },
+    {
+      "id": "privacy",
+      "file": "privacy.md",
+      "routes": ["/privacy"],
+      "sources": ["apps/web/src/features/desktop/Privacy.tsx", "apps/web/src/features/desktop/Preferences.tsx", "apps/web/src/features/collaboration/AgentSettings.tsx", "apps/server/src/routes/agent-settings-routes.ts", "apps/desktop/src/main.mjs"],
+      "journeys": ["verify-web"],
+      "desktopOnly": false
+    },
+    {
+      "id": "knowledge-bases",
+      "file": "knowledge-bases.md",
+      "routes": [],
+      "sources": ["apps/web/src/app/AppShell.tsx", "apps/web/src/features/knowledge-bases/**", "apps/web/src/app/shortcut-guards.ts", "apps/web/src/shared/ConfirmDeleteDialog.tsx", "apps/web/src/shared/i18n/demo-overlay.ts", "apps/server/src/routes/knowledge-base-routes.ts", "apps/server/src/modules/knowledge-bases/**", "apps/desktop/src/main.mjs"],
+      "journeys": ["verify-web", "verify-photo-library"],
+      "desktopOnly": false
+    },
+    {
+      "id": "inspector",
+      "file": "inspector.md",
+      "routes": ["/conversation"],
+      "sources": ["apps/web/src/features/desktop/FloatingAgentPanel.tsx", "apps/web/src/features/desktop/CommandPalette.tsx", "apps/web/src/features/desktop/ConversationWindow.tsx", "apps/web/src/features/desktop/InspectorContext.tsx", "apps/web/src/features/collaboration/Collaboration.tsx", "apps/web/src/features/collaboration/model.ts", "apps/web/src/features/collaboration/AgentSettings.tsx", "apps/web/src/features/collaboration/AgentAnswer.tsx", "apps/web/src/app/AppShell.tsx", "apps/web/src/app/shortcut-guards.ts", "apps/web/src/shared/use-dismiss-layer.ts", "apps/web/src/shared/use-remembered-preview.ts", "apps/web/src/shared/use-panel-preference.ts", "apps/web/src/shared/EditableDocument.tsx", "apps/desktop/src/main.mjs", "apps/desktop/src/preload.cjs", "apps/server/src/routes/run-routes.ts"],
+      "journeys": ["verify-web", "verify-background-navigation", "verify-floating-agent", "verify-dismiss-layers", "verify-preferences"],
+      "desktopOnly": true
+    }
+  ]
+}
