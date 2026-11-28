@@ -3,7 +3,7 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,12 +40,18 @@ try {
     if (new URL(response.url()).pathname.startsWith('/api/') && response.status() >= 400) apiFailures.push(`${response.status()} ${new URL(response.url()).pathname}`);
   });
   const port = await listen();
-  await writeFile(sessionFile, `${JSON.stringify({ ...session, pid: process.pid, port, origin, evidenceDir: path.relative(studio, evidenceRoot) }, null, 2)}\n`);
+  await writeFile(sessionFile, `${JSON.stringify({ ...session, pid: process.pid, serverPid: server.pid, port, origin, evidenceDir: path.relative(studio, evidenceRoot) }, null, 2)}\n`);
 } catch (error) {
   process.stderr.write(`验证实例启动失败：${error.message}\n`);
   await cleanup();
   process.exit(1);
 }
+
+// 无人值守时一条失败的步骤不能带走整个实例：夜里曾经有步骤的 dialog 监听器互相抢一个对话框，
+// 未捕获的异常让驾驶进程退出，留下服务进程和端口。记进证据目录，实例继续可体检、可清理。
+const noteCrash = error => appendFile(path.join(evidenceRoot, 'driver-crashes.jsonl'), `${JSON.stringify({ at: new Date().toISOString(), message: String(error?.message ?? error), stack: error?.stack?.slice(-4000) })}\n`, 'utf8').catch(() => {});
+process.on('uncaughtException', noteCrash);
+process.on('unhandledRejection', noteCrash);
 
 // 没人来清理时自己收摊，不留孤儿进程。
 setTimeout(() => void cleanup().then(() => process.exit(0)), session.maxAgeMs ?? 2 * 60 * 60 * 1000).unref();
@@ -63,7 +69,9 @@ async function handle(request, response) {
   const body = request.method === 'POST' ? JSON.parse(await text(request) || '{}') : {};
   if (url.pathname === '/doctor') return reply(response, 200, await doctor());
   if (url.pathname === '/go') {
-    await page.goto(origin + body.route);
+    // 地图的步骤会把上一步返回的 page.url()（带 origin）原样传回来，认两种写法。
+    const target = /^https?:\/\//.test(body.route ?? '') ? body.route : origin + (body.route ?? '/');
+    await page.goto(target);
     await expect(page.locator('main')).toBeVisible();
     return reply(response, 200, { url: page.url(), h1: await page.locator('main h1').first().innerText().catch(() => null) });
   }

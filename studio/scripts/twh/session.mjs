@@ -61,10 +61,19 @@ export async function cleanup() {
   }
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline && alive(session.pid)) await new Promise(resolve => setTimeout(resolve, 200));
-  if (alive(session.pid)) {
-    process.kill(session.pid, 'SIGKILL');
-    throw new Error(`驾驶进程 ${session.pid} 没有自己退出，已强杀。检查有没有残留端口：lsof -nP -iTCP -sTCP:LISTEN | grep ${session.pid}`);
+  if (alive(session.pid)) process.kill(session.pid, 'SIGKILL');
+  // 驾驶进程若是被强杀或早先崩掉，它拉起的服务会留下来。会话文件里记了服务的 PID，直接收掉。
+  let serviceReaped = true;
+  if (session.serverPid && alive(session.serverPid)) {
+    process.kill(session.serverPid, 'SIGTERM');
+    const stopAt = Date.now() + 10_000;
+    while (Date.now() < stopAt && alive(session.serverPid)) await new Promise(resolve => setTimeout(resolve, 200));
+    if (alive(session.serverPid)) {
+      process.kill(session.serverPid, 'SIGKILL');
+      serviceReaped = false;
+    }
   }
+  if (alive(session.pid)) throw new Error(`驾驶进程 ${session.pid} 没有自己退出，已强杀。检查有没有残留端口：lsof -nP -iTCP -sTCP:LISTEN | grep ${session.pid}`);
   await rm(session.workspace, { recursive: true, force: true });
   await unlink(sessionFile).catch(() => {});
   let portClosed = true;
@@ -73,6 +82,7 @@ export async function cleanup() {
     at: new Date().toISOString(),
     head: session.head,
     driverExited: !alive(session.pid),
+    serviceReaped,
     portClosed,
     workspaceRemoved: !existsSync(session.workspace),
     evidenceDir,
