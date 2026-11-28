@@ -14,6 +14,12 @@
     "typecheck": "pnpm --filter @the-way-here/server typecheck && pnpm --filter @the-way-here/web typecheck && pnpm --filter @the-way-here/desktop typecheck",
     "test": "pnpm --filter @the-way-here/wiki-core test && pnpm --filter @the-way-here/life-views test && pnpm --filter @the-way-here/run-manager test && pnpm --filter @the-way-here/server test && pnpm --filter @the-way-here/web test && pnpm test:desktop",
     "doctor": "node scripts/doctor.mjs",
+    "gate": "node scripts/gate.mjs",
+    "lint": "eslint .",
+    "lint:ratchet": "node scripts/lint-ratchet.mjs",
+    "prepare": "node scripts/hooks/install.mjs",
+    "twh": "node scripts/twh.mjs",
+    "eval": "node scripts/eval.mjs",
     "web:verify": "pnpm build && node scripts/verify-web.mjs",
     "desktop": "pnpm build && pnpm desktop:native && pnpm --filter @the-way-here/desktop dev",
     "desktop:package": "pnpm build && node scripts/package-desktop.mjs",
@@ -35,11 +41,16 @@
     "appstore:release": "node scripts/package-mas.mjs --build --release"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@openai/codex": "0.162.1",
     "@playwright/test": "^1.63.0",
     "concurrently": "^9.2.1",
     "electron": "^44.3.0",
     "electron-builder": "^26.15.3",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "typescript-eslint": "^8.74.0",
     "yaml": "^2.8.1"
   }
 }

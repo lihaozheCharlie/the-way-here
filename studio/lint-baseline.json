@@ -1,0 +1,23 @@
+{
+  "rules": {
+    "@typescript-eslint/no-explicit-any": 266,
+    "@typescript-eslint/no-unused-expressions": 2,
+    "@typescript-eslint/no-unused-vars": 17,
+    "no-control-regex": 3,
+    "no-empty": 32,
+    "no-extra-boolean-cast": 1,
+    "no-irregular-whitespace": 7,
+    "no-restricted-imports": 17,
+    "no-unsafe-finally": 38,
+    "no-useless-assignment": 3,
+    "no-useless-escape": 8,
+    "prefer-const": 7,
+    "preserve-caught-error": 7,
+    "react-hooks/exhaustive-deps": 40,
+    "react-hooks/immutability": 8,
+    "react-hooks/preserve-manual-memoization": 6,
+    "react-hooks/purity": 2,
+    "react-hooks/refs": 26,
+    "react-hooks/set-state-in-effect": 40
+  }
+}
