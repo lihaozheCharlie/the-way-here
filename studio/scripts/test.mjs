@@ -11,7 +11,7 @@ const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const state = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'twh-test-state-'));
 const steps = [
   ...['wiki-core', 'life-views', 'run-manager', 'server', 'web'].map(name => ['pnpm', '--filter', `@the-way-here/${name}`, 'test']),
-  ['node', '--test', ...readdirSync(path.join(studio, 'scripts')).filter(file => file.endsWith('.test.mjs')).map(file => `scripts/${file}`), ...readdirSync(path.join(studio, 'scripts/hooks')).filter(file => file.endsWith('.test.mjs')).map(file => `scripts/hooks/${file}`)],
+  ['node', '--test', '--test-concurrency=1', '--test-timeout=120000', ...readdirSync(path.join(studio, 'scripts')).filter(file => file.endsWith('.test.mjs')).map(file => `scripts/${file}`), ...readdirSync(path.join(studio, 'scripts/hooks')).filter(file => file.endsWith('.test.mjs')).map(file => `scripts/hooks/${file}`)],
   ['pnpm', 'test:desktop'],
 ];
 
