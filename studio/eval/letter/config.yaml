@@ -1,0 +1,23 @@
+version: 3
+name: 匿名工作区
+defaultKnowledgeBase: demo
+paths:
+  skills: knowledge-engine/skills
+  tools: knowledge-engine/tools
+  agentInstructions: AGENTS.md
+knowledgeBases:
+  demo:
+    name: 匿名演示
+    description: 只含虚构材料
+    paths:
+      wiki: vault/demo/wiki
+      sources: vault/demo/sources
+agents:
+  defaultRuntime: "auto"
+  runtimes:
+    codex:
+      enabled: false
+    pi:
+      enabled: false
+validation:
+  commands: []

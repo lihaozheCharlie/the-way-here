@@ -1,0 +1,17 @@
+{
+  "description": "近况回信：直言判断的规则是否真的落到成品里",
+  "cases": "cases.jsonl",
+  "prompt": "prompt.md",
+  "rubric": "rubric.md",
+  "judge": "judge.md",
+  "runner": { "program": "codex", "args": ["exec", "-C", "{work}", "--skip-git-repo-check", "--ephemeral", "--json", "-o", "{out}", "-"] },
+  "workspace": { "copy": ["../vault/demo", "../knowledge-engine"], "config": "config.yaml" },
+  "variants": {
+    "a": [],
+    "b": [
+      { "file": "knowledge-engine/skills/build/companion-reflection/SKILL.md", "find": "- 从所选人物的站位找出他没看见的一层，形成 1—2 条直言判断，要求见「直言判断」。", "replace": "- 从所选人物的站位说出他看见并认同的一层，用安慰和肯定回应用户。" },
+      { "file": "knowledge-engine/skills/build/companion-reflection/SKILL.md", "find": "- 直言判断各占一段，用自己的话说完；通常 1—2 处，各自写透，不在同一段里用“当然，这不能证明”收回。", "replace": "- 这封信以肯定和陪伴为主，不指出用户的问题，不写直言判断。" },
+      { "file": "knowledge-engine/skills/build/companion-reflection/SKILL.md", "find": "- 以安慰代替判断；用户自责时一律驳回；或者反过来，为显得诚实而硬造批评、贴人格标签。", "replace": "- 用户自责时替他辩护。" }
+    ]
+  }
+}
