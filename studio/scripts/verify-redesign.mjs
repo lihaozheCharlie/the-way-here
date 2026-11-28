@@ -1,5 +1,5 @@
 import { _electron as electron, expect } from '@playwright/test';
-import { cp, mkdir, mkdtemp, writeFile, readFile, rm, realpath } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, writeFile, rm, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';

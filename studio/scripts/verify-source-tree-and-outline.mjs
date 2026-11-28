@@ -79,7 +79,7 @@ function App(){if(params.has('integrated'))return <MemoryRouter><div className="
     const headingStyle=await body.locator('h2').first().evaluate(n=>{const s=getComputedStyle(n);return {fontSize:s.fontSize,fontFamily:s.fontFamily,fontWeight:s.fontWeight,lineHeight:s.lineHeight}});await body.press('Enter');const editor=page.locator('[data-document-editor]');await expect(editor).toBeVisible();expect(await editor.locator('.document-editor-heading-2').first().evaluate(n=>{const s=getComputedStyle(n);return {fontSize:s.fontSize,fontFamily:s.fontFamily,fontWeight:s.fontWeight,lineHeight:s.lineHeight}})).toEqual(headingStyle);
     if(width<980){if(!await page.locator('.document-outline-card').isVisible())await first.click();}else await first.hover();await expect(page.getByText('跟随光标', {exact:true})).toBeVisible();
     const second=page.locator('.outline-item').filter({hasText:'第2节'});await second.click();await expect(editor).toBeFocused();await expect(second).toHaveAttribute('aria-current','location');if(width<980)await expect(page.locator('.document-outline-card')).toBeHidden();
-    const heading=await editor.evaluate(n=>getSelection()?.anchorNode?.parentElement?.closest('.cm-line')?.textContent);expect(heading).toContain('第2节');
+    const heading=await editor.evaluate(()=>getSelection()?.anchorNode?.parentElement?.closest('.cm-line')?.textContent);expect(heading).toContain('第2节');
     await page.keyboard.insertText('补充');await expect.poll(()=>writes).toBeGreaterThan(0);
     await page.keyboard.press('Meta+ArrowDown');await expect(page.locator('.outline-item.active')).toContainText('生活 2');
     await page.screenshot({animations:'disabled',path:path.join(captures,`${width}-editing.png`)});

@@ -1,6 +1,6 @@
 // Real bundled CLI, isolated anonymous HOME, no authentication and no model RPCs.
 import { spawn, spawnSync } from 'node:child_process';
-import { copyFile, cp, mkdtemp, mkdir, readdir, realpath, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdtemp, mkdir, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import readline from 'node:readline';
