@@ -1,0 +1,54 @@
+# knowledge-engine 的保守规则集。
+#
+# 在仓库根运行：uvx ruff check knowledge-engine
+# （knowledge-engine/tools/gate.py 跑的是同一条命令。）
+#
+# 约束：本机 Python 3.9，CI Python 3.12，代码必须两边都能跑，所以 target-version 固定为 py39。
+
+line-length = 120
+target-version = "py39"
+
+[lint]
+# E、F：pycodestyle 错误与 pyflakes，只报真问题。
+# I：导入排序。B：bugbear，报很可能的缺陷。
+# UP 不整组开启，只取在 3.9 运行时安全的几条：
+#   UP006 标注用 list[int] 而不是 List[int]（PEP 585，3.9 起运行时可用）。
+#   UP007 标注用 A | B 而不是 Union[A, B]；ruff 只在文件带
+#         `from __future__ import annotations` 时才报，不会落到运行时。
+#   UP045 标注用 A | None 而不是 Optional[A]；同 UP007。
+#   UP008 super(Cls, self) 改 super()。
+#   UP035 从 typing 导入已弃用的名字（如 Iterable），改从 collections.abc 导入。
+# 明确不取的 UP：
+#   UP036 按 py39 目标会把 3.10+ 的版本分支判为过时，而代码要在 3.12 上跑。
+#   UP038 把 isinstance 的第二个参数写成运行时的 X | Y。
+#   UP022 纯风格，且与现有工具 stdout=PIPE, stderr=PIPE 的写法相反。
+#   UP030/UP031/UP032 格式化改写，可能改变求值顺序或异常类型。
+select = ["E", "F", "I", "B", "UP006", "UP007", "UP008", "UP035", "UP045"]
+
+[lint.isort]
+# 现有工具在导入之后空两行再写模块常量，与 PEP 8 一致。
+lines-after-imports = 2
+
+[lint.per-file-ignores]
+# 以下 12 个文件在本规则集引入之前就已存在（首次提交于 2026-08 至 2026-09）。
+# 例外只收窄到具体规则；新文件不得加入这张表，新代码按完整规则集检查。
+#
+# E501  历史行宽不统一（最长 1206 列），不逐行改写存量文件。
+# I001  导入顺序或空行不合 isort。
+# B007  循环变量在循环体内未使用。
+# UP035 从 typing 导入 Iterable。
+# F401  导入了未使用的名字。
+# F541  f-string 里没有占位符。
+
+"skills/build/people/scripts/collect_person_evidence.py" = ["E501", "I001", "UP035"]
+"skills/build/people/scripts/rebuild_known_people.py" = ["E501", "I001"]
+"skills/common/retrieval/scripts/evidence_reader.py" = ["E501"]
+"tools/diary_entity_audit.py" = ["E501", "I001", "B007", "F541"]
+"tools/diary_entity_deep_audit.py" = ["E501", "I001", "B007"]
+"tools/normalize_wikilinks.py" = ["F401"]
+"tools/source_access.py" = ["E501", "I001"]
+"tools/tests/test_linked_sources.py" = ["E501", "I001"]
+"tools/update_obsidian_tags.py" = ["E501", "I001", "UP035"]
+"tools/validate_skill_system.py" = ["E501", "I001", "B007"]
+"tools/validate_wiki_links.py" = ["I001"]
+"tools/vault_context.py" = ["E501"]
