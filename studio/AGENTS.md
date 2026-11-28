@@ -4,7 +4,7 @@
 
 ## 工程流程（常驻合同）
 
-每次 Studio 任务都走这套流程，不靠斜杠命令触发。剧本和原则用 pstack，本仓的差异在 `agents/twh/`，入口说明见 `.agents/skills/twh-mode/SKILL.md`。
+每次 Studio 任务都走这套流程，不靠斜杠命令触发。剧本和原则用 pstack，本仓的差异在 `agents/twh/`，入口说明见 `.agents/skills/twh-mode/SKILL.md`。新上手的 Agent 和操作者先读 `docs/AGENT-WORKFLOW.md`（全流程地图、命令速查、每种拦截的处理办法）。
 
 1. **先复述。** 用大白话说出操作者的目标和满足它的最小改动，然后开始，不等确认。只读的问题先调查，不改代码。
 2. **选剧本，抄进待办。** 映射见 `agents/twh/harness.md`。跳过某一步时写一行 `跳过：<步骤>，<原因>`。
