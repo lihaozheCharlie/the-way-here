@@ -12,7 +12,7 @@
     "build": "pnpm --filter @the-way-here/web build && pnpm --filter @the-way-here/server build",
     "start": "node scripts/start.mjs",
     "typecheck": "pnpm --filter @the-way-here/server typecheck && pnpm --filter @the-way-here/web typecheck && pnpm --filter @the-way-here/desktop typecheck",
-    "test": "pnpm --filter @the-way-here/wiki-core test && pnpm --filter @the-way-here/life-views test && pnpm --filter @the-way-here/run-manager test && pnpm --filter @the-way-here/server test && pnpm --filter @the-way-here/web test && pnpm test:desktop",
+    "test": "node scripts/test.mjs",
     "doctor": "node scripts/doctor.mjs",
     "gate": "node scripts/gate.mjs",
     "lint": "eslint .",

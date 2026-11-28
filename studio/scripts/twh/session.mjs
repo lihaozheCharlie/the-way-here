@@ -67,11 +67,21 @@ export async function cleanup() {
   }
   await rm(session.workspace, { recursive: true, force: true });
   await unlink(sessionFile).catch(() => {});
-  if (session.origin) {
-    const still = await fetch(`${session.origin}/api/health`, { signal: AbortSignal.timeout(1500) }).then(() => true, () => false);
-    if (still) throw new Error(`服务端口还在监听：${session.origin}`);
-  }
-  return { cleaned: true, evidenceDir };
+  let portClosed = true;
+  if (session.origin) portClosed = !(await fetch(`${session.origin}/api/health`, { signal: AbortSignal.timeout(1500) }).then(() => true, () => false));
+  const receipt = {
+    at: new Date().toISOString(),
+    head: session.head,
+    driverExited: !alive(session.pid),
+    portClosed,
+    workspaceRemoved: !existsSync(session.workspace),
+    evidenceDir,
+    evidence: evidenceDir && existsSync(path.join(studio, evidenceDir)) ? (await readdir(path.join(studio, evidenceDir))).sort() : [],
+  };
+  // 清理回执留在证据目录里。"清理干净了"要有文件可查，不能只凭一句汇报。
+  if (receipt.evidenceDir && existsSync(path.join(studio, receipt.evidenceDir))) await writeFile(path.join(studio, receipt.evidenceDir, 'cleanup.json'), `${JSON.stringify(receipt, null, 2)}\n`);
+  if (!portClosed) throw new Error(`服务端口还在监听：${session.origin}`);
+  return { cleaned: true, ...receipt };
 }
 
 export async function request(pathname, body = {}) {
@@ -91,7 +101,10 @@ export async function doctor(session = null) {
   const dirty = git('status', '--porcelain').split('\n').filter(Boolean).length;
   if (dist.stale) value.problems.push(`构建产物比源码旧，实跑看到的不是当前代码。`);
   if (value.head !== git('rev-parse', 'HEAD')) value.problems.push(`实例是从另一个提交启动的：${value.head.slice(0, 7)}，当前 ${git('rev-parse', 'HEAD').slice(0, 7)}。`);
-  return { ...value, ok: value.ok && value.problems.length === 0, dirtyCount: dirty, builtAt: dist.builtAt };
+  const health = { ...value, ok: value.ok && value.problems.length === 0, dirtyCount: dirty, builtAt: dist.builtAt, at: new Date().toISOString() };
+  // 体检结果也留一份在证据目录，早上的复盘看得到实例当时的状态。
+  if (target.evidenceDir && existsSync(path.join(studio, target.evidenceDir))) await writeFile(path.join(studio, target.evidenceDir, 'doctor.json'), `${JSON.stringify(health, null, 2)}\n`);
+  return health;
 }
 
 export async function readSession() {

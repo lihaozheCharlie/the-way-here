@@ -148,7 +148,10 @@ validation:
 }
 
 async function startServer() {
-  const env = { ...process.env, THE_WAY_HERE_VAULT: session.workspace, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo', THE_WAY_HERE_PORT: '0', THE_WAY_HERE_WEB_ROOT: path.join(studio, 'apps/web/dist'), TWH_APP_CACHE_ROOT: path.join(session.workspace, 'cache') };
+  // HOME 指到临时工作区：应用状态默认写在 ~/Library/Application Support 下，不改的话每次验证都往用户的真实目录里留东西。
+  const home = path.join(session.workspace, 'home');
+  await mkdir(home, { recursive: true });
+  const env = { ...process.env, HOME: home, THE_WAY_HERE_VAULT: session.workspace, THE_WAY_HERE_KNOWLEDGE_BASE: 'demo', THE_WAY_HERE_PORT: '0', THE_WAY_HERE_WEB_ROOT: path.join(studio, 'apps/web/dist'), TWH_APP_CACHE_ROOT: path.join(session.workspace, 'cache') };
   delete env.THE_WAY_HERE_DEV;
   delete env.THE_WAY_HERE_DESKTOP_TOKEN;
   let log = '';
