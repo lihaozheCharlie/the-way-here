@@ -15,10 +15,19 @@ const steps = [
   ['pnpm', 'test:desktop'],
 ];
 
+// 每步限时：CI 上曾有一个测试在 Linux 上静默挂死，烧掉整个 job 的超时。
+// 挂起要变成带名字的红失败，而不是没有输出的等待。
 let status = 0;
 for (const [command, ...args] of steps) {
   if (command === 'node') console.log(`\nstudio/scripts（工具自身的测试）:`);
-  status = spawnSync(command, args, { cwd: studio, stdio: 'inherit', env: { ...process.env, TWH_TEST_STATE_ROOT: state } }).status ?? 1;
+  const label = `${command} ${args.join(' ')}`;
+  const run = spawnSync(command, args, { cwd: studio, stdio: 'inherit', env: { ...process.env, TWH_TEST_STATE_ROOT: state }, timeout: 600_000 });
+  if (run.error?.code === 'ETIMEDOUT' || run.signal === 'SIGTERM') {
+    console.error(`\n这一步 10 分钟没有结束，按挂起处理：${label}`);
+    status = 1;
+    break;
+  }
+  status = run.status ?? 1;
   if (status !== 0) break;
 }
 rmSync(state, { recursive: true, force: true });

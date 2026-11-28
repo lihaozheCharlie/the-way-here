@@ -12,7 +12,7 @@ const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sessionFile = path.join(studio, '.runtime/verify/session.json');
 const cli = path.join(studio, 'scripts/twh.mjs');
 
-test('twh 命令行把参数原样发给驾驭进程', { skip: existsSync(sessionFile) && '已有在跑的验证实例，不动它的会话文件' }, async () => {
+test('twh 命令行把参数原样发给驾驭进程', { skip: existsSync(sessionFile) && '已有在跑的验证实例，不动它的会话文件', timeout: 180_000 }, async () => {
   const received = [];
   const server = createServer((request, response) => {
     let body = '';
@@ -26,9 +26,17 @@ test('twh 命令行把参数原样发给驾驭进程', { skip: existsSync(sessio
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   writeFileSync(sessionFile, JSON.stringify({ pid: process.pid, port: server.address().port, token: 'test-token', evidenceDir: '.runtime/evidence/test', workspace: '/nonexistent' }));
   // 必须异步起子进程：它要请求的假服务就在本进程里，同步等待会互相卡住。
-  const run = (...args) => new Promise(resolve => {
+  // 捕获输出并限时：哪一步卡住、卡住时打印了什么，就是诊断信息，不能让整个测试静默挂死。
+  const run = (...args) => new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [cli, ...args], { cwd: studio });
-    const timer = setTimeout(() => child.kill('SIGKILL'), 15000);
+    let out = '';
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`twh ${args.join(' ')} 20 秒内没有退出。子进程输出：${out.slice(-800) || '（无）'}`));
+    }, 20_000);
+    child.stdout.on('data', d => { out += d; });
+    child.stderr.on('data', d => { out += d; });
+    child.once('error', error => { clearTimeout(timer); reject(error); });
     child.once('close', code => { clearTimeout(timer); resolve(code); });
   });
   try {
@@ -41,6 +49,7 @@ test('twh 命令行把参数原样发给驾驭进程', { skip: existsSync(sessio
     await run('evidence', 'bogus', 'x');
   } finally {
     server.close();
+    server.closeAllConnections?.();
     if (existsSync(sessionFile)) unlinkSync(sessionFile);
   }
   const paths = received.map(item => item.path);
