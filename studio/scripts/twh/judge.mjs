@@ -55,7 +55,7 @@ export function check({ head } = {}) {
   head = head ?? git('rev-parse', 'HEAD');
   const file = path.join(judgeRoot, `${head}.json`);
   const reasons = [];
-  if (!existsSync(file)) return { ok: false, reasons: [`HEAD ${head.slice(0, 7)} 没有裁决书。按 studio/agents/twh/judge.md 派裁判，然后用 pnpm twh judge record 登记。`] };
+  if (!existsSync(file)) return { ok: false, reasons: [`HEAD ${head.slice(0, 7)} 没有裁决书。按 studio/agents/twh/judge.md 派裁判，然后用 pnpm twh judge record 登记。`], flags: loosening(git('merge-base', 'origin/main', head), head) };
   const record = JSON.parse(readFileSync(file, 'utf8'));
   if (record.verdict === 'FAIL') reasons.push('裁决是 FAIL。');
   if (!VERDICTS.includes(record.verdict)) reasons.push(`裁决书的 verdict 不是受支持的值：${record.verdict}`);
