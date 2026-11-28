@@ -28,7 +28,11 @@ try {
       process.exitCode = health.ok ? 0 : 1;
       break;
     }
-    case 'go': out(await request('/go', { route: rest[1] ?? '/' })); break;
+    case 'go': {
+      if (!rest[0]) throw new Error('用法：pnpm twh go <路由>，例：pnpm twh go /letters');
+      out(await request('/go', { route: rest[0] }));
+      break;
+    }
     case 'drive': {
       const code = option('--eval');
       if (code) { out(await request('/eval', { code, timeout: Number(option('--timeout', 30)) })); break; }
@@ -70,9 +74,16 @@ try {
         out({ verdict: saved.verdict, head: saved.head, file: `.runtime/judge/${saved.head}.json`, evidence: saved.evidence.length });
       } else if (rest[0] === 'check') {
         const result = check({ head: option('--head') });
+        if (flag('--unsigned')) {
+          // 把没会签的放宽按种类和提交列出来，顺带给出可以直接抄进 --countersign 的写法。
+          const groups = new Map();
+          for (const flagItem of result.flags) groups.set(flagItem.kind, [...new Set([...(groups.get(flagItem.kind) ?? []), flagItem.commit.slice(0, 7)])]);
+          out({ head: option('--head') ?? undefined, unsigned: [...groups].map(([kind, commits]) => ({ kind, commits, countersign: `"${kind}@${commits.join(',')}: <逐个提交看过 diff 后的理由>"` })) });
+          break;
+        }
         if (result.ok) console.log(`VERDICT ${result.record.verdict} head=${result.record.head} judge=${result.record.judgedBy} at=${result.record.recordedAt}`);
         else { console.error(result.reasons.join('\n')); process.exitCode = 1; }
-      } else throw new Error('用法：pnpm twh judge check [--head <sha>]，或 pnpm twh judge record --head <sha> --verdict <PASS|PASS+NOTES|FAIL> --file <说明> --judge "<谁>" [--countersign "<种类>: <理由>"] [--flag "<说明>"]');
+      } else throw new Error('用法：pnpm twh judge check [--head <sha>] [--unsigned]，或 pnpm twh judge record --head <sha> --verdict <PASS|PASS+NOTES|FAIL> --file <说明> --judge "<谁>" [--countersign "<种类>@<sha>,<sha>: <理由>"] [--flag "<说明>"]');
       break;
     }
     case 'ci': out(await ciWatch(rest[1])); break;
@@ -82,6 +93,8 @@ try {
   console.error(error.message);
   process.exitCode = 1;
 }
+// fetch 的连接会留着等复用，不主动退出的话每条命令都要多等几秒。
+process.exit(process.exitCode ?? 0);
 
 function collect(items) {
   const result = { countersigns: [], flags: [] };
