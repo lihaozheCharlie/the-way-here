@@ -122,13 +122,13 @@ async function ciWatch(branch = 'HEAD') {
   const name = branch === 'HEAD' ? spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: studio, encoding: 'utf8' }).stdout.trim() : branch;
   const deadline = Date.now() + 30 * 60 * 1000;
   while (Date.now() < deadline) {
-    const run = gh(['run', 'list', '--branch', name, '--limit', '1', '--json', 'databaseId,status,conclusion,headSha']);
-    if (run?.[0]?.headSha === head) {
-      if (run[0].status === 'completed') return { ...run[0], branch: name };
-      await new Promise(resolve => setTimeout(resolve, 20_000));
-      continue;
+    const run = gh(['run', 'list', '--branch', name, '--limit', '1', '--json', 'databaseId,status,conclusion,headSha,url']);
+    if (run?.[0]?.headSha === head && run[0].status === 'completed') {
+      const jobs = gh(['run', 'view', String(run[0].databaseId), '--json', 'jobs'])?.jobs?.map(job => ({ name: job.name, conclusion: job.conclusion })) ?? [];
+      if (run[0].conclusion !== 'success') process.exitCode = 1;
+      return { ...run[0], branch: name, jobs, next: run[0].conclusion === 'success' ? undefined : `CI 红了。看失败的 job：gh run view ${run[0].databaseId} --log-failed` };
     }
-    await new Promise(resolve => setTimeout(resolve, 10_000));
+    await new Promise(resolve => setTimeout(resolve, run?.[0]?.headSha === head ? 20_000 : 10_000));
   }
   throw new Error(`30 分钟内没看到 ${name} 上 ${head.slice(0, 7)} 的 CI 结果。用 gh run list --branch ${name} 看。`);
 }

@@ -18,7 +18,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # workspace 根在 studio/，action 读不到 packageManager，版本写在这里，和 studio/package.json 保持一致
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22.19.0
@@ -38,6 +41,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22.19.0
