@@ -1,14 +1,24 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+let autoTestRoot: string | undefined;
+
 function appStateRoot(): string {
-  // Explicit acceptance runs must never share the user's persisted app state.
-  // Vitest sets VITEST itself; ordinary desktop launches ignore this test option.
-  const testRoot = process.env.VITEST && process.env.TWH_TEST_STATE_ROOT;
-  if (testRoot) {
-    if (!path.isAbsolute(testRoot)) throw new Error("测试状态目录必须是绝对路径");
-    return path.resolve(testRoot);
+  // Tests must never share the user's persisted app state: every entry under
+  // Application Support looks like a real library to the product.
+  // Vitest sets VITEST itself; ordinary desktop launches ignore this option.
+  if (process.env.VITEST) {
+    const explicit = process.env.TWH_TEST_STATE_ROOT;
+    if (explicit) {
+      if (!path.isAbsolute(explicit)) throw new Error("测试状态目录必须是绝对路径");
+      return path.resolve(explicit);
+    }
+    // A test run that skips the runner (pnpm --filter <pkg> test) still gets its
+    // own root, so nothing lands in the user's real directory.
+    autoTestRoot ??= mkdtempSync(path.join(os.tmpdir(), "twh-test-state-"));
+    return autoTestRoot;
   }
   if (process.platform === "darwin") return path.join(os.homedir(), "Library", "Application Support", "the-way-here");
   if (process.platform === "win32") return path.join(process.env.APPDATA || os.homedir(), "the-way-here");
