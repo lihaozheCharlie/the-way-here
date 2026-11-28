@@ -73,6 +73,10 @@ export function buildQuotes(index: WikiIndex): QuotesView | undefined {
   return page ? { page, groups: parseQuoteGroups(page.markdown) } : undefined;
 }
 
+function frontmatterText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 export function buildLetters(index: WikiIndex): LettersView {
   const pages = index.list({ category: "letters" })
     .filter((page) => !page.title.includes("总览"))
@@ -82,6 +86,8 @@ export function buildLetters(index: WikiIndex): LettersView {
     const full = index.get(page.id);
     const rawEvidenceSources = full?.properties.evidence_sources;
     const evidenceSources = Array.isArray(rawEvidenceSources) ? rawEvidenceSources.filter((value): value is string => typeof value === "string" && Boolean(value.trim())) : typeof rawEvidenceSources === "string" && rawEvidenceSources.trim() ? [rawEvidenceSources] : [];
+    const lensId = frontmatterText(full?.properties.lens);
+    const lensName = frontmatterText(full?.properties.lens_name);
     return {
       page,
       letterDate: semanticDate(page),
@@ -89,6 +95,7 @@ export function buildLetters(index: WikiIndex): LettersView {
       evidenceTo: page.end,
       evidenceSources,
       themes: uniquePages((full?.outgoingLinks || []).map((link) => resolveLink(index, link))).filter((linked) => themeCategories.includes(linked.category)).slice(0, 10),
+      ...(lensId || lensName ? { lens: { ...(lensId ? { id: lensId } : {}), ...(lensName ? { name: lensName } : {}) } } : {}),
     };
   });
   const threads = new Map<string, { id: string; title: string; category: PageCategory | "uncategorized"; letters: string[]; latestDate: string }>();

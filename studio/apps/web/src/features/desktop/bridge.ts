@@ -23,8 +23,6 @@ export interface DesktopBridge {
   onResumeAfterUpdate?: (callback: () => void) => () => void;
   onUpdateState?: (callback: (state: DesktopUpdateState) => void) => () => void;
   connectCodexCLI?: () => Promise<boolean>;
-  prepareMobileWorkspace?: () => Promise<boolean>;
-  openMobileWorkspace?: () => Promise<void>;
   openPrivacy?: () => Promise<void>;
   photoLibraryStatus?: () => Promise<PhotoLibraryAuthorization>;
   photoLibraryFilters?: () => Promise<PhotoLibraryFilters>;
@@ -55,6 +53,8 @@ export interface DesktopBridge {
   notify: (payload: { title: string; body: string; route: string }) => Promise<void>;
   setBadge: (count: number) => Promise<void>;
   revealWorkspace: () => Promise<void>;
+  revealPath?: (targetPath: string) => Promise<void>;
+  moveStorage?: () => Promise<boolean>;
 }
 declare global { interface Window { desktop?: DesktopBridge } }
 export function openDesktopWindow(route: string, kind: "reader" | "focus" | "settings" | "capture" = "reader") {

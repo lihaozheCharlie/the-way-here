@@ -5,6 +5,7 @@ import matter from "gray-matter";
 import type { PageCategory, PageSection, VaultConfig, WikiLink, WikiPage, WikiPageSummary } from "@the-way-here/shared";
 import { readExternalSource } from "./external-sources.js";
 import { loadVaultConfig } from "./config.js";
+import { contentBase } from "./content-base.js";
 import { toPosix, withoutExtension, categoryForPath, pageIdForPath } from "./page-paths.js";
 import { stringArray, sourceImportChannel, dateValue, normalizeFrontmatterProperties, plainText, extractTitle, extractSections, extractWikiLinks } from "./markdown.js";
 
@@ -40,12 +41,13 @@ export class WikiIndex {
 
   private async rebuildNow(): Promise<void> {
     this.config = await loadVaultConfig(this.vaultRoot, this.knowledgeBaseId);
+    const base = contentBase(this.vaultRoot, this.config);
     const patterns = [
       `${toPosix(this.config.paths.wiki)}/**/*.md`,
       `${toPosix(this.config.paths.sources)}/**/*.md`,
     ];
     const files = await fg(patterns, {
-      cwd: this.vaultRoot,
+      cwd: base,
       onlyFiles: true,
       unique: true,
       followSymbolicLinks: false,
@@ -54,8 +56,8 @@ export class WikiIndex {
     const pages = new Map<string, InternalPage>();
     for (const relativeFile of files.sort()) {
       const relativePath = toPosix(relativeFile);
-      const absolutePath = path.resolve(this.vaultRoot, relativePath);
-      if (!absolutePath.startsWith(`${this.vaultRoot}${path.sep}`)) continue;
+      const absolutePath = path.resolve(base, relativePath);
+      if (!absolutePath.startsWith(`${base}${path.sep}`)) continue;
       const [referenceContent, fileStat] = await Promise.all([readFile(absolutePath, "utf8"), stat(absolutePath)]);
       const external = await readExternalSource(this.vaultRoot, this.config, relativePath, referenceContent);
       const content = external?.content ?? referenceContent;

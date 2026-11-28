@@ -22,7 +22,7 @@ source:
 | `knowledge-engine/skills/build/people/SKILL.md` | 人物页、别名、`wiki/05 人物关系图谱/` 和 `wiki/07` 人物分支的唯一负责人 | 分层人物模板和证据收集脚本 |
 | `knowledge-engine/skills/build/life-experience/SKILL.md` | 现实系统、生活过的城市、组织/项目和出现过的地点的唯一负责人 | 现实系统及城市/组织/地点模板 |
 | `knowledge-engine/skills/build/state-tracking/SKILL.md` | 当前状态跟进、状态趋势证据、日记状态评估，以及能把历史理解与今天未知分开的“值得聊聊”问题池 | 状态追踪、冷启时间边界与对话问题池配方 |
-| `knowledge-engine/skills/build/companion-reflection/SKILL.md` | `wiki/12 近况对话/` 的朋友式洞见回信层，以日记和少量 wiki 证据为基础；冷启批次选择一篇代表来源而非机械逐篇生成；主视角决定完整推理，辅助视角只做有边界的盲点校验 | 朋友声音、冷启代表来源选择、回信语义回归和重复样式审计；人物库由共享推理视角统一维护 |
+| `knowledge-engine/skills/build/companion-reflection/SKILL.md` | `wiki/12 近况对话/` 的回信层：有证据的直言点评，由按材料选出的主视角以自己的站位、原话和性情给出；以日记、状态追踪、循环页和少量 wiki 证据为基础，写信不读旧回信正文，靠总览的中心记录避免复读；冷启批次选择一篇代表来源而非机械逐篇生成；主视角决定完整推理与说法，辅助视角只做有边界的盲点校验 | 朋友声音、冷启代表来源选择、回信语义回归和重复样式审计（含保留句、并存句密度与直言句式）；含按材料选角、让人物活起来与人物标志审计；人物库由共享推理视角统一维护 |
 | `knowledge-engine/skills/build/knowledge-adjustment/SKILL.md` | 当前目标中的 wiki、模板或 Skill 调整；不处理仅分析请求 | 受影响的负责 Skill 与质量门 |
 
 ## 通用模块
@@ -32,7 +32,7 @@ source:
 | `knowledge-engine/skills/common/retrieval/SKILL.md` | 共享关键词召回、来源时间核验、渐进阅读与双链追溯；只提供证据，不负责消费结论或写入 | 独立快照/读取工具与来源提示配置；查询、预测、扫描和需要旧知识的构建模块按需依赖 |
 | `knowledge-engine/skills/common/quality-gate/SKILL.md` | 跨模块内容质量和区分读写模式的验证 | 标签/链接验证器、Skill 体系验证器和安全的生成索引检查 |
 | `knowledge-engine/skills/common/skill-system/SKILL.md` | Skill 设计、`AGENTS.md` 路由健康和模块演进 | `AGENTS.md`、`knowledge-engine/skills/common/skill-system/module-map.md`、`skill体系重构思路.md` 和 GBrain 的 Skill 思路 |
-| `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` | 查询、回信和解释性构建共享的人物推理视角；唯一维护选角、主辅关系和忠实度，只改变怎样理解证据，不负责归档或写入决策 | 动态人物发现、证据核验、人物特色与成文校准、成品定位和多视角语义回归 |
+| `knowledge-engine/skills/common/reasoning-lenses/SKILL.md` | 查询、回信和解释性构建共享的人物推理视角；唯一维护选角、主辅关系、站位与个性、说法与故事的用法、忠实度，只改变怎样理解证据，不负责归档或写入决策 | 动态人物发现（站位、说法、适合的材料）、证据核验、性格内核、带出处的口头禅与标志故事、直言方式与成文校准、成品定位和多视角语义回归 |
 | `knowledge-engine/skills/common/signal-detector/SKILL.md` | 普通对话、维护或路由诊断期间的轻量信号分类 | 信号检测配方 |
 
 ## 消费模块
@@ -52,7 +52,8 @@ source:
 - 根 `AGENTS.md` 先区分产品与 Wiki；Wiki 请求再按注册表区分读写模式并选择规范 Skill。
 - `vault/<id>/` 隔离各库的来源和 Wiki；根 `knowledge-engine/skills/`、`knowledge-engine/tools/` 与协议只维护一份，通过知识库 ID 选择内容目标。
 - 详细对象配方放在负责 Skill 的 `references/` 目录中。
-- 人物推理文件只保存在 `knowledge-engine/skills/common/reasoning-lenses/references/figures/`；下游通过动态发现脚本选择，不保存名单或副本。
+- 人物推理文件只保存在 `knowledge-engine/skills/common/reasoning-lenses/references/figures/`；下游通过动态发现脚本选择，不保存名单或副本。每位人物的站位、说法、带出处的口头禅与标志故事写在人物文件里，领域 Skill 的朋友身份只规定关系伦理，不统一口吻。
+- 回信写信时不读取其他回信的正文；重复判断靠状态追踪、循环页和回信总览的中心记录排除。
 - 构建 Skill 采用扇出方式；一个来源可以更新多种对象。
 - 通用 Skill 提供可复用质量门，有实质修改后应串联使用。
 - 查询 Skill 通常先从相关综合 Wiki 回答；预测与扫描按自己的冻结资料契约检索，消费 Skill 自身不写入；若同一任务需要沉淀耐久信息，退出查询流程后路由到相应构建 Skill。

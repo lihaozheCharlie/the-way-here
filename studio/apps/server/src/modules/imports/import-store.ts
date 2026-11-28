@@ -4,6 +4,7 @@ import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promi
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { JOURNEY_REPORT_DRAFT_END, JOURNEY_REPORT_DRAFT_START, type PaymentJourneyClueState, type PaymentJourneyClueStatus, type SourceBuildStatus, type SourceBuiltRef, type SourceImportBatch, type SourceImportChannel, type SourceImportFile, type WikiPage, type WikiRun } from "@the-way-here/shared";
+import { contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import type { ImportSelection } from "./import-options.js";
 import { prepareImportBatch } from "./prepare-import.js";
 import { prepareAlipayStatement } from "./payment-statement.js";
@@ -47,7 +48,7 @@ export class ImportStore {
     // Filter the response only: retain history and hidden photo originals on disk.
     const live = await Promise.all(available.map(async (batch) => {
       const present = await Promise.all(batch.files.map(async (file) => {
-        const target = path.resolve(this.knowledge.vaultRoot, file.storedPath);
+        const target = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, file.storedPath);
         if (!isPathInside(sourceRoot, target)) return false;
         try { return (await stat(target)).isFile(); }
         catch (error: any) {
@@ -63,7 +64,7 @@ export class ImportStore {
   async renameSource(previousPath: string, storedPath: string): Promise<void> {
     if (previousPath === storedPath) return;
     const sourceRoot = this.sourceRoot();
-    if (![previousPath, storedPath].every((entry) => isPathInside(sourceRoot, path.resolve(this.knowledge.vaultRoot, entry)))) {
+    if (![previousPath, storedPath].every((entry) => isPathInside(sourceRoot, resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, entry)))) {
       throw new ImportRequestError(403, "路径超出生活记录目录");
     }
     let manifests: string[];
@@ -146,7 +147,7 @@ export class ImportStore {
 
   async trackCreatedSource(page: Pick<WikiPage, "relativePath" | "title" | "markdown">): Promise<SourceImportBatch> {
     const storedPath = page.relativePath.replace(/\\/g, "/");
-    const target = path.resolve(this.knowledge.vaultRoot, storedPath);
+    const target = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, storedPath);
     const sourceRoot = this.sourceRoot();
     if (!isPathInside(sourceRoot, target) || !/\.md$/i.test(storedPath)) throw new ImportRequestError(400, "只能登记生活记录中的 Markdown 文件");
     const createdAt = new Date().toISOString();
@@ -207,7 +208,7 @@ export class ImportStore {
       } catch (error: any) {
         throw new ImportRequestError(400, error.message);
       }
-      const storedPath = path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/");
+      const storedPath = path.relative(contentBase(this.knowledge.vaultRoot, this.knowledge.index.config), target).split(path.sep).join("/");
       const build = classifyBuild(file.relativePath, file.content, prepared.journey);
       stored.push({ originalName: file.originalName, storedPath, bytes: file.bytes, ...build, buildUpdatedAt: build.buildStatus ? createdAt : undefined });
     }
@@ -237,7 +238,7 @@ export class ImportStore {
   }
 
   private sourceRoot(): string {
-    return path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
+    return resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, this.knowledge.index.config.paths.sources);
   }
 
   private manifestRoot(): string {
@@ -259,7 +260,7 @@ export class ImportStore {
     const rawFile = batch.files.find((file) => !file.buildKind && /\.csv$/i.test(file.storedPath));
     if (!rawFile) return batch;
     const sourceRoot = this.sourceRoot();
-    const rawPath = path.resolve(this.knowledge.vaultRoot, rawFile.storedPath);
+    const rawPath = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, rawFile.storedPath);
     if (!isPathInside(sourceRoot, rawPath)) return batch;
     try {
       const parsed = prepareAlipayStatement({ name: rawFile.originalName, relativePath: rawFile.storedPath, content: await readFile(rawPath, "utf8") }, batch.createdAt);
@@ -281,7 +282,7 @@ export class ImportStore {
 
   private async writeJourneyDraft(batch: SourceImportBatch): Promise<void> {
     const journey = batch.journey!;
-    const reportPath = path.resolve(this.knowledge.vaultRoot, journey.reportPath);
+    const reportPath = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, journey.reportPath);
     const sourceRoot = this.sourceRoot();
     if (!isPathInside(sourceRoot, reportPath)) throw new ImportRequestError(403, "消费旅程报告路径无效");
     const report = await readFile(reportPath, "utf8");

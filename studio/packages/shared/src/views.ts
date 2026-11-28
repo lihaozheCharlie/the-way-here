@@ -154,6 +154,12 @@ export interface GraphData {
   links: Array<{ source: string; target: string }>;
 }
 
+/** 写这封信的主视角，读自信页元数据：id 是人物库里的人物，name 是不在人物库里的自定义名称。 */
+export interface LetterLens {
+  id?: string;
+  name?: string;
+}
+
 export interface LetterViewItem {
   page: WikiPageSummary;
   letterDate: string;
@@ -161,6 +167,7 @@ export interface LetterViewItem {
   evidenceTo?: string;
   evidenceSources?: string[];
   themes: WikiPageSummary[];
+  lens?: LetterLens;
 }
 
 export interface LetterThread {

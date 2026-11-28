@@ -27,22 +27,6 @@ export class UserPreferences {
     return `${preferenceScope(key) === 'global' ? 'global' : createHash('sha256').update(path.resolve(workspace)).digest('hex')}:${key}`;
   }
   get(workspace, key) { return this.state.values[this.address(workspace, key)]?.value ?? null; }
-  copyWorkspacePreferences(source, destination, { knowledgeBaseIdMap } = {}) {
-    if (knowledgeBaseIdMap !== undefined && (!knowledgeBaseIdMap || typeof knowledgeBaseIdMap !== 'object' || Array.isArray(knowledgeBaseIdMap) || !Object.entries(knowledgeBaseIdMap).length || Object.entries(knowledgeBaseIdMap).some(([from, to]) => !/^[a-zA-Z0-9_-]{1,100}$/.test(from) || typeof to !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(to)))) throw new Error('Invalid knowledge-base preference mapping');
-    const prefix = createHash('sha256').update(path.resolve(source)).digest('hex') + ':';
-    const entries = Object.entries(this.read().values).filter(([address]) => address.startsWith(prefix));
-    for (const [address, entry] of entries) {
-      const key = address.slice(prefix.length);
-      if (preferenceScope(key) !== 'workspace') continue;
-      let targetKey = key;
-      if (knowledgeBaseIdMap !== undefined) {
-        const match = key.match(/^(photo-capture\.folder\.|capture\.default-folder\.|the-way-here\.folder-tree\.|the-way-here\.source-folder\.|the-way-here\.closed-topics\.)([a-zA-Z0-9_-]{1,100})$/);
-        if (!match || !Object.hasOwn(knowledgeBaseIdMap, match[2])) continue;
-        targetKey = match[1] + knowledgeBaseIdMap[match[2]];
-      }
-      this.set(destination, targetKey, entry.value, 'legacy-import');
-    }
-  }
   set(workspace, key, value, source = 'user') {
     if (typeof value !== 'string' || value.length > 32768 || !['user', 'legacy-import'].includes(source)) throw new Error('Invalid user preference');
     const address = this.address(workspace, key), state = this.read();

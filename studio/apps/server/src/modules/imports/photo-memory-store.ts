@@ -3,6 +3,7 @@ import { mkdir, readFile, readdir, realpath, rename, writeFile } from "node:fs/p
 import path from "node:path";
 import sharp from "sharp";
 import { photoAssetUrl, type PhotoMemory, type PhotoMemoryOutputTarget, type PhotoPerson, type RelationshipsView, type SourceImportBatch, type VaultConfig } from "@the-way-here/shared";
+import { contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import type { WikiIndex } from "@the-way-here/wiki-core";
 import { buildRelationships } from "@the-way-here/life-views";
 import { PHOTO_IDENTITY_INSTRUCTIONS, PHOTO_PEOPLE_START, PHOTO_PEOPLE_END, parsePhotoPersonBindings } from "./photo-person-bindings.js";
@@ -50,18 +51,19 @@ export class PhotoMemoryStore {
 
   private async directory(config: VaultConfig, id?: string): Promise<string> {
     if (id !== undefined) assertId(id);
-    const source = path.resolve(this.root, config.paths.sources);
-    if (!isPathInside(this.root, source)) throw new PhotoMemoryError(403, "来源路径无效");
+    const source = resolveContentPath(this.root, config, config.paths.sources);
+    if (!isPathInside(contentBase(this.root, config), source)) throw new PhotoMemoryError(403, "来源路径无效");
     // Walk existing ancestors before mkdir/read, including the source root itself.
     const target = path.join(source, ".photo-memories", ...(id ? [id] : []));
-    await this.checkPath(target, source);
+    await this.checkPath(config, target, source);
     return target;
   }
 
-  private async checkPath(target: string, allowed: string): Promise<void> {
+  private async checkPath(config: VaultConfig, target: string, allowed: string): Promise<void> {
     if (target !== allowed && !isPathInside(allowed, target)) throw new PhotoMemoryError(403, "照片路径超出知识库");
+    const base = contentBase(this.root, config);
     let current = target;
-    while (current !== this.root && isPathInside(this.root, current)) {
+    while (current !== base && isPathInside(base, current)) {
       try {
         const resolved = await realpath(current);
         if (resolved !== current) throw new PhotoMemoryError(403, "照片目录不能经过符号链接");
@@ -72,7 +74,7 @@ export class PhotoMemoryStore {
 
   async read(config: VaultConfig, id: string): Promise<PhotoMemory> {
     const directory = await this.directory(config, id);
-    await this.checkPath(path.join(directory, "memory.json"), directory);
+    await this.checkPath(config, path.join(directory, "memory.json"), directory);
     try {
       const memory = JSON.parse(await readFile(path.join(directory, "memory.json"), "utf8")) as PhotoMemory;
       if (memory.id !== id || memory.knowledgeBaseId !== config.knowledgeBaseId) throw new PhotoMemoryError(403, "照片不属于这个知识库");
@@ -107,11 +109,11 @@ export class PhotoMemoryStore {
     }
     const id = randomUUID();
     const directory = await this.directory(config, id);
-    const sourceRoot = path.resolve(this.root, config.paths.sources);
+    const sourceRoot = resolveContentPath(this.root, config, config.paths.sources);
     const report = path.join(sourceRoot, folder, `照片记忆-${id.slice(0, 8)}.md`);
-    await this.checkPath(report, sourceRoot);
+    await this.checkPath(config, report, sourceRoot);
     const manifest = path.join(sourceRoot, ".imports", `${id}.json`);
-    await this.checkPath(manifest, sourceRoot);
+    await this.checkPath(config, manifest, sourceRoot);
     await mkdir(directory, { recursive: true });
     const memory: PhotoMemory = { id, knowledgeBaseId: config.knowledgeBaseId, title, revision: 1, createdAt: new Date().toISOString(), reportPath: path.relative(this.root, report).split(path.sep).join("/"), photos: [], draft: "", confirmedStory: "" };
     for (const [index, file] of files.entries()) {
@@ -308,7 +310,7 @@ export class PhotoMemoryStore {
     if (!photo || !["preview", "original"].includes(variant) && !memory.builtPeople?.some((p) => p.photoId === photoId && p.personId === variant && p.avatar)) throw new PhotoMemoryError(404, "照片或头像不存在");
     const directory = await this.directory(config, id);
     const file = path.join(directory, variant === "original" ? `${photoId}.original` : variant === "preview" ? `${photoId}.jpg` : `${photoId}-${variant}.jpg`);
-    await this.checkPath(file, directory);
+    await this.checkPath(config, file, directory);
     return file;
   }
 
@@ -330,7 +332,7 @@ export class PhotoMemoryStore {
   }
   private async save(config: VaultConfig, memory: PhotoMemory) {
     const target = path.join(await this.directory(config, memory.id), "memory.json");
-    await this.checkPath(target, path.dirname(target));
+    await this.checkPath(config, target, path.dirname(target));
     await this.atomicWrite(target, JSON.stringify(memory, null, 2));
   }
   private async atomicWrite(target: string, content: string) {
@@ -339,8 +341,8 @@ export class PhotoMemoryStore {
     await rename(temporary, target);
   }
   private async reportPath(config: VaultConfig, memory: PhotoMemory) {
-    const target = path.resolve(this.root, memory.reportPath);
-    await this.checkPath(target, path.resolve(this.root, config.paths.sources));
+    const target = resolveContentPath(this.root, config, memory.reportPath);
+    await this.checkPath(config, target, resolveContentPath(this.root, config, config.paths.sources));
     return target;
   }
   private async writeReport(config: VaultConfig, memory: PhotoMemory) {

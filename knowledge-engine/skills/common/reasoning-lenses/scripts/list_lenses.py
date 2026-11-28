@@ -15,19 +15,25 @@ FIELD_RE = re.compile(r"^(?P<key>[a-z_]+):(?P<value>.*)$")
 REQUIRED_FIELDS = (
     "lens_id",
     "display_name",
+    "stance",
+    "voice",
     "attention",
     "signals",
     "helper_use",
 )
 REQUIRED_HEADINGS = (
-    "## 稳定特质与表达风格",
+    "## 性格内核",
     "## 核心关注",
     "## 推理起点",
     "## 推理路径",
     "## 什么算洞见",
     "## 怎样处理矛盾与未知",
     "## 何时停止",
+    "## 稳定特质与表达风格",
     "## 自然成文倾向",
+    "## 直言方式",
+    "## 口头禅与标志说法",
+    "## 标志故事与比喻",
     "## 特色视角与辨别",
     "## 成文校准案例",
     "## 禁止迁移",
@@ -37,6 +43,11 @@ REQUIRED_HEADINGS = (
     "## 可核实的原则与格言",
     "## 一手或官方来源",
 )
+# 个性要真的落到字面：说法一节必须分清已核对与不可用，故事一节必须给出处。
+SECTION_MARKERS = {
+    "## 口头禅与标志说法": ("已核对原文", "不要用"),
+    "## 标志故事与比喻": ("出处",),
+}
 
 
 def parse_quoted_scalar(raw: str, path: Path, key: str, errors: list[str]) -> str:
@@ -80,7 +91,8 @@ def parse_lens(path: Path, errors: list[str]) -> dict[str, str]:
 
     for key in REQUIRED_FIELDS:
         if key not in fields:
-            errors.append(f"{path}: 缺少 {key}")
+            hint = {"stance": "（站位：这个人站在哪一边看事情）", "voice": "（说法：他说话的样子）"}.get(key, "")
+            errors.append(f"{path}: 缺少 {key}{hint}")
 
     lens_id = fields.get("lens_id", "")
     if lens_id and not ID_RE.fullmatch(lens_id):
@@ -94,8 +106,23 @@ def parse_lens(path: Path, errors: list[str]) -> dict[str, str]:
         if heading not in text:
             errors.append(f"{path}: 缺少章节 {heading}")
 
+    for heading, markers in SECTION_MARKERS.items():
+        body = section_text(text, heading)
+        for marker in markers:
+            if marker not in body:
+                errors.append(f"{path}: 章节 {heading} 缺少「{marker}」标记")
+
     fields["file"] = path.as_posix()
     return fields
+
+
+def section_text(text: str, heading: str) -> str:
+    start = text.find(heading)
+    if start < 0:
+        return ""
+    rest = text[start + len(heading) :]
+    end = rest.find("\n## ")
+    return rest if end < 0 else rest[:end]
 
 
 def load_lenses(root: Path) -> tuple[list[dict[str, str]], list[str]]:
@@ -139,12 +166,12 @@ def markdown_table(lenses: list[dict[str, str]]) -> str:
         return value.replace("|", "｜").replace("\n", " ")
 
     lines = [
-        "| lens_id | 人物 | 首先注意 | 适用信号 | 作为辅助 | 文件 |",
-        "|---|---|---|---|---|---|",
+        "| lens_id | 人物 | 站位 | 说法 | 适合的材料 | 作为辅助 | 文件 |",
+        "|---|---|---|---|---|---|---|",
     ]
     for lens in lenses:
         lines.append(
-            "| {lens_id} | {display_name} | {attention} | {signals} | "
+            "| {lens_id} | {display_name} | {stance} | {voice} | {signals} | "
             "{helper_use} | {file} |".format(
                 **{key: clean(value) for key, value in lens.items()}
             )

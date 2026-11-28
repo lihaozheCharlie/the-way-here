@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import yaml
-from vault_context import KNOWLEDGE_BASE_ROOT, SOURCES_ROOT, WORKSPACE_ROOT, selected
+from vault_context import KNOWLEDGE_BASE_ROOT, SOURCES_ROOT, WORKSPACE_ROOT, CONTENT_ROOT, selected
 
 REFERENCE_ROOT = SOURCES_ROOT / "外部来源"
 
@@ -78,6 +78,15 @@ def link_target(path: Path) -> str:
     return path.relative_to(KNOWLEDGE_BASE_ROOT).with_suffix("").as_posix()
 
 
+def display_relative(path: Path) -> Path:
+    """Path for reports: relative to the content root so synced content outside
+    the workspace stays representable; falls back to the workspace root."""
+    try:
+        return path.relative_to(CONTENT_ROOT)
+    except ValueError:
+        return path.relative_to(WORKSPACE_ROOT)
+
+
 def source_files(root: Path = SOURCES_ROOT):
     if not root.is_relative_to(SOURCES_ROOT):
         raise SourceUnavailable("来源搜索超出当前知识库")
@@ -120,7 +129,7 @@ def main():
     path = next((item for item in candidates if item.is_file() and item.resolve().is_relative_to(SOURCES_ROOT)), None)
     if requested.is_absolute() or path is None:
         parser.error("请提供当前知识库中的来源引用路径")
-    result = {"linkTarget": link_target(path), "referencePath": path.relative_to(WORKSPACE_ROOT).as_posix()}
+    result = {"linkTarget": link_target(path), "referencePath": display_relative(path).as_posix()}
     try:
         result.update(available=True, originalPath=str(original_path(path) or path), markdown=read_source(path))
     except SourceUnavailable as error:

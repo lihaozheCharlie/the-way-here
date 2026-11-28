@@ -34,7 +34,7 @@ skills:
   - id: build-companion-reflection
     path: knowledge-engine/skills/build/companion-reflection/SKILL.md
     modes: [write]
-    responsibility: "朋友式、长者式近况回信"
+    responsibility: "朋友式、长者式近况回信：按材料选人物，由他以自己的站位、原话和性情给出有证据的直言点评"
     triggers: ["近况回信", "朋友式回应", "长者式回应", "有洞见的回信"]
   - id: build-knowledge-adjustment
     path: knowledge-engine/skills/build/knowledge-adjustment/SKILL.md

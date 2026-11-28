@@ -1,6 +1,7 @@
 import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
+import { expandHomePath } from "@the-way-here/wiki-core";
 import { isPathInside } from "../../path-policy.js";
 import { DreamStore } from "../dreams/dream-store.js";
 
@@ -15,6 +16,13 @@ type KnowledgeBaseRegistry = Record<string, {
   description?: string;
   paths?: { wiki?: string; sources?: string };
 }>;
+
+function contentBaseFor(vaultRoot: string, storage: unknown): string {
+  const configured = storage && typeof storage === "object" && !Array.isArray(storage)
+    && typeof (storage as { contentRoot?: unknown }).contentRoot === "string"
+    ? (storage as { contentRoot: string }).contentRoot : undefined;
+  return configured ? path.resolve(expandHomePath(configured)) : path.resolve(vaultRoot);
+}
 
 export type DeletedKnowledgeBase = { id: string; name: string; fallbackId: string };
 
@@ -34,8 +42,9 @@ export async function createPersonalKnowledgeBase(vaultRoot: string, requestedNa
 
   const document = YAML.parseDocument(source);
   if (document.errors.length) throw new KnowledgeBaseRequestError(409, "知识库配置无法读取，请先修复 the-way-here.config.yaml");
-  const raw = document.toJS() as { knowledgeBases?: KnowledgeBaseRegistry } | null;
+  const raw = document.toJS() as { storage?: unknown; knowledgeBases?: KnowledgeBaseRegistry } | null;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new KnowledgeBaseRequestError(409, "知识库配置格式不正确");
+  const contentRoot = contentBaseFor(vaultRoot, raw.storage);
   const knowledgeBases = raw.knowledgeBases && typeof raw.knowledgeBases === "object" && !Array.isArray(raw.knowledgeBases) ? raw.knowledgeBases : {};
   let id = "personal";
   for (let suffix = 2; knowledgeBases[id]; suffix += 1) id = `personal-${suffix}`;
@@ -54,8 +63,8 @@ export async function createPersonalKnowledgeBase(vaultRoot: string, requestedNa
   document.set("knowledgeBases", nextKnowledgeBases);
 
   await Promise.all([
-    mkdir(path.join(vaultRoot, wiki), { recursive: true }),
-    mkdir(path.join(vaultRoot, sources), { recursive: true }),
+    mkdir(path.join(contentRoot, wiki), { recursive: true }),
+    mkdir(path.join(contentRoot, sources), { recursive: true }),
   ]);
 
   const temporaryPath = path.join(vaultRoot, `.the-way-here.config.${process.pid}.${Date.now()}.tmp`);
@@ -85,8 +94,9 @@ export async function deletePersonalKnowledgeBase(vaultRoot: string, requestedId
 
   const document = YAML.parseDocument(source);
   if (document.errors.length) throw new KnowledgeBaseRequestError(409, "知识库配置无法读取，请先修复 the-way-here.config.yaml");
-  const raw = document.toJS() as { defaultKnowledgeBase?: unknown; paths?: { wiki?: unknown; sources?: unknown }; knowledgeBases?: KnowledgeBaseRegistry } | null;
+  const raw = document.toJS() as { defaultKnowledgeBase?: unknown; paths?: { wiki?: unknown; sources?: unknown }; storage?: unknown; knowledgeBases?: KnowledgeBaseRegistry } | null;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new KnowledgeBaseRequestError(409, "知识库配置格式不正确");
+  const contentRoot = contentBaseFor(vaultRoot, raw.storage);
   const knowledgeBases = raw.knowledgeBases && typeof raw.knowledgeBases === "object" && !Array.isArray(raw.knowledgeBases) ? raw.knowledgeBases : {};
   const target = knowledgeBases[id];
   if (!target) throw new KnowledgeBaseRequestError(404, "知识库不存在，请刷新后重试");
@@ -102,8 +112,8 @@ export async function deletePersonalKnowledgeBase(vaultRoot: string, requestedId
     ? configuredDefault
     : remainingIds.find((candidateId) => candidateId.toLowerCase() !== "demo") || remainingIds[0]!;
 
-  const managedRoots = ["vault", "app"].map((name) => path.resolve(vaultRoot, name));
-  const deletionPaths = [target.paths.wiki, target.paths.sources].map((entry) => path.resolve(vaultRoot, entry!));
+  const managedRoots = ["vault", "app"].map((name) => path.resolve(contentRoot, name));
+  const deletionPaths = [target.paths.wiki, target.paths.sources].map((entry) => path.resolve(contentRoot, entry!));
   if (deletionPaths.some((candidate) => !managedRoots.some((root) => isPathInside(root, candidate)))) {
     throw new KnowledgeBaseRequestError(409, "这个知识库使用了自定义目录，请在文件系统中手动处理");
   }
@@ -114,7 +124,7 @@ export async function deletePersonalKnowledgeBase(vaultRoot: string, requestedId
   }
   const remainingPaths = Object.values(remaining).flatMap((entry) => [entry.paths?.wiki || raw.paths?.wiki, entry.paths?.sources || raw.paths?.sources])
     .filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
-    .map((entry) => path.resolve(vaultRoot, entry));
+    .map((entry) => path.resolve(contentRoot, entry));
   if (deletionPaths.some((candidate) => remainingPaths.some((remainingPath) => candidate === remainingPath || isPathInside(candidate, remainingPath) || isPathInside(remainingPath, candidate)))) {
     throw new KnowledgeBaseRequestError(409, "这个知识库与其他空间共用目录，不能单独删除");
   }

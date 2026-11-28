@@ -105,6 +105,17 @@ Project Workspace（用户拥有）
 
 Studio 不把知识构建规则重新写进 TypeScript。它提供编排、展示和安全边界；归档判断由根 `AGENTS.md`、Skill 注册表与 `knowledge-engine/skills/` 决定。启动时从配置选择知识库：显式指定的 ID 优先；未指定时优先打开已注册的非 `demo` 知识库，只有不存在个人库时才进入演示库。索引、编辑和运行记录只作用于该库声明的内容路径；Skills 与工具不复制到各库。
 
+### 内容根（contentRoot）
+
+用户内容（`paths.wiki`、`paths.sources` 及由 wiki 目录推导的 `predictions/`）相对**内容根**解析；未配置时内容根即工作区根，行为与旧版完全一致。配置声明 `storage.contentRoot`（绝对路径，支持 `~`）后，知识库内容可放在工作区之外——例如 iCloud Drive 中的同步目录；单个知识库可用 `knowledgeBases.<id>.storage.contentRoot` 覆盖，字面量 `workspace` 把该库锚回工作区（随包演示库始终如此）。应用资源（`paths.skills/tools/agentInstructions`、knowledge-engine、`the-way-here.config.yaml`）永远留在工作区内。
+
+- 解析入口：`wiki-core/src/content-base.ts` 的 `contentBase` / `resolveContentPath` / `isInsideContentBase`；加载器在 `wiki-core/src/config.ts` 校验内容根存在、可写、不与工作区互相嵌套。
+- 安全边界：写入模块的目录校验从“必须在工作区内”改为“必须在已注册的内容根内”（page-writer、source-access、import-store、photo-memory-store、capture-record-store、source-mover、prediction-store、pi-tools 的 WorkspaceAccess、run-manager 快照等）；外部来源连接仍要求在工作区与内容根之外。
+- 质量门：`validation-runner` 向 Python 工具注入 `THE_WAY_HERE_CONTENT_ROOT`；`knowledge-engine/tools/vault_context.py` 按同一规则解析内容根，配置未声明时才接受环境变量。命令行用法与输出不变。
+- 总览：`GET /api/storage/overview` 只返回当前知识库的内容目录、应用状态目录与缓存目录，不枚举同级知识库；展示路径把家目录缩写为 `~`，完整路径随响应返回。
+- 迁移：`GET /api/storage/migration-plan` 与 `POST /api/storage/migrate`（确认标志 + 忙碌检查）。流程：复制（`errorOnExist`，复制后按项数校验）→ 原子改写配置 → 重启运行时。原目录保留为恢复副本；演示库不迁移并写回 `workspace` 锚点；复制中途失败则删除已复制副本且不改配置。桌面入口在设置 → 「存储位置」→「移动内容位置…」（`desktop:storage-move`）。
+- 语音归档：录音成功结束后，主进程调用 `POST /api/capture/archive-recording`，把原始音频与转写稿写入当前知识库 sources 的 `语音原件/<日期>-<会话哈希>/`；userData 下的录音缓存只保留转写过程中的临时角色。
+
 ## 一键启动与本地缓存
 
 根 `start.sh` 用 Bash 调用 Studio 启动入口，支持 macOS、Linux 和 Windows WSL。工作区参数相对调用者目录解析；端口与启动锁在安装依赖之前检查。Node.js 不可用时下载并校验官方安装包；Python 不可用时由 uv 准备项目本地 Python；pnpm 版本从 `package.json` 的 `packageManager` 读取。运行环境、Python 包和状态标记只保存在忽略提交的 `studio/.runtime/`，npm 与 pnpm 使用公网源且不修改用户的全局配置。
@@ -357,7 +368,9 @@ LifePredictionReport 不含版本号，按实际结构校验。读取时忽略�
 
 `wiki-core` 提供 evidence-metadata、evidence-retrieval 与 evidence-snapshot，负责来源线索、日期线索、正文/标题/别名召回、冻结图和通用快照；`life-views` 的 prediction-life-search 只编排预测专用分组、候选及 lanes。公共配置作为参数注入，代码不内嵌人生判断。通用读取脚本接受顶层 retrieval.profiles，兼容已有 lifeSearch.profiles；普通快照没有 lifeSearch，也无需预测配置。
 
-普通查询/构建可用现有只读工具，或从项目根运行 common/retrieval/scripts/snapshot.mts，显式指定 THE_WAY_HERE_KNOWLEDGE_BASE。它把当前库资料和同一套 profiles 写入本任务系统临时目录，提供绑定 hash 的渐进读取；无需启动服务、不写原始材料。写入后的刷新由调用者显式发起，任务结束清理自己创建的临时目录。
+普通查询/构建可用现有只读工具，或从项目根运行 common-retrieval/scripts/snapshot.mts，显式设置 THE_WAY_HERE_KNOWLEDGE_BASE。它把当前库资料和同一套 profiles 写入本任务系统临时目录，提供绑定 hash 的渐进读取；无需启动服务、不写原始材料。写入后的刷新由调用者显式发起，任务结束清理自己创建的临时目录。
+
+Codex 普通任务（非冻结、非商店版）的提示词会附一条本地检索命令 `apps/server` 的 `search-wiki.js`：绑定工作空间根与知识库 ID，接受 1—3 个 `--query`，每条命中带正文片段。命令支持可重复的 `--exclude <路径片段>`（最多 8 个），在排名前按页面 ID 或相对路径排除页面，被排除页面的标题和片段都不返回，也不占用结果名额。需要避开某类页面的 Skill 用它守住读取边界，例如写信不读旧回信时排除整个回信目录；排除哪个目录由 Skill 的任务规则给出，Studio 不内嵌这类判断。
 
 运行时 knowledgeEvidence 是可选、由服务端提供的冻结文件/脚本/库ID/hash绑定；Pi 在该模式仅提供 read_knowledge_evidence，禁用实时文件工具。预测、扫描及局部修复均使用此通道；其他普通任务维持原有工具。共享规则改变会使预测与扫描都过期；预测策略改变仅使预测过期。
 
@@ -504,25 +517,17 @@ CaptureRecordStore 在写日记前保存输入缓存，Markdown 仅含整理正�
 补充已保存日记继续使用其原路径和原记录日期；“只存原文”在最终保存时取本地日期。草稿创建日仍可保留作为草稿元数据，不能决定新日记的最终日期。已有历史记录不批量改写。
 
 
-## 原生 iPhone 宿主与手机文件协议（开发中）
+## iPhone 客户端（规划）
 
-`apps/ios` 是 iOS 17+ SwiftUI 宿主。Foundation 包 `TWHCore` 隔离文件、草稿、分享收件箱与冲突同步；App、分享扩展、小组件使用同一协议。手机不加载或复制知识引擎的判断逻辑。`scripts/prepare-ios-resources.ts` 从现有模型目录、匿名演示、品牌资源和翻译生成安装资源；`generate-ios-project.py` 生成可重复的 Xcode 工程。
+旧「手机文件协议」测试功能已于 2026-11 从 Mac 端整体移除：`mobile-space.json` 清单、`/api/mobile-sync/prepare` 空间复制、手机任务执行器（`MobileSyncWorker`）、手机密钥共享路由、共享空间生命周期、Handoff 接收与对应设置页「iPhone 与 iCloud」区块全部删除；服务端冻结证据输入链路（`frozenEvidence`）随执行器一并移除，预测与做梦直接使用 `knowledgeEvidence` 的冻结读取基础设施保持不变。`apps/ios` 中的探索性客户端保留源码，但不再与桌面产品互通。
 
-共享工作区通过显式 `mobile-space.json` 绑定一个知识库及其来源/Wiki 根。Mac 的 `/api/mobile-sync/prepare` 仅在用户通过原生目录选择器确认后复制当前知识库与公共引擎，保留原工作区；不复制其他库、外部连接、运行状态、模型密钥、历史草稿与仓库元数据，遇到符号链接中止并删除本次未完成的副本。手机新建空间首次由 Mac 打开时只补缺失的公共引擎和默认验证配置；用户之后的配置选择不覆盖。 每次准备独立副本都生成新的 portable UUID；目录名为 `<原库 ID>-<UUID>`，清单、配置默认库及注册键、身份基线、预测状态顶层归属统一绑定该 UUID。来源与 Wiki 相对路径、正文及预测用户文本不重写。桌面副本打开时以其清单与配置一致的身份绑定自身运行时，显式原生选择的副本路径在本次重启中优先于继承的旧工作区提示；不修改系统环境或原工作区。目录偏好在本机按旧库到新库映射迁移，目标已有值优先，不进入 iCloud。 原生复制动作在确认与目录选择之前捕获工作区、客户端及知识库；服务端在首次异步等待之前复制所选配置快照，后续任务检查、陪伴日期读取与实际复制均沿用该绑定。其他窗口切库不会把本次复制改指向后来活动的库。
+规划中的 iPhone 端是薄数据输入客户端：直接指向用户选定的 iCloud Drive 内容根目录，只做语音/文字输入与保存（转写与随手记写入 sources），不构建 Wiki、不运行索引与质量门，也不需要 workspace/knowledge-engine 概念；桌面端负责全部构建与理解。内容层目录布局将作为跨设备契约在稳定后文档化。
 
-手机按用户最新范围只负责输入、保存与已有内容展示，不委派 Mac 执行。日记整理、照片故事和对话只有启用手机模型、配置有效且联网时才显示执行入口；失败仅保留原话、重试或进入设置。全量构建、话题生成、回信生成、扫描预测、远端导入解析、任务进度、Mac 心跳与 Handoff 等入口移除。纠正、人物补充和想法仅追加来源，不承诺自动吸收或生成新理解。本机导入复用文件和保存层，只接受 Markdown、文本、有文字 PDF，保留原件与可读记录，不复制桌面领域解析器。
-
-共享服务端的旧任务协议和执行器保留以兼容既有桌面功能，手机不再使用它们。App 的旧 enqueue 入口统一失败关闭；FileSync 双向排除 `.mobile/queue`，旧请求文件不删除、不同步、不重放。旧任务通知和深链不再产生执行。手机继续消费现有 WikiIndex/life-views 投影，只做原生阅读适配。
-
-手机编辑只作用于来源，保存时在 NSFileCoordinator 的协调块内检查原内容哈希；冲突保留两份并允许逐段核对后另存。Wiki 只读，纠正只写入独立来源。FileSync 使用独立本机三方哈希账本，所有相对路径在两端检查根目录与符号链接；不按时钟选择胜者，不把文件缺席当成删除。删除通过带内容哈希的墓碑传播，恢复与同步在共同的协调式文件事务下互斥，恢复标记优先合并，30 天后只清理恢复副本并保留墓碑，避免旧离线设备复活记录。文件重定位日志在中间路径缺席时解析到最终路径，复用 Mac 的 ImportStore.renameSource 更新关联，允许移动后继续编辑。空目录由独立目录标记同步。照片 Markdown 使用工作区相对附件路径，移动旧记录时仅规范图片链接以保持关联。
-
-可选手机直连模型的 Key 存 synchronizable Keychain，不进入空间、偏好或日志。发送前显示范围；“从不发送照片”同时在界面与手机模型请求路径校验。Mac 通过独立签名、嵌入授权 profile 的 MobileKeychain.app 接入相同组；旧加密配置仅在用户显式选择后迁移，不静默上传。辅助程序从系统签名信息核对父进程的身份、团队和完整资源，拒绝普通命令行调用；未配置合法证书/profile 时明确不可用并保留旧加密配置。详见 [IOS-KEY-SHARING.md](IOS-KEY-SHARING.md)。同步状态区分交给系统、系统上传未完成与容量不足，不把本机文件拷贝完成当成 iCloud 双机到达。
-
-验证使用匿名临时目录。`pnpm ios:verify` 运行资源生成、语法检查、真实 Foundation 核心检查与全部 Swift XCTest；只有完整 Xcode 的 `pnpm ios:build` / `pnpm ios:test` 才能确认 iPhone 编译和模拟器流程。真实 iCloud、设备权限、签名能力及扩展生命周期仍需真机验收。完整需求与未完成项见 [IOS-UX-COVERAGE.md](IOS-UX-COVERAGE.md)。
+容器声明保留：桌面 `electron-builder.yml` 的 `NSUbiquitousContainers` 与 iOS entitlements 声明同一 iCloud 容器，`icloud-container-config.test.mjs` 校验两端一致；桌面仍不携带 iCloud 签名能力。Codex 冻结资料读取边界继续适用于预测与做梦任务，见 [IOS-CODEX-FROZEN-SCOPE.md](IOS-CODEX-FROZEN-SCOPE.md)。
 
 桌面发布包关闭 Electron 的 RunAsNode、NODE_OPTIONS 和 Node 调试参数，并要求 ASAR 完整性校验与仅从 ASAR 加载。搜索工具使用独立的官方 Node 22 LTS 可执行文件，不借桌面主进程执行命令；打包脚本按架构固定版本、SHA256 和官方校验和，并保留许可证。独立 Node 没有共享钥匙串辅助程序身份。最终安装验收只连接隔离配置下的 Chromium 渲染进程，不再依赖主进程调试；原生菜单另由原生界面验收。
 
-回信请求绑定不可变资料范围与内容摘要；AI 生成物先进入私有候选区，再按原始冻结引用和实际来源路径经过共享质量门，成功后才发布可读回信。引用删除、越界、歧义或校验失败不发布成功结果。参见 [IOS-LETTER-PUBLICATION.md](IOS-LETTER-PUBLICATION.md)。Codex 的冻结检索使用独立进程、资料副本、受限读取根与实际策略探测，普通桌面会话沿用既有运行方式，详见 [IOS-CODEX-FROZEN-SCOPE.md](IOS-CODEX-FROZEN-SCOPE.md)。
+桌面回信经普通知识库写入任务生成，遵循共享回信 Skill 与质量门，阅读界面说明见 [letters-reading.md](letters-reading.md)。Codex 的冻结检索使用独立进程、资料副本、受限读取根与实际策略探测，普通桌面会话沿用既有运行方式，详见 [IOS-CODEX-FROZEN-SCOPE.md](IOS-CODEX-FROZEN-SCOPE.md)。
 
 对话发起的后台 Wiki 构建在构建任务中保存 `conversationBuildRunIds`，记录本次提交涵盖的对话轮次。重开对话时，面板从当前知识库的任务列表恢复构建进度，已完成的构建会消除所涵盖轮次的提醒。失败或中断可重新发起，后续新增轮次可单独触发提醒。
 

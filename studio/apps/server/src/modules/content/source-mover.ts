@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { copyFile, lstat, readFile, unlink, utimes, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { WikiPage } from "@the-way-here/shared";
-import { pageIdForPath } from "@the-way-here/wiki-core";
+import { pageIdForPath, contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import { ContentRequestError } from "./content-error.js";
 import type { ContentWorkspace } from "./content-workspace.js";
 import { assertSourcePath, sourceDestination, sourceFile } from "./source-access.js";
@@ -15,7 +15,7 @@ export async function moveSource(knowledge: ContentWorkspace, input: { pageId?: 
   if (page.importChannel === "photos" || page.importChannel === "alipay") throw new ContentRequestError(400, "照片和账单记忆请保留在原目录");
   const config = knowledge.index.config;
   const original = await sourceFile(knowledge.vaultRoot, config, page);
-  const sourceRoot = page.externalSource ? config.sourceConnections!.find(item => item.id === page.externalSource!.connectionId)!.path : path.resolve(knowledge.vaultRoot, config.paths.sources);
+  const sourceRoot = page.externalSource ? config.sourceConnections!.find(item => item.id === page.externalSource!.connectionId)!.path : resolveContentPath(knowledge.vaultRoot, config, config.paths.sources);
   await assertSourcePath(sourceRoot, original);
   const info = await lstat(original).catch(error => { if (error.code === "ENOENT") throw new ContentRequestError(404, "原文件已移动或删除，请刷新后重试"); throw error; });
   if (!info.isFile() || info.isSymbolicLink()) throw new ContentRequestError(403, "请选择真实文件");
@@ -51,13 +51,13 @@ export async function moveSource(knowledge: ContentWorkspace, input: { pageId?: 
     await refresh();
     const updated = destination.connection
       ? knowledge.index.list({ sources: true }).map(item => knowledge.index.get(item.id)!).find(item => item.externalSource?.status === "available" && item.externalSource.originalPath === target)
-      : knowledge.index.get(pageIdForPath(path.relative(knowledge.vaultRoot, target), config));
+      : knowledge.index.get(pageIdForPath(path.relative(contentBase(knowledge.vaultRoot, config), target), config));
     if (!updated) throw new ContentRequestError(409, "未能读取移动后的文件，已保留原文件");
     storedPath = updated.relativePath;
     await onRenamed?.(page.relativePath, storedPath); registered = true;
     for (const document of backlinks) {
-      const file = path.resolve(knowledge.vaultRoot, document.relativePath);
-      const root = [config.paths.wiki, config.paths.sources].map(entry => path.resolve(knowledge.vaultRoot, entry)).find(root => file.startsWith(root + path.sep));
+      const file = resolveContentPath(knowledge.vaultRoot, config, document.relativePath);
+      const root = [config.paths.wiki, config.paths.sources].map(entry => resolveContentPath(knowledge.vaultRoot, config, entry)).find(root => file.startsWith(root + path.sep));
       if (!root) throw new ContentRequestError(403, "关联页面超出知识库范围");
       await assertSourcePath(root, file);
       const text = await readFile(file, "utf8");

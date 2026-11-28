@@ -1,8 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
 import type { AgentProviderConfig, AgentProviderProtocol, AgentRuntimeConfig, VaultConfig } from "@the-way-here/shared";
 import { toPosix } from "./page-paths.js";
+import { expandHomePath } from "./content-base.js";
 
 const DEFAULT_CONFIG: VaultConfig = {
   version: 3,
@@ -32,14 +33,36 @@ function isRecord(value: unknown): value is Record<string, any> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function validatedWorkspacePath(vaultRoot: string, value: unknown, label: string): string {
+function validatedRelativePath(root: string, value: unknown, label: string, boundaryLabel: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`配置 ${label} 必须是非空路径`);
   const relative = toPosix(value.trim()).replace(/^\.\//, "").replace(/\/$/, "");
-  if (path.isAbsolute(relative)) throw new Error(`配置 ${label} 必须使用工作区相对路径`);
-  const resolved = path.resolve(vaultRoot, relative);
-  const root = path.resolve(vaultRoot);
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) throw new Error(`配置 ${label} 超出工作区边界`);
+  if (path.isAbsolute(relative)) throw new Error(`配置 ${label} 必须使用相对路径`);
+  const resolved = path.resolve(root, relative);
+  const base = path.resolve(root);
+  if (resolved !== base && !resolved.startsWith(`${base}${path.sep}`)) throw new Error(`配置 ${label} ${boundaryLabel}`);
   return relative;
+}
+
+/** Content root: an absolute directory outside the workspace that hosts user content.
+ * The literal value `workspace` anchors that entry back to the workspace root
+ * (used to keep app-managed demo content local while personal content syncs elsewhere). */
+async function normalizeStorageContentRoot(value: unknown, vaultRoot: string): Promise<{ contentRoot: string } | undefined> {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new Error("配置 storage 必须是对象");
+  if (value.contentRoot === undefined) return undefined;
+  if (value.contentRoot === "workspace") return { contentRoot: path.resolve(vaultRoot) };
+  const raw = typeof value.contentRoot === "string" ? expandHomePath(value.contentRoot.trim()) : "";
+  if (!raw || !path.isAbsolute(raw)) throw new Error("配置 storage.contentRoot 必须是绝对路径或 workspace（支持 ~ 前缀）");
+  const resolved = path.resolve(raw);
+  const workspace = path.resolve(vaultRoot);
+  if (resolved === workspace || resolved.startsWith(`${workspace}${path.sep}`) || workspace.startsWith(`${resolved}${path.sep}`)) {
+    throw new Error("配置 storage.contentRoot 不能位于工作区内或包含工作区");
+  }
+  let info;
+  try { info = await stat(resolved); }
+  catch (error: any) { if (error?.code === "ENOENT") throw new Error(`配置 storage.contentRoot 指向的目录不存在：${resolved}`); throw error; }
+  if (!info.isDirectory()) throw new Error(`配置 storage.contentRoot 必须是目录：${resolved}`);
+  return { contentRoot: resolved };
 }
 
 const providerProtocols = new Set<AgentProviderProtocol>(["openai-completions", "openai-responses", "anthropic-messages"]);
@@ -135,12 +158,17 @@ export async function loadVaultConfig(vaultRoot: string, requestedKnowledgeBase?
     ? Object.entries(configuredBases).map(([id, value]) => ({ id, name: String(value?.name || id), description: value?.description ? String(value.description) : undefined }))
     : [{ id: "default", name: String(raw.name || DEFAULT_CONFIG.name) }];
   const mergedPaths = { ...DEFAULT_CONFIG.paths, ...(isRecord(raw.paths) ? raw.paths : {}), ...(isRecord(selected.paths) ? selected.paths : {}) };
+  // A knowledge base may anchor its content back to the workspace (bundled demo)
+  // even when the global content root points at a synced folder.
+  const storage = await normalizeStorageContentRoot(selected.storage ?? raw.storage, vaultRoot);
+  const contentRoot = storage?.contentRoot ?? path.resolve(vaultRoot);
+  const contentBoundary = storage ? "超出内容根边界" : "超出工作区边界";
   const paths = {
-    wiki: validatedWorkspacePath(vaultRoot, mergedPaths.wiki, `${knowledgeBaseId}.paths.wiki`),
-    sources: validatedWorkspacePath(vaultRoot, mergedPaths.sources, `${knowledgeBaseId}.paths.sources`),
-    skills: validatedWorkspacePath(vaultRoot, mergedPaths.skills, "paths.skills"),
-    tools: validatedWorkspacePath(vaultRoot, mergedPaths.tools, "paths.tools"),
-    agentInstructions: validatedWorkspacePath(vaultRoot, mergedPaths.agentInstructions, "paths.agentInstructions"),
+    wiki: validatedRelativePath(contentRoot, mergedPaths.wiki, `${knowledgeBaseId}.paths.wiki`, contentBoundary),
+    sources: validatedRelativePath(contentRoot, mergedPaths.sources, `${knowledgeBaseId}.paths.sources`, contentBoundary),
+    skills: validatedRelativePath(vaultRoot, mergedPaths.skills, "paths.skills", "超出工作区边界"),
+    tools: validatedRelativePath(vaultRoot, mergedPaths.tools, "paths.tools", "超出工作区边界"),
+    agentInstructions: validatedRelativePath(vaultRoot, mergedPaths.agentInstructions, "paths.agentInstructions", "超出工作区边界"),
   };
   if (paths.wiki === paths.sources) throw new Error(`知识库 ${knowledgeBaseId} 的 Wiki 与来源目录不能相同`);
   const commands = selected.validation?.commands ?? raw.validation?.commands ?? [];
@@ -159,6 +187,7 @@ export async function loadVaultConfig(vaultRoot: string, requestedKnowledgeBase?
     knowledgeBases,
     name: String(selected.name || raw.name || DEFAULT_CONFIG.name),
     adapter: String(selected.adapter || raw.adapter || DEFAULT_CONFIG.adapter),
+    storage,
     paths,
     sourceConnections: normalizeSourceConnections(selected.sourceConnections),
     views,

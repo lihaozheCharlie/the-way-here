@@ -1,12 +1,18 @@
 import { captureCalendarDate, captureTimeZone } from "../modules/content/capture-dates.js";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { copyFile, mkdir, realpath, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { KnowledgeRuntime } from "../runtime/knowledge-runtime.js";
+import { contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import { CaptureHistoryStore, captureFolder } from "../modules/content/capture-history-store.js";
 import { ContentRequestError, PageWriter } from "../modules/content/page-writer.js";
+import { assertSourcePath } from "../modules/content/source-access.js";
 import { bindContentWorkspace } from "../modules/content/content-workspace.js";
 import { ImportStore } from "../modules/imports/import-store.js";
 import { handleContent } from "./content-errors.js";
+import { isPathInside } from "../path-policy.js";
 
 export function registerCaptureRoutes(app: FastifyInstance, knowledge: KnowledgeRuntime, hasActiveKnowledgeBaseRun: (knowledgeBaseId: string) => Promise<boolean>): void {
   const captures = new CaptureHistoryStore(knowledge.vaultRoot);
@@ -83,4 +89,40 @@ export function registerCaptureRoutes(app: FastifyInstance, knowledge: Knowledge
       return page;
     });
   }, 201));
+  // Speech recordings are user data: the original audio and its transcript are
+  // archived into the knowledge base's life-record tree (synced content layer),
+  // while the in-flight cache copy under userData stays transient.
+  app.post<{ Body: { recordingPath?: unknown; transcript?: unknown } }>("/api/capture/archive-recording", async (request, reply) => handleContent(reply, async () => {
+    const body = request.body;
+    const recordingPath = typeof body?.recordingPath === "string" ? body.recordingPath : "";
+    const transcript = typeof body?.transcript === "string" ? body.transcript.slice(0, 50_000) : "";
+    const cacheRoot = process.env.TWH_APP_CACHE_ROOT;
+    if (!cacheRoot) throw new ContentRequestError(503, "只有桌面客户端可以归档录音");
+    const speechRoot = await realpath(path.join(cacheRoot, "speech-recordings")).catch(() => undefined);
+    if (!speechRoot) throw new ContentRequestError(404, "没有可归档的录音");
+    let recording: string;
+    try { recording = await realpath(recordingPath); }
+    catch { throw new ContentRequestError(404, "录音文件不存在"); }
+    if (!isPathInside(speechRoot, recording) || !(await stat(recording)).isFile()) throw new ContentRequestError(403, "录音位置无效");
+    const config = knowledge.index.config;
+    const sourcesRoot = resolveContentPath(knowledge.vaultRoot, config, config.paths.sources);
+    const sessionKey = createHash("sha256").update(recording).digest("hex").slice(0, 12);
+    const day = captureCalendarDate(new Date());
+    const targetDir = path.join(sourcesRoot, "语音原件", `${day}-${sessionKey}`);
+    await assertSourcePath(sourcesRoot, targetDir);
+    await mkdir(targetDir, { recursive: true });
+    const audioName = path.basename(recording);
+    const audioTarget = path.join(targetDir, audioName);
+    if (!existsSync(audioTarget)) await copyFile(recording, audioTarget);
+    let transcriptPath: string | undefined;
+    if (transcript.trim()) {
+      transcriptPath = path.join(targetDir, "转写.md");
+      if (!existsSync(transcriptPath)) {
+        const markdown = `# 语音转写 ${day}\n\n- 来源录音：${audioName}\n\n${transcript.trim()}\n`;
+        await writeFile(transcriptPath, markdown, { encoding: "utf8", flag: "wx" });
+      }
+    }
+    const storedPath = path.relative(contentBase(knowledge.vaultRoot, config), transcriptPath || audioTarget).split(path.sep).join("/");
+    return { storedPath, audio: audioName, transcriptSaved: Boolean(transcriptPath) };
+  }));
 }

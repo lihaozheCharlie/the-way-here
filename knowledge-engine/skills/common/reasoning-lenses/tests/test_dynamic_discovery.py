@@ -21,9 +21,16 @@ def lens_text(lens_id: str, display_name: str) -> str:
     headings = "\n\n".join(
         f"{heading}\n\n测试内容。" for heading in MODULE.REQUIRED_HEADINGS
     )
+    # 说法与故事两节要带可核对的标记，见 list_lenses.SECTION_MARKERS。
+    for heading, markers in MODULE.SECTION_MARKERS.items():
+        headings = headings.replace(
+            f"{heading}\n\n测试内容。", f"{heading}\n\n{''.join(markers)}。"
+        )
     return f'''---
 lens_id: "{lens_id}"
 display_name: "{display_name}"
+stance: "测试站位"
+voice: "测试说法"
 attention: "测试注意力"
 signals: "测试信号"
 helper_use: "测试辅助边界"
@@ -70,8 +77,8 @@ def main() -> int:
             "future-lens",
         ]
 
-        # 已有路由与推理章节仍不能替代新增的成文校准契约。
-        for heading in ("## 特色视角与辨别", "## 成文校准案例"):
+        # 已有路由与推理章节仍不能替代新增的成文校准与直言方式契约。
+        for heading in ("## 特色视角与辨别", "## 成文校准案例", "## 直言方式"):
             candidate = root / "uncalibrated-lens.md"
             candidate.write_text(
                 lens_text("uncalibrated-lens", "缺少校准的视角").replace(
@@ -80,6 +87,34 @@ def main() -> int:
             )
             _, errors = MODULE.load_lenses(root)
             assert any(heading in error for error in errors), errors
+            candidate.unlink()
+
+        # 没有站位或说法的人物不能进入路由卡。
+        labels = {"stance": "站位", "voice": "说法"}
+        for field, label in labels.items():
+            candidate = root / f"no-{field}-lens.md"
+            candidate.write_text(
+                lens_text(f"no-{field}-lens", f"缺少{label}的视角").replace(
+                    f'{field}: "测试{label}"\n', ""
+                ),
+                encoding="utf-8",
+            )
+            _, errors = MODULE.load_lenses(root)
+            assert any(field in error for error in errors), (field, errors)
+            candidate.unlink()
+
+        # 说法一节不区分已核对与不可用，故事一节不给出处，都不能通过。
+        for heading, markers in MODULE.SECTION_MARKERS.items():
+            content = "".join(markers) + "。"
+            candidate = root / "unmarked-lens.md"
+            candidate.write_text(
+                lens_text("unmarked-lens", "缺少标记的视角").replace(
+                    f"{heading}\n\n{content}", f"{heading}\n\n无关内容。", 1
+                ),
+                encoding="utf-8",
+            )
+            _, errors = MODULE.load_lenses(root)
+            assert any(markers[-1] in error for error in errors), (heading, errors)
             candidate.unlink()
 
         (root / "broken-lens.md").write_text(

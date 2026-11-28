@@ -21,6 +21,13 @@ export interface VaultConfig {
     description?: string;
   }>;
   adapter: string;
+  /**
+   * Content layer root. `paths.wiki` / `paths.sources` (and the derived
+   * predictions directory) resolve against this root; when absent they
+   * resolve against the workspace root. App resources such as
+   * `paths.skills` always stay inside the workspace.
+   */
+  storage?: { contentRoot: string };
   paths: {
     wiki: string;
     sources: string;

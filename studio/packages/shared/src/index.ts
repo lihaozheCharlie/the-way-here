@@ -54,6 +54,7 @@ export {
   type QuoteGroup,
   type QuotesView,
   type GraphData,
+  type LetterLens,
   type LetterViewItem,
   type LetterThread,
   type LettersView,
@@ -97,6 +98,5 @@ export type { LifeDimension, LifeEvidence, LifeScenario, LifePredictionReport, P
 
 export { predictionPathwayLabels, type PredictionPathway } from "./predictions.js";
 export type { CaptureEntry, CaptureHistory } from "./capture.js";
-export * from "./mobile-sync.js";
 export type * from "./dreams.js";
 export { dreamTitle } from "./dreams.js";

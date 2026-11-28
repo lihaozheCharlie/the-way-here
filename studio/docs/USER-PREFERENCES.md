@@ -17,7 +17,7 @@
 | 窗口位置与尺寸 | 同上，按主窗/阅读/设置/随手记/专注角色区分 | 用户移动和缩放后保存；显示器改变时限制到可见区域 |
 | 运行方式（Codex 或第三方模型）、模型、思考深度、服务商、API Key、资料发送授权 | 既有 AgentSettingsStore；桌面密钥继续加密 | 已审查：仅不存在时取默认；读取/解密失败报告，不覆盖设置；不迁入通用偏好。历史设置中的 ZCode 字段读取时忽略，运行方式回落到 Codex |
 | 空间位置、外部目录连接、系统授权书签 | `workspace.json`、来源登记及 `scoped-access.json` | 已审查：保留原位置；暂不可访问时报告或重新授权，不创建默认空间代替 |
-| 知识库名称、目录与配置默认库 | 原工作区配置 | 已审查：升级只补缺失资源，已有配置不重写；后台任务仍绑定启动时知识库 |
+| 知识库名称、目录与配置默认库 | 原工作区配置；含 `storage.contentRoot` 内容根声明 | 已审查：升级只补缺失资源，已有配置不重写；内容根属于受保护配置，损坏时报错不重置，后台任务仍绑定启动时知识库 |
 
 浏览器独立部署继续使用原 Local Storage 行为；上述独立文件存储针对桌面客户端。草稿、临时语音预览、照片编辑草稿和页面导航会话不作为偏好导入，按原恢复机制和保护规则处理。偏好文件不保存正文、录音或密钥。
 
@@ -30,24 +30,8 @@
 - 此次没有证明用户截图中旧选择被哪一步覆盖；没有既有审计记录，不能断言具体原因。修复针对已发现的分散存储、页面地址依赖、默认目录依赖历史文件、窗口尺寸不保存及配置保留验收缺口。不得把测试通过称为所有历史版本与系统环境均已覆盖。
 
 
-## iPhone 宿主偏好（开发中）
+## iPhone 客户端偏好（规划中）
 
-手机偏好保存在 App 的 UserDefaults，升级只读取已有选择或在缺少字段时使用显示默认值；清理 URLCache 不清理偏好、草稿、录音或待上传资料。同步目录关联按空间隔离，解除后同时保留本机与云端原文件。桌面显式复制到 iCloud 工作区时，新副本拥有独立 portable UUID。仅迁移当前库的目录偏好：桌面 `capture.default-folder.*`、`photo-capture.folder.*`、`the-way-here.folder-tree.*`、`the-way-here.source-folder.*` 按旧/新库映射重建键，值不改写；文字默认目录通过 `CapturePreferencesStore` 在新工作区与新库的本机保护状态中以 `legacy-import` 写入。目标已有选择优先（包括空值与 false），不迁移其他库、草稿或历史，不将偏好放入 iCloud，原工作区偏好不动。
-
-| 手机配置 | 键/范围 | 保留行为 |
-|---|---|---|
-| 活动空间、设备 ID、引导完成 | `active.space`、`device.id`、`onboarding.complete` | 重启/升级保持；UI 测试使用独立资料夹 |
-| 默认采集目录、称呼 | `folder.<space>`、`nickname.<space>` | 每空间独立，历史清理不重置目录 |
-| Wi-Fi 附件、低电量暂停、设备同步关联 | `sync.wifiPhotos`、`sync.lowPowerPause`、`sync.cloudBindings`（空间ID→副本目录）、`sync.detachedSpaces` | 新建/重连先保存明确目标，再尝试上传；首轮失败或远端 manifest 尚未出现不丢失连接意图。本机创建和解绑显式排除，旧排除状态继续优先；UI/iCloud 匿名验收分别使用 `acceptance.ui-<fixture>.` / `acceptance.icloud-<run>.` 前缀，不读取或改写真实同步关联。 |
-| 模型厂商、直连、禁止照片 | `model.provider`、`model.direct`、`model.neverPhotos` | Key 仅进入共享系统钥匙串，不进入 UserDefaults；禁止照片在执行层重查 |
-| 识别语言、标点、7 天原音频、撤销、词汇 | `speech.language/punctuation/keepAudio/undo/vocabulary` | 保留用户选择；音频是本机资料而非通用偏好 |
-| 界面语言、回复语言 | `language.interface`、`language.reply` | 原始正文语言不改变 |
-| App 锁、重锁时间、后台隐藏 | `privacy.lock/lockMinutes/hidePreview` | Face ID/设备密码；缺字段默认隐藏预览；场景级遮罩覆盖弹层且不抢编辑焦点 |
-| 本机每日提醒与旧通知偏好 | `notifications.daily`；保留旧 `notifications.tasks/quiet` | 每日提醒由手机调度；旧选择保留，不再用于 Mac 任务或重试 |
-| 阅读位置、回信未读/收藏/归档、自定义人生线 | `reading.<document>`、`document.<space>.<document>.<flag>`、`timeline.lines.<space>` | 本机显示状态；切空间不复用其他空间的筛选资料 |
-| 写信问题、附带会话与最近记录 | `letter.request.<space>` 及 `.conversation/.records/.recordPaths` | 按空间保留；附带记录默认关闭，开启后可逐项选择；提交冻结所选原话、路径和摘要，超限保留表单而不截断 |
-| 话题方向、已看与屏蔽 | `topics.state.<space>` 作用域 | 切空间独立；详情屏蔽后列表即时刷新，方向消费共享投影的明确标签 |
-
-手机正文草稿、照片草稿、对话归档和分享收件箱不是偏好，分别位于空间目录或本机 App Group 中；不能通过“清缓存”删除。旧任务数据保留但不再同步或执行。关闭手机直连时隐藏模型执行入口，不转交 Mac。Mac 原有加密设置保留原存储，当前没有自动转换或上传。
+Mac 端的「手机文件协议」测试功能（空间复制、portable UUID、`copyWorkspacePreferences` 目录偏好映射、`sync.cloudBindings` 云端绑定）已于 2026-11 移除；桌面偏好不再有跨空间复制路径。规划中的 iPhone 端是薄数据输入客户端：偏好保存在手机本机（UserDefaults 与钥匙串），语音与文字输入直接写入用户选定的 iCloud 内容根目录，不依赖 Mac 执行任务，也不把偏好放入 iCloud。`apps/ios` 中保留的探索性客户端偏好约定仅作为其源码的局部说明，不构成桌面产品契约。
 
 值得聊聊的已关闭话题 ID 按工作区和知识库保存在桌面 `user-preferences.json`，可在往期话题中恢复。

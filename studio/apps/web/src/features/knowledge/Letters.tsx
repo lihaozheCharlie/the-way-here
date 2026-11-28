@@ -2,7 +2,7 @@ import { FileMenu } from "../../shared/FileMenu";
 import { LetterHistory } from "./LetterHistory";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { LetterViewItem, LettersView, LifeMapView, ReasoningLens, WikiPageSummary, WikiRun } from "@the-way-here/shared";
+import type { LetterLens, LetterViewItem, LettersView, LifeMapView, ReasoningLens, WikiPageSummary, WikiRun } from "@the-way-here/shared";
 import { useApi } from "../../shared/use-api";
 import { PageAgentContext } from "../desktop/InspectorContext";
 import { letterRunVersions, openContextAgent, type AgentContext } from "../collaboration/model";
@@ -103,6 +103,10 @@ export function Letters({ revision }: { revision: number }) {
   const latestVersion = versions.at(-1);
   const activeVersion = versions.find((version) => version.id === params.get("version")) || latestVersion;
   const historical = Boolean(activeVersion && latestVersion && activeVersion.id !== latestVersion.id);
+  // The trigger names the lens of whatever is on screen: a generated version's own lens, otherwise the letter's recorded lens.
+  const activeLens: LetterLens | undefined = activeVersion && activeVersion.id !== "original"
+    ? { id: lenses?.find((lens) => lens.displayName === activeVersion.lensName)?.id, name: activeVersion.lensName }
+    : selected?.lens;
   const requestedRuns = (runList || []).filter(run => run.sourceModule === "近况回信" && run.displayPrompt?.startsWith(REQUEST_LABEL));
   const pendingRequests = requestedRuns.filter(run => !["completed", "failed", "interrupted"].includes(run.status));
   const requestedPaths = new Set(requestedRuns.filter(run => run.status === "completed").flatMap(run => run.changes?.filter(change => change.kind !== "deleted" && change.path.endsWith(".md")).map(change => change.path.replaceAll("\\", "/")) || []));
@@ -145,7 +149,7 @@ export function Letters({ revision }: { revision: number }) {
           snapshot={activeVersion && activeVersion.id !== "original" ? { id: `letter-version-${activeVersion.id}`, markdown: activeVersion.markdown } : undefined}
           headerActions={<div className="letter-version-actions">
             {generatedVersions.length > 0 && <LetterHistory key={selected.page.id} versions={versions} activeId={activeVersion?.id} onSelect={selectVersion} />}
-            <LetterLensPicker key={selected.page.id} lenses={lenses || []} onSelect={(lens) => { const request = perspectiveLetterRequest(selected, lens); selectVersion(); openContextAgent({ mode: "read", contextOverride: request.context, outputTarget: { kind: "letter-version", pageId: selected.page.id, lensId: lens.id, lensName: lens.displayName, label: tr("${lens.displayName}视角回信", { "lens.displayName": lens.displayName }) }, prompt: request.prompt }); }} />
+            <LetterLensPicker key={selected.page.id} lenses={lenses || []} current={activeLens} onSelect={(lens) => { const request = perspectiveLetterRequest(selected, lens); selectVersion(); openContextAgent({ mode: "read", contextOverride: request.context, outputTarget: { kind: "letter-version", pageId: selected.page.id, lensId: lens.id, lensName: lens.displayName, label: tr("${lens.displayName}视角回信", { "lens.displayName": lens.displayName }) }, prompt: request.prompt }); }} />
           </div>}
           controls={<><div className="letter-provenance" aria-label={t("这封信的来历")}>
           <span>{t("写于 ")}<time dateTime={selected.letterDate.slice(0, 10)}>{selected.letterDate.slice(0, 10)}</time></span>

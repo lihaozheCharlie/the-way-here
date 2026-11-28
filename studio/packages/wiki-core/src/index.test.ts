@@ -252,4 +252,67 @@ agents:
     await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 2\nknowledgeBases:\n  personal:\n    paths:\n      wiki: ../private/wiki\n      sources: vault/personal/sources\n`, "utf8");
     await expect(loadVaultConfig(root, "personal")).rejects.toThrow("超出工作区边界");
   });
+
+  test("resolves content paths against an external content root and keeps app resources local", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "the-way-here-config-"));
+    const destination = await mkdtemp(path.join(os.tmpdir(), "the-way-here-content-"));
+    temporaryRoots.push(root, destination);
+    await mkdir(path.join(destination, "synced/personal/wiki"), { recursive: true });
+    await mkdir(path.join(destination, "synced/personal/sources"), { recursive: true });
+    await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 3
+storage:
+  contentRoot: ${JSON.stringify(destination)}
+knowledgeBases:
+  personal:
+    paths:
+      wiki: synced/personal/wiki
+      sources: synced/personal/sources
+`, "utf8");
+    const config = await loadVaultConfig(root, "personal");
+    expect(config.storage?.contentRoot).toBe(path.resolve(destination));
+    expect(config.paths.wiki).toBe("synced/personal/wiki");
+    expect(config.paths.skills).toBe("skills");
+    // App resources must never be redirected by the content root.
+    await expect(loadVaultConfig(root, "personal")).resolves.toBeTruthy();
+  });
+
+  test("a per-library workspace anchor overrides a synced content root", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "the-way-here-config-"));
+    const destination = await mkdtemp(path.join(os.tmpdir(), "the-way-here-content-"));
+    temporaryRoots.push(root, destination);
+    await mkdir(path.join(destination, "synced/personal/wiki"), { recursive: true });
+    await mkdir(path.join(destination, "synced/personal/sources"), { recursive: true });
+    await mkdir(path.join(root, "app/demo/wiki"), { recursive: true });
+    await mkdir(path.join(root, "app/demo/sources"), { recursive: true });
+    await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 3
+storage:
+  contentRoot: ${JSON.stringify(destination)}
+knowledgeBases:
+  personal:
+    paths:
+      wiki: synced/personal/wiki
+      sources: synced/personal/sources
+  demo:
+    storage:
+      contentRoot: workspace
+    paths:
+      wiki: app/demo/wiki
+      sources: app/demo/sources
+`, "utf8");
+    const synced = await loadVaultConfig(root, "personal");
+    expect(synced.storage?.contentRoot).toBe(path.resolve(destination));
+    const local = await loadVaultConfig(root, "demo");
+    expect(local.storage?.contentRoot).toBe(path.resolve(root));
+  });
+
+  test("rejects content roots inside or containing the workspace and missing directories", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "the-way-here-config-"));
+    temporaryRoots.push(root);
+    await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 3\nstorage:\n  contentRoot: inside\nknowledgeBases:\n  personal: {}\n`, "utf8");
+    await expect(loadVaultConfig(root, "personal")).rejects.toThrow("绝对路径");
+    await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 3\nstorage:\n  contentRoot: ${JSON.stringify(path.join(root, "nested"))}\nknowledgeBases:\n  personal: {}\n`, "utf8");
+    await expect(loadVaultConfig(root, "personal")).rejects.toThrow("不能位于工作区内");
+    await writeFile(path.join(root, "the-way-here.config.yaml"), `version: 3\nstorage:\n  contentRoot: ${JSON.stringify("/nonexistent-twh-content-root")}\nknowledgeBases:\n  personal: {}\n`, "utf8");
+    await expect(loadVaultConfig(root, "personal")).rejects.toThrow("不存在");
+  });
 });

@@ -133,8 +133,50 @@ describe("letter reader", () => {
     expect(html).toContain('aria-label="另外 2 个主题"');
     expect(html).toContain("创作");
     expect(html).toContain("关系");
-    expect(html).toContain("用新视角重读");
+    expect(html).toContain("默认视角");
+    expect(html).toContain('aria-label="默认视角。点击选择一个视角重读"');
     expect(html).not.toContain("选择重读视角");
+  });
+
+  it("names the lens that wrote the letter on the reread control", () => {
+    view = { ...data, letters: [data.letters[0]!, { ...data.letters[1]!, lens: { id: "lens", name: "旧称呼" } }] };
+    expect(render()).toContain("示例视角");
+    expect(render()).toContain('aria-label="示例视角。点击换一个视角重读"');
+    view = { ...data, letters: [data.letters[0]!, { ...data.letters[1]!, lens: { name: "导师" } }] };
+    expect(render()).toContain("导师视角");
+    view = { ...data, letters: [data.letters[0]!, { ...data.letters[1]!, lens: { id: "missing", name: "旧人物" } }] };
+    expect(render()).toContain("旧人物视角");
+    expect(render("?letter=letter-old")).toContain("默认视角");
+  });
+
+  it("keeps naming the lens when the lens catalog cannot be read", () => {
+    view = { ...data, letters: [data.letters[0]!, { ...data.letters[1]!, lens: { name: "导师" } }] };
+    mocks.useApi.mockImplementation((url: string) => {
+      if (url === "/api/lenses") return { data: [], loading: false, error: "unavailable" };
+      if (url === "/api/views/letters") return { data: view, loading: false, error: undefined };
+      if (url === "/api/runs") return { data: [], loading: false, error: undefined };
+      return { data: document, loading: false };
+    });
+    const html = render();
+    expect(html).toContain("导师视角");
+    expect(html).toContain('aria-disabled="true"');
+    expect(html).not.toContain("点击换一个视角重读");
+  });
+
+  it("follows the version on screen and marks the lens being read as current", () => {
+    view = { ...data, letters: [data.letters[0]!, { ...data.letters[1]!, lens: { id: "other", name: "另一位" } }] };
+    runs = [version];
+    mocks.useApi.mockImplementation((url: string) => {
+      if (url === "/api/lenses") return { data: [{ id: "lens", displayName: "示例", attention: "关注证据" }, { id: "other", displayName: "另一位", attention: "关注安排" }], loading: false };
+      if (url === "/api/views/letters") return { data: view, loading: false, error: undefined };
+      if (url === "/api/runs") return { data: runs, loading: false, error: undefined };
+      return { data: document, loading: false };
+    });
+    expect(render()).toContain('aria-label="示例视角。点击换一个视角重读"');
+    expect(render("?letter=letter-new&version=original")).toContain('aria-label="另一位视角。点击换一个视角重读"');
+    const cards = renderToStaticMarkup(<LetterLensChoices lenses={[{ id: "other", displayName: "另一位", attention: "关注安排", signals: [], helperUse: "", relativePath: "" }]} currentId="other" onSelect={() => {}} />);
+    expect(cards).toContain('aria-current="true"');
+    expect(cards).toContain("当前");
   });
 
   it("defaults to the latest completed version and retains original/version deep links", () => {

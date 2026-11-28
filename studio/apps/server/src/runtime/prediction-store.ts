@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { appendFile, copyFile, lstat, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { loadVaultConfig } from "@the-way-here/wiki-core";
+import { loadVaultConfig, contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import { stateRootForVault } from "@the-way-here/run-manager";
 
 // Only portable results belong in the shareable file. Execution details stay local.
@@ -11,11 +11,12 @@ export class PredictionStore {
   private loads = new Map<string, Promise<any>>();
   async directory(id: string) {
     const config = await loadVaultConfig(this.root, id);
-    const dir = path.resolve(this.root, path.dirname(config.paths.wiki), "predictions");
-    // Reject symlinks even when they point to another library inside the workspace.
-    const relative = path.relative(path.resolve(this.root), dir);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("预测目录超出工作区边界");
-    let current = path.resolve(this.root);
+    const dir = resolveContentPath(this.root, config, path.join(path.dirname(config.paths.wiki), "predictions"));
+    // Reject symlinks even when they point to another library inside the content base.
+    const base = contentBase(this.root, config);
+    const relative = path.relative(base, dir);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("预测目录超出内容根边界");
+    let current = base;
     for (const part of relative.split(path.sep)) {
       current = path.join(current, part);
       try { if ((await lstat(current)).isSymbolicLink()) throw new Error("预测目录不允许符号链接"); }
@@ -35,11 +36,6 @@ export class PredictionStore {
     return dir;
   }
   private async runtimeLocation(id: string) {
-    const mobile = await this.read(path.join(this.root, "mobile-space.json"));
-    if (mobile?.version === 1) {
-      const root = path.join(stateRootForVault(this.root), "mobile-predictions");
-      return this.safeFile(root, createHash("sha256").update(id).digest("hex"));
-    }
     return this.safeFile(await this.directory(id), ".runtime");
   }
   private async read(file: string) {

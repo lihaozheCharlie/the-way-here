@@ -1,4 +1,4 @@
-import { readExternalSource, isExternalSourcePath } from "@the-way-here/wiki-core";
+import { readExternalSource, isExternalSourcePath, contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { StartAgentExecution } from "../types.js";
@@ -133,10 +133,16 @@ class WorkspaceAccess {
 
   constructor(cwd: string, private readonly config: VaultConfig) {
     this.root = canonicalPath(path.resolve(cwd));
-    this.readableDirs = [config.paths.wiki, config.paths.sources, config.paths.skills, config.paths.tools].map((entry) => configuredPath(this.root, entry));
+    const base = canonicalPath(contentBase(this.root, this.config));
+    const contentPath = (entry: string) => {
+      const target = canonicalPath(resolveContentPath(this.root, this.config, entry));
+      if (!inside(target, base)) throw new Error(`配置路径超出内容根：${entry}`);
+      return target;
+    };
+    this.readableDirs = [config.paths.wiki, config.paths.sources].map(contentPath).concat([config.paths.skills, config.paths.tools].map((entry) => configuredPath(this.root, entry)));
     this.readableDirs.push(...(config.sourceConnections || []).map(item => item.path));
     this.readableFiles = [configuredPath(this.root, config.paths.agentInstructions)];
-    this.writableDirs = [config.paths.wiki, config.paths.sources].map((entry) => configuredPath(this.root, entry));
+    this.writableDirs = [config.paths.wiki, config.paths.sources].map(contentPath);
     this.writableDirs.push(...(config.sourceConnections || []).filter(item => item.aiWritable).map(item => item.path));
   }
 
@@ -240,11 +246,12 @@ class WorkspaceAccess {
 
   private resolveLexical(relativePath: string): string {
     if (path.isAbsolute(relativePath)) {
-      if (!(this.config.sourceConnections || []).some(item => inside(relativePath, item.path))) throw new Error("文件路径必须相对工作区或位于已打开目录");
+      if (!(this.config.sourceConnections || []).some(item => inside(relativePath, item.path))) throw new Error("文件路径必须相对内容根或位于已打开目录");
       return relativePath;
     }
-    const target = path.resolve(this.root, relativePath);
-    if (!inside(target, this.root)) throw new Error("文件路径超出工作区");
+    const base = contentBase(this.root, this.config);
+    const target = path.resolve(base, relativePath);
+    if (!inside(target, base)) throw new Error("文件路径超出内容根");
     return target;
   }
 
@@ -265,7 +272,8 @@ class WorkspaceAccess {
   }
 
   private relative(target: string): string {
-    return inside(target, this.root) ? path.relative(this.root, target).split(path.sep).join("/") : target;
+    const base = contentBase(this.root, this.config);
+    return inside(target, base) ? path.relative(base, target).split(path.sep).join("/") : target;
   }
 }
 

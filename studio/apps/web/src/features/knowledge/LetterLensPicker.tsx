@@ -1,7 +1,7 @@
 import { useDismissLayer } from "../../shared/use-dismiss-layer";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { ReasoningLens } from "@the-way-here/shared";
+import type { LetterLens, ReasoningLens } from "@the-way-here/shared";
 import { Icon } from "../../shared/ui";
 import { currentLocale, translate } from "../../shared/i18n";
 
@@ -9,7 +9,18 @@ function tr(message: string, params?: Record<string, string | number | null | un
   return translate(currentLocale(), message, params);
 }
 
-function LensChoice({ lens, onSelect, selected = false }: { lens: ReasoningLens; onSelect: () => void; selected?: boolean }) {
+/** Chinese names are written “given name · surname” (理查德·费曼); the surname is how readers refer to the person. */
+function lensSurname(displayName: string): string {
+  const segments = displayName.split("·");
+  return segments.length > 1 ? segments.at(-1)!.trim() : displayName;
+}
+
+function lensInitial(displayName: string): string {
+  const surname = lensSurname(displayName);
+  return surname.split(/\s+/).at(-1)?.slice(0, 1) || surname.slice(0, 1);
+}
+
+function LensChoice({ lens, onSelect, selected = false, current = false }: { lens: ReasoningLens; onSelect: () => void; selected?: boolean; current?: boolean }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const tooltip = useRef<HTMLDivElement>(null);
@@ -32,24 +43,26 @@ function LensChoice({ lens, onSelect, selected = false }: { lens: ReasoningLens;
   const displayName = tr(lens.displayName);
   const attention = tr(lens.attention);
   const summary = attention.split(/[。；;.]/)[0];
-  const initial = displayName.split(/\s+/).at(-1)?.slice(0, 1) || displayName.slice(0, 1);
+  const initial = lensInitial(displayName);
   return <>
-    <button ref={trigger} className="letter-lens-choice" type="button" aria-pressed={selected} aria-describedby={visible ? id : undefined} data-overflow-tooltip="off" onPointerEnter={() => { clearTimeout(timer.current); timer.current = setTimeout(() => setVisible(true), 180); }} onPointerLeave={leave} onFocus={event => { if (event.currentTarget.matches(":focus-visible")) setVisible(true); }} onBlur={hide} onClick={() => { hide(); onSelect(); }}>
+    <button ref={trigger} className="letter-lens-choice" type="button" aria-pressed={selected} aria-current={current ? "true" : undefined} disabled={current} aria-describedby={visible ? id : undefined} data-overflow-tooltip="off" onPointerEnter={() => { if (current) return; clearTimeout(timer.current); timer.current = setTimeout(() => setVisible(true), 180); }} onPointerLeave={leave} onFocus={event => { if (!current && event.currentTarget.matches(":focus-visible")) setVisible(true); }} onBlur={hide} onClick={() => { hide(); if (!current) onSelect(); }}>
       <span className="letter-lens-avatar" aria-hidden="true">{initial}</span>
       <span className="letter-lens-copy"><b>{displayName}</b><small>{summary}</small></span>
+      {current && <span className="letter-lens-current">{tr("当前")}</span>}
     </button>
     {visible && createPortal(<div id={id} ref={tooltip} role="tooltip" className="letter-lens-tooltip" style={position} onPointerEnter={() => clearTimeout(timer.current)} onPointerLeave={leave}><b>{displayName}</b><p>{attention}</p>{lens.helperUse && <p>{tr(lens.helperUse)}</p>}{Boolean(lens.signals?.length) && <p>{tr("关注：")}{lens.signals.map((signal) => tr(signal)).join(tr("、"))}</p>}</div>, document.body)}
   </>;
 }
 
-export function LetterLensChoices({ lenses, onSelect, selectedId, onAutoSelect, autoSelected = false }: { lenses: ReasoningLens[]; onSelect: (lens: ReasoningLens) => void; selectedId?: string; onAutoSelect?: () => void; autoSelected?: boolean }) {
+export function LetterLensChoices({ lenses, onSelect, selectedId, currentId, onAutoSelect, autoSelected = false }: { lenses: ReasoningLens[]; onSelect: (lens: ReasoningLens) => void; selectedId?: string; currentId?: string; onAutoSelect?: () => void; autoSelected?: boolean }) {
   return <div className="letter-lens-grid">
     {onAutoSelect && <button className="letter-lens-choice" type="button" aria-pressed={autoSelected} onClick={onAutoSelect}><span className="letter-lens-avatar" aria-hidden="true"><Icon name="spark" size={16} /></span><span className="letter-lens-copy"><b>{tr("自动选择")}</b><small>{tr("根据这段经历，选择合适的视角")}</small></span></button>}
-    {lenses.map(lens => <LensChoice key={lens.id} lens={lens} selected={selectedId === lens.id} onSelect={() => onSelect(lens)} />)}
+    {lenses.map(lens => <LensChoice key={lens.id} lens={lens} selected={selectedId === lens.id} current={currentId === lens.id} onSelect={() => onSelect(lens)} />)}
   </div>;
 }
 
-export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]; onSelect: (lens: ReasoningLens) => void }) {
+/** The trigger doubles as the “written by” label: it names the lens of the letter or version being read. */
+export function LetterLensPicker({ lenses, current, onSelect }: { lenses: ReasoningLens[]; current?: LetterLens; onSelect: (lens: ReasoningLens) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLElement>(null);
@@ -68,7 +81,7 @@ export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]
       const width = Math.min(460, window.innerWidth - 48);
       const left = Math.max(24, Math.min(rect.left, window.innerWidth - width - 24));
       const edge = above ? window.innerHeight - rect.top + 6 : rect.bottom + 6;
-      setPlacement((current) => current.above === above && current.maxHeight === maxHeight && current.left === left && current.edge === edge ? current : { above, maxHeight, left, edge });
+      setPlacement((previous) => previous.above === above && previous.maxHeight === maxHeight && previous.left === left && previous.edge === edge ? previous : { above, maxHeight, left, edge });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -88,14 +101,28 @@ export function LetterLensPicker({ lenses, onSelect }: { lenses: ReasoningLens[]
       document.removeEventListener("pointerdown", dismiss);
     };
   }, [open]);
-  if (!lenses.length) return null;
+  const known = Boolean(current?.id || current?.name);
+  const currentLens = current?.id ? lenses.find((lens) => lens.id === current.id) : undefined;
+  const currentName = currentLens ? tr(currentLens.displayName) : current?.name ? tr(current.name) : "";
+  // The closed control is narrow, so it uses the short form; the popover spells the lens out in full.
+  const shortName = currentLens ? lensSurname(currentName) : currentName;
+  const canReread = lenses.length > 0;
+  // Letters written before lenses were recorded still say so; only hide the control when there is nothing to show or do.
+  if (!known && !canReread) return null;
+  const visibleLabel = known ? tr("${name}视角", { name: shortName }) : tr("默认视角");
+  const label = canReread ? (known ? tr("${name}视角。点击换一个视角重读", { name: shortName }) : tr("默认视角。点击选择一个视角重读")) : visibleLabel;
   return <div ref={rootRef} className="letter-lens-picker" onBlur={(event) => {
     if (!rootRef.current?.contains(event.relatedTarget as Node | null) && !popoverRef.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
   }}>
-    <button ref={triggerRef} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}>{tr("用新视角重读") + " "}<Icon name="down" size={14} /></button>
+    <button ref={triggerRef} type="button" className={known ? "letter-lens-trigger" : "letter-lens-trigger letter-lens-trigger-default"} aria-expanded={canReread ? open : undefined} aria-controls={open ? id : undefined} aria-haspopup={canReread ? "dialog" : undefined} aria-disabled={canReread ? undefined : "true"} aria-label={label} data-overflow-tooltip="off" onClick={() => { if (canReread) setOpen((value) => !value); }}>
+      <span className="letter-lens-avatar" aria-hidden="true">{known ? lensInitial(shortName) : <Icon name="spark" size={13} />}</span>
+      <span className="letter-lens-trigger-name">{visibleLabel}</span>
+      {canReread && <Icon name="down" size={14} />}
+    </button>
     {open && createPortal(<section ref={popoverRef} id={id} className="letter-lens-popover" data-placement={placement.above ? "above" : "below"} style={{ maxHeight: placement.maxHeight, left: placement.left, top: placement.above ? "auto" : placement.edge, bottom: placement.above ? placement.edge : "auto" }} aria-label={tr("选择重读视角")}>
-      <p>{tr("用 ${count} 种从公开原则提炼的视角重新写这封信。", { count: lenses.length })}</p>
-      <LetterLensChoices lenses={lenses} onSelect={lens => { setOpen(false); onSelect(lens); }} />
+      {known && <b className="letter-lens-popover-title">{tr("当前视角：${name}", { name: currentName })}</b>}
+      <p>{known ? tr("换一个视角，会从原始材料重新写一封，原信保留。") : tr("这封信没有记录视角。选一个视角，会从原始材料重新写一封，原信保留。")}</p>
+      <LetterLensChoices lenses={lenses} currentId={currentLens?.id} onSelect={lens => { setOpen(false); onSelect(lens); }} />
     </section>, document.body)}
   </div>;
 }

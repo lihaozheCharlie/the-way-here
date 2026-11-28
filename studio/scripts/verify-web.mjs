@@ -226,7 +226,7 @@ validation:
   await page.getByRole('button', { name: '主动写一封', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: '关闭写信窗口', exact: true }).click();
-  await page.getByRole('button', { name: '用新视角重读', exact: true }).click();
+  await page.getByRole('button', { name: /^默认视角。点击选择一个视角重读$/ }).click();
   const lenses = page.locator('.letter-lens-popover .letter-lens-choice');
   await expect(lenses.first()).toBeVisible();
   await lenses.first().click();

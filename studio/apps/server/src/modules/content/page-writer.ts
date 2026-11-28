@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pageIdForPath } from "@the-way-here/wiki-core";
+import { pageIdForPath, contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import type { WikiPage } from "@the-way-here/shared";
 import { isPathInside, markdownFileName, normalizeSourceFolder } from "../../path-policy.js";
 import type { ContentWorkspace } from "./content-workspace.js";
@@ -88,7 +88,7 @@ export class PageWriter {
       throw error;
     }
     await this.refresh();
-    const id = pageIdForPath(path.relative(this.knowledge.vaultRoot, target), this.knowledge.index.config);
+    const id = pageIdForPath(path.relative(contentBase(this.knowledge.vaultRoot, this.knowledge.index.config), target), this.knowledge.index.config);
     const page = destination.connection ? this.knowledge.index.list({ sources: true }).map(item => this.knowledge.index.get(item.id)!).find(item => item.externalSource?.originalPath === target) : this.knowledge.index.get(id);
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, path: page?.relativePath });
     return page;
@@ -123,13 +123,13 @@ export class PageWriter {
     }
     await rename(absolutePath, target);
     try {
-      if (page.isSource && !page.externalSource) await this.onSourceRenamed?.(page.relativePath, path.relative(this.knowledge.vaultRoot, target).split(path.sep).join("/"));
+      if (page.isSource && !page.externalSource) await this.onSourceRenamed?.(page.relativePath, path.relative(contentBase(this.knowledge.vaultRoot, this.knowledge.index.config), target).split(path.sep).join("/"));
     } catch (error) {
       await rename(target, absolutePath);
       throw error;
     }
     await this.refresh();
-    const id = pageIdForPath(path.relative(this.knowledge.vaultRoot, target), this.knowledge.index.config);
+    const id = pageIdForPath(path.relative(contentBase(this.knowledge.vaultRoot, this.knowledge.index.config), target), this.knowledge.index.config);
     const updated = page.externalSource ? this.knowledge.index.get(page.id) : this.knowledge.index.get(id);
     if (!updated) throw new Error("重命名后无法重新读取页面");
     this.knowledge.events.broadcast("index", { at: this.knowledge.index.lastIndexedAt, path: updated.relativePath, previousPath: page.relativePath });
@@ -139,7 +139,7 @@ export class PageWriter {
   async deleteSource(pageId: string | undefined, expectedModifiedAt?: string): Promise<{ ok: true; pageId: string }> {
     const page = pageId ? this.knowledge.index.get(pageId) : undefined;
     if (!page || !page.isSource) throw new ContentRequestError(404, "生活记录不存在，请刷新后重试");
-    const sourceRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.sources);
+    const sourceRoot = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, this.knowledge.index.config.paths.sources);
     const absolutePath = await sourceFile(this.knowledge.vaultRoot, this.knowledge.index.config, page);
     if (!page.externalSource && !isPathInside(sourceRoot, absolutePath)) throw new ContentRequestError(403, "只能删除生活记录中的文件");
     await this.assertCurrent(absolutePath, expectedModifiedAt);
@@ -153,8 +153,8 @@ export class PageWriter {
     if (typeof pageId !== "string" || !pageId.trim() || typeof expectedModifiedAt !== "string" || !Number.isFinite(Date.parse(expectedModifiedAt))) throw new ContentRequestError(400, "缺少有效的文件标识或修改时间，请刷新后重试");
     const page = this.knowledge.index.get(pageId);
     if (!page || page.isSource) throw new ContentRequestError(404, "Wiki 文件不存在，请刷新后重试");
-    const wikiRoot = path.resolve(this.knowledge.vaultRoot, this.knowledge.index.config.paths.wiki);
-    const absolutePath = path.resolve(this.knowledge.vaultRoot, page.relativePath);
+    const wikiRoot = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, this.knowledge.index.config.paths.wiki);
+    const absolutePath = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, page.relativePath);
     if (page.externalSource || !isPathInside(wikiRoot, absolutePath)) throw new ContentRequestError(403, "只能删除当前知识库中的 Wiki 文件");
     const [root, resolved, info] = await Promise.all([realpath(wikiRoot), realpath(absolutePath), lstat(absolutePath)]);
     if (!isPathInside(root, resolved) || !info.isFile() || info.isSymbolicLink()) throw new ContentRequestError(403, "所选文件不在可删除的 Wiki 目录中");
@@ -215,7 +215,7 @@ export class PageWriter {
   async openInEditor(pageId: string | undefined, reveal = false): Promise<{ ok: true }> {
     const page = pageId ? this.knowledge.index.get(pageId) : undefined;
     if (!page) throw new ContentRequestError(404, "页面不存在");
-    const absolutePath = page.externalSource?.status === "available" ? page.externalSource.originalPath : path.resolve(this.knowledge.vaultRoot, page.relativePath);
+    const absolutePath = page.externalSource?.status === "available" ? page.externalSource.originalPath : resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, page.relativePath);
     if (page.externalSource?.status === "unavailable") throw new ContentRequestError(404, "原始来源不可用，请检查目录连接");
     const configuredEditor = reveal ? undefined : process.env.THE_WAY_HERE_EDITOR?.trim();
     const editor = configuredEditor || (process.platform === "darwin" ? "/usr/bin/open" : process.platform === "win32" ? "cmd" : "xdg-open");
@@ -238,7 +238,7 @@ export class PageWriter {
   }
 
   private allowedRoots(): string[] {
-    return [this.knowledge.index.config.paths.wiki, this.knowledge.index.config.paths.sources].map((entry) => path.resolve(this.knowledge.vaultRoot, entry));
+    return [this.knowledge.index.config.paths.wiki, this.knowledge.index.config.paths.sources].map((entry) => resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, entry));
   }
 
   private assertEditable(absolutePath: string, message: string): void {
@@ -246,7 +246,7 @@ export class PageWriter {
   }
 
   private editablePath(relativePath: string, message: string): string {
-    const absolutePath = path.resolve(this.knowledge.vaultRoot, relativePath);
+    const absolutePath = resolveContentPath(this.knowledge.vaultRoot, this.knowledge.index.config, relativePath);
     this.assertEditable(absolutePath, message);
     return absolutePath;
   }

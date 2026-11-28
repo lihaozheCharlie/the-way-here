@@ -96,6 +96,20 @@
 .letter-lens-copy small { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .letter-lens-tooltip { position:fixed; z-index:1400; width:320px; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); overflow:auto; padding:12px 14px; border-radius:var(--radius-control); background:var(--paper); color:var(--ink); box-shadow:var(--shadow-float); font-size:12px; line-height:1.7; }
 .letter-lens-tooltip p { margin:6px 0 0; }
+/* Collapsed, the reread control is a compact lens card: it names who wrote the letter being read. */
+.letter-version-actions .letter-lens-picker > button.letter-lens-trigger { gap:8px; min-height:34px; padding:4px 12px 4px 5px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface-subtle); color:var(--ink); font-size:12px; transition:border-color .15s ease, background .15s ease; }
+.letter-version-actions .letter-lens-picker > button.letter-lens-trigger:hover,.letter-version-actions .letter-lens-picker > button.letter-lens-trigger[aria-expanded="true"] { border-color:var(--warm); background:var(--warm-soft); }
+.letter-version-actions .letter-lens-picker > button.letter-lens-trigger:focus-visible { outline:2px solid var(--accent-primary); outline-offset:2px; }
+.letter-lens-picker > button.letter-lens-trigger[aria-disabled="true"] { cursor:default; }
+.letter-lens-trigger .letter-lens-avatar { width:24px; height:24px; font-size:12px; }
+.letter-lens-trigger .letter-lens-trigger-name { font-weight:500; white-space:nowrap; }
+.letter-lens-trigger .icon { color:var(--muted); transition:transform .15s ease; }
+.letter-lens-trigger[aria-expanded="true"] .icon { transform:rotate(180deg); }
+.letter-lens-trigger-default .letter-lens-avatar { background:var(--accent-soft); color:var(--accent-ink); }
+.letter-lens-popover .letter-lens-popover-title { margin:0 0 4px; color:var(--ink); font-size:13px; font-weight:600; }
+.letter-lens-grid button.letter-lens-choice[aria-current="true"] { border-color:var(--accent-primary); cursor:default; }
+.letter-lens-grid button.letter-lens-choice:disabled { opacity:1; }
+.letter-lens-current { flex:none; margin-left:auto; padding:1px 7px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); font-size:11px; line-height:1.6; }
 
 .letter-history-trigger { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--surface-subtle); color:var(--ink); font-size:12px; }
 .letter-history-trigger[aria-expanded=true] .icon { transform:rotate(180deg); }
@@ -119,3 +133,5 @@
 .understanding-letters-page .document-identity-copy { flex:1 1 280px; min-width:0; }
 .understanding-letters-page .document-header-actions { margin-left:auto; flex:0 0 auto; max-width:100%; }
 .understanding-letters-page .document-header-actions .letter-version-actions { justify-content:flex-end; }
+/* The lens control sits beside the title; a long title should trail off rather than be cut mid-character. */
+.understanding-letters-page .document-file-name input.text-control { text-overflow:ellipsis; }

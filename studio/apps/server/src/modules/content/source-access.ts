@@ -1,5 +1,6 @@
 import { lstat, mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
+import { contentBase, resolveContentPath } from "@the-way-here/wiki-core";
 import type { VaultConfig, WikiPage } from "@the-way-here/shared";
 import { normalizeSourceFolder } from "../../path-policy.js";
 import { ContentRequestError } from "./content-error.js";
@@ -16,10 +17,10 @@ export async function sourceDestination(workspace: string, config: VaultConfig, 
   const external = parts[0] === "外部来源";
   const connection = external ? config.sourceConnections?.find(item => item.id === parts[1]) : undefined;
   if (external && !connection) throw new ContentRequestError(403, "请选择已打开的文件夹");
-  const root = connection?.path || path.resolve(workspace, config.paths.sources);
+  const root = connection?.path || resolveContentPath(workspace, config, config.paths.sources);
   if (connection && await realpath(root) !== root) throw new ContentRequestError(403, "文件夹位置已变化，请重新打开");
   if (!external) {
-    await assertSourcePath(workspace, root);
+    await assertSourcePath(contentBase(workspace, config), root);
     await mkdir(root, { recursive: true });
   }
   const target = path.resolve(root, external ? parts.slice(2).join("/") : folder);
@@ -28,7 +29,7 @@ export async function sourceDestination(workspace: string, config: VaultConfig, 
 }
 
 export async function sourceFile(workspace: string, config: VaultConfig, page: WikiPage) {
-  if (!page.externalSource) return path.resolve(workspace, page.relativePath);
+  if (!page.externalSource) return resolveContentPath(workspace, config, page.relativePath);
   const connection = config.sourceConnections?.find(item => item.id === page.externalSource!.connectionId);
   if (!connection || page.externalSource.status !== "available") throw new ContentRequestError(404, "原文件不可用，请重新打开文件夹");
   if (await realpath(connection.path) !== connection.path) throw new ContentRequestError(403, "文件夹位置已变化，请重新打开");

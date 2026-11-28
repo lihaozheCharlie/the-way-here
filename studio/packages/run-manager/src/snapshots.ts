@@ -15,15 +15,38 @@ async function hashFile(filePath: string): Promise<{ sha256: string; size: numbe
   return { sha256: createHash("sha256").update(content).digest("hex"), size: content.length };
 }
 
-function snapshotPatterns(config: VaultConfig): string[] {
+/** User content (wiki/sources) may live under an external content root; app resources stay in the workspace. */
+function contentBaseOf(vaultRoot: string, config: VaultConfig): string {
+  return config.storage?.contentRoot ? path.resolve(config.storage.contentRoot) : path.resolve(vaultRoot);
+}
+
+function isContentKey(key: string, config: VaultConfig): boolean {
+  const normalized = key.replace(/\\/g, "/");
+  return normalized.startsWith(`${config.paths.wiki}/`) || normalized.startsWith(`${config.paths.sources}/`);
+}
+
+function contentPatterns(config: VaultConfig): string[] {
   return [
-    config.paths.agentInstructions,
     `${config.paths.wiki}/**/*`,
-    `${config.paths.skills}/**/*`,
-    `${config.paths.tools}/**/*`,
     `${config.paths.sources}/**/*`,
     // Directory sync owns these references; they are not Agent edits or source copies.
     `!${config.paths.sources}/${EXTERNAL_SOURCE_FOLDER}/**/*`,
+  ];
+}
+
+function workspacePatterns(config: VaultConfig): string[] {
+  return [
+    config.paths.agentInstructions,
+    `${config.paths.skills}/**/*`,
+    `${config.paths.tools}/**/*`,
+  ];
+}
+
+async function snapshotFiles(vaultRoot: string, config: VaultConfig): Promise<string[]> {
+  const options = { onlyFiles: true, unique: true, followSymbolicLinks: false } as const;
+  return [
+    ...await fg(contentPatterns(config), { ...options, cwd: contentBaseOf(vaultRoot, config) }),
+    ...await fg(workspacePatterns(config), { ...options, cwd: path.resolve(vaultRoot) }),
   ];
 }
 
@@ -31,12 +54,7 @@ export class RunSnapshots {
   constructor(private readonly vaultRoot: string) {}
 
   async snapshot(directory: string, config: VaultConfig): Promise<void> {
-    const files = await fg(snapshotPatterns(config), {
-      cwd: this.vaultRoot,
-      onlyFiles: true,
-      unique: true,
-      followSymbolicLinks: false,
-    });
+    const files = await snapshotFiles(this.vaultRoot, config);
     files.push(...await this.localFiles(config));
     const manifest: SnapshotManifest = { files: {} };
     for (const relativePath of files.sort()) {
@@ -51,12 +69,7 @@ export class RunSnapshots {
 
   async collectChanges(directory: string, config: VaultConfig): Promise<RunFileChange[]> {
     const manifest = JSON.parse(await readFile(path.join(directory, "manifest.json"), "utf8")) as SnapshotManifest;
-    const currentFiles = await fg(snapshotPatterns(config), {
-      cwd: this.vaultRoot,
-      onlyFiles: true,
-      unique: true,
-      followSymbolicLinks: false,
-    });
+    const currentFiles = await snapshotFiles(this.vaultRoot, config);
     currentFiles.push(...await this.localFiles(config));
     const current = new Set(currentFiles);
     const paths = new Set([...Object.keys(manifest.files), ...currentFiles]);
@@ -80,7 +93,7 @@ export class RunSnapshots {
   }
 
   private sourcePath(key: string, config: VaultConfig): string {
-    if (!key.startsWith("@local/")) return path.join(this.vaultRoot, key);
+    if (!key.startsWith("@local/")) return path.join(isContentKey(key, config) ? contentBaseOf(this.vaultRoot, config) : path.resolve(this.vaultRoot), key);
     const [, id, ...parts] = key.split("/");
     const connection = config.sourceConnections?.find(item => item.id === id && item.aiWritable);
     if (!connection) throw new Error("任务目录授权不存在");

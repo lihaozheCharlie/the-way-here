@@ -11,6 +11,7 @@ import {
   type SourceImportBatch,
   type VaultConfig,
 } from "@the-way-here/shared";
+import { resolveContentPath } from "@the-way-here/wiki-core";
 import { isPathInside } from "../../path-policy.js";
 
 const maxJourneyDraftLength = 120_000;
@@ -83,15 +84,15 @@ export class JourneyReportStore {
     });
     journey.clueStates = journey.clusters.map((item) => states.get(item.id) || { clusterId: item.id, status: "pending" });
     journey.revision = (journey.revision || 1) + 1;
-    const manifest = path.resolve(this.vaultRoot, config.paths.sources, ".imports", `${target.importId}.json`);
+    const manifest = resolveContentPath(this.vaultRoot, config, path.posix.join(config.paths.sources, ".imports", `${target.importId}.json`));
     const temporary = `${manifest}.${process.pid}.${randomUUID()}.tmp`;
     await writeFile(temporary, `${JSON.stringify(batch, null, 2)}\n`, "utf8");
     await rename(temporary, manifest);
   }
 
   private resolveReportPath(config: VaultConfig, storedPath: string): string {
-    const sourceRoot = path.resolve(this.vaultRoot, config.paths.sources);
-    const reportPath = path.resolve(this.vaultRoot, storedPath);
+    const sourceRoot = resolveContentPath(this.vaultRoot, config, config.paths.sources);
+    const reportPath = resolveContentPath(this.vaultRoot, config, storedPath);
     if (!isPathInside(sourceRoot, reportPath) || !/\.md$/i.test(reportPath)) {
       throw new JourneyReportTargetError("消费旅程报告路径无效");
     }
@@ -100,7 +101,7 @@ export class JourneyReportStore {
 
   private async readBatch(config: VaultConfig, importId: string): Promise<SourceImportBatch> {
     if (!/^[a-z0-9-]+$/i.test(importId)) throw new JourneyReportTargetError("消费旅程导入编号无效");
-    const manifest = path.resolve(this.vaultRoot, config.paths.sources, ".imports", `${importId}.json`);
+    const manifest = resolveContentPath(this.vaultRoot, config, path.posix.join(config.paths.sources, ".imports", `${importId}.json`));
     try {
       return JSON.parse(await readFile(manifest, "utf8")) as SourceImportBatch;
     } catch (error: any) {

@@ -97,7 +97,7 @@ describe("Pi workspace tools", () => {
     expect(createPiTools({ cwd: root, config, mode: "auto" }).some((tool) => tool.name === "write_file")).toBe(true);
     expect(createPiTools({ cwd: root, config, mode: "auto", strictReadOnly: true }).some((tool) => tool.name === "write_file")).toBe(false);
     const writer = createPiTools({ cwd: root, config, mode: "write" }).find((tool) => tool.name === "write_file")!;
-    await expect(writer.execute("traversal", { path: "../outside.md", content: "unsafe" } as any)).rejects.toThrow("超出工作区");
+    await expect(writer.execute("traversal", { path: "../outside.md", content: "unsafe" } as any)).rejects.toThrow("超出内容根");
     await expect(writer.execute("product", { path: "apps/server/injected.ts", content: "unsafe" } as any)).rejects.toThrow("允许目录");
   });
 });

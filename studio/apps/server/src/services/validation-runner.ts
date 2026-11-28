@@ -1,4 +1,6 @@
+import path from "node:path";
 import { spawn } from "node:child_process";
+import { contentBase } from "@the-way-here/wiki-core";
 import { validationCommand } from "./bundled-tools.js";
 import type { VaultConfig, WikiRun } from "@the-way-here/shared";
 
@@ -18,9 +20,11 @@ export async function runValidationCommands(options: {
     if (!command.length) continue;
     const result = await new Promise<{ exitCode: number | null; output: string }>((resolve) => {
       const executable = validationCommand(command, options.vaultRoot);
+      const contentRoot = contentBase(options.vaultRoot, options.config);
+      const envExtras = contentRoot !== path.resolve(options.vaultRoot) ? { THE_WAY_HERE_CONTENT_ROOT: contentRoot } : {};
       const child = spawn(executable[0]!, executable.slice(1), {
         cwd: options.vaultRoot,
-        env: { ...process.env, THE_WAY_HERE_KNOWLEDGE_BASE: options.knowledgeBaseId },
+        env: { ...process.env, THE_WAY_HERE_KNOWLEDGE_BASE: options.knowledgeBaseId, ...envExtras },
         detached: process.platform !== "win32",
       });
       let output = "", emitted = 0;

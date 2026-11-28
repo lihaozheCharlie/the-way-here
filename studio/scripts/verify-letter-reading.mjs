@@ -91,8 +91,9 @@ try {
   await expect(reading.locator('[data-document-editor]')).toBeFocused();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '回到最新版本' }).click();
-  await page.getByRole('button', { name: '用新视角重读', exact: true }).click();
-  await expect(page.locator('.letter-lens-popover > p')).toHaveText('用 9 种从公开原则提炼的视角重新写这封信。');
+  await page.getByRole('button', { name: /^默认视角。点击选择一个视角重读$/ }).click();
+  await expect(page.locator('.letter-lens-popover > p')).toContainText('这封信没有记录视角。');
+  await expect(page.locator('.letter-lens-popover > p')).toContainText('会从原始材料重新写一封，原信保留。');
   await expect(page.getByText('对比两个视角')).toHaveCount(0);
   const choices = page.locator('.letter-lens-choice');
   await expect(choices).toHaveCount(9);
@@ -113,7 +114,7 @@ try {
   await expect(page.locator('.letter-lens-tooltip')).toHaveCount(0);
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1100, 900));
   if (!process.env.SKIP_CAPTURE) await page.screenshot({ path: path.join(captures, 'reader.png') });
-  await page.getByRole('button', { name: '用新视角重读', exact: true }).click();
+  await page.getByRole('button', { name: /^默认视角。点击选择一个视角重读$/ }).click();
   await choices.first().click();
   await expect.poll(() => page.evaluate(() => Boolean(sessionStorage.getItem('test.reread')))).toBe(true);
   const request = await page.evaluate(() => JSON.parse(sessionStorage.getItem('test.reread')));

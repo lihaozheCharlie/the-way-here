@@ -3,6 +3,7 @@ import { WikiIndex } from "@the-way-here/wiki-core";
 import { searchWiki } from "../services/wiki-search.js";
 
 const queries: string[] = [];
+const exclude: string[] = [];
 let knowledgeBaseId = "";
 let vaultRoot = "";
 for (let index = 2; index < process.argv.length; index++) {
@@ -12,11 +13,13 @@ for (let index = 2; index < process.argv.length; index++) {
   if (flag === "--knowledge-base") knowledgeBaseId = value;
   else if (flag === "--root") vaultRoot = path.resolve(value);
   else if (flag === "--query") queries.push(value);
+  else if (flag === "--exclude") exclude.push(value);
   else throw new Error(`未知参数：${flag}`);
 }
 if (!knowledgeBaseId || !vaultRoot || !queries.length || queries.length > 3) throw new Error("需要 --root、--knowledge-base 和 1–3 个 --query");
+if (exclude.length > 8) throw new Error("--exclude 最多 8 个");
 
 const index = new WikiIndex(vaultRoot, knowledgeBaseId);
 await index.rebuild();
 if (index.config.knowledgeBaseId !== knowledgeBaseId) throw new Error("检索知识库与本轮绑定的知识库不一致");
-process.stdout.write(`${JSON.stringify(searchWiki(index, queries), null, 2)}\n`);
+process.stdout.write(`${JSON.stringify(searchWiki(index, queries, 8, exclude), null, 2)}\n`);

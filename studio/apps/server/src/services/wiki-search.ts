@@ -10,12 +10,16 @@ export type WikiSearchHit = {
   snippets: string[];
 };
 
-export function searchWiki(index: WikiIndex, proposedQueries: string[], limit = 8): WikiSearchHit[] {
+// `exclude` holds path fragments (matched against page id and relative path) whose pages must not
+// surface at all: a task that is forbidden from reading old letters must not get their snippets either.
+export function searchWiki(index: WikiIndex, proposedQueries: string[], limit = 8, exclude: string[] = []): WikiSearchHit[] {
   const queries = [...new Set(proposedQueries.map((query) => query.trim()).filter(Boolean))].slice(0, 3);
   if (!queries.length || queries.some((query) => query.length > 100)) throw new Error("请提供 1–3 个不超过 100 字的检索短语");
+  const blocked = exclude.filter(Boolean);
   const candidates = new Map<string, { page: WikiPageSummary; rank: number; matchedQueries: string[] }>();
   for (const query of queries) {
     for (const [position, page] of index.search(query, 16).entries()) {
+      if (blocked.some((term) => page.id.includes(term) || page.relativePath.includes(term))) continue;
       const existing = candidates.get(page.id);
       if (existing) {
         existing.rank += Math.max(1, 16 - position);

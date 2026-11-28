@@ -46,36 +46,3 @@ test('window dimensions persist and offscreen positions are not restored', async
   assert.deepEqual(readWindowBounds(new UserPreferences(root), '/anonymous', 'main', [{ x: 0, y: 0, width: 1440, height: 900 }]), { x: 100, y: 50, width: 1200, height: 800 });
   assert.deepEqual(readWindowBounds(preferences, '/anonymous', 'main', [{ x: 2000, y: 0, width: 1000, height: 700 }]), { width: 1000, height: 700 });
 });
-test('explicit iCloud workspace copying retains scoped choices without replacing destination preferences', async t => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'twh-mobile-preferences-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
-  const preferences = new UserPreferences(root);
-  preferences.set('/anonymous-original', 'capture.default-folder.fixture', '原来选择的目录');
-  preferences.set('/anonymous-original', 'photo-capture.folder.fixture', '照片目录');
-  preferences.set('/anonymous-cloud', 'photo-capture.folder.fixture', '云端既有选择');
-  preferences.copyWorkspacePreferences('/anonymous-original', '/anonymous-cloud');
-  const reopened = new UserPreferences(root);
-  assert.equal(reopened.get('/anonymous-cloud', 'capture.default-folder.fixture'), '原来选择的目录');
-  assert.equal(reopened.get('/anonymous-cloud', 'photo-capture.folder.fixture'), '云端既有选择');
-  assert.equal(reopened.get('/anonymous-original', 'capture.default-folder.fixture'), '原来选择的目录');
-});
-
-test('portable copies rekey only the selected library and preserve authored folders and existing target choices', async t => {
-  const root=await mkdtemp(path.join(os.tmpdir(),'twh-anonymous-portable-preferences-'));t.after(()=>rm(root,{recursive:true,force:true}));
-  const preferences=new UserPreferences(root),source='/anonymous/source-workspace',target='/anonymous/personal-portable-copy',portable='6a9e6ca9-035a-4abc-9674-efdf88a2d57b';
-  preferences.set(source,'capture.default-folder.personal','personal is an authored folder name');
-  preferences.set(source,'photo-capture.folder.personal','');
-  preferences.set(source,'the-way-here.folder-tree.personal','{"personal is an authored label":false}');
-  preferences.set(source,'capture.default-folder.other','other library must not follow');
-  preferences.set(target,'the-way-here.folder-tree.'+portable,'false');
-  preferences.copyWorkspacePreferences(source,target,{knowledgeBaseIdMap:{personal:portable}});
-  const reopened=new UserPreferences(root);
-  assert.equal(reopened.get(target,'capture.default-folder.'+portable),'personal is an authored folder name');
-  assert.equal(reopened.get(target,'photo-capture.folder.'+portable),'');
-  assert.equal(reopened.get(target,'the-way-here.folder-tree.'+portable),'false');
-  assert.equal(reopened.get(target,'capture.default-folder.personal'),null);
-  assert.equal(reopened.get(target,'capture.default-folder.other'),null);
-  assert.equal(reopened.get(source,'capture.default-folder.personal'),'personal is an authored folder name');
-  assert.equal(reopened.get(source,'the-way-here.folder-tree.personal'),'{"personal is an authored label":false}');
-  assert.throws(()=>reopened.copyWorkspacePreferences(source,target,{knowledgeBaseIdMap:{personal:'../invalid'}}),/mapping/);
-});

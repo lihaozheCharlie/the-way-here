@@ -35,3 +35,25 @@ test("letter themes contain summaries and never repeat linked page bodies", asyn
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("letters carry the lens recorded in their frontmatter and stay silent when none was recorded", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "twh-letters-lens-"));
+  try {
+    await mkdir(path.join(root, "wiki/12 近况回信"), { recursive: true });
+    await mkdir(path.join(root, "sources"));
+    const letters: Array<[string, string]> = [
+      ["2026-10-01", "---\nlens: \"yanni\"\n---\n"],
+      ["2026-10-02", "---\nlens_name: \"导师\"\n---\n"],
+      ["2026-10-03", "---\nlens: \"\"\nlens_name: \" \"\n---\n"],
+      ["2026-10-04", ""],
+    ];
+    for (const [day, frontmatter] of letters) await writeFile(path.join(root, `wiki/12 近况回信/${day}.md`), `${frontmatter}# ${day} 回信\n\n匿名回信正文。\n`);
+    const index = new WikiIndex(root);
+    await index.rebuild();
+    const view = buildLetters(index);
+    const lenses = Object.fromEntries(view.letters.map((letter) => [letter.letterDate, letter.lens]));
+    expect(lenses).toEqual({ "2026-10-01": { id: "yanni" }, "2026-10-02": { name: "导师" }, "2026-10-03": undefined, "2026-10-04": undefined });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -3,7 +3,7 @@ import { mkdir, readFile, realpath, writeFile, rename } from "node:fs/promises";
 import path from "node:path";
 import { cacheRootForVault } from "@the-way-here/run-manager";
 import { createHash } from "node:crypto";
-import { WikiIndex, pageIdForPath, linkDiaryEntities } from "@the-way-here/wiki-core";
+import { WikiIndex, pageIdForPath, linkDiaryEntities, contentBase } from "@the-way-here/wiki-core";
 import type { WikiRun, VaultConfig, CaptureOutputTarget } from "@the-way-here/shared";
 import { isPathInside } from "../../path-policy.js";
 import { CaptureInputCache } from "./capture-input-cache.js";
@@ -30,7 +30,7 @@ export class CaptureRecordStore {
   }
 
   private async safeFile(config: VaultConfig, storedPath: string) {
-    const root = await realpath(this.vaultRoot), sources = path.resolve(root, config.paths.sources), file = path.resolve(root, storedPath);
+    const root = await realpath(contentBase(this.vaultRoot, config)), sources = path.resolve(root, config.paths.sources), file = path.resolve(root, storedPath);
     if (!isPathInside(root, sources) || !isPathInside(sources, file) || await realpath(file) !== file) throw new ContentRequestError(409, "原日记位置已变化，请先查看文件");
     return file;
   }
@@ -53,9 +53,9 @@ export class CaptureRecordStore {
     if (target?.kind !== "life-record") throw new Error("记录目标无效");
     const answer = run.result?.finalAnswer?.trim();
     if (!answer || answer.length > 100_000 || !/^# [^\n]+\n+\S/.test(answer)) throw new Error("整理结果不完整，原话已保留，请重新整理");
-    const root = await realpath(this.vaultRoot);
+    const root = await realpath(contentBase(this.vaultRoot, run.configSnapshot));
     const sources = path.resolve(root, run.configSnapshot.paths.sources);
-    if (!isPathInside(root, sources)) throw new Error("记录目录超出工作区");
+    if (!isPathInside(root, sources)) throw new Error("记录目录超出内容根");
     // Validate every existing parent before creating children, including symlinks.
     let folder = root;
     for (const part of [...path.relative(root, sources).split(path.sep), ...captureFolder(target.folder || "随手记").split("/")]) {
@@ -76,7 +76,8 @@ export class CaptureRecordStore {
     const diary = linkDiaryEntities(datedAnswer, target.entityLinks || []);
     const markdown = `${diary}\n`;
     // Persist input before the knowledge file, so a cache write failure cannot discard the only input.
-    await new CaptureInputCache(root).write(run.knowledgeBaseId, run.id, target.originalText);
+    // The input cache stays app-local and keeps its vault-root key even when content lives elsewhere.
+    await new CaptureInputCache(this.vaultRoot).write(run.knowledgeBaseId, run.id, target.originalText);
     if (target.storedPath) {
       const current = await readFile(file, "utf8");
       if (createHash("sha256").update(current).digest("hex") !== target.expectedFileHash) throw new ContentRequestError(409, "整理期间原日记被修改，未覆盖文件；原话已保留");

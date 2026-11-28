@@ -141,12 +141,6 @@ export class AgentRuntimeRegistry implements AgentRuntimeProvider, AgentRuntimeS
     this.listeners.clear();
   }
 
-  mobileKeyStatus(providerId: string) { return this.settingsStore.sharedKeyStatus(providerId); }
-  async changeMobileKey(providerId: string, action: "publish" | "pull" | "remove" | "local") {
-    await this.settingsStore.changeSharedKey(providerId, action);
-    await this.refreshSharedKeys();
-    return this.settingsStore.sharedKeyStatus(providerId);
-  }
   private refreshSharedKeys(): Promise<void> {
     const work = this.updateQueue.catch(() => undefined).then(async () => {
       const next = await this.settingsStore.load();

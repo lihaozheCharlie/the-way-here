@@ -1,13 +1,14 @@
 import { readdir, realpath, stat, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { resolveContentPath } from "@the-way-here/wiki-core";
 import type { SourceFolderSummary } from "@the-way-here/shared";
 import { sourceDestination } from "./source-access.js";
 import type { ContentWorkspace } from "./content-workspace.js";
 
 /** Lists user-visible folders inside the active knowledge base's life-record root. */
 export async function listSourceFolders(knowledge: ContentWorkspace): Promise<SourceFolderSummary[]> {
-  const sourceRoot = path.resolve(knowledge.vaultRoot, knowledge.index.config.paths.sources);
+  const sourceRoot = resolveContentPath(knowledge.vaultRoot, knowledge.index.config, knowledge.index.config.paths.sources);
   const folders: SourceFolderSummary[] = [];
 
   async function visit(absoluteFolder: string, relativeFolder: string, external = false): Promise<void> {

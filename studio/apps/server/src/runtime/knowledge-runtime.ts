@@ -1,5 +1,6 @@
 import chokidar, { type FSWatcher } from "chokidar";
-import { WikiIndex } from "@the-way-here/wiki-core";
+import path from "node:path";
+import { WikiIndex, contentBase } from "@the-way-here/wiki-core";
 import type { AgentRuntimeDescriptor } from "@the-way-here/shared";
 import { createPersonalKnowledgeBase, deletePersonalKnowledgeBase, renamePersonalKnowledgeBase, type DeletedKnowledgeBase } from "../modules/knowledge-bases/knowledge-base-manager.js";
 import { StudioEvents } from "./studio-events.js";
@@ -116,8 +117,14 @@ export class KnowledgeRuntime {
 
   private watch(watchedIndex: WikiIndex): FSWatcher {
     const watcher = chokidar.watch([watchedIndex.config.paths.wiki, watchedIndex.config.paths.sources], {
-      cwd: this.vaultRoot,
+      cwd: contentBase(this.vaultRoot, watchedIndex.config),
       ignoreInitial: true,
+      // Sync providers (iCloud Drive) emit placeholder churn and dot-file noise;
+      // none of it changes indexable Markdown.
+      ignored: (targetPath: string) => {
+        const name = path.basename(targetPath);
+        return name.startsWith(".") || name.endsWith(".icloud") || name.endsWith(".nosync");
+      },
       awaitWriteFinish: { stabilityThreshold: 350, pollInterval: 100 },
     });
     watcher.on("all", (eventName, changedPath) => {

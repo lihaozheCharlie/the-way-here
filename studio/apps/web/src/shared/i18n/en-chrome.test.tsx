@@ -120,12 +120,12 @@ describe("English chrome", () => {
   it("renders Letters without Chinese chrome, aside from bracketed demo content", () => {
     const html = renderLetters();
     expect(html).toContain("Write one now");
-    expect(html).toContain("Reread with a new lens");
+    expect(html).toContain("Default lens");
     expect(html).toContain("【中文片段】");
     expect(chromeText(html)).not.toMatch(CJK);
   });
 
-  it("translates the eight reasoning lenses", () => {
+  it("translates the reasoning lenses", () => {
     const lenses: ReasoningLens[] = [
       ["albert-einstein", "阿尔伯特·爱因斯坦", "默认参照系、隐藏假设、关系和惊奇", "提出一个新的参照位置或隐藏假设", ["抽象问题", "学习"]],
       ["elon-musk", "埃隆·马斯克", "底层约束、关键瓶颈和验证速度", "指出一个底层约束、瓶颈或可验证台阶", ["技术研发"]],
@@ -135,6 +135,7 @@ describe("English chrome", () => {
       ["warren-buffett", "沃伦·巴菲特", "长期承担者、信任、复利和不可逆损失", "校验一个长期承担、不可逆损失或现实底盘问题", ["金钱"]],
       ["benjamin-franklin", "本杰明·富兰克林", "价值怎样进入日常、人与人怎样共同改进", "把一个价值判断落到日常证据或低负担实验", ["习惯"]],
       ["yanni", "雅尼", "场景里的感受、内在声音、并存情绪和非功利价值", "补充被遗漏的感受、非功利价值或创作自由", ["音乐"]],
+      ["zeng-guofan", "曾国藩", "立志是否真、功夫断在哪里、言与行的落差", "校验一处功夫间断或立志只停在口头", ["立志与中断", "日记复盘"]],
     ].map(([id, displayName, attention, helperUse, signals]) => ({ id, displayName, attention, helperUse, signals, relativePath: `lenses/${id}.md` })) as ReasoningLens[];
     const html = renderToStaticMarkup(<LetterLensChoices lenses={lenses} onSelect={() => undefined} />);
     expect(html).toContain("Albert Einstein");
@@ -145,6 +146,7 @@ describe("English chrome", () => {
     expect(html).toContain("Warren Buffett");
     expect(html).toContain("Benjamin Franklin");
     expect(html).toContain("Yanni");
+    expect(html).toContain("Zeng Guofan");
     expect(html).toContain("Default frames of reference");
     expect(chromeText(html)).not.toMatch(CJK);
   });
@@ -173,11 +175,17 @@ describe("English chrome", () => {
     expect(text).not.toMatch(CJK);
   });
 
-  it("renders the reread lens menu in English", () => {
+  it("names the current lens in English on the reread control", () => {
     const lens = { id: "charlie-munger", displayName: "查理·芒格", attention: "机制、激励、重复模式和可避免的大错", helperUse: "校验一个机制盲点、反例或严重下行", signals: ["复杂决策"], relativePath: "lenses/charlie-munger.md" } as ReasoningLens;
-    const html = renderToStaticMarkup(<LetterLensPicker lenses={[lens]} onSelect={() => undefined} />);
-    expect(html).toContain("Reread with a new lens");
-    expect(chromeText(html)).not.toMatch(CJK);
+    const other = { ...lens, id: "yanni", displayName: "雅尼", attention: "场景里的感受、内在声音、并存情绪和非功利价值", helperUse: "补充被遗漏的感受、非功利价值或创作自由", signals: ["音乐"], relativePath: "lenses/yanni.md" } as ReasoningLens;
+    const unrecorded = renderToStaticMarkup(<LetterLensPicker lenses={[lens, other]} onSelect={() => undefined} />);
+    expect(unrecorded).toContain('aria-label="Default lens. Choose a lens to reread this letter"');
+    expect(chromeText(unrecorded)).toContain("Default lens");
+    expect(chromeText(unrecorded)).not.toMatch(CJK);
+    const current = renderToStaticMarkup(<LetterLensPicker lenses={[lens, other]} current={{ id: "charlie-munger" }} onSelect={() => undefined} />);
+    expect(current).toContain('aria-label="Charlie Munger lens. Choose another lens to reread this letter"');
+    expect(chromeText(current)).toContain("Charlie Munger lens");
+    expect(chromeText(current)).not.toMatch(CJK);
   });
 
   it("translates digest tags and search excerpts from demo payloads", () => {

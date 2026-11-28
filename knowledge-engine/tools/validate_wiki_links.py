@@ -9,7 +9,7 @@ import yaml
 from collections import defaultdict
 from pathlib import Path
 
-from vault_context import KNOWLEDGE_BASE_ROOT, WORKSPACE_ROOT, SOURCES_ROOT
+from vault_context import KNOWLEDGE_BASE_ROOT, WORKSPACE_ROOT, SOURCES_ROOT, CONTENT_ROOT
 from source_access import read_source, original_identity, SourceUnavailable
 
 
@@ -34,6 +34,10 @@ def scoped_relative(path: Path) -> Path:
     try:
         return path.relative_to(ROOT)
     except ValueError:
+        pass
+    try:
+        return path.relative_to(CONTENT_ROOT)
+    except ValueError:
         return path.relative_to(WORKSPACE_ROOT)
 
 
@@ -48,7 +52,12 @@ def normalize_target(raw: str) -> str:
 def candidates_for(path: Path) -> set[str]:
     rel_path = scoped_relative(path)
     rel = rel_path.with_suffix("").as_posix() if rel_path.suffix == ".md" else rel_path.as_posix()
-    candidates = {rel, path.stem, path.relative_to(WORKSPACE_ROOT).with_suffix("").as_posix()}
+    candidates = {rel, path.stem}
+    # The full-path key is content-root relative; content may live outside the workspace.
+    try:
+        candidates.add(path.relative_to(CONTENT_ROOT).with_suffix("").as_posix())
+    except ValueError:
+        pass
     try:
         original = original_identity(path) if path.is_relative_to(SOURCES_ROOT) else None
         if original:
@@ -138,8 +147,10 @@ def main() -> int:
                     resolved = []
             elif "/" in target:
                 resolved = by_key.get(target.lower(), [])
-                if not resolved and ((ROOT / target).is_dir() or (WORKSPACE_ROOT / target).is_dir()):
-                    resolved = [ROOT / target if (ROOT / target).is_dir() else WORKSPACE_ROOT / target]
+                dir_candidates = [ROOT / target if (ROOT / target).is_dir() else None,
+                                  CONTENT_ROOT / target if (CONTENT_ROOT / target).is_dir() else None,
+                                  WORKSPACE_ROOT / target if (WORKSPACE_ROOT / target).is_dir() else None]
+                resolved = [candidate for candidate in dir_candidates if candidate] or resolved
             else:
                 resolved = by_key.get(target.lower(), [])
             if not resolved:

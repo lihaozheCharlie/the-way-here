@@ -77,6 +77,8 @@ export class SourceConnections {
       const workspace = await realpath(this.knowledge.vaultRoot);
       // Keep generated data and private sibling knowledge bases out of a source connection.
       if (directory === workspace || inside(directory, workspace) || inside(workspace, directory)) throw new KnowledgeBaseRequestError(400, "请选择工作区外的原始资料目录，避免把生成内容或其他知识库重新收录");
+      const contentRoot = config.storage?.contentRoot ? await realpath(path.resolve(config.storage.contentRoot)) : undefined;
+      if (contentRoot && (directory === contentRoot || inside(directory, contentRoot) || inside(contentRoot, directory))) throw new KnowledgeBaseRequestError(400, "请选择内容目录之外的原始资料目录，避免把知识库内容重新收录");
       if (directory === path.parse(directory).root) throw new KnowledgeBaseRequestError(400, "不能连接整个磁盘");
       if (reconnectId && await this.runs.hasActiveKnowledgeBaseRun(id)) throw new KnowledgeBaseRequestError(409, "请等待当前知识库任务结束后再重新连接");
       if (config.sourceConnections?.some((entry) => entry.id !== reconnectId && (entry.path === directory || inside(entry.path, directory) || inside(directory, entry.path)))) throw new KnowledgeBaseRequestError(409, "这个目录或它的父子目录已经连接");
