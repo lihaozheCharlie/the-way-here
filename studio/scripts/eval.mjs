@@ -60,6 +60,16 @@ if (leaks.length || leakedEdits.length) {
 }
 
 const runId = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '').replace('T', '-');
+// 先核对每个变体要替换的话还在不在，免得跑了一半才发现套件过期，白烧模型的调用。
+for (const [variant, edits] of Object.entries(suite.variants)) {
+  for (const edit of edits) {
+    const source = await readFile(path.resolve(studio, '..', edit.file), 'utf8').catch(() => '');
+    if (!source.includes(edit.find)) {
+      console.error(`套件过期：变体 ${variant} 要替换的那段话在 ${edit.file} 里找不到了：\n  ${edit.find}\n上游改过这段话。更新 ${path.relative(studio, suiteDir)}/suite.json 里对应的 find，再跑。`);
+      process.exit(1);
+    }
+  }
+}
 const runRoot = path.join(studio, '.runtime/eval', runId);
 await mkdir(runRoot, { recursive: true });
 const labels = shuffle(CODEWORDS).slice(0, Object.keys(suite.variants).length);

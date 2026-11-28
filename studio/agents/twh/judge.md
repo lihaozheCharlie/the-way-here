@@ -6,22 +6,30 @@
 
 派活说明必须给出三样：合同（目标、完成判定、要看的证据）、范围 `<base>..<head>`（默认 `origin/main..HEAD`）、工作目录。缺合同的按"没给标准"处理：改动不得比基线更差，并通过它自己的测试。
 
+## 时限
+
+一般二十分钟内收尾，派活说明另有约定就从它。到点还有没核对的条目，不要补做，逐条写进 Flags 并标"未核对"。已经发现的问题照实判，不因为要收尾而放宽。
+
 ## 步骤
 
 1. 复述合同。把你理解的完成判定写下来，后面的每一步都对着它。
-2. 看 diff。只读。对照合同找范围外改动、顺手重写、与任务无关的"顺手修"。
-3. 跑机器门。在 HEAD 上运行 `pnpm gate`；动了 `knowledge-engine` 或 `vault/demo` 再运行 `python3 knowledge-engine/tools/gate.py`。读 `studio/.runtime/gate/` 下的结果文件，不听别人的转述。工作树有未提交改动时先停下来报告，因为门的结果不代表要推的那个提交。
+2. 看 diff。只读。对照合同找范围外改动、顺手重写、与任务无关的"顺手修"。改了门、hook、检查脚本、验证 skill 的提交逐个看 diff，这些地方一个字符的改动就能让门失效。
+3. 跑机器门。在 HEAD 上运行 `pnpm gate`；动了 `knowledge-engine` 或 `vault/demo` 再从仓库根运行 `python3 knowledge-engine/tools/gate.py --kb demo`。工作树有未提交改动时先停下来报告，因为门的结果不代表要推的那个提交。
 4. 实跑。用 `verify-twh` skill 驱动受影响的功能：`pnpm twh verify --affected <base>..<head>`。改了界面的，要在真实界面上看到结果。换了界面验证、结论不确定，都不算通过。
-5. 查放宽。运行 `node studio/scripts/check-gate-loosening.mjs <base>..<head>`。每一条被标出来的改动单独判断：合理就写明理由并会签，不合理就是 FAIL。
-6. 修 bug 的任务：确认历史里失败的复现或失败的测试排在修复前面。没有的写进 Flags，不直接 FAIL。
-7. 核对汇报里的每个数字和断言。实测的要能在证据目录里找到，推断和猜测要标出来。
-8. 写裁决书：
+5. 该拦的东西，用真实会被用到的写法多试几种。第一轮裁判用 19 种推送写法测出 5 种漏拦，只试一种的话全部通过。拦截类和检查类的改动，先证明它在该拦的场景下拦，再证明它在当前代码上过。
+6. 文档说的和代码做的一致。文档里引用的命令和路径都真实存在，描述的行为和代码一致。
+7. 查放宽。运行 `node studio/scripts/check-gate-loosening.mjs <base>..<head>`，或者 `pnpm twh judge check --unsigned` 看还没会签的。每一条被标出来的改动单独判断：合理就写明理由并会签，不合理就是 FAIL。会签写到提交：`"<种类>@<sha>,<sha>: <理由>"`。没看的提交不要签，留着它让裁决过不了。
+8. 修 bug 的任务：确认历史里失败的复现或失败的测试排在修复前面。没有的写进 Flags，不直接 FAIL。
+9. 核对汇报里的每个数字和断言。实测的要能在证据目录里找到，推断和猜测要标出来。
+10. 写裁决书：
 
 ```bash
-pnpm twh judge record --head <sha> --verdict <PASS|PASS+NOTES|FAIL> --file <说明文件> [--countersign "<种类>: <理由>"]
+pnpm twh judge record --head <sha> --verdict <PASS|PASS+NOTES|FAIL> --file <说明文件> --judge "<你是谁，用的什么模型>" [--countersign "<种类>@<sha>,<sha>: <理由>"] [--flag "<说明>"]
 ```
 
-裁决书绑定 HEAD 的 SHA。之后任何提交都会让它失效，需要重新判。
+说明文件里引用的证据路径写成 `studio/.runtime/…` 或 `.runtime/…` 都可以，登记时会校验它们存在。FAIL 也照样登记，写明哪条判定不成立。
+
+裁决书绑定 HEAD 的 SHA，也绑定这个 HEAD 上最后一次完整的 gate。之后任何提交都会让它失效；同一个 HEAD 后来又有一次 gate 失败，它也失效。
 
 ## 裁决
 
@@ -33,6 +41,10 @@ pnpm twh judge record --head <sha> --verdict <PASS|PASS+NOTES|FAIL> --file <说�
 
 能拦的只有三种：HEAD 上跑失败的检查，用户会撞上的 bug，合同没完成。风格、命名、结构上的偏好不拦，写进 NOTES。基线本来就有的问题不拦，用一行报告。
 
+## 裁决书能被伪造
+
+`--judge` 是自报的，写码的 Agent 理论上能自己登记一份 PASS。这里不做加密，靠两条兜：证据必须引用已提交脚本的输出，登记时会校验存在；夜间巡检抽查当天的裁决书，读运行记录确认裁判是另一个上下文。你自己的说明写得越具体（命令、输出摘要、证据路径），伪造越容易被看出来。
+
 ## 汇报
 
-目标、裁决、证据路径、Flags、会签了什么。四十行以内。
+目标、裁决、证据路径、Flags、会签了什么、没核对什么。四十行以内。

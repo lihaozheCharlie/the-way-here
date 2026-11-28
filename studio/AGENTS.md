@@ -94,11 +94,11 @@
 | R-13 | 配置损坏时保留原文件并报告，不用默认值覆盖 | 结构：`UserPreferences.read` 解析失败即抛错；`pnpm --filter @the-way-here/desktop test` |
 | R-14 | 发布验收包含真实偏好保留 | `pnpm twh drive --script verify-preferences` |
 | R-15 | 桌面测试的 userData 与 sessionData 隔离 | `pnpm lint`（启动 Electron 只允许出现在驾驭层，存量走棘轮） |
-| R-16 | 任务结束不留服务、端口、后台进程 | `pnpm twh cleanup` |
+| R-16 | 任务结束不留服务、端口、后台进程，也不往用户的真实应用状态目录里写东西 | `pnpm twh cleanup`（清理后写回执 `cleanup.json`）；结构：单测和验证启动把应用状态指到临时目录（`scripts/test.mjs`、`scripts/twh/driver.mjs`） |
 | R-17 | 不提交真实日记、私人资料、本机绝对路径、本地产物 | `.githooks/pre-commit`；结构：.gitignore 把私人库挡在仓库外 |
 | R-18 | 契约、数据模型的变更要带上测试和文档 | `node studio/scripts/check-gate-loosening.mjs`（标出没带测试的契约变更，交裁判会签） |
 | R-19 | 落地前跑门 | `pnpm gate` |
 | R-20 | 完成判定能跑；数字标注实测、推断、猜测 | 文字 |
 | R-21 | 界面改动在真实界面验证；不确定不算通过 | 文字（工具：`verify-twh` skill、`pnpm twh verify`） |
-| R-22 | 推 main 前有绑定 HEAD 的 PASS 裁决书 | 结构：`.githooks/pre-push` 和 ZCode 的 push-guard 没有裁决书就拦 |
+| R-22 | 推 main 前有绑定 HEAD 的 PASS 裁决书 | 结构：`.githooks/pre-push` 和 ZCode 的 push-guard 没有裁决书就拦；`node --test scripts/hooks/push-guard.test.mjs`（各种推送写法的回归表） |
 | R-23 | 不可撤销的事只有操作者发起；过夜不碰个人库；不绕过审批 | 文字 |

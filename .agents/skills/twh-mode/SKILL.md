@@ -21,7 +21,7 @@ description: The Way Here 仓的工程入口。用户说 /twh-mode、"按本仓�
    | 只改结构 | `refactoring`。先钉住行为，typecheck 和 lint 不算钉住 |
    | 实测变慢 | `perf-issue`；持续优化一个数字用 `hillclimb` |
    | UI 或交互的决策没定 | `prototype`。带切换器的几个变体加截图 |
-   | 大的、跨模块的、没人看着的 | `figure-it-out`，它自己设计流程并记决策日志 |
+   | 大的、跨模块的、没人看着的 | `figure-it-out`。它是 skill 不是剧本，读 `<pstack根>/skills/figure-it-out/SKILL.md`；它自己设计流程并记决策日志 |
    | 改 skill、提示词 | `authoring-a-skill` 加 `eval`，先盲评再落地 |
    | 过夜 | `studio/agents/twh/contracts/overnight.md` 加 `autonomous-run` |
 
