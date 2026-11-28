@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "node \"${ZCODE_PROJECT_DIR}/studio/scripts/hooks/push-guard.mjs\"",
+              "timeout": 15,
+              "onError": "allow"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

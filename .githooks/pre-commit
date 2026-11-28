@@ -1,0 +1,2 @@
+#!/bin/sh
+exec node "$(git rev-parse --show-toplevel)/studio/scripts/hooks/pre-commit.mjs" "$@"

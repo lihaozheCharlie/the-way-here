@@ -7,13 +7,60 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  studio:
+    name: Studio lint, typecheck, tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+          cache-dependency-path: studio/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: studio
+      # 和本地同一条命令。pre-push hook 跑的就是它。
+      - name: Gate
+        run: pnpm gate
+        working-directory: studio
+
+  studio-build:
+    name: Studio build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+          cache-dependency-path: studio/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: studio
+      - run: pnpm gate build
+        working-directory: studio
+
+  knowledge-engine:
+    name: Knowledge engine gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate repository
-        run: python3 tools/check.py
+      - run: pip install -r knowledge-engine/requirements.txt
+      - uses: astral-sh/setup-uv@v5
+      # 标签更新会写文件：跑完之后 demo 库必须和提交里一模一样。
+      - name: Gate, then confirm the demo library is unchanged
+        run: |
+          python3 knowledge-engine/tools/gate.py --kb demo
+          git diff --exit-code --stat -- vault/demo
