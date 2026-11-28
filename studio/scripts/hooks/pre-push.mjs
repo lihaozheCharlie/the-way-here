@@ -5,9 +5,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const root = path.resolve(studio, '..');
 if (process.env.TWH_SKIP_HOOKS === '1') process.exit(0);
 
-const git = (...parts) => spawnSync('git', parts, { cwd: studio, encoding: 'utf8' }).stdout.trim();
+// git 的路径规格相对仓库根解析，所以 git 命令都在根目录下跑。
+const git = (...parts) => spawnSync('git', parts, { cwd: root, encoding: 'utf8' }).stdout.trim();
 const pushes = readFileSync(0, 'utf8').split('\n').filter(Boolean).map(line => line.trim().split(/\s+/));
 const toMain = pushes.find(([, localSha, remoteRef]) => localSha !== '0'.repeat(40) && /(?:^|\/|[.:])main$/.test(remoteRef));
 
