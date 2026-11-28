@@ -1,0 +1,23 @@
+/* Storage locations: same card, row rhythm and control sizing as the other preference groups. */
+.storage-preferences .storage-list { margin:0; padding:0; list-style:none; }
+.storage-preferences .storage-row { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"text side" "path path" "issue issue"; column-gap:24px; row-gap:6px; padding:16px 0 0; border-top:1px solid var(--line); }
+.storage-preferences .storage-list:first-of-type > .storage-row:first-child { padding-top:0; border-top:0; }
+.storage-preferences .storage-text { grid-area:text; display:grid; gap:4px; min-width:0; }
+.storage-preferences .storage-text b { font-size:14px; font-weight:500; }
+.storage-preferences .storage-text small { color:var(--ink-soft); font-size:12.5px; line-height:1.65; }
+.storage-preferences .storage-side { grid-area:side; display:flex; align-items:center; gap:12px; }
+.storage-preferences .storage-size { color:var(--ink-soft); font-size:12.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.storage-preferences .storage-path { grid-area:path; display:block; color:var(--ink-soft); font:400 11px/1.7 "SF Mono",Menlo,monospace; overflow-wrap:anywhere; user-select:text; }
+.storage-preferences .storage-issues { grid-area:issue; display:grid; gap:2px; }
+.storage-preferences .storage-issue { margin:0; color:var(--ink-soft); font-size:12.5px; line-height:1.65; }
+.storage-preferences .storage-issue-conflict { color:var(--watch-ink); }
+.storage-preferences .storage-action { flex:none; min-height:28px; padding:4px 11px; border:1px solid var(--line); border-radius:var(--radius-control); background:var(--paper); color:var(--ink); font-family:var(--font-ui); font-size:12.5px; font-weight:500; line-height:1.3; white-space:nowrap; }
+.storage-preferences .storage-action:hover:not(:disabled) { background:var(--surface-tinted); }
+.storage-preferences .storage-action:focus-visible { outline:2px solid var(--accent-ink); outline-offset:3px; }
+/* Moving content is the one action here that changes where user data lives; keep it next to the content row, on the shared hint surface. */
+.storage-preferences .storage-move { display:flex; align-items:center; justify-content:space-between; gap:8px 16px; margin:16px 0 2px; padding:13px 15px; background:var(--surface-tinted); border-radius:var(--radius-card-small); }
+.storage-preferences .storage-move > div { min-width:0; }
+.storage-preferences .storage-move p { margin:2px 0 0; color:var(--ink-soft); font-size:13px; line-height:1.65; }
+.storage-preferences .storage-move p:first-child { margin-top:0; }
+.storage-preferences .storage-notice { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0; color:var(--ink-soft); font-size:13px; line-height:1.65; }
+.storage-preferences .storage-feedback { margin:16px 0 0; color:var(--danger); font-size:13px; line-height:1.65; }
