@@ -22,6 +22,17 @@ if [ ! -s "$logfile" ]; then
 	printf 'ts\tphase\tdecision\twhy\tevidence\tresult\n' >> "$logfile"
 fi
 
+# 证据写成 git show <sha> 时，这个提交必须真的存在。gate 没过就写了日志的事，发生过一次。
+case "$4" in
+	git\ show\ *)
+		sha="${4#git show }"
+		if ! git cat-file -e "$sha^{commit}" 2>/dev/null; then
+			printf '拒绝写入：证据指向的提交不存在：%s。先确认提交真的落地了再记日志。\n' "$sha" >&2
+			exit 1
+		fi
+		;;
+esac
+
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # 去掉制表符和换行，让单元格保持单行；以 = + - @ 开头的单元格前面加一个单引号，
 # 免得别人提供的文本在表格软件里变成公式。
