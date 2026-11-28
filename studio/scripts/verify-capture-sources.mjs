@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 const sharp = createRequire(new URL('../apps/server/package.json', import.meta.url))('sharp');
 import { chromium, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
@@ -13,7 +13,6 @@ const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-web-check-')));
 const linkedRoot = await realpath(await mkdtemp(path.join(os.tmpdir(), 'twh-web-original-')));
 const captures = path.join(studio, '.impeccable/review/capture-sources');
-const sampleId = 'sources/Web 验收/浏览器样例';
 const samplePath = path.join(root, 'vault/demo/sources/Web 验收/浏览器样例.md');
 let server, browser, origin, stateRoot;
 let serverLog = '';
@@ -200,7 +199,7 @@ validation:
   const batches = await fetch(origin+'/api/photo-memories?knowledgeBaseId=demo').then(r=>r.json());
   const imported = batches.find(b=>b.files[0]?.originalName.includes('匿名照片流程验收'));
   expect(imported.targetFolder).toBe('匿名照片目的地');
-  let generated = false, built = false, finishBuild = false;
+  let generated = false, finishBuild = false;
   const fakeRuns = new Map();
   let delayPendingLookups=false;
   const pendingReleases=[];
@@ -209,7 +208,7 @@ validation:
     const body=route.request().postDataJSON(),drafting=body.outputTarget?.phase==='draft';
     const run={...body,id:drafting?'anonymous-draft':'anonymous-build',status:'running',createdAt:new Date().toISOString(),events:[],changes:[],configSnapshot:{paths:{sources:'vault/demo/sources'}}};
     fakeRuns.set(run.id,run);
-    if(drafting) { generated=true; expect(body.prompt).toContain('匿名线索：和朋友一起看风景'); } else built=true;
+    if(drafting) { generated=true; expect(body.prompt).toContain('匿名线索：和朋友一起看风景'); }
     await route.fulfill({json:run});
   });
   await context.route('**/api/runs/anonymous-*', async route => {
