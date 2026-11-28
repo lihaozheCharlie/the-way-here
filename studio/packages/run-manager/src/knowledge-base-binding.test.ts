@@ -60,6 +60,8 @@ describe("Run knowledge base binding", () => {
     for (const [id, knowledgeBaseId] of [[personal.id, "personal"], [demo.id, "demo"]] as const) {
       expect(await store.get(id)).toMatchObject({ knowledgeBaseId, configSnapshot: { knowledgeBaseId } });
     }
-    expect((await new RunStore(store.vaultRoot, store.stateRoot).list()).map((run) => [run.id, run.knowledgeBaseId])).toEqual([[demo.id, "demo"], [personal.id, "personal"]]);
+    // 两条记录可能落在同一毫秒，列表顺序不保证；只断言每条各绑各的库。
+    const listed = (await new RunStore(store.vaultRoot, store.stateRoot).list()).map((run) => [run.id, run.knowledgeBaseId]);
+    expect(listed.sort()).toEqual([[demo.id, "demo"], [personal.id, "personal"]].sort());
   });
 });
